@@ -1,0 +1,21 @@
+[package]
+name = "couchbase-shell"
+version = "0.1.0"
+authors = ["Michael Nitschinger <michael@nitschinger.at>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log = "0.4"
+pretty_env_logger = "0.3"
+structopt = "0.3"
+futures = "0.3"
+warp = "0.2"
+tokio = { version = "0.2", features = ["full"] }
+nu = "0.10"
+couchbase = { git = "https://github.com/couchbaselabs/couchbase-rs" }
+
+[[bin]]
+name = "cbsh"
+path = "src/main.rs"
