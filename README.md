@@ -33,11 +33,20 @@ OPTIONS:
     -c, --connstring <connection-string>     [default: couchbase://localhost]
     -p, --password <password>                [default: password]
     -u, --username <username>                [default: Administrator]
-````
+```
 
 Note that if you want to spawn the ui, use the `--ui` flag.
 
+# Supported Commands
+
+This is heavily in flux right now, but you can try these commands (always try with `--help` if you are unsure about args and flags).
+
+ - `query <statement>`
+ - `analytics <statement>`
+ - `kv-get <id>`
+
 # Installing into bin
+
 If you just want to use it and don't want to bother compiling all the time, you can use `cargo install --path .` to install it into your cargo bin path.
 
 ```

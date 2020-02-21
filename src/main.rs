@@ -1,5 +1,6 @@
 use crate::cli::analytics::Analytics;
 use crate::cli::query::Query;
+use crate::cli::get::Get;
 
 use couchbase::Cluster;
 use log::debug;
@@ -35,6 +36,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     context.add_commands(vec![
         nu::whole_stream_command(Query::new(cluster.clone())),
         nu::whole_stream_command(Analytics::new(cluster.clone())),
+        nu::whole_stream_command(Get::new(cluster.clone())),
     ]);
 
     nu::cli(Some(syncer), Some(context)).await
