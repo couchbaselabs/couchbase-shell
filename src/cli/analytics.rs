@@ -1,6 +1,6 @@
 use super::util::convert_json_value_to_nu_value;
 use crate::state::State;
-use couchbase::{AnalyticsOptions};
+use couchbase::AnalyticsOptions;
 use futures::executor::block_on;
 use futures::stream::StreamExt;
 use log::debug;

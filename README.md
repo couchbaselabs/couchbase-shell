@@ -45,6 +45,7 @@ This is heavily in flux right now, but you can try these commands (always try wi
  - `analytics <statement>`
  - `kv-get <id>`
  - `nodes`
+ - `buckets`
 
 # Installing into bin
 

@@ -1,3 +1,4 @@
+use crate::state::State;
 use futures::executor::block_on;
 use nu::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
@@ -5,7 +6,6 @@ use nu_protocol::{Signature, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
 use serde::Deserialize;
 use std::sync::Arc;
-use crate::state::State;
 
 pub struct Nodes {
     state: Arc<State>,

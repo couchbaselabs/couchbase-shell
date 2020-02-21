@@ -39,6 +39,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         nu::whole_stream_command(Get::new(state.clone())),
         // Displays cluster manager node infos
         nu::whole_stream_command(Nodes::new(state.clone())),
+        // Displays cluster manager bucket infos
+        nu::whole_stream_command(Buckets::new(state.clone())),
         // Performs n1ql queries
         nu::whole_stream_command(Query::new(state.clone())),
     ]);

@@ -1,5 +1,6 @@
 use super::util::convert_json_value_to_nu_value;
-use couchbase::{QueryOptions};
+use crate::state::State;
+use couchbase::QueryOptions;
 use futures::executor::block_on;
 use futures::stream::StreamExt;
 use log::debug;
@@ -8,7 +9,6 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
 use std::sync::Arc;
-use crate::state::State;
 
 pub struct Query {
     state: Arc<State>,
@@ -42,7 +42,12 @@ impl nu::WholeStreamCommand for Query {
         let statement = args.nth(0).expect("need statement").as_string()?;
 
         debug!("Running n1ql query {}", &statement);
-        let mut result = block_on(self.state.cluster().query(statement, QueryOptions::default())).unwrap();
+        let mut result = block_on(
+            self.state
+                .cluster()
+                .query(statement, QueryOptions::default()),
+        )
+        .unwrap();
         let stream = result
             .rows::<serde_json::Value>()
             .map(|v| convert_json_value_to_nu_value(&v.unwrap(), Tag::default()));
