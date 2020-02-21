@@ -1,5 +1,5 @@
 use crate::cli::query::Query;
-use couchbase::{Cluster};
+use couchbase::Cluster;
 use log::debug;
 use std::error::Error;
 use std::sync::Arc;
