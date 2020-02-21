@@ -1,6 +1,4 @@
-use crate::cli::analytics::Analytics;
-use crate::cli::get::Get;
-use crate::cli::query::Query;
+use crate::cli::*;
 
 use couchbase::Cluster;
 use log::debug;
@@ -34,9 +32,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut syncer = nu::EnvironmentSyncer::new();
     let mut context = nu::create_default_context(&mut syncer)?;
     context.add_commands(vec![
-        nu::whole_stream_command(Query::new(cluster.clone())),
+        // Performs analytics queries
         nu::whole_stream_command(Analytics::new(cluster.clone())),
+        // Performs kv get operations
         nu::whole_stream_command(Get::new(cluster.clone())),
+        // Displays cluster manager node infos
+        nu::whole_stream_command(Nodes::new(cluster.clone())),
+        // Performs n1ql queries
+        nu::whole_stream_command(Query::new(cluster.clone())),
     ]);
 
     nu::cli(Some(syncer), Some(context)).await

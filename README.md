@@ -44,6 +44,7 @@ This is heavily in flux right now, but you can try these commands (always try wi
  - `query <statement>`
  - `analytics <statement>`
  - `kv-get <id>`
+ - `nodes`
 
 # Installing into bin
 

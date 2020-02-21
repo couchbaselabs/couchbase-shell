@@ -11,6 +11,7 @@ structopt = "0.3"
 futures = "0.3"
 warp = "0.2"
 tokio = { version = "0.2", features = ["full"] }
+reqwest = { version = "0.10", features = ["json"] }
 
 nu = { git = "https://github.com/daschl/nushell.git", branch = "custom" }
 nu-protocol = { git = "https://github.com/daschl/nushell.git", branch = "custom" }
