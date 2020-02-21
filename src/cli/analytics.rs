@@ -1,4 +1,4 @@
-use couchbase::{Cluster, QueryOptions};
+use couchbase::{Cluster, AnalyticsOptions};
 use futures::executor::block_on;
 use futures::stream::StreamExt;
 use log::debug;
@@ -9,31 +9,31 @@ use nu_source::Tag;
 use std::sync::Arc;
 use super::util::convert_json_value_to_nu_value;
 
-pub struct Query {
+pub struct Analytics {
     cluster: Arc<Cluster>,
 }
 
-impl Query {
+impl Analytics {
     pub fn new(cluster: Arc<Cluster>) -> Self {
         Self { cluster }
     }
 }
 
-impl nu::WholeStreamCommand for Query {
+impl nu::WholeStreamCommand for Analytics {
     fn name(&self) -> &str {
-        "query"
+        "analytics"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("query").required(
+        Signature::build("analytics").required(
             "statement",
             SyntaxShape::String,
-            "the query statement",
+            "the analytics statement",
         )
     }
 
     fn usage(&self) -> &str {
-        "Performs a n1ql query"
+        "Performs an analytics query"
     }
 
     fn run(
@@ -44,8 +44,8 @@ impl nu::WholeStreamCommand for Query {
         let args = args.evaluate_once(registry)?;
         let statement = args.nth(0).expect("need statement").as_string()?;
 
-        debug!("Running n1ql query {}", &statement);
-        let mut result = block_on(self.cluster.query(statement, QueryOptions::default())).unwrap();
+        debug!("Running analytics query {}", &statement);
+        let mut result = block_on(self.cluster.analytics_query(statement, AnalyticsOptions::default())).unwrap();
         let stream = result
             .rows::<serde_json::Value>()
             .map(|v| convert_json_value_to_nu_value(&v.unwrap(), Tag::default()));

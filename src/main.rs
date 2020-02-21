@@ -1,4 +1,6 @@
+use crate::cli::analytics::Analytics;
 use crate::cli::query::Query;
+
 use couchbase::Cluster;
 use log::debug;
 use std::error::Error;
@@ -30,7 +32,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let mut syncer = nu::EnvironmentSyncer::new();
     let mut context = nu::create_default_context(&mut syncer)?;
-    context.add_commands(vec![nu::whole_stream_command(Query::new(cluster.clone()))]);
+    context.add_commands(vec![
+        nu::whole_stream_command(Query::new(cluster.clone())),
+        nu::whole_stream_command(Analytics::new(cluster.clone())),
+    ]);
 
     nu::cli(Some(syncer), Some(context)).await
 }
