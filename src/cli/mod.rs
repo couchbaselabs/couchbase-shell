@@ -1,5 +1,5 @@
 pub mod analytics;
-pub mod query;
 pub mod get;
+pub mod query;
 
 mod util;

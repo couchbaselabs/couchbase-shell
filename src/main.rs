@@ -1,6 +1,6 @@
 use crate::cli::analytics::Analytics;
-use crate::cli::query::Query;
 use crate::cli::get::Get;
+use crate::cli::query::Query;
 
 use couchbase::Cluster;
 use log::debug;

@@ -1,3 +1,4 @@
+use super::util::convert_json_value_to_nu_value;
 use couchbase::{Cluster, QueryOptions};
 use futures::executor::block_on;
 use futures::stream::StreamExt;
@@ -7,7 +8,6 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
 use std::sync::Arc;
-use super::util::convert_json_value_to_nu_value;
 
 pub struct Query {
     cluster: Arc<Cluster>,
@@ -25,11 +25,7 @@ impl nu::WholeStreamCommand for Query {
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("query").required(
-            "statement",
-            SyntaxShape::String,
-            "the query statement",
-        )
+        Signature::build("query").required("statement", SyntaxShape::String, "the query statement")
     }
 
     fn usage(&self) -> &str {

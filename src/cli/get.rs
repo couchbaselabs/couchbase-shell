@@ -1,12 +1,12 @@
+use super::util::convert_json_value_to_nu_value;
 use couchbase::{Cluster, GetOptions};
 use futures::executor::block_on;
 use log::debug;
 use nu::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
-use nu_protocol::{Primitive, TaggedDictBuilder, UntaggedValue, Value, Signature, SyntaxShape, ReturnSuccess};
+use nu_protocol::{ReturnSuccess, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
 use std::sync::Arc;
-use super::util::convert_json_value_to_nu_value;
 
 pub struct Get {
     cluster: Arc<Cluster>,
@@ -24,11 +24,7 @@ impl nu::WholeStreamCommand for Get {
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("kv-get").required(
-            "id",
-            SyntaxShape::String,
-            "the document id",
-        )
+        Signature::build("kv-get").required("id", SyntaxShape::String, "the document id")
     }
 
     fn usage(&self) -> &str {
@@ -57,7 +53,7 @@ impl nu::WholeStreamCommand for Get {
                 let content_converted = convert_json_value_to_nu_value(&content, Tag::default());
                 collected.insert_value("content", content_converted);
                 OutputStream::one(Ok(ReturnSuccess::Value(collected.into_value())))
-            },
+            }
             Err(_e) => OutputStream::empty(),
         };
 

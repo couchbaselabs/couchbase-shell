@@ -1,4 +1,5 @@
-use couchbase::{Cluster, AnalyticsOptions};
+use super::util::convert_json_value_to_nu_value;
+use couchbase::{AnalyticsOptions, Cluster};
 use futures::executor::block_on;
 use futures::stream::StreamExt;
 use log::debug;
@@ -7,7 +8,6 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
 use std::sync::Arc;
-use super::util::convert_json_value_to_nu_value;
 
 pub struct Analytics {
     cluster: Arc<Cluster>,
@@ -45,7 +45,11 @@ impl nu::WholeStreamCommand for Analytics {
         let statement = args.nth(0).expect("need statement").as_string()?;
 
         debug!("Running analytics query {}", &statement);
-        let mut result = block_on(self.cluster.analytics_query(statement, AnalyticsOptions::default())).unwrap();
+        let mut result = block_on(
+            self.cluster
+                .analytics_query(statement, AnalyticsOptions::default()),
+        )
+        .unwrap();
         let stream = result
             .rows::<serde_json::Value>()
             .map(|v| convert_json_value_to_nu_value(&v.unwrap(), Tag::default()));
