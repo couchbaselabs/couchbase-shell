@@ -1,4 +1,3 @@
-use couchbase::Cluster;
 use futures::executor::block_on;
 use nu::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
@@ -6,14 +5,15 @@ use nu_protocol::{Signature, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
 use serde::Deserialize;
 use std::sync::Arc;
+use crate::state::State;
 
 pub struct Nodes {
-    _cluster: Arc<Cluster>,
+    state: Arc<State>,
 }
 
 impl Nodes {
-    pub fn new(cluster: Arc<Cluster>) -> Self {
-        Self { _cluster: cluster }
+    pub fn new(state: Arc<State>) -> Self {
+        Self { state }
     }
 }
 
@@ -35,16 +35,20 @@ impl nu::WholeStreamCommand for Nodes {
         _args: CommandArgs,
         _registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
-        block_on(nodes())
+        block_on(nodes(self.state.clone()))
     }
 }
 
-async fn nodes() -> Result<OutputStream, ShellError> {
+async fn nodes(state: Arc<State>) -> Result<OutputStream, ShellError> {
     let client = reqwest::Client::new();
 
+    // todo: hack! need to actually use proper hostname from a parsed connstr...
+    let host = state.connstr().replace("couchbase://", "");
+    let uri = format!("http://{}:8091/pools/default", host);
+
     let resp = client
-        .get("http://localhost:8091/pools/default")
-        .basic_auth("Administrator", Some("password"))
+        .get(&uri)
+        .basic_auth(state.username(), Some(state.password()))
         .send()
         .await
         .unwrap()

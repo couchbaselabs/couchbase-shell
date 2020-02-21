@@ -1,5 +1,7 @@
 use super::util::convert_json_value_to_nu_value;
-use couchbase::{Cluster, GetOptions};
+use couchbase::{GetOptions};
+use crate::state::State;
+
 use futures::executor::block_on;
 use log::debug;
 use nu::{CommandArgs, CommandRegistry, OutputStream};
@@ -9,12 +11,12 @@ use nu_source::Tag;
 use std::sync::Arc;
 
 pub struct Get {
-    cluster: Arc<Cluster>,
+    state: Arc<State>,
 }
 
 impl Get {
-    pub fn new(cluster: Arc<Cluster>) -> Self {
-        Self { cluster }
+    pub fn new(state: Arc<State>) -> Self {
+        Self { state }
     }
 }
 
@@ -39,7 +41,7 @@ impl nu::WholeStreamCommand for Get {
         let args = args.evaluate_once(registry)?;
         let id = args.nth(0).expect("need id").as_string()?;
 
-        let bucket = self.cluster.bucket("travel-sample");
+        let bucket = self.state.cluster().bucket("travel-sample");
         let collection = bucket.default_collection();
         debug!("Running kv get for doc {}", &id);
 

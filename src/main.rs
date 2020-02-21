@@ -1,12 +1,13 @@
-use crate::cli::*;
+mod cli;
+mod state;
 
-use couchbase::Cluster;
+use crate::cli::*;
 use log::debug;
+use state::State;
 use std::error::Error;
 use std::sync::Arc;
 use structopt::StructOpt;
 use warp::Filter;
-mod cli;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -15,7 +16,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let opt = CliOptions::from_args();
     debug!("Effective {:?}", opt);
 
-    let cluster = Arc::new(Cluster::connect(
+    let state = Arc::new(State::new(
         opt.connection_string,
         opt.username,
         opt.password,
@@ -33,13 +34,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut context = nu::create_default_context(&mut syncer)?;
     context.add_commands(vec![
         // Performs analytics queries
-        nu::whole_stream_command(Analytics::new(cluster.clone())),
+        nu::whole_stream_command(Analytics::new(state.clone())),
         // Performs kv get operations
-        nu::whole_stream_command(Get::new(cluster.clone())),
+        nu::whole_stream_command(Get::new(state.clone())),
         // Displays cluster manager node infos
-        nu::whole_stream_command(Nodes::new(cluster.clone())),
+        nu::whole_stream_command(Nodes::new(state.clone())),
         // Performs n1ql queries
-        nu::whole_stream_command(Query::new(cluster.clone())),
+        nu::whole_stream_command(Query::new(state.clone())),
     ]);
 
     nu::cli(Some(syncer), Some(context)).await

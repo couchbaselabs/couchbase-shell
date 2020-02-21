@@ -1,5 +1,6 @@
 use super::util::convert_json_value_to_nu_value;
-use couchbase::{AnalyticsOptions, Cluster};
+use crate::state::State;
+use couchbase::{AnalyticsOptions};
 use futures::executor::block_on;
 use futures::stream::StreamExt;
 use log::debug;
@@ -10,12 +11,12 @@ use nu_source::Tag;
 use std::sync::Arc;
 
 pub struct Analytics {
-    cluster: Arc<Cluster>,
+    state: Arc<State>,
 }
 
 impl Analytics {
-    pub fn new(cluster: Arc<Cluster>) -> Self {
-        Self { cluster }
+    pub fn new(state: Arc<State>) -> Self {
+        Self { state }
     }
 }
 
@@ -46,7 +47,8 @@ impl nu::WholeStreamCommand for Analytics {
 
         debug!("Running analytics query {}", &statement);
         let mut result = block_on(
-            self.cluster
+            self.state
+                .cluster()
                 .analytics_query(statement, AnalyticsOptions::default()),
         )
         .unwrap();
