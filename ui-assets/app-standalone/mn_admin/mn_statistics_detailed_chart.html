@@ -1,0 +1,23 @@
+<div class="panel-content">
+  <div class="row flex-center width-10 margin-auto margin-top-neg-half">
+    <select ng-model="detailedChartCtl.zoom"
+            ng-change="detailedChartCtl.onSelectZoom()">
+      <option value="minute">minute</option>
+      <option value="hour">hour</option>
+      <option value="day">day</option>
+      <option value="week">week</option>
+      <option value="month">month</option>
+    </select>
+  </div>
+  <mn-statistics-chart
+     ng-class="detailedChartCtl.zoom + '-chart'"
+     ng-if="!detailedChartCtl.reloadChartDirective"
+     bucket="{{detailedChartCtl.bucket}}"
+     zoom="{{detailedChartCtl.zoom}}"
+     node="{{detailedChartCtl.node || 'all'}}"
+     mn-d3="detailedChartCtl.options"
+     rbac="rbac"
+     items="detailedChartCtl.items"
+     config="detailedChartCtl.chart"
+     class="detailed-chart"></mn-statistics-chart>
+</div>

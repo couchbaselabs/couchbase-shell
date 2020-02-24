@@ -1,0 +1,114 @@
+<mn-element-cargo depot="alerts">
+  <div
+     class="interim alert alert-warning"
+     ng-repeat="message in gsiCtl.state.warnings">
+    <p>Warning: {{message}}</p>
+  </div>
+</mn-element-cargo>
+
+<div mn-spinner="!gsiCtl.state" style="padding-bottom: 120px;">
+
+  <div class="row flex-left margin-bottom-half relative">
+    <span>
+      <div class="simple-select-inside-label">
+        view by
+      </div>
+      <div class="simple-select margin-right-half">
+        <select ng-model="viewby" ng-init="viewby = 'viewby_index'">
+          <option value="viewby_index">index</option>
+          <option value="viewby_bucket">bucket</option>
+          <option value="viewby_node">server node</option>
+        </select>
+      </div>
+    </span>
+    <div
+       class="row filter-index"
+       mn-placeholder="filter indexes..."
+       mn-hide-button="true"
+       mn-search="gsiCtl.filterField">
+    </div>
+  </div>
+
+  <div ng-if="gsiCtl.state.indexes.length">
+    <div
+       ng-if="viewby == 'viewby_node'"
+       ng-repeat="(nodeName, group) in gsiCtl.state.byNodes track by nodeName">
+      <h4 class="margin-top-1-5">{{nodeName}}</h4>
+      <mn-gsi-table
+         list="group"
+         rbac="rbac"
+         node-name="{{nodeName}}"
+         pools="pools"
+         hide-column="node"
+         filter-field="gsiCtl.filterField">
+      </mn-gsi-table>
+    </div>
+
+    <div
+       ng-if="viewby == 'viewby_bucket'"
+       ng-repeat="(bucketName, group) in gsiCtl.state.byBucket track by bucketName">
+      <h4 class="margin-top-1-5">{{bucketName}}</h4>
+      <mn-gsi-table
+         list="group"
+         rbac="rbac"
+         pools="pools"
+         hide-column="bucket"
+         filter-field="gsiCtl.filterField">
+      </mn-gsi-table>
+    </div>
+
+    <mn-gsi-table
+       ng-if="viewby == 'viewby_index'"
+       list="gsiCtl.state.byID"
+       rbac="rbac"
+       pools="pools"
+       hide-column="index"
+       filter-field="gsiCtl.filterField">
+    </mn-gsi-table>
+  </div>
+
+  <div ng-if="!gsiCtl.state.indexes.length" class="zero-content">
+    You have no GSI indexes yet.
+  </div>
+
+  <div ng-init="stats = ['index_memory_quota','index_memory_used','index_remaining_ram','index_ram_percent','index/num_rows_returned','index/fragmentation','index/data_size','index/disk_size']">
+  <footer
+     class="footer-indexes"
+     ng-if="gsiCtl.state.indexes.length && rbac.bucketNames['.stats!read'].length"
+     ng-controller="mnFooterStatsController as footerStatsCtl">
+    <div class="column vertical-divider">
+      <span class="width-6">Index Service RAM Quota</span>
+      <span class="text-right width-6">{{footerStatsCtl.getLatestStat('index_memory_quota')/1024/1024 | number:1}} MB</span><br>
+      <span class="width-6">RAM Used/Remaining</span>
+      <span class="text-right width-6">{{footerStatsCtl.getLatestStat('index_memory_used')/1024/1024 | number:1}}/{{footerStatsCtl.getLatestStat('index_remaining_ram')/1024/1024 | number:1}} MB</span><br>
+      <span class="width-6">Index Service RAM Percent</span>
+      <span class="text-right width-6">{{footerStatsCtl.getLatestStat('index_ram_percent') | number:1}}%</span>
+    </div>
+    <div class="column vertical-divider">
+      <span class="width-6">Total Scan Rate</span>
+      <span class="text-right width-6">{{footerStatsCtl.getLatestStat('index/num_rows_returned') | number:0}}/sec</span><br>
+      <span class="width-6">Indexes Fragmentation</span>
+      <span class="text-right width-6">{{footerStatsCtl.getLatestStat('index/fragmentation') | number:1}}%</span>
+    </div>
+    <div class="column">
+      <ui-select
+         class="cbui-select cbui-select-small"
+         ng-model="footerStatsCtl.currentBucket"
+         theme="selectize"
+         ng-disabled="!rbac.bucketNames['.stats!read'].length"
+         on-select="footerStatsCtl.onSelectBucket($item)">
+        <ui-select-match class="ui-select-match">{{$select.selected}} </ui-select-match>
+        <ui-select-choices
+           class="ui-select-choices"
+           repeat="name in rbac.bucketNames['.stats!read'] | filter: $select.search">
+          <span class="select-item ellipsis" ng-bind-html="name | highlight: $select.search"></span>
+        </ui-select-choices>
+      </ui-select>
+      <span class="width-6">Indexes Data Size</span>
+      <span class="text-right width-6">{{footerStatsCtl.getLatestStat('index/data_size')/1024/1024 | number:1}} MB</span><br>
+      <span class="width-6">Indexes Disk Size</span>
+      <span class="text-right width-6">{{footerStatsCtl.getLatestStat('index/disk_size')/1024/1024 | number:1}} MB</span>
+    </div>
+  </footer>
+  </div>
+</div>

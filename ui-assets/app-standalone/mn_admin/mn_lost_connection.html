@@ -1,0 +1,5 @@
+<div
+   class="interim alert alert-warning"
+   ng-show="lostConnCtl.state.isActive">
+  <p>Lost connection to server at {{lostConnCtl.lostConnectionAt}}. Repeating in {{lostConnCtl.state.repeatAt}} seconds. <a  ng-click="lostConnCtl.retryNow()">Retry now</a></p>
+</div>

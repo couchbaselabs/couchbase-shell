@@ -1,0 +1,33 @@
+<div class="dialog-lg wb-history-dialog dialog-resizable" style="height:80vh;width:80vw">
+  <div class="panel-header">
+    <h2>Query Plan</h2>
+  </div>
+
+    <div class="panel-content" style="height:calc(100% - 120px)">
+      <span class="pills">
+        <a ng-click="set_show_plan(true)"
+           ng-class="{selected: show_plan}">Plan</a>
+        <a ng-click="set_show_plan(false)"
+           ng-class="{selected: !show_plan}"
+           class="resp-hide-xsml">Plan Text</a>
+        </span>
+            
+      <div class="wb-results-wrapper" style="height:calc(100% - 20px)">
+         <div class="wb-results-explain" ng-if="show_plan" qw-explain-viz-d3="plan" style="height:100%"></div>
+         <div class="wb-results-explain-text" ng-if="!show_plan" ui-ace="acePlanOptions" ng-model="planText" style="height:100%"></div>
+      </div>
+
+      </div>
+
+
+    <div class="panel-footer spaced scroll-shadow">
+      <span>
+        <button
+           type="submit"
+           class="outline"
+           ng-click="$close()">
+          Close
+        </button>
+      </span>
+    </div>
+</div>

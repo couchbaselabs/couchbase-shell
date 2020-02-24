@@ -1,0 +1,28 @@
+<div class="dialog-med">
+  <div  class="panel-header">
+    <h2>Copy Design Document</h2>
+  </div>
+  <form
+     ng-submit="viewsCopyDialogCtl.onSubmit()"
+     mn-spinner="viewsCopyDialogCtl.viewLoading">
+    <div class="panel-content forms">
+      <label for="copy_ddoc_ddoc_name">Document Name:</label>
+      <div class="formrow form-inline">
+        <label for="copy_ddoc_ddoc_name">_design/dev_</label>
+        <input
+           type="text"
+           autocorrect="off"
+           spellcheck="false"
+           autocapitalize="off"
+           id="copy_ddoc_ddoc_name"
+           ng-model="viewsCopyDialogCtl.ddoc.name">
+      </div>
+      <p><strong>NOTE:</strong> Development mode (_design/dev_) provides the opportunity to edit and test your map/reduce views against a subset of data without overloading the cluster.</p>
+    </div>
+    <div class="panel-footer">
+      <a ng-click="$dismiss()">Cancel</a>
+      <button
+         type="submit">Copy Design Doc</button>
+    </div>
+  </form>
+</div>

@@ -1,0 +1,44 @@
+<div class="indent-1 cursor-auto">
+  <div class="row items-top margin-bottom-1">
+    <div class="margin-right-half">
+      <div ng-click="$event.stopPropagation();">
+        <strong>Definition</strong> {{row.definition}}
+      </div>
+      <div>
+        <strong>Storage Mode</strong> {{row.storageMode | mnFormatStorageMode:pools.isEnterprise}} &nbsp;&nbsp;
+        <span ng-if="!row.partitioned && (row.hosts.length > 1)" class="margin-bottom-0">
+          <strong>Nodes</strong> {{row.hosts.join(', ')}}
+        </span>
+        <span ng-if="row.partitioned" class="margin-bottom-0">
+          <strong>Nodes</strong>
+          <span ng-repeat="(node, partitions) in row.partitionMap track by node">
+            {{node}} ({{partitions.length}} partition<span ng-show="partitions.length != 1">s</span>){{$last ? '' : ','}}
+          </span>
+        </span>
+      </div>
+      <div ng-show="row.lastScanTime && row.lastScanTime != 'NA'">
+         <strong>Last Scanned</strong> {{mnGsiItemDetailsCtl.getFormattedScanTime(row)}}
+       </div>
+    </div>
+    <div class="nowrap margin-right-1">
+      <button
+         class="outline"
+         ui-sref="app.admin.query.workbench({query: row.definition})">
+        Open in Workbench
+      </button>
+      <button
+         ng-if="rbac.cluster.bucket[row.bucket].n1ql.select.execute"
+         class="outline"
+         ng-click="mnGsiItemDetailsCtl.dropIndex(row)">Drop</button>
+    </div>
+  </div>
+  <mn-detail-stats
+     node-name="{{nodeName || 'all'}}"
+     bucket="{{row.bucket}}"
+     mn-title="Index Stats"
+     item-id="{{row.index}}"
+     service="index"
+     prefix="index"
+     ></mn-detail-stats>
+  <!-- nodes="statisticsNewCtl.nodes" -->
+</div>

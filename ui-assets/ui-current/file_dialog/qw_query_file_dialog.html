@@ -1,0 +1,20 @@
+<div id="bucket_file_dialog" style="width: 600px">
+	<h1 class="dialog_corner_radius">Save to...</h1>
+	<form class="simple-form">
+		<div class="sub_section" style="margin: 1em">
+			<table style="margin-left:0em"><tr style="white-space: nowrap">
+				<td style="margin-top: 0.25em; padding-right: 1em; vertical-align: middle">
+						Enter a name for the {{file_type}}file: </td>
+				<td width="100%">
+					<input type="text" id="pwd"
+						ng-model="file.name" focus-me="open" style="width: 100%"></input></td>
+			</tr></table>
+		</div>
+		<div class="save_cancel">
+			<button type="submit" class="save_button float_right"
+				ng-click="$close('ok')">OK</button>
+            <a type="submit" class="close"
+                ng-click="$dismiss('cancel')">Cancel</a>
+		</div>
+	</form>
+</div>

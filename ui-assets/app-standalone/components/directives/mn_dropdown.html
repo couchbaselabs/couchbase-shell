@@ -1,0 +1,11 @@
+<div class="mn-dropdown">
+  <div ng-class="[{active: showMenu}, iconClass || 'select']"
+       ng-if="isSlotFilled('select')"
+       ng-transclude="select"
+       ng-click="toggleMenu($event)"></div>
+  <div class="menu" ng-if="showMenu">
+    <div class="header" ng-transclude="header" ng-if="isSlotFilled('header')"></div>
+    <div class="body" ng-transclude="body"></div>
+    <div class="footer" ng-transclude="footer" ng-if="isSlotFilled('footer')"></div>
+  </div>
+</div>

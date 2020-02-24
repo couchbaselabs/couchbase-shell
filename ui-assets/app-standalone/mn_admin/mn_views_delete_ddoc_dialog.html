@@ -1,0 +1,21 @@
+<div class="dialog-med">
+  <div class="panel-header">
+    <h2>Confirm Delete Design Document</h2>
+  </div>
+  <div class="panel-content">
+    <div class="row flex-left">
+      <span class="icon fa-warning fa-2x red-3"></span>
+      <p>Warning: This action is not reversible.</p>
+    </div>
+    <p class="indent-3">
+      The views contained in <strong>{{viewsDeleteDdocDialogCtl.currentDdocName}}</strong> will no longer be accessible.
+      Are you sure you want to remove it?
+    </p>
+  </div>
+  <div class="panel-footer">
+    <a  ng-click="$dismiss()">Cancel</a>
+    <button
+       type="submit"
+       ng-click="viewsDeleteDdocDialogCtl.doDelete()">Delete Document</button>
+  </div>
+</div>

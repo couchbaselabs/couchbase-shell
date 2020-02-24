@@ -1,0 +1,34 @@
+<div class="row flex-left min-height-2"
+     ng-click="$event.stopPropagation();">
+  <h5
+     class="disclosure inline margin-right-1"
+     ng-class="{'disclosed': showStats}"
+     ng-click="showStats = !showStats;">
+    {{mnTitle}}
+  </h5>
+  <div class="text-right">
+    <select
+       ng-model="thisCtl.zoom"
+       ng-change="thisCtl.onSelectZoom()"
+       ng-if="showStats">
+      <option value="minute">minute</option>
+      <option value="hour">hour</option>
+      <option value="day">day</option>
+      <option value="week">week</option>
+      <option value="month">month</option>
+    </select>
+  </div>
+</div>
+<div class="row charts"
+     ng-if="showStats"
+     ng-click="$event.stopPropagation();">
+  <mn-statistics-chart
+     ng-repeat="config in thisCtl.charts track by config.id"
+     items="thisCtl.items"
+     ng-class="'statistics-' + config.size"
+     bucket="{{bucket}}"
+     node="{{nodeName || 'all'}}"
+     zoom="{{thisCtl.zoom}}"
+     class="panel"
+     config="config"></mn-statistics-chart>
+</div>

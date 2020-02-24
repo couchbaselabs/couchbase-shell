@@ -1,0 +1,36 @@
+<div class="fix-width-8">
+  <div class="panel-header">
+    <h2>Failover Multiple Nodes</h2>
+  </div>
+  <form
+     ng-submit="multipleFailoverDialogCtl.onSubmit()"
+     mn-spinner="multipleFailoverDialogCtl.viewLoading">
+    <div class="panel-content forms" style="padding:1rem 1.5rem .5rem 1.5rem;">
+      <div
+         class="error error-form"
+         ng-show="multipleFailoverDialogCtl.errors">{{multipleFailoverDialogCtl.errors}}</div>
+      <div
+         class="hide-select-all"
+         mn-selectable-nodes-list=""
+         nodes="multipleFailoverDialogCtl.nodes"
+         mn-selected-nodes-holder="multipleFailoverDialogCtl.mnSelectedNodesHolder"
+         mn-groups="multipleFailoverDialogCtl.mnGroups">
+      </div>
+      <p class="text-smaller row margin-bottom-0 margin-top-1">
+        <span class="icon fa-2x fa-warning orange-3 margin-right-1"></span>
+        <span>
+          <strong>Data Loss Warning:</strong> For hard failover of multiple nodes,
+          each Couchbase bucket must have at least as many replicas as the total
+          number of nodes failed over or you WILL lose data. Since hard failover
+          removes nodes immediately it may also result in failure of in-flight operations.
+        </span>
+      </p>
+    </div>
+    <div class="panel-footer">
+      <span class="row">
+        <a  ng-click="$dismiss()">Cancel</a>
+        <button type="submit">Failover Nodes</button>
+      </span>
+    </div>
+  </form>
+</div>

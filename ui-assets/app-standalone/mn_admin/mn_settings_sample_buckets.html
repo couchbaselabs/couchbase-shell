@@ -1,0 +1,70 @@
+<mn-element-cargo depot="alerts">
+  <div
+     ng-messages="settingsSampleBucketsCtl.state.warnings"
+     ng-message-multiple>
+    <div
+       ng-message="quota"
+       class="alert alert-warning"><p>Insufficient RAM quota available to add the selected sample data. Please free up at least {{settingsSampleBucketsCtl.state.warnings.quota}}MB of RAM quota in <a ui-sref="app.admin.settings.cluster">cluster settings</a>.</p></div>
+    <div
+       ng-message="rebalance"
+       class="alert alert-warning"><p>Can not load samples during rebalance.</p></div>
+    <div
+       ng-message="maxBucketCount"
+       class="alert alert-warning"><p>Maximum number of buckets has been reached. For optimal performance, no more than {{settingsSampleBucketsCtl.state.warnings.maxBucketCount}} buckets are allowed.</p></div>
+  </div>
+  <div
+     ng-show="settingsSampleBucketsCtl.state.attentions.noIndexOrQuery && settingsSampleBucketsCtl.isAnyBucketSelected()"
+     class="alert alert-warning"><p>This cluster does not contain an index or query node. Sample data will be installed without creating indexes.</p></div>
+</mn-element-cargo>
+
+<div>
+  <form
+     class="forms"
+     ng-submit="settingsSampleBucketsCtl.installSampleBuckets()"
+     mn-spinner="!settingsSampleBucketsCtl.state || settingsSampleBucketsCtl.viewLoading">
+    <h4>Sample Buckets</h4>
+    <p class="text-small">
+      Sample buckets contain example data, views, and indexes for your experimentation.
+    </p>
+    <p class="text-small red-1">
+      Sample buckets &mdash; like all buckets in Couchbase Server 5.0+ &mdash; can only be accessed by a user with privileges for that bucket.
+    </p>
+
+    <div class="row width-480 items-top margin-top-1-5">
+      <div class="column">
+        <h4>Available Samples</h4>
+        <div class="formrow checkbox-list">
+          <div ng-repeat="bucket in settingsSampleBucketsCtl.state.available">
+            <input
+               type="checkbox"
+               ng-false-value="0"
+               ng-true-value="{{bucket.quotaNeeded}}"
+               id="setup-sample-{{bucket.name}}"
+               ng-disabled="!rbac.cluster.buckets.create"
+               ng-model="settingsSampleBucketsCtl.selected[bucket.name]">
+            <label for="setup-sample-{{bucket.name}}">&nbsp;{{bucket.name}}</label>
+          </div>
+          <div class="text-smaller" ng-if="!settingsSampleBucketsCtl.state.available.length">
+            none
+          </div>
+        </div>
+      </div>
+      <div>
+        <h4>Installed Samples</h4>
+        <div class="formrow checkbox-list">
+          <div ng-repeat="bucket in settingsSampleBucketsCtl.state.installed">
+            {{bucket.name}}
+          </div>
+          <div class="text-smaller" ng-if="!settingsSampleBucketsCtl.state.installed.length">
+            none
+          </div>
+        </div>
+      </div>
+    </div>
+    <button
+       type="submit"
+       ng-show="rbac.cluster.buckets.create"
+       ng-disabled="settingsSampleBucketsCtl.isCreateButtonDisabled()">Load Sample Data</button>
+
+  </form>
+</div>

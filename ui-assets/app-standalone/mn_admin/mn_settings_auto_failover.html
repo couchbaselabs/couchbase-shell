@@ -1,0 +1,172 @@
+<div>
+  <div>
+    <div class="formrow">
+      <label class="inline">Node Availability</label>
+      <span
+         class="fa-stack icon-info"
+         uib-tooltip="After the timeout period set here — and up to the limit of actionable events — an unresponsive
+                      or malfunctioning node will be failed over. Any replica copies of data, indexes, or query engines will
+                      be promoted to active elsewhere in the cluster. Please note that this feature is only available when 3
+                      or more nodes are present in the cluster and that many other factors determine whether or not an auto-failover
+                      will take place. After it has recovered, a failed-over node can be brought back into the cluster with a
+                      rebalance or replaced with a new node."
+         tooltip-placement="auto right">
+        <span class="icon fa-circle-thin fa-stack-2x"></span>
+        <span class="icon fa-info fa-stack-1x"></span>
+      </span>
+      <div class="row flex-left text-medium flex-wrap">
+        <input
+           type="checkbox"
+           id="for-auto-failover-enable"
+           ng-disabled="!rbac.cluster.settings.write"
+           ng-model="settingsAutoFailoverCtl.autoFailoverSettings.enabled">
+        <label
+           for="for-auto-failover-enable"
+           class="margin-right-zero line-height-1-5">
+          Auto-failover
+        </label>
+        &nbsp;after&nbsp;
+        <input
+           type="number"
+           autocorrect="off"
+           spellcheck="false"
+           autocapitalize="off"
+           id="auto_failover_timeout"
+           ng-model="settingsAutoFailoverCtl.autoFailoverSettings.timeout"
+           ng-disabled="!settingsAutoFailoverCtl.autoFailoverSettings.enabled || !rbac.cluster.settings.write"
+           class="input-small input-short-1">
+        &nbsp;seconds&nbsp;
+        <span ng-if="adminCtl.poolDefault.compat.atLeast55 &&
+                     adminCtl.poolDefault.isEnterprise"
+              class="row">
+          for up to&nbsp;
+          <input
+             type="number"
+             autocorrect="off"
+             spellcheck="false"
+             autocapitalize="off"
+             id="auto_failover_maxcount"
+             ng-model="settingsAutoFailoverCtl.autoFailoverSettings.maxCount"
+             ng-disabled="!settingsAutoFailoverCtl.autoFailoverSettings.enabled || !rbac.cluster.settings.write"
+             class="input-small input-short-half">
+          &nbsp;event{{settingsAutoFailoverCtl.autoFailoverSettings.maxCount !== 1 ? "s" : ""}}
+        </span>
+      </div>
+      <div
+         class="error"
+         ng-show="settingsAutoFailoverCtl.saveAutoFailoverSettingsErrors.timeout">
+        {{settingsAutoFailoverCtl.saveAutoFailoverSettingsErrors.timeout}}
+      </div>
+      <div
+         class="error"
+         ng-show="settingsAutoFailoverCtl.saveAutoFailoverSettingsErrors.maxCount">
+        {{settingsAutoFailoverCtl.saveAutoFailoverSettingsErrors.maxCount}}
+      </div>
+      <div
+         ng-if="adminCtl.poolDefault.compat.atLeast55 && adminCtl.poolDefault.isEnterprise"
+         class="row flex-left text-medium flex-wrap">
+        <input
+           type="checkbox"
+           id="for-disk-failover-enable"
+           ng-disabled="!settingsAutoFailoverCtl.autoFailoverSettings.enabled || !rbac.cluster.settings.write"
+           ng-model="settingsAutoFailoverCtl.autoFailoverSettings.failoverOnDataDiskIssues.enabled">
+        <label
+           for="for-disk-failover-enable"
+           class="margin-right-zero line-height-1-5">
+          Auto-failover for sustained data disk read/write failures
+        </label>
+        &nbsp;after&nbsp;
+        <input
+           type="number"
+           autocorrect="off"
+           spellcheck="false"
+           autocapitalize="off"
+           id="auto_failover_disk_timeout"
+           ng-model="settingsAutoFailoverCtl.autoFailoverSettings.failoverOnDataDiskIssues.timePeriod"
+           ng-disabled="!settingsAutoFailoverCtl.autoFailoverSettings.enabled || !settingsAutoFailoverCtl.autoFailoverSettings.failoverOnDataDiskIssues.enabled || !rbac.cluster.settings.write"
+           class="input-small input-short-1">
+        &nbsp;seconds&nbsp;
+        <div
+           class="error"
+           ng-show="settingsAutoFailoverCtl.saveAutoFailoverSettingsErrors['failoverOnDataDiskIssues[timePeriod]']">
+          {{settingsAutoFailoverCtl.saveAutoFailoverSettingsErrors['failoverOnDataDiskIssues[timePeriod]']}}
+        </div>
+      </div>
+      <div ng-if="adminCtl.poolDefault.compat.atLeast55 &&
+                  adminCtl.poolDefault.isEnterprise">
+        <input
+           type="checkbox"
+           id="for-group-failover-enable"
+           ng-disabled="!settingsAutoFailoverCtl.autoFailoverSettings.enabled || !rbac.cluster.settings.write"
+           ng-model="settingsAutoFailoverCtl.autoFailoverSettings.failoverServerGroup">
+        <label for="for-group-failover-enable" class="margin-right-zero">
+          Enable auto-failover of server groups
+        </label>
+        <span
+           class="icon-info-warning raised"
+           uib-tooltip="DO NOT enable this unless you have set up homogenous server groups for failure scenarios
+                        (like racks/zones), have 3 or more server groups, and have the capacity to absorb the load of the failed-over group."
+           tooltip-placement="auto right">
+          <span class="icon fa-warning"></span>
+        </span>
+      </div>
+      <div ng-if="adminCtl.poolDefault.compat.atLeast65 &&
+                  adminCtl.poolDefault.isEnterprise">
+        <input
+           type="checkbox"
+           id="for-can-abort-rebalance"
+           ng-disabled="!settingsAutoFailoverCtl.autoFailoverSettings.enabled || !rbac.cluster.settings.write"
+           ng-model="settingsAutoFailoverCtl.autoFailoverSettings.canAbortRebalance">
+        <label for="for-can-abort-rebalance" class="margin-right-zero">
+          Auto-failover can abort rebalance
+        </label>
+      </div>
+    </div>
+
+    <div class="margin-top2 margin-bottom-1">
+      <p
+         class="disclosure"
+         ng-class="{disclosed: showAutoRepro}"
+         ng-click="showAutoRepro = !showAutoRepro">
+        For Ephemeral Buckets
+      </p>
+      <div ng-show="showAutoRepro" class="margin-top-half indent-1-5">
+        <div class="row flex-left text-medium flex-wrap">
+          <input
+             type="checkbox"
+             ng-disabled="!rbac.cluster.settings.write"
+             ng-model="settingsAutoFailoverCtl.reprovisionSettings.enabled"
+             id="for-auto-reprovision-enable">
+          <label for="for-auto-reprovision-enable" class="margin-right-zero">
+            Enable auto-reprovisioning
+          </label>
+          &nbsp;for up to&nbsp;
+          <input
+             type="number"
+             autocorrect="off"
+             spellcheck="false"
+             autocapitalize="off"
+             id="for-max-nodes"
+             ng-model="settingsAutoFailoverCtl.reprovisionSettings.max_nodes"
+             ng-disabled="!settingsAutoFailoverCtl.reprovisionSettings.enabled || !rbac.cluster.settings.write"
+             class="input-small input-short-half">
+          &nbsp;node{{settingsAutoFailoverCtl.reprovisionSettings.max_nodes !== 1 ? "s" : ""}}&nbsp;
+          <span
+             class="fa-stack icon-info"
+             uib-tooltip="For an unresponsive node with Ephemeral Buckets, you may choose to have its replicas
+                          promoted to active if it becomes responsive again. This avoids data loss, but leaves
+                          the cluster in an unbalanced state that will require a rebalance."
+             tooltip-placement="auto top">
+            <span class="icon fa-circle-thin fa-stack-2x"></span>
+            <span class="icon fa-info fa-stack-1x"></span>
+          </span>
+          <div
+             class="error"
+             ng-show="settingsAutoFailoverCtl.postAutoReprovisionSettingsErrors.maxNodes">
+            {{settingsAutoFailoverCtl.postAutoReprovisionSettingsErrors.maxNodes}}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

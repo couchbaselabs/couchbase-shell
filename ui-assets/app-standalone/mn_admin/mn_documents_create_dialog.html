@@ -1,0 +1,29 @@
+<div class="dialog-small">
+  <div class="panel-header">
+    <h2>Create Document</h2>
+  </div>
+  <form
+     mn-spinner="viewLoading"
+     ng-submit="documentsCreateDialogCtl.onSubmit()"
+     class="forms">
+    <div class="panel-content">
+      <div
+         class="error"
+         ng-show="documentsCreateDialogCtl.error">{{documentsCreateDialogCtl.error}}</div>
+      <div class="formrow">
+        <label for="new_doc_id">Document ID</label>
+        <input
+           type="text"
+           autocorrect="off"
+           spellcheck="false"
+           autocapitalize="off"
+           id="new_doc_id"
+           ng-model="documentsCreateDialogCtl.documentId">
+      </div>
+    </div>
+    <div class="panel-footer">
+      <a ng-click="$dismiss()">Cancel</a>
+      <button type="submit">Save Document</button>
+    </div>
+  </form>
+</div>

@@ -1,0 +1,123 @@
+<div>
+  <div ng-class="{fiter_opened: viewsEditingCtl.isFilterOpened}">
+    <div ng-show="rbac.cluster.bucket[viewsEditingCtl.currentBucketName].data.docs.read">
+      <div ng-click="viewsEditingCtl.toggleSampleDocument()">
+        <div class="row margin-bottom-half">
+          <h4
+             class="disclosure"
+             ng-class="{disclosed: !viewsEditingCtl.isSampleDocumentClosed}">
+            Sample Document: <span class="text-normal">{{viewsEditingCtl.state.sampleDocument.meta.id}}</span>
+          </h4>
+          <span>
+            <button
+               class="outline"
+               ng-hide="viewsEditingCtl.isSampleDocumentClosed"
+               ng-disabled="viewsEditingCtl.isPreviewRandomDisabled()"
+               ng-click="!viewsEditingCtl.isPreviewRandomDisabled() && viewsEditingCtl.previewRandomDocument($event)">Load Another Document</button>
+            <button
+               class="outline"
+               ng-hide="viewsEditingCtl.isSampleDocumentClosed"
+               ng-disabled="viewsEditingCtl.isEditDocumentDisabled()"
+               ng-click="!viewsEditingCtl.isEditDocumentDisabled() && viewsEditingCtl.goToDocumentsSection($event)">Edit Document</button>
+          </span>
+        </div>
+      </div>
+
+      <div
+         class="row items-top padded text-small"
+         ng-hide="viewsEditingCtl.isSampleDocumentClosed"
+         mn-spinner="viewsEditingCtl.awaitingSampleDocument()">
+        <div
+           class="width-8 column read-only-editor"
+           spellcheck="false"
+           ng-if="!viewsEditingCtl.state.sampleDocument.warnings"
+           ng-model="viewsEditingCtl.state.sampleDocument.jsonJSON"
+           ui-codemirror="viewsEditingCtl.sampleDocumentOptions"></div>
+        <div
+           class="width-4 read-only-editor"
+           spellcheck="false"
+           ng-if="!viewsEditingCtl.state.sampleDocument.warnings"
+           ng-model="viewsEditingCtl.state.sampleDocument.metaJSON"
+           ui-codemirror="viewsEditingCtl.sampleMetaOptions"></div>
+        <div
+           class="zero-content width-12"
+           ng-show="viewsEditingCtl.state.sampleDocument.warnings"
+           ng-messages="viewsEditingCtl.state.sampleDocument.warnings">
+          <span ng-message="documentDoesNotExist">A document with that ID does not exist.</span>
+          <span ng-message="largeDocument">Large documents are not allowed for preview.</span>
+          <span ng-message="thereAreNoDocs">There are no documents to display.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="row margin-top-2 margin-bottom-half">
+      <h4>{{viewsEditingCtl.isSpatial ? "Spatial" : "View"}} Index Code</h4>
+      <span>
+        <button
+           ng-hide="viewsEditingCtl.isViewsClosed"
+           ng-disabled="viewsEditingCtl.isViewsEditorControllsDisabled()"
+           ng-click="!viewsEditingCtl.isViewsEditorControllsDisabled() && viewsEditingCtl.saveAs($event)">Make Copy</button>
+        <button
+           ng-hide="viewsEditingCtl.isViewsClosed"
+           ng-disabled="viewsEditingCtl.isViewsEditorControllsDisabled()"
+           ng-click="!viewsEditingCtl.isViewsEditorControllsDisabled() && viewsEditingCtl.save($event)">Save Changes</button>
+      </span>
+    </div>
+    <div
+       class="ellipsis error"
+       ng-show="viewsEditingCtl.state.viewsError.reason">
+      {{viewsEditingCtl.state.viewsError.reason}}
+    </div>
+    <div
+       ng-hide="viewsEditingCtl.isViewsClosed"
+       class="row padded text-small"
+       mn-spinner="viewsEditingCtl.awaitingViews()">
+      <div
+         class="column"
+         ng-class="{'width-8': !viewsEditingCtl.isSpatial, 'read-only-editor': viewsEditingCtl.isViewsEditorControllsDisabled()}">
+        <label for="viewcode_map">Map</label>
+        <textarea
+           autocorrect="off"
+           autocapitalize="off"
+           spellcheck="false"
+           class="width-4 text-small"
+           ng-if="viewsEditingCtl.isSpatial"
+           spellcheck="false"
+           ng-model="viewsEditingCtl.state.currentDocument.doc.json.spatial[viewsEditingCtl.viewId]"
+           ui-codemirror="viewsEditingCtl.viewsOptions"
+           ></textarea>
+        <textarea
+           ng-if="!viewsEditingCtl.isSpatial"
+           autocorrect="off"
+           autocapitalize="off"
+           spellcheck="false"
+           ng-model="viewsEditingCtl.state.currentDocument.doc.json.views[viewsEditingCtl.viewId].map"
+           ui-codemirror="viewsEditingCtl.viewsOptions"
+           ></textarea>
+      </div>
+      <div
+         ng-class="{'read-only-editor': viewsEditingCtl.isViewsEditorControllsDisabled()}"
+         ng-if="!viewsEditingCtl.isSpatial"
+         class="width-4">
+        <label for="viewcode_reduce">Reduce
+          <span class="text-normal">(built in:
+            <a ng-click="viewsEditingCtl.setReduceValue('_count')" >_count</a>,
+            <a ng-click="viewsEditingCtl.setReduceValue('_sum')" >_sum</a>,
+            <a ng-click="viewsEditingCtl.setReduceValue('_stats')" >_stats</a>)
+          </span>
+        </label>
+        <textarea
+           class="text-small"
+           placeholder="(optional)"
+           autocorrect="off"
+           autocapitalize="off"
+           spellcheck="false"
+           ng-change="viewsEditingCtl.onReduceChange(viewsEditingCtl.state.currentDocument.doc.json.views[viewsEditingCtl.viewId])"
+           ng-model="viewsEditingCtl.state.currentDocument.doc.json.views[viewsEditingCtl.viewId].reduce"
+           ui-codemirror="viewsEditingCtl.viewsOptions"
+           ></textarea>
+      </div>
+    </div>
+    <ui-view ng-if="viewsEditingCtl.state && !viewsEditingCtl.state.isEmptyState"></ui-view>
+  </div>
+</div>

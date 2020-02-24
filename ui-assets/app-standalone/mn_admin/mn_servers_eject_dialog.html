@@ -1,0 +1,29 @@
+<div class="dialog-med">
+  <div class="panel-header">
+    <h2>Confirm Server Removal</h2>
+  </div>
+  <div
+     class="panel-content"
+     mn-spinner="serversEjectDialogCtl.viewLoading">
+    <div class="row flex-left">
+      <span class="icon fa-warning fa-2x red-3"></span>
+      <p>Warning: Removing this server will...</p>
+    </div>
+    <div class="indent-3">
+      <ul class="margin-bottom0" ng-messages="serversEjectDialogCtl.warningFlags" ng-messages-multiple>
+        <li ng-message="isThereIndex">Remove indexes from the cluster and may cause queries to fail if there are no replica indexes</li>
+        <li ng-message="isThereReplica">May cause some replica indexes to be lost</li>
+        <li ng-message="isLastIndex">Remove the last index node from the cluster so new indexes can’t be created</li>
+        <li ng-message="isLastQuery">Remove the last query node from the cluster so queries can’t be run</li>
+        <li ng-message="isLastFts">Remove the last full text node from the cluster so full text search can’t be run</li>
+        <li ng-message="isLastCBAS"><p>Remove the last analytics node from the cluster so analytics can’t be run</li>
+        <li ng-message="isLastEventing"><p>Remove the last eventing node from the cluster so eventing can’t be run</li>
+        <li ng-message="isKv">Reduce cache capacity across all data buckets</li>
+      </ul>
+    </div>
+  </div>
+  <div class="panel-footer">
+    <a  ng-click="$dismiss()">Cancel</a>
+    <button ng-click="serversEjectDialogCtl.doEjectServer()">Remove Server</button>
+  </div>
+</div>

@@ -1,0 +1,17 @@
+<div class="dialog-small">
+  <h2 class="panel-header">
+    Delete Group
+  </h2>
+  <form ng-submit="$close()">
+    <div class="panel-content">
+      <div class="row flex-left">
+        <span class="icon fa-warning fa-2x red-3"></span>
+          <p>Delete this group and all its charts?</p>
+      </div>
+    </div>
+    <div class="panel-footer">
+      <a ng-click="$dismiss()">Cancel</a>
+      <button type="submit" mn-focus="">Delete Group</button>
+    </div>
+  </form>
+</div>

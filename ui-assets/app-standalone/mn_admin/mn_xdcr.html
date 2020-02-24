@@ -1,0 +1,190 @@
+<mn-element-cargo depot="actions">
+  <div class="header-controls resp-sml">
+    <a
+       ng-show="(rbac.cluster.xdcr.remote_clusters.read && xdcrCtl.references.filtered.length) && rbac.cluster.xdcr.settings.read && rbac.cluster.xdcr.settings.write && rbac.cluster.bucket['.'].xdcr.write"
+       ng-click="xdcrCtl.createReplications()"
+       class="resp-hide-sml">
+      ADD REPLICATION
+    </a>
+    <a
+       ng-show="rbac.cluster.xdcr.remote_clusters.write"
+       ng-click="xdcrCtl.createClusterReference()"
+       class="resp-hide-sml">
+      ADD REMOTE
+    </a>
+  </div>
+</mn-element-cargo>
+
+<div mn-spinner="(rbac.cluster.xdcr.remote_clusters.read && !xdcrCtl.references) || (rbac.cluster.tasks.read && !adminCtl.tasks)" min-height="300px">
+  <div ng-show="rbac.cluster.xdcr.remote_clusters.read">
+    <h4>Remote Clusters</h4>
+    <div
+       mn-spinner="xdcrCtl.showReferencesSpinner"
+       min-height="66px">
+      <div class="cbui-table" mn-sortable-table ng-if="xdcrCtl.references.filtered.length">
+        <div class="cbui-table-header padding-left">
+          <span class="cbui-table-cell flex-grow-1-5">
+            <span
+               mn-sortable-title="name"
+               sort-by-default="true"
+               class="sorter">name</span>
+          </span>
+          <span class="cbui-table-cell flex-grow-1-5">
+            <span class="sorter">IP/hostname</span>
+          </span>
+          <span class="cbui-table-cell flex-grow-1-5 resp-hide-sml"></span>
+          <span class="cbui-table-cell flex-grow-half resp-hide-sml"></span>
+        </div>
+
+        <section
+           ng-if="xdcrCtl.references.filtered.length"
+           ng-repeat="row in xdcrCtl.references.filtered | orderBy:'name' track by row.name"
+           class="has-hover"
+           ng-click="xdcrCtl.toggleDetails(row.name)">
+          <div class="cbui-tablerow">
+            <span
+               class="cbui-table-cell flex-grow-1-5"
+               title="{{row.name}}">{{row.name}}</span>
+            <span class="cbui-table-cell flex-grow-1-5">
+              <a
+                 href="{{ window.location.protocol + '//' + row.hostname + '/index.html#/analytics/?statsHostname=' + (row.hostname | encodeURIComponent) }}"
+                 ng-click="$event.stopPropagation();">
+                {{row.hostname}}
+              </a>
+            </span>
+            <span class="cbui-table-cell flex-grow-1-5 resp-hide-sml"></span>
+            <span class="cbui-table-cell flex-grow-half resp-hide-sml"></span>
+          </div>
+          <div
+             class="cbui-tablerow-expanded"
+             ng-if="xdcrCtl.isDetailsOpened(row.name)">
+            <div class="width-12 text-right margin-top-half">
+              <button
+                 ng-show="rbac.cluster.xdcr.remote_clusters.write"
+                 ng-click="xdcrCtl.deleteClusterReference(row)"
+                 class="outline">
+                Delete
+              </button>
+              <button
+                 ng-show="rbac.cluster.xdcr.remote_clusters.write"
+                 ng-click="xdcrCtl.editClusterReference(row)">
+                Edit
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div
+         ng-if="!xdcrCtl.references.filtered.length"
+         class="zero-content">
+        No remote clusters defined. Use ADD REMOTE to set one up.
+      </div>
+
+    </div>
+  </div>
+
+  <script type="text/ng-template" id="filterTooltipTemplate.html">
+    <div>
+      <h5 class="margin-bottom-quarter">Active Filters</h5>
+      <div class="filter relative padding-left-1" ng-show="row.filterExpression">{{row.filterExpression}}</div>
+      <div class="filter relative padding-left-1" ng-show="row.filterExpiration">Do not replicate document expirations</div>
+      <div class="filter relative padding-left-1" ng-show="row.filterDeletion">Do not replicate DELETE operations</div>
+      <div class="filter relative padding-left-1" ng-show="row.filterBypassExpiry">Remove TTL from replicated items</div>
+   </div>
+  </script>
+
+<!-- Outgoing Replications ************************************************ -->
+  <div
+     ng-show="rbac.cluster.tasks.read && xdcrCtl.references.filtered.length"
+     class="margin-top-1-5">
+    <h4>Outgoing Replications</h4>
+    <div
+       mn-spinner="adminCtl.showTasksSpinner"
+       min-height="66px">
+      <div class="cbui-table" mn-sortable-table ng-if="adminCtl.tasks.tasksXDCR.length">
+        <div class="cbui-table-header">
+          <span class="cbui-table-cell">
+            <span
+               mn-sortable-title="source"
+               sort-by-default="true"
+               class="sorter">source bucket</span>
+          </span>
+          <span class="cbui-table-cell">
+            <span
+               mn-sortable-title="target"
+               sort-function="xdcrCtl.toBucket(value)"
+               class="sorter">destination bucket</span>
+          </span>
+          <span class="cbui-table-cell">
+            <span
+               mn-sortable-title="remote"
+               sort-function="xdcrCtl.toCluster(value)"
+               class="sorter">remote cluster</span>
+          </span>
+          <span class="cbui-table-cell">
+            <span
+               mn-sortable-title="status"
+               sort-function="xdcrCtl.humanStatus(value)"
+               class="sorter">status</span>
+          </span>
+        </div>
+
+        <section
+           ng-if="adminCtl.tasks.tasksXDCR.length"
+           ng-repeat="row in adminCtl.tasks.tasksXDCR | orderBy:mnSortableTable.sortableTableProperties.orderBy:mnSortableTable.sortableTableProperties.invert track by row.id"
+           class="has-hover"
+           ng-click="xdcrCtl.toggleDetails(row.id)"
+           ng-class="[xdcrCtl.isDetailsOpened(row.id) ? (xdcrCtl.humanStatus(row) == 'replicating' ? 'dynamic_healthy' : 'dynamic_warmup') : '']">
+          <div
+             class="cbui-tablerow"
+             ng-class="[!xdcrCtl.isDetailsOpened(row.id) ? (xdcrCtl.humanStatus(row) == 'replicating' ? 'dynamic_healthy' : 'dynamic_warmup') : '']">
+            <span
+               class="cbui-table-cell"
+               title="{{row.source}}">
+              {{row.source}}
+              <span
+                 class="label lt-blue"
+                 ng-if="row.filterExpression || row.filterExpiration || row.filterDeletion || row.filterBypassExpiry"
+                 ng-click="$event.stopPropagation()"
+                 uib-tooltip-template="'filterTooltipTemplate.html'"
+                 tooltip-placement="auto top"
+                 tooltip-append-to-body="true"
+                 tooltip-trigger="'mouseenter'">
+                filter
+              </span>
+            </span>
+            <span
+               class="cbui-table-cell"
+               title="{{xdcrCtl.to(row)}}">
+              {{xdcrCtl.toBucket(row)}}
+            </span>
+            <span class="cbui-table-cell">
+              {{xdcrCtl.toCluster(row)}}
+            </span>
+            <span class="cbui-table-cell">
+              {{xdcrCtl.humanStatus(row)}}
+              <span ng-if="xdcrCtl.humanStatus(row) !== 'paused'" class="loading"></span>
+              <span
+                 ng-show="row.errors.length"
+                 ng-click="$event.stopPropagation();xdcrCtl.showReplicationErrors(row)"
+                 class="label replications badge orange-1">
+                {{row.errors.length}}
+              </span>
+            </span>
+          </div>
+          <mn-xdcr-item-details
+             row="row"
+             rbac="rbac"
+             class="cbui-tablerow-expanded"
+             ng-if="xdcrCtl.isDetailsOpened(row.id)">
+          </mn-xdcr-item-details>
+        </section>
+      </div>
+
+      <div ng-if="!adminCtl.tasks.tasksXDCR.length" class="zero-content">
+        There are currently no replications defined. Use ADD REPLICATION to set one up.
+      </div>
+
+  </div>
+</div>

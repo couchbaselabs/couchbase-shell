@@ -1,0 +1,23 @@
+<div class="dialog-small">
+  <div class="panel-header">
+    <h2>Confirm Delete</h2>
+  </div>
+  <form
+     ng-submit="rolesGroupsDeleteDialogCtl.onSubmit()"
+     mn-spinner="rolesGroupsDeleteDialogCtl.viewLoading">
+    <div class="panel-content">
+      <div class="row flex-left">
+        <span class="icon fa-warning fa-2x red-3"></span>
+        <p>
+          Warning: This action is not reversible. Users assigned to only this
+          group will not have any access until you reassign them.
+          <br>Delete {{rolesGroupsDeleteDialogCtl.grolesGroupsId}}?
+        </p>
+      </div>
+    </div>
+    <div class="panel-footer">
+      <a ng-click="$dismiss()">Cancel</a>
+      <button type="submit">Delete Group</button>
+    </div>
+  </form>
+</div>

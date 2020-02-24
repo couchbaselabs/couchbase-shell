@@ -1,0 +1,27 @@
+<div class="panel dialog width-530 text-center">
+  <div class="panel-content">
+    <img
+     src="/cb_logo_red_withtext.svg"
+     height="157"
+     width="373">
+  <div class="text-normal margin-top-1">
+    {{wizardWelcomeCtl.implementationVersion | mnPrettyVersion}}
+  </div>
+  <button
+     mn-focus
+     ng-click="wizardWelcomeCtl.setIsNewClusterFlag(true)"
+     class="btn-lg margin-top-2"
+     data-ui-sref="app.wizard.setupNewCluster">Setup New Cluster</button><br>
+  <button
+     ng-click="wizardWelcomeCtl.setIsNewClusterFlag(false)"
+     class="btn-lg margin-bottom-half"
+     style="margin-top: 12px;"
+     data-ui-sref="app.wizard.joinCluster">Join Existing Cluster</button>
+  </div>
+</div>
+<a
+  href="https://docs.couchbase.com/server/6.5/install/install-platforms.html#supported-browsers"
+  target="_blank"
+  class="supported-browsers">
+ Chrome, Firefox, Edge, Safari
+</a>

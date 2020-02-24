@@ -1,0 +1,223 @@
+<div ng-controller="qwDocEditorController as dec" class="doc-editor">
+
+  <mn-element-cargo
+     depot="actions"
+     ng-if="dec.options.selected_bucket">
+    <div class="header-controls">
+      <a
+       ui-sref="app.admin.buckets.documents.control.list({bucket: dec.options.selected_bucket, statsHostname: 'all'})"
+       class="resp-hide-sml">
+        CLASSIC <span class="resp-hide-xsml">EDITOR</span>
+      </a>
+
+      <a ng-click="dec.createBlankDoc()"
+       ng-show="dec.rbac.cluster.bucket[dec.options.selected_bucket].data.docs.upsert">
+        ADD <span class="resp-hide-xsml">DOCUMENT</span>
+      </a>
+    </div>
+  </mn-element-cargo>
+
+<!-- row of controls for the query ----------------------------------------- -->
+  <form name="searchForm">
+  <div class="controls resp-med">
+
+   <div class="column">
+     <div class="row row-min"><label>Bucket</label>
+        <a type="button" ng-click="dec.getTopKeys()" class="text-smaller">show top keys</a>
+      </div>
+      <ui-select
+        on-select="dec.bucketChanged($item)"
+        ng-model="dec.options.selected_bucket"
+        theme="selectize"
+        class="cbui-select">
+      <ui-select-match class="ui-select-match">
+        {{$select.selected}}
+      </ui-select-match>
+      <ui-select-choices
+         class="ui-select-choices"
+         repeat="bucket in dec.buckets | filter: $select.search">
+        <span class="select-item ellipsis" ng-bind-html="bucket | highlight: $select.search"></span>
+      </ui-select-choices>
+     </ui-select>
+    </div>
+
+    <div class="column">
+      <div>
+        <label class="inline">Limit</label>
+        <span
+           class="fa-stack icon-info"
+           uib-tooltip-html="'How many documents to retrieve at once (max 200).'"
+           tooltip-placement="auto top"
+           tooltip-append-to-body="true"
+           tooltip-trigger="'mouseenter'">
+          <span class="icon fa-circle-thin fa-stack-2x"></span>
+          <span class="icon fa-info fa-stack-1x"></span>
+        </span>
+      </div>
+      <input
+         type="number"
+         name="limit"
+         min="1"
+         max="200"
+         required
+         ng-disabled="dec.options.doc_id.length"
+         ng-submit="dec.retrieveDocs()"
+         ng-model="dec.options.limit"
+         ng-class="{'ng-invalid-number': searchForm.limit.$invalid}"
+         >
+    </div>
+
+    <div class="column">
+      <div>
+        <label class="inline">Offset</label>
+        <span class="fa-stack icon-info"
+           uib-tooltip-html="'Start showing documents after this many in the entire set.'"
+           tooltip-placement="auto top" tooltip-append-to-body="true" tooltip-trigger="'mouseenter'">
+            <span class="icon fa-circle-thin fa-stack-2x"></span>
+            <span class="icon fa-info fa-stack-1x"></span>
+        </span>
+      </div>
+      <input
+         type="number"
+         name="offset"
+         min="0"
+         required
+         ng-disabled="dec.options.doc_id.length"
+         ng-submit="dec.retrieveDocs()"
+         ng-class="{'ng-invalid-number': searchForm.offset.$invalid}"
+         ng-model="dec.options.offset">
+    </div>
+
+    <div class="column flex-grow-1">
+      <div class="row row-min">
+        <span>
+          <label
+             class="inline"
+             ng-disabled="(dec.options.where_clause.length > 0)">
+            Document ID
+          </label>
+          <span
+             class="fa-stack icon-info"
+             uib-tooltip-html="'Find a specific document, specify a range of IDs, or leave blank to retrieve all or use a WHERE clause.'"
+             tooltip-placement="auto top"
+             tooltip-append-to-body="true"
+             tooltip-trigger="'mouseenter'">
+            <span class="icon fa-circle-thin fa-stack-2x"></span>
+            <span class="icon fa-info fa-stack-1x"></span>
+          </span>
+        </span>
+        <a ng-click="dec.show_id(!dec.options.show_id)" class="text-smaller">
+          <span ng-if="dec.options.show_id">show range</span>
+          <span ng-if="!dec.options.show_id">hide range</span>
+        </a>
+      </div>
+      <input
+         type="text"
+         ng-model="dec.options.doc_id"
+         ng-if="dec.options.show_id"
+         ng-submit="dec.retrieveDocs()"
+         ng-disabled="(dec.options.where_clause.length > 0)"
+         placeholder="optional..."
+         class="width-12">
+      <input
+         type="text"
+         ng-if="!dec.options.show_id"
+         ng-model="dec.options.doc_id_start"
+         ng-submit="dec.retrieveDocs()"
+         ng-disabled="(dec.options.where_clause.length > 0)"
+         placeholder="starting..."
+         class="width-6">
+      <input
+         type="text"
+         ng-if="!dec.options.show_id"
+         ng-model="dec.options.doc_id_end"
+         ng-submit="dec.retrieveDocs()"
+         ng-disabled="(dec.options.where_clause.length > 0)"
+         placeholder="ending..."
+         class="width-6">
+    </div>
+
+    <div class="column flex-grow-2">
+      <label
+         class="inline"
+         ng-disabled="!dec.can_use_n1ql() || (dec.options.doc_id.length > 0) || ((dec.options.doc_id_start.length || dec.options.doc_id_end.length))">
+        N1QL WHERE
+      </label>
+      <span
+         class="fa-stack icon-info"
+         uib-tooltip-html="'Show only documents that satisfy a N1QL WHERE clause such as meta().id = &quot;some_id&quot; and type = &quot;a_type&quot;'"
+         tooltip-placement="auto top"
+         tooltip-append-to-body="true"
+         tooltip-trigger="'mouseenter'">
+        <span class="icon fa-circle-thin fa-stack-2x"></span>
+        <span class="icon fa-info fa-stack-1x"></span>
+      </span>
+      <br>
+      <input
+         type="text"
+         ng-model="dec.options.where_clause"
+         ng-submit="dec.retrieveDocs()"
+         ng-disabled="!dec.can_use_n1ql() || (dec.options.doc_id.length > 0) || ((dec.options.doc_id_start.length || dec.options.doc_id_end.length))"
+         class="width-12"
+         placeholder="{{dec.has_indexes() ? 'optional...' : 'no indexes available...'}}">
+    </div>
+
+    <div style="display:none;" class="resp-show-sml margin-top-half width-12"></div>
+    <div class="column">
+      <button
+         ng-disabled="searchForm.$invalid || !dec.options.selected_bucket"
+         ng-click="dec.retrieveDocs()"
+         class="fix-width-3">
+          Retrieve Docs
+        <span ng-if="dec.options.queryBusy" class="icon-button">
+          <span class="icon fa-spinner fa-spin fa-pulse"></span>
+        </span>
+      </button>
+    </div>
+  </div>
+  </form>
+
+<!-- row for result query text, toggle, & next/previous buttons *********** -->
+  <div
+     ng-if="dec.options.selected_bucket && dec.options.current_query.length > 0"
+     class="row resp-sml margin-bottom-half">
+    <div class="text-small resp-margin-sml">
+      <strong><span ng-if="dec.resultSize()">{{dec.resultSize()}}</span>
+       Results for</strong> <em>{{dec.options.current_query}}</em>
+    </div>
+    <div class="row text-small resp-margin-sml">
+      <label for="show_tables" class="toggle-control">
+        <input
+           type="checkbox" id="show_tables"
+           ng-model="dec.options.show_tables"
+           ng-enabled="true">
+        <span class="toggle-control-body"></span>
+      </label>
+      enable field editing
+    </div>
+    <div class="text-right nowrap pagination padding-right-min">
+      <a
+         ng-click="dec.prevBatch()"
+         ng-class="{'disabled-link' : dec.options.offset <= 0 || dec.options.doc_id}">
+        &lt; prev batch</a>
+      <span class="text-smaller grayblack-3">&nbsp; |</span>
+      <a
+         ng-click="dec.nextBatch()"
+         ng-class="{'disabled-link' : dec.options.doc_id || dec.options.current_result.length == 0 || dec.options.current_query.startsWith('top keys')}">
+        next batch &gt;</a>
+    </div>
+  </div>
+
+<!-- results (documents or status messages) ***************************** -->
+  <div ng-if="dec.options.queryBusy">Retrieving results...</div>
+  <div>
+    <div class="row" ng-if="dec.options.selected_bucket && dec.options.current_query.length > 0">
+      <div class="doc-editor-results show-scrollbar">
+        <qw-json-table-editor
+           ng-if="!dec.options.queryBusy"
+           data="dec.options.current_result"
+           controller="dec">
+      </div>
+    </div>
+  </div>
+</div>

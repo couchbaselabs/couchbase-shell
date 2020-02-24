@@ -1,0 +1,496 @@
+<div
+   ng-if="rbac.cluster.settings.read"
+   mn-launchpad
+   launchpad-source="adminCtl.launchpadSource"
+   launchpad-id="adminCtl.launchpadId"></div>
+<div
+   ui-view="lostConnection">
+</div>
+
+<div class="row">
+  <div class="red-1 nowrap text-smaller margin-left-1">
+    <span ng-show="adminCtl.isDeveloperPreview">PREVIEW MODE &#8231; UNSUPPORTED &#8231; NOT FOR USE IN PRODUCTION</span>
+  </div>
+  <nav class="nav-header">
+    <a ng-click="adminCtl.toggleProgressBar()" class="activities" ng-if="rbac.cluster.tasks.read">
+      activity
+      <span
+         ng-if="adminCtl.filterTasks(adminCtl.tasks.running, true).length > 0"
+         class="label badge">
+        {{adminCtl.filterTasks(adminCtl.tasks.running, true).length}}
+      </span>
+    </a>
+<!-- activity menu ******************************************************** -->
+    <div class="relative inline" ng-if="rbac.cluster.tasks.read">
+      <div
+         mn-drag-and-drop
+         base-corner-right="true"
+         class="tasks-progress panel dialog-med activity-panel enable-ng-animation"
+         ng-if="!adminCtl.isProgressBarClosed">
+        <div class="text-right grayblack-2">
+          <span ng-click="adminCtl.toggleProgressBar()" class="cursor-pointer close-x">
+            X
+          </span>
+        </div>
+
+        <h4 ng-if="adminCtl.tasks.tasksRebalance.statusId">Rebalance</h4>
+        <div ng-if="adminCtl.tasks.tasksRebalance">
+          <p class="desc relative"
+             ng-if="adminCtl.tasks.tasksRebalance.statusId">
+            <span class="nowrap" ng-if="adminCtl.tasks.tasksRebalance.stageInfo.startTime">
+              <strong>start</strong> {{adminCtl.tasks.tasksRebalance.stageInfo.startTime | date:'d MMM HH:mm:ss'}}
+            </span>
+            <span ng-show="adminCtl.tasks.tasksRebalance.stageInfo.completedTime.status" class="nowrap margin-left-half">
+              <strong>complete</strong> {{adminCtl.tasks.tasksRebalance.stageInfo.completedTime.time | date:'d MMM HH:mm:ss'}}
+            </span>
+            <span class="nowrap margin-left-half" ng-class="{'rebalance-status-inprogress' : adminCtl.tasks.tasksRebalance.status == 'running'}">
+              <strong>status</strong> {{adminCtl.tasks.tasksRebalance.status == "running" ? "in progress" :
+              adminCtl.tasks.tasksRebalance.errorMessage ? "failed" : "completed"}}
+            </span>
+          </p>
+          <div class="alert margin-bottom-1 row"
+               ng-if="adminCtl.tasks.tasksRebalance.completionMessage"
+               ng-class="{'alert-error': adminCtl.tasks.tasksRebalance.errorMessage,
+                         'alert-success': !adminCtl.tasks.tasksRebalance.errorMessage}">
+            <p>
+              {{adminCtl.tasks.tasksRebalance.completionMessage}}
+            </p>
+            <div ng-if="adminCtl.poolDefault.isEnterprise" class="nowrap">
+              <button
+                 ng-click="adminCtl.getRebalanceReport()"
+                 download="rebalanceReport.json"
+                 class="outline tight margin-right-half">
+                Download Report
+              </button>
+            </div>
+          </div>
+
+<!-- rebalance per stage info ********************************************** -->
+          <div
+             ng-if="adminCtl.poolDefault.isEnterprise"
+             ng-repeat="service in adminCtl.tasks.tasksRebalance.stageInfo.services track by (service.name + $index)">
+            <div class="row margin-top-half margin-bottom-half">
+              <label class="initialcaps">
+                {{service.name}}
+              </label>
+              <span
+                 ng-show="service.timeTaken !== false"
+                 class="rebalance-stage-status">
+                <span
+                   ng-show="service.completedTime"
+                   class="rebalance-stage-success">
+                  completed
+                </span>
+                <span
+                   ng-show="!service.completedTime && !adminCtl.tasks.tasksRebalance.errorMessage"
+                   class="rebalance-stage-inprogress"
+                   ng-class="{'rebalance-stage-inprogress-paused' : adminCtl.tasks.tasksRebalance.status !== 'running'}">
+                  elapsed
+                </span>
+                <span
+                   ng-show="!service.completedTime && adminCtl.tasks.tasksRebalance.errorMessage"
+                   class="rebalance-stage-error">
+                  failed
+                </span>
+                {{service.timeTaken | mnMsToTime}}
+              </span>
+              <span ng-show="service.timeTaken === false">- - -</span>
+            </div>
+
+<!-- delta recovery info *************************************************** -->
+            <div
+               ng-repeat="(name, subStage) in service.subStages track by name"
+               class="row margin-left-half margin-bottom-half margin-top-half">
+              <label>{{name == "deltaRecovery" ? "Delta Recovery Warmup" : name}}</label>
+              <span
+                 ng-show="subStage.timeTaken !== false"
+                 class="rebalance-stage-status">
+                <span
+                   ng-show="subStage.completedTime"
+                   class="rebalance-stage-success">
+                  completed
+                </span>
+                <span
+                   ng-show="!subStage.completedTime && !adminCtl.tasks.tasksRebalance.errorMessage"
+                   class="rebalance-stage-inprogress">
+                  elapsed
+                </span>
+                <span
+                   ng-show="!subStage.completedTime && adminCtl.tasks.tasksRebalance.errorMessage"
+                   class="rebalance-stage-error">
+                  failed
+                </span>
+                {{subStage.timeTaken | mnMsToTime}}
+              </span>
+              <span ng-show="subStage.timeTaken === false">- - -</span>
+            </div>
+
+<!-- per bucket info ******************************************************* -->
+            <div ng-repeat="bucketInfo in service.details track by bucketInfo.name">
+              <div class="row margin-bottom-half">
+                <label
+                   ng-click="showBucket = !showBucket"
+                   class="disclosure cursor-pointer margin-left-half ellipsis"
+                   ng-class="{disclosed: showBucket}">
+                    {{bucketInfo.name}}
+                </label>
+                <span class="nowrap text-smaller text-right">
+                  vbuckets moved: {{(bucketInfo.vbucketLevelInfo.move.totalCount - bucketInfo.vbucketLevelInfo.move.remainingCount) + ' of ' + bucketInfo.vbucketLevelInfo.move.totalCount}}
+                  &nbsp; {{(bucketInfo.vbucketLevelInfo.move.totalCount - bucketInfo.vbucketLevelInfo.move.remainingCount) / bucketInfo.vbucketLevelInfo.move.totalCount * 100 | number:0}}%
+                </span>
+              </div>
+              <div
+                 class="indent-1-5 margin-bottom-1 margin-top-half"
+                 ng-if="showBucket">
+<!-- replication info ************************************************ -->
+                <div
+                   class="rebalance-stage-details"
+                   ng-if="bucketInfo.replicationInfo">
+                  <div class="cbui-table-header padding-left-0 border-0 min-height-0">
+                    <div class="cbui-table-cell grayblack-0 bold">node</div>
+                    <div class="cbui-table-cell grayblack-0 bold">incoming docs</div>
+                    <div class="cbui-table-cell grayblack-0 bold">outgoing docs</div>
+                  </div>
+                  <div
+                     class="cbui-tablerow padding-left-0"
+                     ng-repeat="(node, details) in bucketInfo.replicationInfo track by node">
+                    <div class="cbui-table-cell">{{node}}</div>
+                    <div class="cbui-table-cell">{{(details.inDocsTotal - details.inDocsLeft) + ' of ' + details.inDocsTotal}}</div>
+                    <div class="cbui-table-cell">{{(details.outDocsTotal - details.outDocsLeft) + ' of ' + details.outDocsTotal}}</div>
+                  </div>
+                </div>
+<!-- compaction info ******************************************************* -->
+                <h6
+                   ng-show="bucketInfo.compactionInfo"
+                   ng-click="showCompaction = !showCompaction"
+                   class="disclosure cursor-pointer"
+                   ng-class="{disclosed: showCompaction}">
+                  Views Compaction
+                </h6>
+                <div ng-if="showCompaction && bucketInfo.compactionInfo"
+                     class="rebalance-stage-details">
+                  <div class="cbui-table-header padding-left-0 border-0 min-height-0">
+                    <div class="cbui-table-cell grayblack-0 bold">node</div>
+                    <div class="cbui-table-cell">&nbsp;</div>
+                    <div class="cbui-table-cell grayblack-0 bold">average time</div>
+                  </div>
+                  <div class="cbui-tablerow padding-left-0"
+                       ng-repeat="(node, v) in bucketInfo.compactionInfo.perNode track by node">
+                    <div class="cbui-table-cell">{{node}}</div>
+                    <div class="cbui-table-cell">&nbsp;</div>
+                    <div class="cbui-table-cell">{{v.averageTime / 1000 | number:4}}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div
+             class="text-right margin-bottom-1 margin-top-half"
+             ng-hide="!poolDefault.rebalancing || !rbac.cluster.pools.write">
+            <button
+               class="red"
+               ng-click="adminCtl.postStopRebalance()">
+              Stop
+            </button>
+          </div>
+        </div>
+        <div ng-repeat="task in adminCtl.filterTasks(adminCtl.tasks.running)" class="zero-content margin-top-1">
+          <div class="text-small text-left">
+            {{task | formatProgressMessage}}
+            <span ng-if="task.progress != undefined">{{(task.progress | number:1) + '%'}}</span>
+          </div>
+          <div
+             class="bar-wrapper"
+             ng-show="task.type !== 'loadingSampleBucket' && task.type !== 'orphanBucket'">
+            <div
+               class="bar positive"
+               ng-style="{'width': task.progress + '%'}">
+              <div></div>
+            </div>
+            <div
+               class="bar negative"
+               ng-style="{'width': (100 - task.progress) + '%'}">
+              <div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+<!-- End of rebalance/activity menu **************************************** -->
+    <a
+       ng-click="adminCtl.runInternalSettingsDialog();"
+       ng-show="adminCtl.enableInternalSettings && rbac.cluster.admin.settings.write">
+      Edit internal settings
+    </a>
+    <span uib-dropdown>
+      <a uib-dropdown-toggle>
+        help <span class="has-menu">&nbsp;</span>
+      </a>
+      <div uib-dropdown-menu class="dropdown-menu-select-like">
+        <a ng-href="https://developer.couchbase.com/documentation/server/{{::(adminCtl.implementationVersion | parseVersion)[0].split('.').splice(0,2).join('.')}}/introduction/whats-new.html" target="_blank">
+          Documentation<br>
+          <desc>For version {{::(adminCtl.implementationVersion | parseVersion)[0].split('.').splice(0,2).join('.')}}</desc>
+        </a>
+        <a ng-href="{{adminCtl.poolDefault.isEnterprise  ? 'http://support.couchbase.com' : 'http://www.couchbase.com/communities/'}}" target="cbforums">
+          Couchbase Support<br>
+          <desc ng-if="adminCtl.poolDefault.isEnterprise">For Enterprise Edition subscription customers</desc>
+          <desc ng-if="!adminCtl.poolDefault.isEnterprise">For Community Edition users</desc>
+        </a>
+        <a ng-click="adminCtl.showClusterInfoDialog()">
+          Get Cluster Summary Info<br>
+          <desc>For complete info, use
+            <span
+               ng-click="$event.stopPropagation()"
+               ui-sref="app.admin.logs.collectInfo.form"
+               class="blue-1">
+              Collect Info
+            </span>
+          </desc>
+        </a>
+      </div>
+    </span>
+    <span uib-dropdown>
+      <a uib-dropdown-toggle class="nowrap ellipsis max-width-3">
+        {{adminCtl.user.id}}
+        <span class="has-menu">&nbsp;</span>
+      </a>
+      <div uib-dropdown-menu class="dropdown-menu-select-like">
+        <a
+           ng-show="pools.isEnterprise && (adminCtl.user.domain === 'local' || adminCtl.user.domain === 'admin')"
+           ng-click="adminCtl.showResetPasswordDialog()">
+          Change Password
+        </a>
+        <a
+           ng-click="adminCtl.logout()"
+           class="ellipsis max-width-4">
+          Sign Out {{adminCtl.user.id}}
+        </a>
+      </div>
+    </span>
+  </nav>
+</div>
+
+<header>
+  <a ui-sref="app.admin.overview.statistics" class="logobug-wrapper">
+    <img src="../cb_logo_bug_white_2.svg" width="48" height="48" alt="Couchbase Server" class="logobug" title="Couchbase Server {{::adminCtl.implementationVersion | mnPrettyVersion}}">
+  </a>
+  <h1>
+    <a ui-sref="app.admin.overview.statistics" class="resp-txt-xsml ellipsis">
+      {{adminCtl.tabName}} <!-- the cluster name -->
+    </a>
+    <span class="resp-hide-xsml" ng-show="adminCtl.tabName">
+      <span class="icon fa-angle-right"></span>
+    </span>
+    <span ng-if="adminCtl.$state.current.data.child">
+      <a
+        ui-state="adminCtl.$state.current.data.child"
+        ui-state-params="('merge' | lodash:{}:adminCtl.$state.params:adminCtl.$state.current.data.childParams)">
+        {{adminCtl.$state.get(adminCtl.$state.current.data.child).data.title}} <!-- the back-to-parent page name -->
+      </a>
+    </span>
+    <span ng-if="adminCtl.$state.current.data.child" class="icon fa-angle-right"></span>
+    <span>
+      {{adminCtl.$state.current.data.title}} <!-- the current page name -->
+    </span>
+  </h1>
+
+  <!-- Depots are the placeholders for page-specific controls/content -->
+  <div class="row flex-right">
+    <mn-element-depot name="header"></mn-element-depot>
+    <mn-element-depot name="actions"></mn-element-depot>
+    <span class="menu-icon" ng-click="showRespMenu = !showRespMenu">
+      <span class="icon fa-navicon"></span>
+    </span>
+  </div>
+</header>
+
+<mn-element-depot name="subnav"></mn-element-depot>
+
+<main>
+  <nav
+     class="nav-sidebar"
+     ng-class="{'resp-show-menu' : showRespMenu, 'nav-sidebar-hidden' : poolDefault.hideNavSidebar}"
+     ng-click="showRespMenu = !showRespMenu"
+     mn-pluggable-ui-tabs
+     mn-tab-bar-name="adminTab">
+
+    <a
+       mn-tab="overview"
+       ui-sref="app.admin.overview.statistics"
+       ui-sref-active="currentnav">
+      Dashboard
+    </a>
+    <a
+       mn-tab="servers"
+       ui-sref-active="currentnav"
+       ui-sref="app.admin.servers.list">
+      Servers
+    </a>
+    <a
+       mn-tab="buckets"
+       ng-show="rbac.cluster.bucket['.'].settings.read"
+       ui-sref="app.admin.buckets"
+       ui-sref-active="currentnav">
+      Buckets
+    </a>
+    <a
+       ng-show="rbac.cluster.tasks.read"
+       mn-tab="replications"
+       ui-sref-active="currentnav"
+       ui-sref="app.admin.replications">
+      XDCR
+    </a>
+    <a
+       ng-show="rbac.cluster.admin.security.read"
+       mn-tab="security"
+       ng-class="{currentnav: ('app.admin.security' | includedByState)}"
+       ui-sref="app.admin.security.roles.user">
+      Security
+    </a>
+    <a
+       mn-tab="settings"
+       ng-class="{currentnav: ('app.admin.settings' | includedByState)}"
+       ui-sref="app.admin.settings.cluster">
+      <span
+         ng-show="adminCtl.updates.sendStats && !!adminCtl.updates.newVersion"
+         class="label neutral badge notify"
+         uib-tooltip="A newer version of Couchbase Server is available on the General Settings page..."
+         tooltip-placement="auto right"
+         tooltip-append-to-body="true">i</span>
+      Settings
+    </a>
+    <a
+       mn-tab="logs"
+       ui-sref="app.admin.logs.list"
+       ng-class="{currentnav: ('app.admin.logs' | includedByState)}"
+       ng-show="rbac.cluster.logs.read">
+      Logs
+    </a>
+    <div class="margin-bottom-1"></div>
+    <nav
+       mn-pluggable-ui-tabs
+       mn-tab-bar-name="workbenchTab">
+    </nav>
+    <a
+       ng-show="rbac.cluster.bucket['.'].settings.read && rbac.cluster.bucket['.'].views.read"
+       ui-state="'app.admin.views.list'"
+       ui-state-params="{bucket: rbac.bucketNames['.views!read'][0] || null}"
+       ng-class="{currentnav: ('app.admin.views' | includedByState)}">Views</a>
+
+    <div
+        class="sidebar-closer resp-hide-med"
+        title="hide sidebar"
+        ng-click="poolDefault.hideNavSidebar = true">
+      <span class="icon fa-chevron-left"></span>
+    </div>
+  </nav>
+
+  <div
+     class="sidebar-opener"
+     title="show sidebar"
+     ng-class="{'show' : poolDefault.hideNavSidebar}"
+     ng-click="poolDefault.hideNavSidebar = false">
+    <span class="icon fa-chevron-right"></span>
+  </div>
+
+  <!-- all page content goes here -->
+  <div
+     ui-view="main"
+     autoscroll="false"
+     class="main-content min-width-zero width-12"
+     mn-spinner="showMainSpinner"
+     opacity="true"></div>
+</main>
+
+<div class="alert-wrapper fix-position-bl">
+  <mn-element-depot name="alerts"></mn-element-depot>
+  <div
+     class="alert alert-warning ng-hide"
+     ng-show="adminCtl.retryRebalance && (adminCtl.retryRebalance.retry_rebalance !== 'not_pending')">
+    <p>
+      <span ng-show="adminCtl.retryRebalance.type == 'rebalance'">Rebalance</span>
+      <span ng-show="adminCtl.retryRebalance.type == 'graceful_failover'">Graceful Failover</span>
+      failed. It will be automatically retried in {{adminCtl.retryRebalance.retry_after_secs}}<br>
+      <a
+         ng-click="adminCtl.postCancelRebalanceRetry(adminCtl.retryRebalance.rebalance_id)"
+         ng-show="rbac.cluster.pools.write">
+        CANCEL RETRY
+      </a>
+    </p>
+  </div>
+  <div
+     class="alert alert-warning"
+     ng-if="adminCtl.tasks.isLoadingSamples && rbac.cluster.tasks.read && !poolDefault.balanced"
+     ng-show="!adminCtl.clientAlerts.rebalanceDataLoading"
+     ng-init="adminCtl.enableCustomAlert('rebalanceDataLoading')">
+    <p>Warning: Rebalance is not available until data loading is completed.</p>
+    <a ng-click="adminCtl.closeCustomAlert('rebalanceDataLoading')" class="close">X</a>
+  </div>
+  <div
+     class="alert alert-warning"
+     ng-if="!adminCtl.poolDefault.compat.atLeast55 && !!adminCtl.moxiBucket && !poolDefault.balanced"
+     ng-show="!adminCtl.clientAlerts.moxiBucket"
+     ng-init="adminCtl.enableCustomAlert('moxiBucket')">
+    <p>Your Couchbase bucket <i>{{adminCtl.moxiBucket.name}}</i> has an active dedicated port, also known as a Moxi port. Moxi is deprecated and will be removed in a future release.<br> You can run the CLI command <i>couchbase-cli bucket-edit</i> command with the <i>--remove-bucket-port</i> option to remove the Moxi port.</p>
+    <a ng-click="adminCtl.closeCustomAlert('moxiBucket')" class="close">X</a>
+  </div>
+  <div
+     class="alert alert-warning"
+     ng-if="!('every' | lodash:('values' | lodash:poolDefault.compat)) && !adminCtl.clientAlerts.hideCompatibility"
+     ng-show="!adminCtl.clientAlerts.hideCompatibility"
+     ng-init="adminCtl.enableCustomAlert('hideCompatibility')">
+    <p>This cluster contains multiple server versions and is running in {{::poolDefault.thisNode.clusterCompatibility | decodeCompatVersion}} compatibility mode.</p>
+    <a ng-click="adminCtl.closeCustomAlert('hideCompatibility')" class="close">X</a>
+  </div>
+  <div
+     class="alert alert-warning"
+     ng-repeat="warning in poolDefault.failoverWarnings track by warning"
+     ng-if="warning && warning != 'failoverNeeded' && !poolDefault.rebalancing"
+     ng-show="!adminCtl.clientAlerts[warning]"
+     ng-init="adminCtl.enableCustomAlert(warning)">
+    <p>Warning: {{warning | formatFailoverWarnings}}</p>
+    <a ng-click="adminCtl.closeCustomAlert(warning)" class="close">X</a>
+  </div>
+  <div
+     class="alert alert-warning"
+     ng-if="adminCtl.autoFailoverSettings.count > 0 && rbac.cluster.settings.read"
+     ng-show="!adminCtl.clientAlerts.maxCount"
+     ng-init="adminCtl.enableCustomAlert('maxCount')">
+    <p>
+      A server was automatically failed over. Failover quota used/max:
+      {{adminCtl.autoFailoverSettings.count}}/{{adminCtl.autoFailoverSettings.maxCount}}
+    </p>
+    <a ng-click="adminCtl.closeCustomAlert('maxCount')" class="close">X</a>
+  </div>
+  <div
+     class="alert alert-warning ng-hide"
+     ng-if="(adminCtl.autoFailoverSettings &&
+              (adminCtl.autoFailoverSettings.count == adminCtl.autoFailoverSettings.maxCount)) ||
+              (!(poolDefault.compat.atLeast55 && pools.isEnterprise) &&
+                 adminCtl.autoFailoverSettings.count == 1)">
+    <p>
+      The maximum number of nodes have been automatically failed over.
+      Auto-failover is disabled until you reset it.<br>
+      <a
+         ng-click="adminCtl.resetAutoFailOverCount()"
+         ng-show="rbac.cluster.settings.write">
+        Reset Auto-Failover
+      </a>
+    </p>
+  </div>
+  <div
+     class="alert alert-warning"
+     ng-show="adminCtl.lostConnState.isActive">
+    <p>Difficulties communicating with the cluster. Displaying cached information.</p>
+  </div>
+  <div
+     ng-repeat="alert in adminCtl.alerts"
+     class="animate-alert alert enable-ng-animation"
+     ng-class="['alert-' + alert.type]">
+    <p>{{alert.msg}}</p>
+    <a
+       ng-click="adminCtl.closeAlert(alert)"
+       class="close"
+       ng-hide="alert.type == 'success'">X</a>
+  </div>
+</div>

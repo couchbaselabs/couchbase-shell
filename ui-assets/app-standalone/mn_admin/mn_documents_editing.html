@@ -1,0 +1,47 @@
+<mn-element-cargo depot="alerts">
+  <div
+     class="alert alert-warning"
+     ng-show="documentsEditingCtl.state.errors">
+    <p>Error: {{documentsEditingCtl.state.errors.reason}} ({{documentsEditingCtl.state.errors.error }})</p>
+  </div>
+  <div
+     class="alert alert-warning"
+     ng-show="documentsEditingCtl.areThereWarnings()"
+     ng-messages="documentsEditingCtl.state.editorWarnings">
+    <p ng-message="documentLimitError">Warning: Editing of document with size more than 256 KiB is not allowed</p>
+    <p ng-message="documentIsBase64">Warning: Editing of binary document is not allowed</p>
+    <p ng-message="notFound">Error: not found (Document does not exist)</p>
+  </div>
+</mn-element-cargo>
+
+<div class="row margin-bottom-half">
+  <h4 class="ellipsis width-7">{{documentsEditingCtl.state.title}}</h4>
+  <div class="width-5 text-right">
+    <button
+       ng-disabled="documentsEditingCtl.isDeleteDisabled()"
+       ng-click="documentsEditingCtl.deleteDocument()">Delete</button>
+    <button
+       ng-disabled="documentsEditingCtl.isSaveAsDisabled()"
+       ng-click="documentsEditingCtl.saveAsDialog()">Save As...</button>
+    <button
+       ng-disabled="documentsEditingCtl.isSaveDisabled()"
+       ng-click="documentsEditingCtl.save()">Save</button>
+  </div>
+</div>
+<div
+   class="row items-top text-small"
+   mn-spinner="documentsEditingCtl.viewLoading || !documentsEditingCtl.state">
+  <div
+     class="width-8 column height-100"
+     spellcheck="false"
+     ng-model="documentsEditingCtl.state.doc"
+     ng-class="{'read-only-editor': documentsEditingCtl.isEditorDisabled()}"
+     ui-codemirror="documentsEditingCtl.editorOptions"
+     ></div>
+  <div
+     class="width-4 read-only-editor"
+     spellcheck="false"
+     ng-model="documentsEditingCtl.state.meta"
+     ui-codemirror="documentsEditingCtl.metaOptions"
+     ></div>
+</div>

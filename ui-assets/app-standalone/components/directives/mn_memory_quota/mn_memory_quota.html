@@ -1,0 +1,205 @@
+<div
+   class="error"
+   ng-show="errors._">
+  {{errors._}}
+</div>
+<div ng-if="config.displayedServices.kv">
+  <div class="row formrow">
+    <div class="width-6">
+      <input
+         ng-if="config.services"
+         ng-change="mnMemoryQuotaController.change('kv', config)"
+         ng-model="config.services.model.kv"
+         ng-disabled="config.services.disabled.kv"
+         type="checkbox"
+         id="kv_ram_quota">
+      <label
+         for="kv_ram_quota">
+        Data
+      </label>
+    </div>
+    <div class="row width-6 flex-right relative">
+      <div class="inside-label">MB</div>
+      <input
+         type="text"
+         mn-focus
+         ng-disabled="config.services && !config.services.model.kv || (rbac && !rbac.cluster.pools.write)"
+         ng-model="config.memoryQuota"
+         class="input-inside-label">
+    </div>
+  </div>
+
+  <div
+     class="error"
+     ng-show="errors.memoryQuota">
+    {{errors.memoryQuota}}
+  </div>
+</div>
+
+<div ng-if="config.displayedServices.n1ql">
+  <div class="row formrow">
+    <div class="width-5">
+      <input
+         ng-if="config.services"
+         ng-model="config.services.model.n1ql"
+         type="checkbox"
+         ng-change="mnMemoryQuotaController.change('n1ql', config)"
+         ng-disabled="config.services.disabled.n1ql"
+         id="n1ql_ram_quota">
+      <label
+         for="n1ql_ram_quota">
+        Query
+      </label>
+    </div>
+    <small class="form-inline width-7 text-center">
+      - - - - - - - - -
+    </small>
+  </div>
+  <div
+     class="error"
+     ng-show="errors.n1qlMemoryQuota">
+    {{errors.n1qlMemoryQuota}}
+  </div>
+</div>
+
+<div ng-if="config.displayedServices.index">
+  <div class="row formrow">
+    <div class="width-6">
+      <input
+         ng-if="config.services"
+         ng-change="mnMemoryQuotaController.change('index', config)"
+         ng-model="config.services.model.index"
+         ng-disabled="config.services.disabled.index"
+         type="checkbox"
+         id="index_ram_quota">
+      <label
+         for="index_ram_quota">
+        Index
+      </label>
+    </div>
+    <div class="row width-6 flex-right">
+      <div class="inside-label">MB</div>
+      <input
+         type="text"
+         min="0"
+         ng-disabled="config.services && !config.services.model.index || (rbac && !rbac.cluster.pools.write)"
+         mn-focus="config.services.model.kv === false"
+         ng-model="config.indexMemoryQuota"
+         class="input-inside-label">
+    </div>
+  </div>
+  <div
+     class="error"
+     ng-show="errors.indexMemoryQuota">
+    {{errors.indexMemoryQuota}}
+  </div>
+</div>
+
+<div ng-if="config.displayedServices.fts">
+  <div class="row formrow">
+    <div class="width-6">
+      <input
+         ng-if="config.services"
+         ng-model="config.services.model.fts"
+         ng-disabled="config.services.disabled.fts"
+         type="checkbox"
+         ng-change="mnMemoryQuotaController.change('fts', config)"
+         id="fts_ram_quota">
+      <label
+         for="fts_ram_quota">
+        Search
+      </label>
+    </div>
+    <div class="row width-6 flex-right">
+      <div class="inside-label">MB</div>
+      <input
+         type="text"
+         mn-focus="config.services.model.kv === false && config.services.model.index  === false"
+         ng-disabled="config.services && !config.services.model.fts || (rbac && !rbac.cluster.pools.write)"
+         ng-model="config.ftsMemoryQuota"
+         class="input-inside-label">
+    </div>
+  </div>
+  <div
+     class="error"
+     ng-show="errors.ftsMemoryQuota">
+    {{errors.ftsMemoryQuota}}
+  </div>
+</div>
+
+<div ng-if="config.displayedServices.cbas && mnIsEnterprise">
+  <div class="row formrow">
+    <div class="width-6">
+      <input
+         ng-if="config.services"
+         ng-model="config.services.model.cbas"
+         ng-disabled="config.services.disabled.cbas"
+         type="checkbox"
+         ng-change="mnMemoryQuotaController.change('cbas', config)"
+         id="cbas_ram_quota">
+      <label
+         for="cbas_ram_quota">
+        Analytics
+      </label>
+    </div>
+    <div class="row width-6 flex-right">
+      <div class="inside-label">MB</div>
+      <input
+         type="text"
+         mn-focus="config.services.model.kv === false && config.services.model.index  === false"
+         ng-disabled="config.services && !config.services.model.cbas || (rbac && !rbac.cluster.pools.write)"
+         ng-model="config.cbasMemoryQuota"
+         class="input-inside-label">
+    </div>
+  </div>
+  <div
+     class="error"
+     ng-show="errors.cbasMemoryQuota">
+    {{errors.cbasMemoryQuota}}
+  </div>
+</div>
+
+<div ng-if="config.displayedServices.eventing && mnIsEnterprise">
+  <div class="row formrow">
+    <div class="width-6">
+      <input
+         ng-if="config.services"
+         ng-model="config.services.model.eventing"
+         type="checkbox"
+         ng-change="mnMemoryQuotaController.change('eventing', config)"
+         ng-disabled="config.services.disabled.eventing"
+         id="eventing_ram_quota">
+      <label
+         for="eventing_ram_quota">
+        Eventing
+      </label>
+    </div>
+    <div class="row width-6 flex-right">
+      <div class="inside-label">MB</div>
+      <input
+         type="text"
+         mn-focus="config.services.model.kv === false && config.services.model.index  === false"
+         ng-disabled="config.services && !config.services.model.eventing || (rbac && !rbac.cluster.pools.write)"
+         ng-model="config.eventingMemoryQuota"
+         class="input-inside-label">
+    </div>
+  </div>
+  <div
+     class="error"
+     ng-show="errors.eventingMemoryQuota">
+    {{errors.eventingMemoryQuota}}
+  </div>
+</div>
+
+<div
+   ng-if="config.calculateTotal"
+   class="text-small text-right nowrap margin-right-1">
+  <strong>TOTAL QUOTA</strong> &nbsp; {{calculateTotalQuota()}} MB
+</div>
+
+<div
+   ng-if="config.maxMemorySize"
+   class="content-box text-center margin-top-1">
+  <strong>RAM Available</strong> {{::config.totalMemorySize}}MB &nbsp;
+  <strong>Max Allowed Quota</strong> {{::config.maxMemorySize}}MB
+</div>

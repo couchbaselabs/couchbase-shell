@@ -1,0 +1,136 @@
+<div
+   mn-spinner="!rolesGroupsCtl.state || rolesGroupsCtl.viewLoading"
+   min-height="300px"
+   class="margin-top-neg-half margin-left-neg-1">
+  <div
+     class="row resp-sml margin-bottom-half">
+    <div
+       class="row"
+       mn-placeholder="filter groups..."
+       mn-hide-button="true"
+       mn-disabled="!rolesGroupsCtl.filterField && !rolesGroupsCtl.state.groups.length"
+       mn-search="rolesGroupsCtl.filterField">
+    </div>
+    <span class="pills nowrap">
+      <a
+         ui-sref="app.admin.security.roles.user"
+         ui-sref-active="selected">Users</a>
+      <a
+         ui-sref="app.admin.security.roles.groups"
+         ui-sref-active="selected">Groups</a>
+    </span>
+  </div>
+  <div class="cbui-table" ng-if="rolesGroupsCtl.state.groups.length">
+    <div class="cbui-table-header padding-left">
+      <span class="cbui-table-cell">
+        <span class="sorter"
+              ng-click="rolesGroupsCtl.sortByChanged('id')"
+              ng-class="{'dynamic-active': rolesGroupsCtl.isOrderBy('id'),
+                        'dynamic-inverted': rolesGroupsCtl.isOrderBy('id')
+                        && rolesGroupsCtl.isDesc()}">group name</span>
+      </span>
+      <span class="cbui-table-cell flex-grow-3">
+        <span class="sorter"
+              ng-click="rolesGroupsCtl.sortByChanged('roles')"
+              ng-class="{'dynamic-active': rolesGroupsCtl.isOrderBy('roles'),
+                        'dynamic-inverted': rolesGroupsCtl.isOrderBy('roles')
+                        && rolesGroupsCtl.isDesc()}">roles</span>
+      </span>
+      <span class="cbui-table-cell resp-hide-xsml">
+        <span class="sorter"
+              ng-click="rolesGroupsCtl.sortByChanged('ldap_group_ref')"
+              ng-class="{'dynamic-active': rolesGroupsCtl.isOrderBy('ldap_group_ref'),
+                        'dynamic-inverted': rolesGroupsCtl.isOrderBy('ldap_group_ref')
+                        && rolesGroupsCtl.isDesc()}">external mapping</span>
+      </span>
+      <span class="cbui-table-cell resp-hide-sml">
+        <span class="sorter">created</span>
+      </span>
+    </div>
+    <section
+       class="has-hover"
+       ng-click="rolesGroupsCtl.toggleDetails(rolesGroup.id)"
+       ng-repeat="rolesGroup in rolesGroupsCtl.state.groups track by (rolesGroup.id)">
+      <div class="cbui-tablerow padding-left resp-sml">
+        <span class="cbui-table-cell">
+          {{rolesGroup.id}}
+        </span>
+        <span class="cbui-table-cell flex-grow-3 wrap">
+          <span
+             class="relative"
+             ng-repeat="role in rolesGroup.roles track by $index"
+             tooltip-trigger="'mouseenter'"
+             tooltip-append-to-body="true"
+             tooltip-placement="auto top"
+             ng-click="$event.stopPropagation()"
+             uib-tooltip="{{rolesGroupsCtl.rolesByRole[role.role + (role.bucket_name ? '[' + role.bucket_name + ']' : '')].desc}}">
+            <span class="ellipsis">
+              {{rolesGroupsCtl.rolesByRole[role.role + (role.bucket_name ? '[' + role.bucket_name + ']' : '')].name}}<span ng-show="role.bucket_name"
+                                                                                                                           >[{{role.bucket_name}}]</span
+                                                                                                                                                    ><span ng-show="!$last && rolesGroup.roles.length > 1">,</span>
+            </span>
+          </span>
+        </span>
+        <span class="cbui-table-cell resp-hide-xsml">
+          {{rolesGroup.ldap_group_ref ? rolesGroup.ldap_group_ref : "No"}}
+        </span>
+        <span class="cbui-table-cell resp-hide-sml">
+          {{rolesGroup.created | date:"d MMM, y"}}
+        </span>
+      </div>
+      <div
+         class="cbui-tablerow-expanded flex-left"
+         ng-if="rolesGroupsCtl.isDetailsOpened(rolesGroup.id) && rbac.cluster.admin.security.write">
+        <div class="cbui-table-props break-word margin-bottom-half">
+          {{rolesGroup.description}}
+        </div>
+        <div class="text-right">
+          <button
+             class="outline"
+             ng-click="rolesGroupsCtl.deleteRolesGroup(rolesGroup)">Delete Group</button>
+          <button
+             ng-click="rolesGroupsCtl.editRolesGroup(rolesGroup)">Edit</button>
+        </div>
+      </div>
+    </section>
+
+  </div>
+  <div class="row pagination"
+       ng-if="rolesGroupsCtl.state.groups.length">
+    <div class="simple-select">
+      <select
+         ng-change="rolesGroupsCtl.pageSizeChanged()"
+         ng-model="rolesGroupsCtl.pageSize"
+         ng-options="o as o for o in [10,20,50,100]"></select>
+    </div>
+    <span>
+      <a
+         ng-class="{'disabled-link' : rolesGroupsCtl.state.skipped == 0}"
+         ui-sref="{pageSize: rolesGroupsCtl.pageSize, startFromDomain: null, startFrom: null}">
+        &lt;&lt; first</a>
+      <a
+         ui-sref="(rolesGroupsCtl.state.links.prev)"
+         ng-class="{'disabled-link' : !rolesGroupsCtl.state.links.prev}">
+        &lt; prev</a>
+      <span class="text-smaller grayblack-3">&nbsp; |</span>
+      <a
+         ui-sref="(rolesGroupsCtl.state.links.next)"
+         ng-class="{'disabled-link' : !rolesGroupsCtl.state.links.next}">
+        next &gt;</a>
+      <a
+         ui-sref="(rolesGroupsCtl.state.links.last)"
+         ng-class="{'disabled-link' : !rolesGroupsCtl.state.links.last}">
+        last &gt;&gt;</a>
+    </span>
+  </div>
+  <div
+     class="zero-content margin-top-1"
+     ng-show="!rolesGroupsCtl.filterField && !rolesGroupsCtl.state.groups.length">
+    You don't have any groups to display yet.
+    <span ng-show="rbac.cluster.admin.security.write">
+      Use ADD GROUP above to create one.
+    </span>
+  </div>
+  <div ng-show="rolesGroupsCtl.filterField && !rolesGroupsCtl.state.groups.length"
+       class="zero-content text-left">no result</div>
+</div>

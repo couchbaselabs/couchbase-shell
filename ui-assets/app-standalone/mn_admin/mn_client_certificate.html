@@ -1,0 +1,114 @@
+<form ng-submit="clientCertCtl.onSubmit()">
+  <div class="formrow">
+    <h4>Require Client Certificate</h4>
+    <input
+       type="radio"
+       value="disable"
+       ng-disabled="!rbac.cluster.admin.security.write"
+       name="client_cert_state"
+       id="client_cert_disabled"
+       ng-model="clientCertCtl.settings.state">
+    <label for="client_cert_disabled" class="checkbox">
+      Disable
+    </label>
+    <br>
+    <input
+       type="radio"
+       value="enable"
+       ng-disabled="!rbac.cluster.admin.security.write"
+       name="client_cert_state"
+       id="client_cert_enabled"
+       ng-model="clientCertCtl.settings.state">
+    <label for="client_cert_enabled" class="checkbox">
+      Enable
+    </label>
+    <br>
+    <input
+       type="radio"
+       value="mandatory"
+       ng-disabled="!rbac.cluster.admin.security.write"
+       name="client_cert_state"
+       id="client_cert_mandatory"
+       ng-model="clientCertCtl.settings.state">
+    <label for="client_cert_mandatory" class="checkbox">
+      Mandatory
+    </label>
+  </div>
+
+  <div class="error error-field"
+       ng-show="('isString' | lodash:clientCertCtl.errors) && clientCertCtl.settings.state != 'disable'">
+    <span>{{clientCertCtl.errors}}</span>
+  </div>
+  <div class="forms"
+       ng-repeat="prefix in clientCertCtl.settings.prefixes track by $index">
+    <div class="row fix-width-5">
+      <div class="width-5 margin-right-half">
+        <label for="client_cert_path_{{$index}}">Path</label>
+        <select
+           id="client_cert_path_{{$index}}"
+           ng-disabled="!rbac.cluster.admin.security.write || clientCertCtl.settings.state == 'disable'"
+           ng-model="prefix.path">
+          <option value="subject.cn">subject.cn</option>
+          <option value="san.dnsname">san.dnsname</option>
+          <option value="san.email">san.email</option>
+          <option value="san.uri">san.uri</option>
+        </select>
+      </div>
+      <div class="width-5 margin-right-half">
+        <label for="client_cert_prefix_{{$index}}">Prefix</label>
+        <input
+           placeholder="e.g.  couchbase."
+           ng-model="prefix.prefix"
+           ng-disabled="!rbac.cluster.admin.security.write || clientCertCtl.settings.state == 'disable'"
+           type="text"
+           autocorrect="off"
+           spellcheck="false"
+           autocapitalize="off"
+           id="client_cert_prefix_{{$index}}">
+      </div>
+      <div class="width-2">
+        <label for="client_cert_delimiter_{{$index}}">Delimiter</label>
+        <input
+           placeholder="e.g.  ."
+           ng-model="prefix.delimiter"
+           ng-disabled="!rbac.cluster.admin.security.write || clientCertCtl.settings.state == 'disable'"
+           type="text"
+           autocorrect="off"
+           spellcheck="false"
+           autocapitalize="off"
+           id="client_cert_delimiter_{{$index}}">
+      </div>
+    </div>
+    <div class="error error-field"
+         ng-show="clientCertCtl.errors[$index] &&
+                  clientCertCtl.settings.state != 'disable' &&
+                  !('isString' | lodash:clientCertCtl.errors)">
+      <span>{{clientCertCtl.errors[$index]}}</span>
+    </div>
+  </div>
+
+  <div class="row flex-left margin-top-half">
+    <button
+       class="outline btn-small"
+       title="Add a prefix"
+       ng-show="adminCtl.poolDefault.compat.atLeast51"
+       ng-disabled="!rbac.cluster.admin.security.write || clientCertCtl.settings.state == 'disable'"
+       ng-click="clientCertCtl.settings.prefixes.push({delimiter: '', prefix: '', path: 'subject.cn'});"
+       type="button">+</button>
+    &nbsp;
+    <button
+       class="outline btn-small"
+       ng-show="adminCtl.poolDefault.compat.atLeast51"
+       ng-disabled="!rbac.cluster.admin.security.write || (clientCertCtl.settings.prefixes.length == 1) || (clientCertCtl.settings.state == 'disable')"
+       title="Remove a prefix"
+       ng-click="clientCertCtl.settings.prefixes.pop();"
+       type="button">-</button>
+  </div>
+
+  <div class="margin-top-2">
+    <button type="submit"
+            ng-disabled="!rbac.cluster.admin.security.write">
+      Save
+    </button>
+  </div>
+</form>

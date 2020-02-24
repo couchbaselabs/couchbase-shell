@@ -44,6 +44,7 @@ impl nu::WholeStreamCommand for Query {
         debug!("Running n1ql query {}", &statement);
         let mut result = block_on(
             self.state
+                .active_cluster()
                 .cluster()
                 .query(statement, QueryOptions::default()),
         )

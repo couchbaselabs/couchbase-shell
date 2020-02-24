@@ -43,12 +43,15 @@ async fn nodes(state: Arc<State>) -> Result<OutputStream, ShellError> {
     let client = reqwest::Client::new();
 
     // todo: hack! need to actually use proper hostname from a parsed connstr...
-    let host = state.connstr().replace("couchbase://", "");
+    let host = state.active_cluster().connstr().replace("couchbase://", "");
     let uri = format!("http://{}:8091/pools/default", host);
 
     let resp = client
         .get(&uri)
-        .basic_auth(state.username(), Some(state.password()))
+        .basic_auth(
+            state.active_cluster().username(),
+            Some(state.active_cluster().password()),
+        )
         .send()
         .await
         .unwrap()

@@ -1,0 +1,25 @@
+<div class="dialog-small" id="bucket_file_dialog">
+  <div class="panel-header">
+    <h2 class="ellipsis">{{header_message}}</h2>
+  </div>
+  <form class="forms">
+  <div class="panel-content">
+    <label>{{body_message}}</label>
+    <div class="formrow">
+      <input
+         type="text" id="pwd"
+         ng-model="file.name" focus-me="open">
+    </div>
+  </div>
+  <div class="panel-footer">
+    <a
+       ng-click="$dismiss('cancel')"
+       href="">
+      Cancel
+    </a>
+    <button
+       type="submit"
+       ng-click="!errors() && $close('ok')">Save</button>
+  </div>
+  </form>
+</div>

@@ -1,0 +1,23 @@
+<div class="formrow">
+  <label ng-attr-for="{{::mnId}}">{{::mnLabel}}</label>
+  <input
+     ng-if="mnType == 'number'"
+     ng-attr-id="{{::mnId}}"
+     autocorrect="off"
+     spellcheck="false"
+     autocapitalize="off"
+     ng-disabled="mnDisabled"
+     type="number"
+     ng-model="mnModel[mnName]">
+  <select
+     ng-if="mnType == 'select'"
+     ng-disabled="mnDisabled"
+     ng-model="mnModel[mnName]">
+    <option ng-repeat="value in mnItems" value="{{value}}">{{value}}</option>
+  </select>
+  <div
+     class="error"
+     ng-show="mnErrors[mnName]">
+    {{mnErrors[mnName]}}
+  </div>
+</div>

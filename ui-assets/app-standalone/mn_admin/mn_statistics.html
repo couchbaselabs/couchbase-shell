@@ -1,0 +1,311 @@
+<div class="row margin-bottom-1-5">
+  <div class="row flex-left flex-wrap">
+    <div class="inline margin-right-half"
+         ng-controller="mnScenarioDialogController as scenarioCtrl">
+      <mn-dropdown
+         ng-click="$event.stopPropagation();"
+         on-select="statisticsNewCtl.onSelectScenario(scenario);"
+         model="statisticsNewCtl.scenario"
+         class="scenario-dropdown">
+        <inner-select>
+          {{statisticsNewCtl.scenario.selected.name}}
+        </inner-select>
+        <inner-body ng-class="{'body-shorter' : scenarioCtrl.showRestOfMenu}">
+          <mn-dropdown-item
+             ng-repeat="scenario in statisticsNewCtl.scenarios | orderBy:'-preset' track by scenario.id"
+             mn-item="scenario">
+            <p>{{scenario.name}}</p>
+            <p ng-if="scenario.desc">{{scenario.desc}}</p>
+            <div
+               ng-if="!scenario.preset"
+               class="scenario-controls"
+               ng-click="$event.stopPropagation();"
+               title="delete/edit scenario">
+              <span
+                 title="delete scenario"
+                 class="icon fa-trash"
+                 ng-click="scenarioCtrl.deleteScenario(scenario.id)"></span>
+              <span
+                 title="edit scenario"
+                 class="icon fa-edit"
+                 ng-click="scenarioCtrl.editScenario(scenario)"></span>
+            </div>
+          </mn-dropdown-item>
+        </inner-body>
+        <inner-footer>
+          <form
+             novalidate
+             ng-submit="scenarioCtrl.onSubmit(statisticsNewCtl.scenario.selected)"
+             name="form"
+             class="forms">
+            <div class="scenario-add" ng-class="{'scenario-add-ext' : scenarioCtrl.showRestOfMenu}">
+              <input
+                 type="text"
+                 ng-model="scenarioCtrl.scenario.name"
+                 placeholder="new dashboard..."
+                 autocorrect="off"
+                 ng-click="scenarioCtrl.showRestOfMenu = true"
+                 spellcheck="false"
+                 autocapitalize="off"
+                 ng-disabled="!rbac.bucketNames['.stats!read'].length">
+              <span class="icon fa-plus-square" ng-show="!scenarioCtrl.showRestOfMenu"></span>
+            </div>
+
+            <input
+               type="text"
+               ng-model="scenarioCtrl.scenario.desc"
+               placeholder="add optional description..."
+               autocorrect="off"
+               spellcheck="false"
+               autocapitalize="off"
+               ng-disabled="!rbac.bucketNames['.stats!read'].length"
+               ng-show="scenarioCtrl.showRestOfMenu"
+               class="scenario-desc">
+            <div class="checkbox-list margin-bottom-half"
+                 ng-show="!scenarioCtrl.isEditingMode && scenarioCtrl.showRestOfMenu">
+              <input
+                 type="radio"
+                 value="true"
+                 ng-model="scenarioCtrl.copyScenario"
+                 id="for-bucket-type-current">
+              <label for="for-bucket-type-current">save current charts</label>
+              <input
+                 type="radio"
+                 value="false"
+                 ng-model="scenarioCtrl.copyScenario"
+                 id="for-bucket-type-blank">
+              <label for="for-bucket-type-blank">start blank</label>
+            </div>
+            <div class="scenario-save-controls" ng-show="scenarioCtrl.showRestOfMenu">
+              <button type="submit">Save</button>
+              <a class="width-12 text-center" ng-click="scenarioCtrl.clear()">Cancel</a>
+            </div>
+          </form>
+        </inner-footer>
+      </mn-dropdown>
+    </div>
+
+    <select
+       ng-model="statisticsNewCtl.zoom"
+       ng-change="statisticsNewCtl.onSelectZoom()"
+       class="margin-right-half">
+      <option value="minute">minute</option>
+      <option value="hour">hour</option>
+      <option value="day">day</option>
+      <option value="week">week</option>
+      <option value="month">month</option>
+    </select>
+
+    <select
+       ng-model="statisticsNewCtl.selectedBucket"
+       class="max-width-4 margin-right-half"
+       ng-change="statisticsNewCtl.onBucketChange(statisticsNewCtl.selectedBucket)">
+      <option ng-repeat="name in rbac.bucketNames['.stats!read']" value="{{name}}">
+        {{name}}
+      </option>
+    </select>
+
+    <ui-select
+       class="cbui-select"
+       ng-model="statisticsNewCtl.nodes.nodesNames.selected"
+       theme="selectize"
+       on-select="statisticsNewCtl.onSelectNode($item)">
+      <ui-select-match
+         class="ui-select-match nocaps">{{$select.selected}}</ui-select-match>
+      <ui-select-choices
+         class="ui-select-choices nocaps"
+         repeat="name in statisticsNewCtl.nodes.nodesNames | filter: $select.search">
+        <span class="select-item ellipsis" ng-bind-html="name | highlight: $select.search"></span>
+      </ui-select-choices>
+    </ui-select>
+  </div>
+  <div class="row flex-right">
+<!--
+    <a href="http://127.0.0.1:9000/ui/index.html#!/servers/list/analytics/" class="text-smaller">
+      Classic Stats
+    </a>
+-->
+    <button ng-click="statisticsNewCtl.resetDashboardConfiguration();" class="outline tight scenario-delete indent-1">
+      <span class="icon fa-trash grayblack-3"></span> Reset
+    </button>
+    <button
+       ng-disabled="!statisticsNewCtl.scenarios.length"
+       ng-click="statisticsNewCtl.openGroupDialog(statisticsNewCtl.scenario.selected)"
+       class="outline tight"
+       ng-hide="statisticsNewCtl.scenario.selected.preset">
+      <span class="icon fa-plus-circle grayblack-3"></span> Add Group
+    </button>
+  </div>
+</div>
+
+<div class="width-12">
+  <div
+     ng-repeat="groupID in statisticsNewCtl.scenario.selected.groups track by ($index + groupID)"
+     ng-attr-id="group-{{groupID}}"
+     ng-controller="mnStatisticsGroupsController as mnStatsGroupsCtl"
+     ng-if="statisticsNewCtl.selectedBucket"
+     class="charts-group">
+    <div
+       ng-if="mnStatsGroupsCtl.group && ((mnStatsGroupsCtl.group.enterprise == undefined) || poolDefault.isEnterprise)"
+       ng-click="mnStatsGroupsCtl.group.isOpen = !mnStatsGroupsCtl.group.isOpen;
+                 mnStatsGroupsCtl.saveDashboard();"
+       class="charts-group-row disclosure nowrap"
+       ng-class="{disclosed: mnStatsGroupsCtl.group.isOpen}">
+      <form novalidate
+            ng-if="!mnStatsGroupsCtl.group.preset"
+            style="display: inline-block;"
+            ng-mouseleave="mnStatsGroupsCtl.hideGroupControls();"
+            ng-click="$event.stopPropagation();"
+            ng-submit="mnStatsGroupsCtl.onGroupSubmit();">
+        <input
+           ng-model="mnStatsGroupsCtl.group.name"
+           autocorrect="off"
+           spellcheck="false"
+           autocapitalize="off"
+           type="text"
+           class="charts-group-name"
+           ng-focus="mnStatsGroupsCtl.onGroupFocus();"
+           ng-blur="mnStatsGroupsCtl.onGroupNameBlur();"
+           ng-attr-size="{{mnStatsGroupsCtl.group.name.length + 3}}">
+        <button
+           type="submit"
+           title="save chart"
+           class="outline icon fa-check"
+           mn-focus="mnStatsGroupsCtl.focusOnSubmit"
+           ng-show="mnStatsGroupsCtl.showGroupControls"
+           ng-mousedown="mnStatsGroupsCtl.onControlClick = true;">
+        </button>
+        <span
+           title="delete group"
+           class="icon fa-trash"
+           ng-show="mnStatsGroupsCtl.showGroupControls"
+           ng-mousedown="mnStatsGroupsCtl.onGroupDelete();">
+        </span>
+      </form>
+      <span class="charts-preset-group-name ellipsis"
+            ng-if="mnStatsGroupsCtl.group.preset">{{mnStatsGroupsCtl.group.name}}</span>
+
+<!-- if stats can be sub-divided by "item", they show in these menus ---------->
+      <div
+         ng-if="mnStatsGroupsCtl.group.isOpen"
+         class="chart-group-row-items"
+         ng-click="$event.stopPropagation();">
+        <div
+           ng-if="mnStatsGroupsCtl.enabledItems['@index-'] && statisticsNewCtl.indexItems.length"
+           ng-init="mnStatsGroupsCtl.items.index =
+                    'index/' + statisticsNewCtl.indexItems[0].index +'/'">
+          indexes:
+          <select
+             ng-model="mnStatsGroupsCtl.items.index"
+             class="max-width-4">
+            <option ng-repeat="row in statisticsNewCtl.indexItems"
+                    ng-value="'index/' + row.index + '/'">
+              {{row.index}}
+            </option>
+          </select>
+        </div>
+
+        <div ng-if="mnStatsGroupsCtl.enabledItems['@kv-'] && statisticsNewCtl.viewItems.length"
+             ng-init="mnStatsGroupsCtl.items.kv =
+                      statisticsNewCtl.viewItems[0].statKeyPrefix">
+          views:
+          <select
+             ng-model="mnStatsGroupsCtl.items.kv"
+             class="max-width-4 margin-left-quarter">
+            <option ng-repeat="row in statisticsNewCtl.viewItems"
+                    ng-value="row.statKeyPrefix">
+              {{row.statId}}
+            </option>
+          </select>
+        </div>
+
+        <div
+           ng-if="mnStatsGroupsCtl.enabledItems['@xdcr-'] && statisticsNewCtl.xdcrItems.length"
+           ng-init="mnStatsGroupsCtl.items.xdcr =
+                    'replications/' + statisticsNewCtl.xdcrItems[0].id + '/'">
+          replications:
+          <select
+             ng-model="mnStatsGroupsCtl.items.xdcr"
+             class="max-width-4">
+            <option ng-repeat="row in statisticsNewCtl.xdcrItems"
+                    ng-value="'replications/' + row.id + '/'">
+              {{row.source}} -&gt; {{row.target.split('buckets/')[1]}}
+            </option>
+          </select>
+        </div>
+
+        <div
+           ng-if="mnStatsGroupsCtl.enabledItems['@fts-'] && statisticsNewCtl.ftsItems.length"
+           ng-init="mnStatsGroupsCtl.items.fts =
+                    'fts/' + statisticsNewCtl.ftsItems[0].name + '/'">
+          search indexes:
+          <select
+             ng-model="mnStatsGroupsCtl.items.fts"
+             class="max-width-4">
+            <option ng-repeat="row in statisticsNewCtl.ftsItems"
+                    ng-value="'fts/' + row.name + '/'">
+              {{row.name}}
+            </option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div ng-if="mnStatsGroupsCtl.group.isOpen" class="row charts">
+      <div
+         ng-repeat="chartID in mnStatsGroupsCtl.group.charts track by ($index + chartID)"
+         ng-controller="mnStatisticsChartsController as mnStatsChartsCtl"
+         ng-class="'statistics-' + (mnStatsChartsCtl.chart.size || 'small')"
+         class="panel relative">
+        <div class="chart-controls"
+             title="show/hide chart controls"
+             ng-show="!mnStatsChartsCtl.chart.preset">
+          <span
+             title="delete chart"
+             class="icon fa-trash"
+             ng-click="mnStatsChartsCtl.deleteChart()"></span>
+          <span
+             ng-if="mnStatsChartsCtl.chart"
+             title="edit chart"
+             class="icon fa-edit"
+             ng-click="mnStatsChartsCtl.editChart(mnStatsGroupsCtl.group,
+                       statisticsNewCtl.scenario.selected)"></span>
+        </div>
+        <div ng-if="!mnStatsChartsCtl.chart" class="statistics-not-available">
+          Chart not available
+        </div>
+        <mn-statistics-chart
+           ng-click="mnStatsChartsCtl.api.chart.inititalized &&
+                     mnStatsChartsCtl.openDetailedChartDialog();"
+           ng-if="mnStatsChartsCtl.chart && !mnStatsChartsCtl.reloadChartDirective && !mnStatsGroupsCtl.reloadChartDirective"
+           sync-scope="statisticsNewCtl.mnStatisticsNewScope"
+           bucket="{{statisticsNewCtl.bucket}}"
+           zoom="{{statisticsNewCtl.zoom}}"
+           node="{{statisticsNewCtl.node}}"
+           items="mnStatsGroupsCtl.items"
+           rbac="rbac"
+           api="mnStatsChartsCtl.api"
+           config="mnStatsChartsCtl.chart"></mn-statistics-chart>
+      </div>
+      <div
+         class="chart-adder"
+         ng-show="!statisticsNewCtl.scenario.selected.preset"
+         ng-click="statisticsNewCtl.openChartBuilderDialog(
+                   mnStatsGroupsCtl.group,
+                   statisticsNewCtl.scenario.selected,
+                   mnStatsGroupsCtl)"
+         title="Add a Chart">
+      </div>
+    </div>
+  </div>
+  <div
+     ng-if="statisticsNewCtl.scenario.selected &&
+            !statisticsNewCtl.scenario.selected.groups.length"
+     class="zero-content">
+    No charts to display yet.
+    <a ng-click="statisticsNewCtl.openGroupDialog(statisticsNewCtl.scenario.selected)">
+      Add a Group
+    </a> to start, then add charts.<br>
+    NOTE: All your changes will be auto-saved.
+  </div>
+</div>

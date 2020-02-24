@@ -1,0 +1,20 @@
+<div class="row" style="pointer-events: none;">
+  <span
+     class="chart-title cursor-pointer"
+     style="pointer-events: auto;"
+     tooltip-append-to-body="true"
+     uib-tooltip-html="'{{desc}}'"
+     tooltip-trigger="'mouseenter'"
+     tooltip-placement="auto right">
+    {{title}}
+  </span>
+  <span>&nbsp;</span>
+</div>
+<mn-multi-chart
+   ng-if="options"
+   style="display:block;"
+   sync-scope="syncScope"
+   api="api"
+   options="options"
+   data="chartData"
+   ></mn-multi-chart>

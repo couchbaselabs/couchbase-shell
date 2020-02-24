@@ -48,6 +48,7 @@ impl nu::WholeStreamCommand for Analytics {
         debug!("Running analytics query {}", &statement);
         let mut result = block_on(
             self.state
+                .active_cluster()
                 .cluster()
                 .analytics_query(statement, AnalyticsOptions::default()),
         )

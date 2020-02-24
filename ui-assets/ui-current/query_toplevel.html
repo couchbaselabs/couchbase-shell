@@ -1,0 +1,35 @@
+<div ng-controller="qwQueryController as qc">
+
+  <mn-element-cargo depot="subnav">
+    <nav ng-if="qc.validated.valid() && qc.isEnterprise()" class="sub-nav">
+      <a ui-sref="app.admin.query.workbench" ui-sref-active="selected">
+        Query Workbench</a>
+      <a ui-sref="app.admin.query.monitoring" ng-if="qc.isEnterprise() && qc.validated.monitoringAllowed()"
+       ng-class="{selected: ('app.admin.query.monitoring' | includedByState)}">
+        Query Monitor</a>
+        <!--
+      <a ui-sref="app.admin.query.doc_editor" ui-sref-active="selected">
+        Document Editor</a> -->
+    </nav>
+  </mn-element-cargo>
+
+  <div class="margin-top-1" ng-if="qc.validated.inProgress() && !qc.validated.valid()">
+    <p>Contacting query node...</p>
+  </div>
+
+  <div ng-if="!qc.validated.inProgress() && !qc.validated.valid()" class="margin-top-half">
+    <div ng-if="qc.validNodes.length">
+      <span>
+        <p class="error">Received error {{qc.validated.otherStatus()}} when contacting the
+        query service. Try refreshing the browser, as errors may occur if the query service is still warming up 
+        or suffering a transient error.</p>
+      </span>
+    </div>
+    <div ng-if="qc.validNodes.length == 0">
+      <p class="error">The query interface is only available on Couchbase clusters running the query service. 
+      No query nodes were found on this cluster.</p>
+    </div>
+  </div>
+
+  <div ui-view=""></div>
+</div>

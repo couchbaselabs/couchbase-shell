@@ -1,0 +1,127 @@
+<div class="dialog-med">
+  <div class="panel-header">
+    <h2>Add Server Node</h2>
+  </div>
+  <form
+     novalidate
+     ng-submit="serversAddDialogCtl.onSubmit(form)"
+     name="form"
+     class="forms"
+     mn-spinner="serversAddDialogCtl.viewLoading">
+    <div class="panel-content">
+      <div class="error error-form">
+        Warning: Adding a server to this cluster means any previous Couchbase Server data on that server will be removed.
+      </div>
+      <div class="error error-form"
+           ng-show="serversAddDialogCtl.certificate.cert.type == 'generated'">
+        This cluster is using self-signed certificates. No peer verification between nodes will be done.
+      </div>
+      <div
+         class="error error-form"
+         ng-repeat="error in serversAddDialogCtl.errors">
+        Attention: {{error}}<br>
+      </div>
+      <div
+         class="error error-form"
+         ng-show="form.hostname.$error.required">
+        Attention: Hostname/IP Address cannot be blank.
+      </div>
+      <div
+         class="error error-form"
+         ng-show="form.$error.services">
+        Attention: Please specify a Service(s) for this node.
+      </div>
+
+      <div class="formrow">
+        <label for="add-server-hostname">Hostname/IP Address</label>
+        <input
+           type="text"
+           id="add-server-hostname"
+           ng-model="serversAddDialogCtl.addNodeConfig.credentials.hostname"
+           mn-focus="serversAddDialogCtl.focusMe"
+           ng-disabled="!!serversAddDialogCtl.postDiskStorageErrors"
+           required
+           name="hostname"
+           autocorrect="off"
+           spellcheck="false"
+           autocapitalize="off">
+
+      </div>
+
+      <div class="formrow" ng-show="serversAddDialogCtl.groups.length > 1">
+        <span ng-if="serversAddDialogCtl.isGroupsAvailable">
+          <label for="js_servers_group_select">Assign Group</label>
+          <select
+             ng-disabled="!!serversAddDialogCtl.postDiskStorageErrors"
+             id="js_servers_group_select"
+             ng-model="serversAddDialogCtl.addNodeConfig.selectedGroup"
+             ng-options="group.name for group in serversAddDialogCtl.groups"></select>
+        </span>
+      </div>
+
+      <div class="formrow">
+        <label for="user_inp" class="inline">Username&nbsp;</label>
+        <small>a user with admin access to this server</small>
+        <br>
+        <input
+           ng-disabled="!!serversAddDialogCtl.postDiskStorageErrors"
+           type="text"
+           id="user_inp"
+           ng-model="serversAddDialogCtl.addNodeConfig.credentials.user"
+           autocorrect="off"
+           spellcheck="false"
+           autocapitalize="off">
+      </div>
+
+      <div class="formrow">
+        <label for="password_inp">Password</label>
+        <input
+           ng-disabled="!!serversAddDialogCtl.postDiskStorageErrors"
+           mn-autocomplete-off
+           type="password"
+           id="password_inp"
+           ng-model="serversAddDialogCtl.addNodeConfig.credentials.password"
+           autocorrect="off"
+           spellcheck="false">
+      </div>
+
+      <label class="inline">Services</label>
+      <span
+         class="fa-stack icon-info"
+         uib-tooltip="Only uncheck services you are certain you will NOT use on this node. Services are enabled on a per-node basis. The selection of services CANNOT be changed on an active node. To make service changes, you must first take down the node."
+         tooltip-placement="auto right">
+        <span class="icon fa-circle-thin fa-stack-2x"></span>
+        <span class="icon fa-info fa-stack-1x"></span>
+      </span>
+      <br>
+      <div
+         mn-is-disabled="!!serversAddDialogCtl.postDiskStorageErrors"
+         class="formrow checkbox-list"
+         mn-is-enterprise="poolDefault.isEnterprise"
+         mn-services="serversAddDialogCtl.addNodeConfig">
+      </div>
+
+      <div class="formrow">
+        <input
+           type="checkbox"
+           id="for-use-disk-paths"
+           ng-model="serversAddDialogCtl.specifyDisk">
+        <label for="for-use-disk-paths">
+          Customize disk storage paths (this node)
+        </label>
+      </div>
+      <mn-services-disk-paths
+         is-disabled="!serversAddDialogCtl.specifyDisk"
+         ng-if="serversAddDialogCtl.selfConfig && serversAddDialogCtl.specifyDisk"
+         config="serversAddDialogCtl.selfConfig"
+         is-enterprise="poolDefault.isEnterprise"
+         post-disk-storage-errors="serversAddDialogCtl.postDiskStorageErrors"
+         ></mn-services-disk-paths>
+    </div>
+
+    <div class="panel-footer">
+      <a  ng-click="$dismiss()">Cancel</a>
+      <button type="submit">Add Server</button>
+    </div>
+  </form>
+</div>

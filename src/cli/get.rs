@@ -41,7 +41,11 @@ impl nu::WholeStreamCommand for Get {
         let args = args.evaluate_once(registry)?;
         let id = args.nth(0).expect("need id").as_string()?;
 
-        let bucket = self.state.cluster().bucket("travel-sample");
+        let bucket = self
+            .state
+            .active_cluster()
+            .cluster()
+            .bucket("travel-sample");
         let collection = bucket.default_collection();
         debug!("Running kv get for doc {}", &id);
 

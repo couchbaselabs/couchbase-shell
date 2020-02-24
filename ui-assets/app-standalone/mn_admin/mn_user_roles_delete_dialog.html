@@ -1,0 +1,22 @@
+<div class="dialog-small">
+  <div class="panel-header">
+    <h2>Confirm Delete</h2>
+  </div>
+  <form
+     ng-submit="userRolesDeleteDialogCtl.onSubmit()"
+     mn-spinner="userRolesDeleteDialogCtl.viewLoading">
+    <div class="panel-content">
+      <div class="row flex-left">
+        <span class="icon fa-warning fa-2x red-3"></span>
+        <p>
+          Warning: This action is not reversible.
+          <br>Delete {{userRolesDeleteDialogCtl.username}}?
+        </p>
+      </div>
+    </div>
+    <div class="panel-footer">
+      <a  ng-click="$dismiss()">Cancel</a>
+      <button type="submit">Delete User</button>
+    </div>
+  </form>
+</div>

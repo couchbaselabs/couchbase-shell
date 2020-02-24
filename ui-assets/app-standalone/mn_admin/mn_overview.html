@@ -1,0 +1,129 @@
+<mn-element-cargo depot="header">
+  <div class="about-text resp-hide-sml">
+    {{::adminCtl.implementationVersion | mnPrettyVersion}}
+    <span ng-show="overviewCtl.addressFamily=='inet6'">&#8231; IPv6</span>
+    <span ng-show="overviewCtl.addressFamily=='inet'">&#8231; IPv4</span>
+    <span ng-show="overviewCtl.nodeEncryption">&#8231; encrypted</span>
+    &nbsp; &copy; 2020 <a href="https://couchbase.com" target="_blank">Couchbase, Inc.</a>
+  </div>
+</mn-element-cargo>
+
+<div class="margin-top-quarter" mn-spinner="(rbac.cluster.bucket['.'].stats.read && !overviewCtl.mnOverviewStats) || !overviewCtl.mnOverviewConfig || !overviewCtl.nodes || (rbac.cluster.bucket['.'].settings.read && !buckets.details)">
+
+  <div class="zero-content max-width-12" ng-show="!buckets.details.length">
+    You have no data buckets.
+    <span ng-show="rbac.cluster.buckets.create">
+      Go to <a ui-sref="app.admin.buckets">Buckets</a> to add one, or load a
+      sample bucket with data & indexes from Settings > <a ui-sref="app.admin.settings.sampleBuckets">Sample Buckets</a>.
+    </span>
+  </div>
+
+  <div ng-show="buckets.details.length" ui-view=""></div>
+
+</div>
+<footer class="footer-dashboard">
+  <div class="service-widget-row resp-margin-xsml">
+    <div
+       class="service-widget"
+       ui-sref="app.admin.buckets"
+       ng-class="['dynamic_' + overviewCtl.nodes.kv.statusClass]">
+      <p>Data - {{buckets.details.length + ' bucket' + overviewCtl.getEndings(buckets.details.length)}}</p>
+      <div
+         class="error"
+         ng-repeat="(nodeStatuses, count) in overviewCtl.nodes.kv.nodespyStatuses">
+        {{count + ' node' + overviewCtl.getEndings(count) + ' ' + nodeStatuses}}
+      </div>
+    </div>
+    <div
+       class="service-widget"
+       ui-sref="app.admin.gsi"
+       ng-class="['dynamic_' + overviewCtl.nodes.index.statusClass]">
+      <p>Index</p>
+      <div
+         class="error"
+         ng-repeat="(nodeStatuses, count) in overviewCtl.nodes.index.nodesByStatuses">
+        {{count + ' node' + overviewCtl.getEndings(count) + ' ' + nodeStatuses}}
+      </div>
+    </div>
+    <div
+       class="service-widget"
+       ui-sref="app.admin.query.monitoring"
+       ng-class="['dynamic_' + overviewCtl.nodes.n1ql.statusClass]">
+      <p>Query</p>
+      <div
+         class="error"
+         ng-repeat="(nodeStatuses, count) in overviewCtl.nodes.n1ql.nodesByStatuses">
+        {{count + ' node' + overviewCtl.getEndings(count) + ' ' + nodeStatuses}}
+      </div>
+    </div>
+    <div
+       class="service-widget"
+       ui-sref="app.admin.search.fts_list"
+       ng-class="['dynamic_' + overviewCtl.nodes.fts.statusClass]">
+      <p>Search</p>
+      <div
+         class="error"
+         ng-repeat="(nodeStatuses, count) in overviewCtl.nodes.fts.nodesByStatuses">
+        {{count + ' node' + overviewCtl.getEndings(count) + ' ' + nodeStatuses}}
+      </div>
+    </div>
+    <div
+       ng-if="adminCtl.poolDefault.isEnterprise"
+       class="service-widget"
+       ui-sref="app.admin.cbas.workbench"
+       ng-class="['dynamic_' + overviewCtl.nodes.cbas.statusClass]">
+      <p>Analytics</p>
+      <div
+         class="error"
+         ng-repeat="(nodeStatuses, count) in overviewCtl.nodes.cbas.nodesByStatuses">
+        {{count + ' node' + overviewCtl.getEndings(count) + ' ' + nodeStatuses}}
+      </div>
+    </div>
+    <div
+       ng-if="adminCtl.poolDefault.isEnterprise"
+       class="service-widget"
+       ui-sref="app.admin.eventing.summary"
+       ng-class="['dynamic_' + overviewCtl.nodes.eventing.statusClass]">
+      <p>Eventing</p>
+      <div
+         class="error"
+         ng-repeat="(nodeStatuses, count) in overviewCtl.nodes.eventing.nodesByStatuses">
+        {{count + ' node' + overviewCtl.getEndings(count) + ' ' + nodeStatuses}}
+      </div>
+    </div>
+    <div
+       ng-show="rbac.cluster.xdcr.remote_clusters.read"
+       ui-sref="app.admin.replications"
+       class="service-widget"
+       ng-class="['dynamic_' + (adminCtl.tasks.tasksXDCR.length ? 'healthy' : 'inactive')]">
+      <p>XDCR</p>
+    </div>
+  </div>
+
+  <div class="dashboard-servers resp-xsml">
+    <div class="dashboard-node" title="active nodes">
+      <span class="icon fa-server green-2"></span>
+      <p>
+        {{(overviewCtl.nodes.all.active.length || '0') + ' active node' + overviewCtl.getEndings(overviewCtl.nodes.all.active.length)}}
+      </p>
+    </div>
+    <div class="dashboard-node" title="failed-over nodes">
+      <span class="icon fa-server orange-2"></span>
+      <p>
+        {{(overviewCtl.nodes.all.failedOver.length || '0') + ' failed-over node' + overviewCtl.getEndings(overviewCtl.nodes.all.failedOver.length)}}
+      </p>
+    </div>
+    <div class="dashboard-node" title="nodes pending rebalance">
+      <span class="icon fa-server orange-2"></span>
+      <p>
+        {{(overviewCtl.nodes.all.pending.length || '0') + ' node' + overviewCtl.getEndings(overviewCtl.nodes.all.pending.length) + ' pending rebalance'}}
+      </p>
+    </div>
+    <div class="dashboard-node" title="inactive nodes">
+      <span class="icon fa-server red-3"></span>
+      <p>
+        {{(overviewCtl.nodes.all.down.length || '0') + ' inactive node' + overviewCtl.getEndings(overviewCtl.nodes.all.down.length)}}
+      </p>
+    </div>
+  </div>
+</footer>

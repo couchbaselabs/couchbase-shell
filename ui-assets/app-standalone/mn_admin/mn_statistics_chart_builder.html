@@ -1,0 +1,214 @@
+<div class="chart-builder dialog-xlg">
+  <div class="panel-header">
+    <h2>
+      <span ng-if="builderCtl.isEditing">Edit</span>
+      <span ng-if="!builderCtl.isEditing">Add</span>
+      Chart
+    </h2>
+  </div>
+  <form
+     mn-spinner="builderCtl.viewLoading"
+     ng-submit="builderCtl.create()">
+    <div class="panel-content" style="padding-bottom: 0;">
+      <div class="row items-top content-box min-padding margin-bottom-half">
+        <div class="column">
+          <h5>Multi-Stat or Multi-Node Chart?</h5>
+          <div class="checkbox-list" style="margin-top: 4px;">
+            <input
+               type="radio"
+               id="for-individual-nodes"
+               ng-model="builderCtl.newChart.specificStat"
+               ng-change="builderCtl.onSpecificChecked()"
+               name="specificStat"
+               value="true">
+            <label for="for-individual-nodes">
+              show seperate nodes + single statistic
+            </label>
+            <input
+               type="radio"
+               id="for-whole-cluster"
+               ng-model="builderCtl.newChart.specificStat"
+               name="specificStat"
+               ng-change="builderCtl.onSpecificChecked()"
+               value="false">
+            <label for="for-whole-cluster">
+              combine node data + multiple stats per chart</label>
+          </div>
+        </div>
+
+        <div class="margin-right-1 nowrap">
+          <h5>Chart Size</h5>
+          <select
+             ng-model="builderCtl.newChart.size"
+             class="fix-width-1">
+            <option value="small">S</option>
+            <option value="medium">M</option>
+            <option value="large">L</option>
+          </select>
+        </div>
+
+        <div
+           class="nowrap"
+           ng-if="builderCtl.isEditing">
+          <h5>Group</h5>
+          <select
+             class="fix-width-2"
+             ng-disabled="!builderCtl.isEditing"
+             ng-model="builderCtl.selectedGroup">
+            <option
+               ng-repeat="group in builderCtl.groups"
+               value="{{group.id}}">
+              {{group.name}}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row pills margin-bottom-half">
+        <a ng-repeat="name in builderCtl.tabs"
+           ng-if="((name !== '@eventing') && (name !== '@cbas')) || poolDefault.isEnterprise"
+           ng-class="{selected: builderCtl.tab == name}"
+           ng-click="builderCtl.selectTab(name)"
+           class="margin-right-half">
+          {{name | mnFormatStatsSections | mnFormatServices}}
+        </a>
+      </div>
+
+      <div
+         class="row margin-bottom-half"
+         ng-if="builderCtl.tab == '@kv'">
+        <div
+           class="checkbox-filter"
+           ng-repeat="(name, _) in builderCtl.kvGroups"
+           ng-class="{selected : builderCtl.selectedKVFilters[name]}">
+          <input
+             id="kv-filter-{{name}}"
+             type="checkbox"
+             ng-model="builderCtl.selectedKVFilters[name]">
+          <label
+             for="kv-filter-{{name}}"
+             class="initialcaps">
+            {{name}}
+          </label>
+        </div>
+      </div>
+<!-- list of selectable stats ---------------------------------------------- -->
+      <div class="scrolling-wrapper">
+        <div class="margin-bottom-1-5 margin-right-half columns-3">
+  <!-- bucket KV stats ------------------------------------------------------- -->
+          <div ng-if="builderCtl.tab == '@kv'">
+            <div ng-repeat="(name1, group) in builderCtl.kvGroups">
+              <div ng-repeat="name in group"
+                   ng-style="{opacity: builderCtl.maybeDisableField('@kv-.' + name) ? '0.3' : '1'}"
+                   ng-if="builderCtl.selectedKVFilters[name1]">
+                <input
+                   id="stat-{{name}}-checkbox"
+                   type="checkbox"
+                   ng-change="builderCtl.onStatChecked('@kv-.' + name)"
+                   ng-disabled="builderCtl.maybeDisableField('@kv-.' + name)"
+                   ng-model="builderCtl.newChart.stats['@kv-.' + name]">
+                <label
+                   for="stat-{{name}}-checkbox"
+                   uib-tooltip="{{builderCtl.statsDesc['@kv-'][name].desc}}"
+                   tooltip-placement="auto top"
+                   tooltip-trigger="'mouseenter'"
+                   tooltip-append-to-body="true"
+                   tooltip-popup-delay="500">
+                  {{::builderCtl.statsDesc["@kv-"][name].title}}
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- bucket XDCR/VIEWS/INDEXES...(items) stats ----------------------------- -->
+          <div
+             ng-repeat="(name, stat) in builderCtl.statsDesc[builderCtl.tab + '-']['@items']"
+             ng-if="stat"
+             ng-style="{opacity: builderCtl.maybeDisableField(
+                       builderCtl.tab + '-' + '.' + '@items' + '.' + name) ? '0.3' : '1'}">
+            <input
+               id="stat-{{name}}-checkbox"
+               type="checkbox"
+               ng-change="builderCtl.onStatChecked(
+                          builderCtl.tab + '-' + '.' + '@items' + '.' + name)"
+               ng-disabled="builderCtl.maybeDisableField(
+                            builderCtl.tab + '-' + '.' + '@items' + '.' + name)"
+               ng-model="builderCtl.newChart.stats[
+                         builderCtl.tab + '-' + '.' + '@items' + '.' + name]">
+            <label
+               for="stat-{{name}}-checkbox"
+               uib-tooltip="{{stat.desc}}"
+               tooltip-placement="auto top"
+               tooltip-trigger="'mouseenter'"
+               tooltip-append-to-body="true"
+               tooltip-popup-delay="500">
+              {{::stat.title}}
+            </label>
+          </div>
+
+          <!-- bucket non KV stats --------------------------------------------------- -->
+          <div ng-if="builderCtl.statsDesc[builderCtl.tab] && builderCtl.tab !== '@kv'">
+            <div
+               ng-repeat="(name, stat) in builderCtl.statsDesc[builderCtl.tab]"
+               ng-if="stat && (name !== '@items')"
+               ng-style="{opacity: builderCtl.maybeDisableField(
+                         builderCtl.tab + '.' + name) ? '0.3' : '1'}">
+              <input
+                 id="stat-{{name}}-checkbox"
+                 type="checkbox"
+                 ng-change="builderCtl.onStatChecked(builderCtl.tab + '.' + name)"
+                 ng-disabled="builderCtl.maybeDisableField(builderCtl.tab + '.' + name)"
+                 ng-model="builderCtl.newChart.stats[builderCtl.tab + '.' + name]">
+              <label
+                 for="stat-{{name}}-checkbox"
+                 uib-tooltip="{{stat.desc}}"
+                 tooltip-placement="auto top"
+                 tooltip-trigger="'mouseenter'"
+                 tooltip-append-to-body="true"
+                 tooltip-popup-delay="500">
+                {{::stat.title}}
+              </label>
+            </div>
+
+            <!-- <\!-- services specific stats ----------------------------------------------- -\-> -->
+              <div
+                 ng-repeat="(name, stat) in builderCtl.statsDesc[builderCtl.tab + '-']"
+                 ng-if="stat && (name !== '@items')"
+                 ng-style="{opacity: builderCtl.maybeDisableField(
+                           builderCtl.tab + '-' + '.' + name) ? '0.3' : '1'}">
+                <input
+                   id="stat-{{name}}-checkbox"
+                   type="checkbox"
+                   ng-change="builderCtl.onStatChecked(builderCtl.tab + '-' + '.' + name)"
+                   ng-disabled="builderCtl.maybeDisableField(builderCtl.tab + '-' + '.' + name)"
+                   ng-model="builderCtl.newChart.stats[builderCtl.tab + '-' + '.' + name]">
+                <label
+                   for="stat-{{name}}-checkbox"
+                   uib-tooltip="{{stat.desc}}"
+                   tooltip-placement="auto top"
+                   tooltip-trigger="'mouseenter'"
+                   tooltip-append-to-body="true"
+                   tooltip-popup-delay="500">
+                  {{::stat.title}}
+                </label>
+              </div>
+          </div>
+        </div>
+      </div>
+    </div>
+      <div class="panel-footer spaced scroll-shadow">
+        <div class="text-smaller flex-grow-2 margin-right-15">
+          <span class="cb-breadcrumb" ng-repeat="(breadcrumb, _val) in builderCtl.breadcrumbs">
+            {{breadcrumb}}
+            <span class="breadcrumb-divider"> | </span>
+          </span>
+        </div>
+        <div class="row row-min">
+          <a ng-click="$dismiss()">Cancel</a>
+          <button
+             type="submit"
+             ng-disabled="!builderCtl.getSelectedStatsLength()">Save Chart</button>
+        </div>
+      </div>
+  </form>
+  </div>

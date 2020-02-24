@@ -1,0 +1,18 @@
+<div class="dialog-small">
+  <h2 class="panel-header">Confirm Over-Write</h2>
+  <div class="panel-content">
+    <div class="row flex-left">
+      <span class="icon fa-warning fa-2x red-3"></span>
+      <p>
+        Warning: A design document with this name already exists.
+        <br>Overwrite this design document?
+      </p>
+    </div>
+  </div>
+  <div class="panel-footer">
+    <a  ng-click="$dismiss()">Cancel</a>
+    <button
+       type="submit"
+       ng-click="$close()">Overwrite Document</button>
+  </div>
+</div>

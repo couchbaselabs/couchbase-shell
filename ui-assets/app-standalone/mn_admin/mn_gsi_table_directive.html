@@ -1,0 +1,153 @@
+<div class="cbui-table" mn-sortable-table>
+  <div class="cbui-table-header">
+    <span class="cbui-table-cell flex-grow-1-5">
+      <span
+         mn-sortable-title="index"
+         sort-by-default="true"
+         class="sorter">
+        index name
+      </span>
+    </span>
+    <span class="cbui-table-cell flex-grow-half resp-hide-xsml">
+      <span mn-sortable-title="num_requests" class="sorter">
+        requests/sec
+      </span>
+    </span>
+    <span class="cbui-table-cell flex-grow-half resp-hide-sml">
+      <span mn-sortable-title="index_resident_percent" class="sorter">
+        resident ratio
+      </span>
+    </span>
+    <span class="cbui-table-cell flex-grow-half">
+      <span mn-sortable-title="items_count" class="sorter">
+        items
+      </span>
+    </span>
+    <span class="cbui-table-cell flex-grow-half resp-hide-xsml">
+      <span mn-sortable-title="data_size" class="sorter">
+        data size
+      </span>
+    </span>
+    <span class="cbui-table-cell flex-grow-half" ng-if="hideColumn !== 'bucket'">
+      <span mn-sortable-title="bucket" class="sorter">
+        bucket
+      </span>
+    </span>
+    <span class="cbui-table-cell" ng-if="hideColumn == 'bucket'">
+      <span mn-sortable-title="hosts[0]" class="sorter">
+        node
+      </span>
+    </span>
+    <span class="cbui-table-cell">
+      <span mn-sortable-title="status" class="sorter">
+        status
+      </span>
+    </span>
+  </div>
+  <section
+     ng-repeat="row in list
+                | orderBy:mnSortableTable.sortableTableProperties.orderBy
+                : mnSortableTable.sortableTableProperties.invert
+                | filter:filterField
+                as listFiltered
+                track by mnGsiTableCtl.generateIndexId(row)"
+     ng-class="[(row.awaitingRemoval ? 'disabled-tag' : ''),
+               (mnGsiTableCtl.isDetailsOpened(mnGsiTableCtl.generateIndexId(row)) ?
+               mnGsiTableCtl.getStatusClass(row) : '')]"
+     ng-click="mnGsiTableCtl.toggleDetails(mnGsiTableCtl.generateIndexId(row))"
+     class="has-hover">
+    <div
+       class="cbui-tablerow"
+       ng-class="[(!mnGsiTableCtl.isDetailsOpened(mnGsiTableCtl.generateIndexId(row)) ?
+                 mnGsiTableCtl.getStatusClass(row) : '')]"
+       ng-controller="mnGsiItemController as gsiItemCtl">
+      <span class="cbui-table-cell flex-grow-1-5 row flex-left" title="{{row.index}}">
+        {{row.indexName}}
+        <span class="flex-inline flex-wrap">
+          <span class="label lt-blue" ng-if="row.partitioned">
+            partitioned
+          </span>
+          <span class="label warning" ng-if="row.stale">
+            stale
+          </span>
+          <span
+             class="label lt-blue" ng-if="row.index.indexOf('(replica') > -1"
+             uib-tooltip="Index replicas are always active and automatically load-balance scan requests."
+             tooltip-append-to-body="true"
+             tooltip-placement="auto top"
+             tooltip-trigger="'mouseenter'">
+            replica {{row.index.split("(replica ")[1].slice(0,-1)}}
+          </span>
+        </span>
+      </span>
+      <span class="cbui-table-cell flex-grow-half resp-hide-xsml">
+        <span ng-show="gsiItemCtl.has_num_requests">
+          {{row.num_requests | number:0}}
+        </span>
+        <span ng-show="gsiItemCtl.has_no_num_requests"> - </span>
+      </span>
+      <span class="cbui-table-cell flex-grow-half resp-hide-sml">
+        <span ng-show="gsiItemCtl.has_index_resident_percent">
+          {{row.index_resident_percent | number:0}}%
+        </span>
+        <span ng-show="gsiItemCtl.has_no_index_resident_percent"> - </span>
+      </span>
+      <span class="cbui-table-cell flex-grow-half">
+        <span ng-show="gsiItemCtl.has_items_count">
+          {{row.items_count | number:0}}
+        </span>
+        <span ng-show="gsiItemCtl.has_no_items_count"> - </span>
+      </span>
+      <span class="cbui-table-cell flex-grow-half resp-hide-xsml">
+        <span ng-show="gsiItemCtl.has_data_size">
+          {{row.data_size/1024/1024 | number:1}} MB
+        </span>
+        <span ng-show="gsiItemCtl.has_no_data_size"> - </span>
+      </span>
+      <span ng-if="hideColumn !== 'bucket'" class="cbui-table-cell flex-grow-half">
+        {{row.bucket}}
+      </span>
+      <span
+         ng-if="hideColumn == 'bucket'"
+         class="cbui-table-cell"
+         title="{{row.hosts.join(', ')}}">
+        {{row.hosts.join(', ')}}
+      </span>
+      <span class="cbui-table-cell flex-wrap text-smaller">
+        <div
+           ng-show="row.status == 'Building'"
+           uib-tooltip="{{mnGsiTableCtl.getStatusDescription(row)}}"
+           tooltip-append-to-body="true"
+           tooltip-trigger="'mouseenter'"
+           ng-click="$event.stopPropagation();">
+          building {{row.progress}}%
+        </div>
+        <div
+           ng-show="row.status != 'Building'"
+           uib-tooltip="{{mnGsiTableCtl.getStatusDescription(row)}}"
+           tooltip-append-to-body="true"
+           tooltip-trigger="'mouseenter'"
+           ng-click="$event.stopPropagation();"
+           class="nocaps">
+          {{row.status}}
+        </div>
+        <div ng-if="row['num_docs_pending+queued']"
+             class="label warning">
+          {{row['num_docs_pending+queued'] | number:0}}
+          mutations remaining
+        </div>
+      </span>
+    </div>
+    <mn-gsi-item-details
+       row="row"
+       node-name="{{nodeName}}"
+       rbac="rbac"
+       pools="pools"
+       class="cbui-tablerow-expanded"
+       ng-if="mnGsiTableCtl.isDetailsOpened(mnGsiTableCtl.generateIndexId(row))">
+    </mn-gsi-item-details>
+  </section>
+  <div ng-if="!listFiltered.length" class="zero-content margin-top-1-5">
+    You have definitely over-filtered this. Try a little less filtering...
+  </div>
+</div>

@@ -1,0 +1,43 @@
+<mn-element-cargo depot="subnav">
+  <nav
+     class="sub-nav"
+     mn-pluggable-ui-tabs
+     mn-tab-bar-name="settingsTab">
+    <a
+       ui-sref="app.admin.settings.cluster"
+       ui-sref-active="selected">General</a>
+    <a
+       class="resp-hide-sml"
+       ng-show="rbac.cluster.settings.read"
+       ui-sref="app.admin.settings.autoCompaction"
+       ui-sref-active="selected">Auto-Compaction</a>
+    <a
+       ng-show="rbac.cluster.settings.read"
+       ui-sref="app.admin.settings.alerts"
+       ui-sref-active="selected">Email Alerts</a>
+    <a
+       class="resp-hide-sml"
+       ng-show="rbac.cluster.samples.read"
+       ui-sref="app.admin.settings.sampleBuckets"
+       ui-sref-active="selected">Sample Buckets</a>
+<!-- for smaller screens, hide some subnav links and show them in this menu -->
+    <span uib-dropdown class="hidden resp-show-sml">
+      <a uib-dropdown-toggle class="toggle-subnav">
+        <span class="icon fa-ellipsis-v"></span>
+      </a>
+      <div uib-dropdown-menu class="dropdown-menu-select-like">
+        <a
+           ng-show="rbac.cluster.samples.read"
+           ui-sref="app.admin.settings.sampleBuckets"
+           ui-sref-active="selected">Sample Buckets</a>
+        <a
+           ng-show="rbac.cluster.settings.read"
+           ui-sref="app.admin.settings.autoCompaction"
+           ui-sref-active="selected">Auto-Compaction</a>
+      </div>
+    </span>
+  </nav>
+</mn-element-cargo>
+
+<div ui-view="" class="margin-top-half padding-left-1">
+</div>

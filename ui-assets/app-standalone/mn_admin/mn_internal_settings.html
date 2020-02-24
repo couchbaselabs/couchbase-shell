@@ -1,0 +1,176 @@
+<div class="dialog-med">
+  <div class="panel-header">
+    <h2>Tweak internal settings</h2>
+  </div>
+  <form
+     class="forms"
+     ng-submit="internalSettingsCtl.onSubmit()"
+     mn-spinner="internalSettingsCtl.viewLoading">
+    <div class="panel-content">
+      <div
+         ng-show="internalSettingsCtl.errors.error"
+         class="error error-form">
+        {{internalSettingsCtl.errors.error}}
+      </div>
+      <input
+         type="hidden"
+         ng-model="internalSettingsCtl.state.rebalanceIndexWaitingDisabled"
+         value="false">
+      <input
+         type="hidden"
+         ng-model="internalSettingsCtl.state.rebalanceIndexPausingDisabled"
+         value="false">
+      <input
+         type="hidden"
+         ng-model="internalSettingsCtl.state.rebalanceIgnoreViewCompactions"
+         value="false">
+      <input
+         type="hidden"
+         ng-model="internalSettingsCtl.state.indexAutoFailoverDisabled"
+         value="false">
+      <input
+         type="hidden"
+         ng-model="internalSettingsCtl.state.certUseSha1"
+         value="false">
+      <div class="formrow">
+        <input
+           type="checkbox"
+           id="for_view_waiting_rebalance"
+           ng-model="internalSettingsCtl.state.rebalanceIndexWaitingDisabled"
+           value="true">
+        <label for="for_view_waiting_rebalance" class="margin-right-zero">
+          Disable view-index waiting during rebalance
+        </label>
+        <span
+           class="fa-stack icon-info"
+           uib-tooltip="Whether index aware rebalance waiting for index up-to-dateness should be disabled. Makes rebalance faster"
+           tooltip-placement="auto right">
+          <span class="icon fa-circle-thin fa-stack-2x"></span>
+          <span class="icon fa-info fa-stack-1x"></span>
+        </span>
+      </div>
+      <div class="formrow">
+        <input
+           type="checkbox"
+           id="for_view_pausing_rebalance"
+           ng-model="internalSettingsCtl.state.rebalanceIndexPausingDisabled"
+           value="true">
+        <label for="for_view_pausing_rebalance" class="margin-right-zero">
+          Disable view-index pausing during rebalance
+        </label>
+        <span
+           class="fa-stack icon-info"
+           uib-tooltip="That's too complex to explain"
+           tooltip-placement="auto right">
+          <span class="icon fa-circle-thin fa-stack-2x"></span>
+          <span class="icon fa-info fa-stack-1x"></span>
+        </span>
+      </div>
+      <div class="formrow">
+        <input
+           type="checkbox"
+           id="for_view_no_compact"
+           ng-model="internalSettingsCtl.state.rebalanceIgnoreViewCompactions"
+           value="true">
+        <label for="for_view_no_compact">
+          Don't compact views during rebalance
+        </label>
+      </div>
+      <div class="formrow">
+        <input
+           type="checkbox"
+           id="for_no_index_failover"
+           ng-model="internalSettingsCtl.state.indexAutoFailoverDisabled"
+           value="true">
+        <label for="for_no_index_failover">
+          Do not failover Index service automatically
+        </label>
+      </div>
+      <label class="formrow">
+        <span>Max in-/out-going backfills per node during rebalance</span>
+        <input
+           type="text"
+           maxlength="5"
+           ng-model="internalSettingsCtl.state.rebalanceMovesPerNode">
+      </label>
+      <label class="formrow">
+        <span>VBucket moves per node before forced view compaction</span>
+        <input
+           maxlength="5"
+           type="text"
+           ng-model="internalSettingsCtl.state.rebalanceMovesBeforeCompaction">
+      </label>
+      <label class="formrow">
+        <span>Max parallel main view-index tasks per node</span>
+        <input
+           maxlength="5"
+           type="text"
+           ng-model="internalSettingsCtl.state.maxParallelIndexers">
+      </label>
+      <label class="formrow">
+        <span>Max parallel replica view-index tasks per node</span>
+        <input
+           maxlength="5"
+           type="text"
+           ng-model="internalSettingsCtl.state.maxParallelReplicaIndexers">
+      </label>
+      <label class="formrow">
+        <span>Maximum Bucket Count</span>
+        <input
+           maxlength="3"
+           type="text"
+           ng-model="internalSettingsCtl.state.maxBucketCount">
+      </label>
+      <label class="formrow">
+        <span>Simultaneous REST requests limit</span>
+        <input
+           maxlength="6"
+           type="text"
+           ng-model="internalSettingsCtl.state.restRequestLimit">
+      </label>
+      <label class="formrow">
+        <span>Simultaneous CAPI requests limit</span>
+        <input
+           maxlength="6"
+           type="text"
+           ng-model="internalSettingsCtl.state.capiRequestLimit">
+      </label>
+      <label class="formrow">
+        <span>Drop requests after this much memory is used (MiB)</span>
+        <input
+           maxlength="6"
+           type="text"
+           ng-model="internalSettingsCtl.state.dropRequestMemoryThresholdMiB">
+      </label>
+      <label class="formrow">
+        <span>GOTRACEBACK</span>
+        <input
+           type="text"
+           ng-model="internalSettingsCtl.state.gotraceback">
+      </label>
+      <div class="formrow">
+        <input
+           type="checkbox"
+           id="for_use_sha1"
+           ng-model="internalSettingsCtl.state.certUseSha1"
+           value="true">
+        <label for="for_use_sha1" class="margin-right-zero">
+          Use sha1 in ssl certificates
+        </label>
+        <span
+           class="fa-stack icon-info"
+           uib-tooltip="When enabled forces sha1 signature algorithm during ssl certificates generation"
+           tooltip-placement="auto right">
+          <span class="icon fa-circle-thin fa-stack-2x"></span>
+          <span class="icon fa-info fa-stack-1x"></span>
+        </span>
+      </div>
+    </div>
+    <div class="panel-footer">
+      <a  ng-click="$dismiss()">Cancel</a>
+      <button type="submit">
+        Save
+      </button>
+    </div>
+  </form>
+</div>

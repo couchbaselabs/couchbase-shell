@@ -1,0 +1,31 @@
+<div
+   ng-if="mnSearchCtl.showFilterFlag || mnSearchCtl.mnHideButton"
+   class="filter-input-group">
+  <input
+     type="text"
+     ng-model="mnSearchCtl.mnSearch"
+     mn-focus="mnSearchCtl.focusFilterField"
+     ng-disabled="mnSearchCtl.mnDisabled"
+     maxlength="256"
+     class="filter-input"
+     placeholder="{{::mnSearchCtl.mnPlaceholder}}">
+  <span
+     class="icon fa-search-minus"
+     ng-show="!mnSearchCtl.mnSearch">
+  </span>
+  <span
+     class="icon fa-times-circle"
+     ng-show="!!mnSearchCtl.mnSearch"
+     ng-click="mnSearchCtl.mnSearch = ''">
+  </span>
+</div>
+<a
+   ng-click="mnSearchCtl.showFilter()"
+   ng-show="!mnSearchCtl.showFilterFlag && !mnSearchCtl.mnHideButton"
+   class="allcaps">filter
+</a>
+<a
+   ng-click="mnSearchCtl.hideFilter()"
+   ng-show="mnSearchCtl.showFilterFlag && !mnSearchCtl.mnHideButton"
+   class="allcaps">done
+</a>

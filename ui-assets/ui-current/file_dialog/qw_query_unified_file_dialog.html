@@ -1,0 +1,54 @@
+<div class="dialog-med">
+  <div class="panel-header">
+    <h2>Export Query / Data / History</h2>
+  </div>
+
+  <form class="forms">
+  <div class="panel-content">
+    <div class="formrow checkbox-list">
+      <label>Choose Export</label>
+      <div
+         data-ng-repeat="choice in file_options track by $index">
+        <input
+           type="radio"
+           name="response"
+           value="{{$index}}"
+           id="for-{{$index}}"
+           ng-model="$parent.selected.item"
+           ng-checked="$index==0">
+        <label
+           for="for-{{$index}}"
+           class="checkbox">
+          {{choice.label}} &nbsp;
+        </label>
+      </div>
+    </div>
+    <div class="formrow">
+      <label>Filename</label>
+      <span  class="input-append items-center">
+        <input type="text" ng-model="file.name">
+        <small>&nbsp; .{{file_options[selected.item].kind}}</small>
+      </span>
+    </div>
+    <div class="formrow" ng-show="safari">
+      Older versions of Safari do not support SaveAs, and will show the output in a new tab,
+      you can use File > Save As to save it to a specific file. For queries, use a .txt file if
+      you wish to reload it into the Query Workbench.
+    </div>
+  </div>
+
+  <div class="panel-footer">
+    <a
+       ng-click="$dismiss('cancel')"
+       href="">
+      Cancel
+    </a>
+    <button
+       type="submit"
+       ng-click="$close('ok')">
+      <span ng-show="!safari">Save</span>
+			<span ng-show="safari">Next ></span>
+    </button>
+  </div>
+  </form>
+</div>

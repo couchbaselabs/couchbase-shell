@@ -2,8 +2,10 @@ mod cli;
 mod state;
 
 use crate::cli::*;
+use crate::state::RemoteCluster;
 use log::debug;
 use state::State;
+use std::collections::HashMap;
 use std::error::Error;
 use std::sync::Arc;
 use structopt::StructOpt;
@@ -16,11 +18,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let opt = CliOptions::from_args();
     debug!("Effective {:?}", opt);
 
-    let state = Arc::new(State::new(
-        opt.connection_string,
-        opt.username,
-        opt.password,
-    ));
+    let cluster = RemoteCluster::new(opt.connection_string, opt.username, opt.password);
+    let mut clusters = HashMap::new();
+    clusters.insert("default".into(), cluster);
+    let state = Arc::new(State::new(clusters, "default".into()));
 
     if opt.ui {
         tokio::task::spawn(async {
@@ -43,6 +44,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         nu::whole_stream_command(Buckets::new(state.clone())),
         // Performs n1ql queries
         nu::whole_stream_command(Query::new(state.clone())),
+        // Manages local cluster references
+        nu::whole_stream_command(Clusters::new(state.clone())),
     ]);
 
     nu::cli(Some(syncer), Some(context)).await

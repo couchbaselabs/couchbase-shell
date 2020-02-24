@@ -1,0 +1,61 @@
+<div>
+  <h4>Current Version</h4>
+  <p class="text-medium">
+    <em>Couchbase Server {{settingsNotificationsCtl.implementationVersion | mnPrettyVersion}}</em>
+  </p>
+  <div class="margin-bottom-half">
+    <input
+       type="checkbox"
+       id="for-update-notice-enable"
+       ng-disabled="!rbac.cluster.settings.write"
+       ng-model="settingsNotificationsCtl.updates.enabled">
+    <label for="for-update-notice-enable" class="margin-right-zero">
+      Enable software update notifications
+    </label>
+    <span
+       class="fa-stack icon-info"
+       uib-tooltip="Enabling software update notifications allows notification
+       in the Couchbase web console when a new version of Couchbase Server is
+       available. Configuration information transferred in the update check is
+       anonymous and does not include any stored key-value data."
+       tooltip-placement="auto right">
+      <span class="icon fa-circle-thin fa-stack-2x"></span>
+      <span class="icon fa-info fa-stack-1x"></span>
+    </span>
+  </div>
+  <div ng-if="settingsNotificationsCtl.updates.sendStats">
+    <p
+       ng-if="settingsNotificationsCtl.updates.newVersion === undefined"
+       class="error error-form">
+      Warning: There was a problem with retreiving the update information.
+    </p>
+    <p ng-if="settingsNotificationsCtl.updates.newVersion === false">
+      <em>No updates available.</em>
+    </p>
+    <p ng-if="settingsNotificationsCtl.updates.newVersion" class="text-small">
+      {{settingsNotificationsCtl.updates.newVersion}} is available.<br>
+      New features and improvements in this release can be found in the
+      <a href="{{settingsNotificationsCtl.updates.links.release}}"
+      target="_blank">release notes</a>.
+    </p>
+    <div
+       ng-if="settingsNotificationsCtl.updates.newVersion"
+       class="margin-top-1 margin-bottom-1-5">
+      <a
+         class="btn outline margin-right-1"
+         href="{{settingsNotificationsCtl.updates.links.download}}"
+         target="_blank">
+        Download Latest Version
+      </a>
+      <span class="text-small">
+        <a href="https://docs.couchbase.com/server/current/install/upgrade.html" target="_blank">
+          Upgrade Instructions
+        </a>
+        |
+        <a href="{{settingsNotificationsCtl.updates.links.release}}" target="_blank">
+          Release Notes
+        </a>
+      </span>
+    </div>
+  </div>
+</div>

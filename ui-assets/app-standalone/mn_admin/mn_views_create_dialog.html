@@ -1,0 +1,65 @@
+<div class="dialog-med">
+  <div class="panel-header">
+    <h2>
+      <span ng-show="!viewsCreateDialogCtl.isSpatial && !viewsCreateDialogCtl.isCopy">
+        Add Development View
+      </span>
+      <span ng-show="viewsCreateDialogCtl.isSpatial && !viewsCreateDialogCtl.isCopy">
+        Add Spatial Development View
+      </span>
+      <span ng-show="viewsCreateDialogCtl.isCopy">
+        Copy View
+      </span>
+    </h2>
+  </div>
+  <form
+     ng-submit="viewsCreateDialogCtl.onSubmit(ddocForm)"
+     name="ddocForm"
+     mn-spinner="viewsCreateDialogCtl.viewLoading"
+     novalidate>
+    <div class="panel-content forms">
+      <span
+         class="error"
+         ng-show="viewsCreateDialogCtl.errors.reason">
+        {{viewsCreateDialogCtl.errors.reason}}
+      </span>
+      <span
+         class="error"
+         ng-show="
+                  (ddocForm.$submitted && ddocForm.designdoc_name.$error.required) ||
+                  (ddocForm.$submitted && ddocForm.view_name.$error.required)">
+        Design Document and View names cannot be empty
+      </span>
+      <label for="copy_view_ddoc_name">Design Document Name</label>
+      <div class="formrow form-inline">
+        <label class="checkbox" for="copy_view_ddoc_name">_design/dev_</label>
+        <input
+           type="text"
+           autocorrect="off"
+           spellcheck="false"
+           autocapitalize="off"
+           id="copy_view_ddoc_name"
+           name="designdoc_name"
+           ng-model="viewsCreateDialogCtl.ddoc.name"
+           ng-disabled="viewsCreateDialogCtl.doesDdocExist && !viewsCreateDialogCtl.isCopy"
+           required>
+      </div>
+      <div class="formrow">
+        <label for="copy_view_name">View Name</label>
+        <input
+           type="text"
+           autocorrect="off"
+           spellcheck="false"
+           autocapitalize="off"
+           id="copy_view_name"
+           name="view_name"
+           ng-model="viewsCreateDialogCtl.ddoc.view"
+           required>
+      </div>
+    </div>
+    <div class="panel-footer">
+      <a ng-click="$dismiss()">Cancel</a>
+      <button type="submit">Save</button>
+    </div>
+  </form>
+</div>

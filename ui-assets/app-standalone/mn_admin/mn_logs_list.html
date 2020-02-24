@@ -1,0 +1,63 @@
+<div mn-spinner="!logsListCtl.logs" min-height="300px">
+  <div
+     class="row flex-left margin-bottom-half filter-log"
+     mn-search="logsListCtl.filterField"
+     mn-placeholder="filter logs..."
+     mn-hide-button="true">
+  </div>
+  <div class="cbui-table" mn-sortable-table>
+    <div class="cbui-table-header padding-left resp-hide-sml">
+      <span class="cbui-table-cell flex-grow-3">
+        event
+      </span>
+      <span class="cbui-table-cell">
+        <span mn-sortable-title="module" class="sorter">module code</span>
+      </span>
+      <span class="cbui-table-cell">
+        <span mn-sortable-title="node" class="sorter">server node</span>
+      </span>
+      <span class="cbui-table-cell flex-grow-1-5">
+        <span mn-sortable-title="tstamp" sort-by-default="true" class="sorter">time</span>
+      </span>
+    </div>
+    <section
+       ng-init="mnSortableTable.sortableTableProperties.invert = true"
+       ng-repeat="row in logsListCtl.logs | orderBy:mnSortableTable.sortableTableProperties.orderBy:mnSortableTable.sortableTableProperties.invert | filter:logsListCtl.filterField track by $index">
+      <div class="cbui-tablerow items-top resp-sml">
+        <span class="cbui-table-cell flex-grow-3 min-width-zero resp-sml">
+          <span
+             ng-if="!logsListCtl.isOpened($index) && logsListCtl.isOverLimit(row)"
+             class="pre-line"
+             >{{row.text | mnLimitTo: logsListCtl.textLimit}}</span>
+          <span
+             class="pre-line"
+             ng-if="logsListCtl.isOpened($index) || !logsListCtl.isOverLimit(row)"
+             >{{row.text}}</span>
+          <span ng-show="logsListCtl.isOverLimit(row)">
+            <a
+               ng-show="!logsListCtl.isOpened($index)"
+               ng-click="logsListCtl.toggle($index)">show...</a>
+            <a
+               ng-show="logsListCtl.isOpened($index)"
+               ng-click="logsListCtl.toggle($index)">hide</a>
+          </span>
+        </span>
+        <span class="cbui-table-cell resp-sml" title="{{row.module}} {{row.code}}">
+          {{row.module}} {{row.code}}
+        </span>
+        <span class="cbui-table-cell cursor-pointer resp-sml">
+          <span
+             uib-tooltip-html="'{{row.node}}'"
+             tooltip-placement="auto top"
+             tooltip-trigger="'outsideClick'">
+            {{row.node}}
+          </span>
+         </span>
+        <span class="cbui-table-cell flex-grow-1-5 wrap resp-sml">
+          <span class="semi-bold nowrap">{{row.time}}</span> &nbsp;
+          <span class="nowrap">{{row.date}}</span>
+        </span>
+      </div>
+    </section>
+  </div>
+</div>

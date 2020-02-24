@@ -1,0 +1,193 @@
+<div class="dialog-lg">
+  <div class="panel-header">
+    <h2 class="ellipsis">
+      <span ng-if="!userRolesAddDialogCtl.isEditingMode">
+        Add New User
+      </span>
+      <span ng-if="userRolesAddDialogCtl.isEditingMode">
+        Edit User {{userRolesAddDialogCtl.userID}}
+      </span>
+    </h2>
+  </div>
+  <form
+     name="userRolesAddDialogCtl.form"
+     novalidate
+     ng-submit="userRolesAddDialogCtl.save()"
+     mn-spinner="userRolesAddDialogCtl.viewLoading">
+    <div class="panel-content forms row resp-sml items-top" style="padding-bottom: .5rem;">
+      <div class="column width-5">
+        <div
+           mn-focus="userRolesAddDialogCtl.focusError"
+           tabindex="1"
+           class="error error-form"
+           ng-show="userRolesAddDialogCtl.errors"
+           ng-repeat="error in userRolesAddDialogCtl.errors">
+          {{error}}
+        </div>
+        <div ng-if="userRolesAddDialogCtl.isLdapEnabled" class="formrow checkbox-list">
+          <div>
+            <h4>Authentication Domain</h4>
+            <input
+               type="radio"
+               name="domain"
+               value="local"
+               ng-change="userRolesAddDialogCtl.onDomainChanged()"
+               ng-disabled="userRolesAddDialogCtl.isEditingMode"
+               id="user-domain-local"
+               ng-model="userRolesAddDialogCtl.user.domain">
+            <label for="user-domain-local">Couchbase</label>
+            <input
+               type="radio"
+               name="domain"
+               value="external"
+               ng-change="userRolesAddDialogCtl.onDomainChanged()"
+               ng-disabled="userRolesAddDialogCtl.isEditingMode"
+               id="user-domain-external"
+               ng-model="userRolesAddDialogCtl.user.domain">
+            <label for="user-domain-external">External</label>
+          </div>
+        </div>
+        <div class="formrow">
+          <label for="name_inp">
+            Username
+            <span ng-show="userRolesAddDialogCtl.isLookupEnabled() &&
+                           userRolesAddDialogCtl.user.id">
+              <span ng-show="!userRolesAddDialogCtl.isUserAvailable"
+                    style="display: inline"
+                    class="error">not found</span>
+              <span ng-show="userRolesAddDialogCtl.isUserAvailable"
+                    style="display: inline"
+                    class="success">exists</span>
+            </span>
+          </label>
+          <input
+             type="text"
+             ng-if="!userRolesAddDialogCtl.isLookupEnabled();"
+             autocorrect="off"
+             spellcheck="false"
+             autocitalize="off"
+             mn-autocomplete-off="enforce"
+             ng-disabled="userRolesAddDialogCtl.isEditingMode"
+             id="name_inp"
+             ng-model="userRolesAddDialogCtl.user.id">
+          <input
+             type="text"
+             ng-change="userRolesAddDialogCtl.lookupMembership()"
+             ng-if="userRolesAddDialogCtl.isLookupEnabled();"
+             autocorrect="off"
+             spellcheck="false"
+             autocapitalize="off"
+             mn-autocomplete-off="enforce"
+             ng-disabled="userRolesAddDialogCtl.isEditingMode"
+             id="name_inp"
+             ng-model="userRolesAddDialogCtl.user.id">
+        </div>
+        <div class="formrow">
+          <label for="name_full_inp">Full Name <small>(optional)</small></label>
+          <input
+             type="text"
+             autocorrect="off"
+             spellcheck="false"
+             autocapitalize="off"
+             mn-autocomplete-off="enforce"
+             id="name_full_inp"
+             ng-model="userRolesAddDialogCtl.user.name">
+        </div>
+        <div ng-if="userRolesAddDialogCtl.user.domain !== 'external' && !userRolesAddDialogCtl.isEditingMode">
+          <div class="formrow">
+            <label for="password_inp">Password</label>
+            <input
+               type="password"
+               autocorrect="off"
+               spellcheck="false"
+               autocapitalize="off"
+               mn-autocomplete-off="enforce"
+               name="password"
+               mn-equal="{{userRolesAddDialogCtl.user.verifyPassword}}"
+               id="password_inp"
+               ng-model="userRolesAddDialogCtl.user.password">
+          </div>
+          <div
+             class="error error-form"
+             ng-show="userRolesAddDialogCtl.form.$submitted && userRolesAddDialogCtl.form.password.$error.mnEqual">
+            'Password' and 'Verify Password' do not match
+          </div>
+          <div class="formrow">
+            <label for="secure-password-verify">Verify Password</label>
+            <input
+               type="password"
+               autocorrect="off"
+               spellcheck="false"
+               name="passwordVerify"
+               id="secure-password-verify"
+               mn-autocomplete-off="enforce"
+               ng-model="userRolesAddDialogCtl.user.verifyPassword">
+          </div>
+        </div>
+      </div>
+
+      <div class="column width-7">
+        <span ng-show="pools.isEnterprise" class="pills nowrap">
+          <a ng-click="userRolesAddDialogCtl.selectedPanel = 'roles'"
+             ng-class="{selected : (userRolesAddDialogCtl.selectedPanel == 'roles')}">
+            Roles
+          </a>
+          <a ng-show="poolDefault.isEnterprise && poolDefault.compat.atLeast65"
+             ng-click="userRolesAddDialogCtl.selectedPanel = 'groups'"
+             ng-class="{selected : (userRolesAddDialogCtl.selectedPanel == 'groups')}">
+            Groups
+          </a>
+        </span>
+        <fieldset class="select-user-roles hide-track show-scrollbar"
+                  mn-spinner="userRolesAddDialogCtl.reloadUserRoles"
+                  min-height="410px">
+          <div ng-show="userRolesAddDialogCtl.selectedPanel == 'groups'">
+            <label
+               class="disclosure"
+               ng-init="isGroupOpened = true;"
+               ng-click="isGroupOpened = !isGroupOpened;"
+               ng-class="{'disclosed': isGroupOpened}">
+              Groups
+            </label>
+            <div class="indent-1" ng-show="isGroupOpened">
+              <div
+                 ng-repeat="group in userRolesAddDialogCtl.groups"
+                 ng-class="[{'has-selection': userRolesAddDialogCtl.selectedGroups[group.id] || userRolesAddDialogCtl.externalGroups[group.id]}]">
+                <input
+                   type="checkbox"
+                   ng-change="userRolesAddDialogCtl.onGroupChanged(group)"
+                   id="for-{{::group.id}}"
+                   ng-model="userRolesAddDialogCtl.selectedGroups[group.id]">
+                <label
+                   ng-attr-title="{{::userRolesAddDialogCtl.getGroupTitle(group.roles);}}"
+                   for="for-{{::group.id}}">
+                  {{::group.id}}
+                </label>
+              </div>
+            </div>
+          </div>
+          <div style="width: 320px;">
+            <mn-user-roles-list
+               ng-if="!userRolesAddDialogCtl.reloadUserRoles"
+               ng-show="userRolesAddDialogCtl.selectedPanel == 'roles'"
+               selected-wrappers="userRolesAddDialogCtl.selectedWrappers"
+               selected-groups-roles="userRolesAddDialogCtl.selectedGroupsRoles"
+               roles-to-enable="userRolesAddDialogCtl.rolesToEnable"
+               selected-roles="userRolesAddDialogCtl.selectedRoles"></mn-user-roles-list>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+    <div class="panel-footer scroll-shadow">
+      <a ng-click="$dismiss()">Cancel</a>
+      <button type="submit">
+        <span ng-if="userRolesAddDialogCtl.isEditingMode">
+          Save Changes
+        </span>
+        <span ng-if="!userRolesAddDialogCtl.isEditingMode">
+          Add User
+        </span>
+      </button>
+    </div>
+  </form>
+</div>

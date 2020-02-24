@@ -1,0 +1,263 @@
+<div
+   ng-show="qc.validated.valid()"
+   class="wb-wrapper">
+
+  <mn-element-cargo depot="actions" ng-if="qc.validated.valid()">
+    <div class="header-controls">
+      <a
+         ng-if="qc.showOptions"
+         ng-click="qc.options()">
+        <span class="icon fa-cog fa-lg"></span>
+      </a>
+      <input
+         type="file"
+         id="loadQuery"
+         name="files"
+         style="display:none"
+         accept=".txt,.json">
+      <a
+
+         id="loadQueryButton"
+         ng-click="qc.do_import()"
+         class="outline resp-hide-sml"
+         onchange="console.log('changed files')">
+        IMPORT
+      </a>
+      <a
+         ng-click="qc.unified_save()"
+         class="resp-hide-sml">
+        EXPORT
+      </a>
+    </div>
+  </mn-element-cargo>
+
+<!-- wrapper for query editor and results ------------------------------------>
+  <div mn-spinner="queryInProgress" class="wb-main-wrapper width-9 resp-small">
+<!-- query editor header, main editor area, and results footer --------------->
+    <div class="wb-query-editor">
+<!-- Editor "header row" ----------------------------------------------------->
+      <div class="wb-query-editor-header"  ng-click="qc.handleClick('editor')">
+        <h4>Query Editor</h4>
+        <span class="wb-history-controls">
+          <span
+             title="View previous queries & results" ng-click="qc.prev()"
+             qw-long-press="qc.historyMenu"
+             class="icon angle-icon left"
+             ng-disabled="!qc.hasPrev()">
+
+          </span>
+          <span class="wb-history-controls-inner">
+            <a ng-click="qc.historyMenu()">history</a>
+            ({{qc.getCurrentIndex()}})
+          </span>
+          <span
+             title="View subsequent queries & results"
+             ng-click="qc.next()"
+             qw-long-press="qc.historyMenu"
+             class="icon angle-icon right"
+             ng-disabled="!qc.hasNext()">
+
+          </span>
+        </span>
+        <div class="wb-fullscreen resp-hide-sml" ng-click="qc.toggleFullscreen()">
+          <span ng-if="!qc.fullscreen" class="icon fa-expand" title="expand"></span>
+          <span ng-if="qc.fullscreen" class="icon fa-compress" title="contract"></span>
+        </div>
+      </div>
+<!-- Ace editor -------------------------------------------------------------->
+      <div ng-click="qc.handleClick('editor')"
+         class="wb-ace-editor"
+         ui-ace="qc.aceInputOptions"
+         ng-model="qc.lastResult().query">
+      </div>
+
+<!-- wrapper under query editor for button and stats ------------------------->
+      <div class="wb-query-editor-footer"  ng-click="qc.handleClick('results')">
+        <span class="wb-button-wrapper nowrap">
+          <button ng-click="qc.query()" class="wb-button-execute">
+            <div ng-if="!qc.lastResult().busy">Execute</div>
+            <div ng-if="qc.lastResult().busy" class="icon-button">
+              Cancel
+              <span class="icon fa-spinner fa-spin fa-pulse"></span>
+            </div>
+          </button>
+          <button
+             ng-disabled="qc.lastResult().busy"
+             ng-click="qc.query(true)"
+             class="outline tight">
+            Explain
+            <span  ng-if="qc.lastResult().busy" class="icon fa-spinner fa-spin fa-pulse"></span>
+          </button>
+          <button ng-if="qc.isEnterprise"
+             ng-disabled="qc.lastResult().busy"
+             ng-click="qc.runAdviseOnLatest()"
+             class="outline tight">
+             Advise
+            <span  ng-if="qc.lastResult().busy" class="icon fa-spinner fa-spin fa-pulse"></span>
+          </button>
+        </span>
+<!-- query execution summary stats -------------------------------------------->
+        <div class="wb-result-summary">
+          <span
+             class="nowrap wb-result-status padding-right-half"
+             ng-class="{success: qc.status_success() || qc.lastResult().status == 'explain success', error: qc.status_fail()}">
+            {{qc.lastResult().status}}
+          </span>
+          <span class="nowrap" ng-hide="qc.lastResult().status == 'executing'">
+            {{qc.lastResult().getLastRun()}}
+          </span>
+          <span ng-if="qc.lastResult().elapsedTime" class="nowrap pipe">
+            elapsed: {{qc.lastResult().elapsedTime}}
+          </span>
+          <span ng-if="qc.lastResult().executionTime" class="nowrap pipe">
+            execution: {{qc.lastResult().executionTime}}
+          </span>
+          <span ng-if="qc.lastResult().mutationCount" class="nowrap pipe">
+            mutations: {{qc.lastResult().mutationCount}}
+          </span>
+          <span ng-if="!qc.lastResult().mutationCount && qc.lastResult().resultCount" class="nowrap pipe">
+            docs: {{qc.lastResult().resultCount}}
+          </span>
+          <span ng-if="qc.lastResult().resultSize" class="nowrap pipe">
+            size: {{qc.lastResult().resultSize}} bytes
+          </span>
+        </div>
+
+        <div>
+          <a
+             ng-disabled="qc.executingQuery.busy"
+             ng-click="$event.stopPropagation(); qc.format(); qc.handleClick('editor');"
+             class="text-smallish nowrap resp-hide-xsml">
+            <span class="icon fa-align-right"></span>
+            format
+          </a>
+        </div>
+      </div>
+    </div>
+
+<!-- query results ------------------------------------------------------------>
+    <div  ng-click="qc.handleClick('results')" class="wb-results-header">
+      <h4>Query Results
+        <span
+           class="icon fa-copy"
+           ng-click="qc.copyResultAsCSV()"
+           title="Copy results in tabular format">
+        </span>
+        <span
+           ng-if="qc.lastResult().warnings"
+           tooltip-trigger="'mouseenter'"
+           tooltip-append-to-body="true"
+           class="fa-warning icon force-orange-3 cursor-pointer"
+           uib-tooltip-html="{{qc.lastResult().warnings}}">
+        </span>
+        <span class="icon fa-search" ng-if="qc.isSelected(1)" ng-click="qc.aceSearchOutput()"></span>
+      </h4>
+
+      <span class="pills">
+        <a ng-click="qc.selectTab(2)"
+           ng-class="{selected: qc.isSelected(2)}">Table</a>
+        <a ng-click="qc.selectTab(1)"
+           ng-class="{selected: qc.isSelected(1)}">JSON</a>
+        <a ng-click="qc.selectTab(3)"
+           ng-class="{selected: qc.isSelected(3)}"
+           class="resp-hide-med">Tree</a>
+        <a ng-click="qc.selectTab(4)"
+           ng-class="{selected: qc.isSelected(4)}">Plan</a>
+        <a ng-click="qc.selectTab(5)"
+           ng-class="{selected: qc.isSelected(5)}"
+           class="resp-hide-med">Plan Text</a>
+        <a ng-click="qc.selectTab(6)" ng-if="qc.isEnterprise"
+           ng-class="{selected: qc.isSelected(6)}">Advice
+             <span ng-if="qc.hasRecommendedIndex(qc.lastResult())">*</span>
+         </a>
+      </span>
+    </div>
+
+    <div class="wb-results-wrapper" ng-click="qc.handleClick('results')">
+      <div class="wb-results-show-anyway" ng-if="!qc.showBigDatasets && qc.dataTooBig()">
+        <div ng-bind-html="qc.getBigDataMessage()"> </div>
+        <a ng-click="qc.setShowBigData(true)" class="text-medium link-heavy">Show anyway <span class="icon fa-angle-right"></span></a>
+      </div>
+
+      <div class="wb-results-json" ui-ace="qc.aceOutputOptions"
+        ng-if="qc.isSelected(1) && (!qc.dataTooBig() || qc.showBigDatasets)"
+        ng-model="qc.lastResult().result"></div>
+
+      <div class="wb-results-table"
+        ng-if="qc.isSelected(2) && qc.lastResult().data"
+        qw-json-data-table="qc.lastResult().data"></div>
+
+      <div class="wb-results-tree"
+        ng-if="qc.isSelected(3) && (!qc.dataTooBig() || qc.showBigDatasets)"
+        qw-json-tree="qc.lastResult().data"></div>
+
+      <div class="wb-results-explain" ng-if="qc.isSelected(4)"
+        qw-explain-viz-d3="qc.lastResult().explainResult"></div>
+
+      <div class="wb-results-explain-text" ng-if="qc.isSelected(5)"
+        ui-ace="qc.acePlanOptions"
+        ng-model="qc.lastResult().explainResultText"></div>
+
+      <div class="wb-results-advice" style="overflow:auto" ng-if="qc.isSelected(6)"
+        qw-advice-viz="qc.lastResult().advice || qc.lastResult().query"></div>
+    </div>
+  </div>
+
+<!-- data insights sidebar ------------------------------------------------ -->
+  <div class="insights-sidebar width-3 resp-hide-sml">
+    <div ng-if="qc.qqs.bucket_errors" class="insights-sidebar-body">
+      {{qc.qqs.bucket_errors}}
+    </div>
+    <div ng-if="!qc.qqs.bucket_errors" class="insights-sidebar-body narrow-scrollbar">
+      <div class="row margin-bottom-half">
+        <h4>Data Insights</h4>
+        <div class="insights-sidebar-expand" ng-click="qc.toggleAnalysisSize()">
+          <span ng-if="!qc.analysisExpanded" class="icon fa-expand" title="expand"></span>
+          <span ng-if="qc.analysisExpanded" class="icon fa-compress" title="contract"></span>
+        </div>
+      </div>
+
+      <section ng-if="qc.has_prim_buckets()">
+        <h5 title="Buckets with a primary index support all queries. Not recommended for production!">
+          Queryable Buckets
+        </h5>
+        <span
+           ng-repeat="bucket in qc.buckets"
+           ng-show="bucket.has_prim">
+          <div bucket-display="bucket"></div>
+        </span>
+      </section>
+
+      <section ng-if="qc.has_sec_buckets()">
+        <h5 title="Buckets with only secondary indexes require a 'WHERE' clause using indexed fields.">
+          Queryable On Indexed Fields
+        </h5>
+          <span
+             ng-repeat="bucket in qc.buckets"
+             ng-show="!bucket.has_prim && bucket.has_sec">
+            <div bucket-display="bucket"></div>
+          </span>
+      </section>
+
+      <section ng-if="qc.has_unindexed_buckets()">
+        <h5 title="Buckets with no index can only be queried by document id.">Queryable By Doc ID Only</h5>
+          <span
+             ng-repeat="bucket in qc.buckets"
+             ng-show="!bucket.has_prim && !bucket.has_sec">
+            <div bucket-display="bucket"></div>
+          </span>
+      </section>
+<!-- bucket insights refresh button ---------------------------------------- -->
+      <div class="row flex-right fix-position-br wb-refresh-btn" ng-if="!qc.fullscreen">
+        <button
+           title="Refresh bucket insights"
+           ng-click="qc.updateBuckets()"
+           class="outline"
+           ng-disabled="qc.qqs.loadingBuckets">
+          Refresh &nbsp;
+          <span class="icon fa-refresh"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

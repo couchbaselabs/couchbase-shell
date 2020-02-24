@@ -1,0 +1,26 @@
+<div class="margin-bottom-2">
+  <form
+     class="forms"
+     ng-submit="settingsAutoCompactionCtl.submit()"
+     mn-spinner="settingsAutoCompactionCtl.viewLoading || !settingsAutoCompactionCtl.autoCompactionSettings">
+    <h4>Auto-Compaction</h4>
+    <p class="text-small margin-bottom-1-5">
+      Auto-Compaction settings trigger the compaction process, compacting databases and their respective view indexes when the following conditions are met:
+    </p>
+    <div
+       class="margin-bottom-2"
+       mn-auto-compaction-form
+       auto-compaction-settings="settingsAutoCompactionCtl.autoCompactionSettings"
+       validation-errors="settingsAutoCompactionCtl.errors"></div>
+    <footer class="footer-save">
+     <button
+        type="submit"
+        ng-disabled="settingsAutoCompactionCtl.errors"
+        ng-show="rbac.cluster.settings.write"
+        class="margin-right-2">
+       Save
+     </button>
+     <a class="text-medium" ng-click="settingsAutoCompactionCtl.reloadState()">Cancel/Reset</a>
+    </footer>
+  </form>
+</div>

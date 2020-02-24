@@ -1,0 +1,92 @@
+.dialog_full_screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.dialog_overlay {
+    z-index: 9999;
+    background-color: #000000;
+    cursor: pointer;
+}
+
+.modal-open {
+  overflow: hidden;
+}
+
+.dialog_main_wrapper {
+    position: fixed;
+    overflow: auto;
+    z-index: 9999;
+    height: 100%;
+    top: 0;
+    width: 100%;
+}
+
+.dialog {
+    position: relative;
+    z-index: 101;
+    top: 2.5rem;
+}
+
+
+.fade {
+    opacity: 0;
+    -webkit-transition: opacity .0s linear;
+    -o-transition: opacity .0s linear;
+    transition: opacity .0s linear;
+}
+
+.modal.in {
+    opacity: 1
+}
+.modal-backdrop.in {
+    opacity: 0.8
+}
+.modal-backdrop {
+    position: fixed;
+}
+
+/* dialog closing (X) hyperlinks ------------ */
+.modal-close {
+    display: block;
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: 400;
+    position: absolute;
+    top: .25rem;
+    right: .5rem;
+    color: #fff;
+    border-radius: 50%;
+    padding: .25rem .75rem;
+    opacity: .7;
+    transition: all .4s ease;
+    opacity: 1;
+}
+.modal-close:link {
+    color: #fff;
+}
+.modal-close:visited {
+    color: #fff;
+}
+.modal-close:hover {
+  color: #000;
+  font-weight: 600;
+  background-color: #fff;
+  opacity: .8;
+}
+.modal-close:active {
+    color: #689fde;
+    background-color: #eceff2;
+    opacity: .5;
+}
+.chart-overlay .modal-close,
+.chart-overlay .modal-close:link,
+.chart-overlay .modal-close:visited {
+  color: #333;
+}
+.chart-overlay .modal-close:hover {
+  background-color: #eceff2;
+}

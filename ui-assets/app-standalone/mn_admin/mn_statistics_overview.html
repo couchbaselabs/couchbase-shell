@@ -1,0 +1,82 @@
+<div class="row flex-left margin-bottom-half">
+
+  <select
+     ng-model="statisticsOverviewCtl.zoom"
+     ng-change="statisticsOverviewCtl.onSelectZoom(statisticsOverviewCtl.zoom)"
+     class="margin-right-half">
+    <option value="minute">minute</option>
+    <option value="hour">hour</option>
+    <option value="day">day</option>
+    <option value="week">week</option>
+    <option value="month">month</option>
+  </select>
+
+  <select
+     ng-model="statisticsOverviewCtl.bucket"
+     class="max-width-4 margin-right-half"
+     ng-change="statisticsOverviewCtl.onSelectBucket(statisticsOverviewCtl.bucket)">
+    <option ng-repeat="name in rbac.bucketNames['.stats!read']" value="{{name}}">
+      {{name}}
+    </option>
+  </select>
+
+  <select
+     ng-model="statisticsOverviewCtl.node"
+     class="max-width-4"
+     ng-change="statisticsOverviewCtl.onSelectNode(statisticsOverviewCtl.node)">
+    <option ng-repeat="name in statisticsOverviewCtl.nodes.nodesNames" value="{{name}}">
+      {{name}}
+    </option>
+  </select>
+
+</div>
+
+<div class="width-12">
+
+  <div class="row flex-column items-top margin-bottom-2" ng-if="statisticsOverviewCtl.bucket && statisticsOverviewCtl.node">
+    <div
+       class="margin-top-1 flex-order-two columns-four-new"
+       ng-repeat="block in statisticsOverviewCtl.blocks track by (block.blockName + $index)"
+       ng-class="{dynamic_withtotal: block.withTotal,
+                 'flex-order-one': block.blockName=='Summary',
+                 'columns-four-new': block.blockName=='vBucket Resources' || block.blockName=='Disk Queues' || block.blockName=='Query' || block.blockName=='Incoming XDCR Operations',
+                 'columns-six-new': block.blockName=='DCP Queues',
+                 'columns-five-new': (block.blockName=='Summary') || (block.blockName.indexOf('Server Resources') > -1),
+                 'columns-three-new': (block.blockName.indexOf('Mapreduce View Stats') > -1) || (block.blockName.indexOf('Spatial View Stats') > -1)}">
+      <h4
+         class="disclosure"
+         ng-class="{disclosed: statisticsOverviewCtl.myIsDetailsOpened(block.blockName)}"
+         ng-click="statisticsOverviewCtl.myToggleDetails(block.blockName)">
+        &nbsp;{{block.blockName}}
+      </h4>
+
+      <div ng-if="statisticsOverviewCtl.myIsDetailsOpened(block.blockName)" class="margin-top-1">
+        <div
+           ng-show="block.warning !== undefined"
+           class="interim alert alert-warning">
+          <p>{{block.warning}}</p>
+        </div>
+        <div ng-if="block.columns">
+          <h5
+             class="chart-column-headers"
+             ng-repeat="columnName in block.columns">{{ columnName }}</h5>
+        </div>
+        <div >
+
+        <span class="statistics-tiny chart-cell-tiny" ng-repeat="chart in block.charts track by $index">
+          <mn-statistics-chart
+           style="display: block;"
+           nvd3-options="{showLegend: false}"
+           zoom="{{statisticsOverviewCtl.zoom}}"
+           rbac="rbac"
+           bucket="{{statisticsOverviewCtl.bucket}}"
+           node="{{statisticsOverviewCtl.getNode()}}"
+           ng-click="statisticsOverviewCtl.openDetailedChartDialog(block,chart)"
+           config="chart">
+          </mn-statistics-chart>
+         </span>
+
+        </div>
+      </div>
+    </div>
+  </div>

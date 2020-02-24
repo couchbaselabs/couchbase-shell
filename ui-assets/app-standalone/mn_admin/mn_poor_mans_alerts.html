@@ -1,0 +1,18 @@
+<div class="dialog-med">
+  <div class="panel-header">
+    <h2>Alert</h2>
+  </div>
+  <div
+     class="panel-content"
+     mn-spinner="poorMansCtl.viewLoading">
+    <span ng-repeat="alert in poorMansCtl.alerts">
+      <strong>[{{alert.serverTime | date:'d MMM, y, h:mm:ss a'}}]</strong> - {{alert.msg}} <br>
+    </span>
+  </div>
+  <div class="panel-footer" ng-show="rbac.cluster.settings.write">
+    <button
+       ng-click="poorMansCtl.onClose()">
+      OK
+    </button>
+  </div>
+</div>
