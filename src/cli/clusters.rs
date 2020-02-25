@@ -47,10 +47,9 @@ async fn clusters(state: Arc<State>) -> Result<OutputStream, ShellError> {
         .map(|(k, v)| {
             let mut collected = TaggedDictBuilder::new(Tag::default());
             collected.insert_untagged("active", UntaggedValue::boolean(k == &active));
-            collected.insert_value("name", k.clone());
+            collected.insert_value("identifier", k.clone());
             collected.insert_value("connstr", String::from(v.connstr()));
             collected.insert_value("username", String::from(v.username()));
-            //collected.insert_value("type", n.bucket_type);
             collected.into_value()
         })
         .collect::<Vec<_>>();

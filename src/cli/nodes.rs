@@ -6,6 +6,7 @@ use nu_protocol::{Signature, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
 use serde::Deserialize;
 use std::sync::Arc;
+use std::fmt;
 
 pub struct Nodes {
     state: Arc<State>,
@@ -64,8 +65,10 @@ async fn nodes(state: Arc<State>) -> Result<OutputStream, ShellError> {
         .into_iter()
         .map(|n| {
             let mut collected = TaggedDictBuilder::new(Tag::default());
+            let services = n.services.iter().map(|n| format!("{}", n)).collect::<Vec<_>>().join(",");
             collected.insert_value("hostname", n.hostname);
             collected.insert_value("status", n.status);
+            collected.insert_value("services", services);
             collected.insert_value(
                 "memory_total",
                 UntaggedValue::bytes(n.memory_total).into_untagged_value(),
@@ -96,4 +99,34 @@ struct NodeInfo {
     memory_total: u64,
     #[serde(rename = "memoryFree")]
     memory_free: u64,
+    services: Vec<NodeService>,
+}
+
+#[derive(Debug, Deserialize)]
+enum NodeService {
+    #[serde(rename = "cbas")]
+    Analytics,
+    #[serde(rename = "eventing")]
+    Eventing,
+    #[serde(rename = "fts")]
+    Search,
+    #[serde(rename = "n1ql")]
+    Query,
+    #[serde(rename = "index")]
+    Indexing,
+    #[serde(rename = "kv")]
+    KeyValue,
+}
+
+impl fmt::Display for NodeService {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            NodeService::Analytics => write!(f, "analytics"),
+            NodeService::Eventing => write!(f, "eventing"),
+            NodeService::Search => write!(f, "search"),
+            NodeService::Query => write!(f, "query"),
+            NodeService::Indexing => write!(f, "indexing"),
+            NodeService::KeyValue => write!(f, "kv"),
+        }
+    }
 }
