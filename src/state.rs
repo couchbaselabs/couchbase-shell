@@ -9,7 +9,10 @@ pub struct State {
 
 impl State {
     pub fn new(clusters: HashMap<String, RemoteCluster>, active: String) -> Self {
-        Self { active: Mutex::new(active), clusters }
+        Self {
+            active: Mutex::new(active),
+            clusters,
+        }
     }
 
     pub fn clusters(&self) -> &HashMap<String, RemoteCluster> {

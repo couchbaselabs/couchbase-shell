@@ -1,17 +1,17 @@
 mod cli;
-mod state;
 mod config;
+mod state;
 
 use crate::cli::*;
+use crate::config::ShellConfig;
 use crate::state::RemoteCluster;
-use log::{warn, debug};
+use log::{debug, warn};
 use state::State;
 use std::collections::HashMap;
 use std::error::Error;
 use std::sync::Arc;
 use structopt::StructOpt;
 use warp::Filter;
-use crate::config::ShellConfig;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -30,15 +30,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
         clusters.insert("default".into(), cluster);
         String::from("default")
     } else {
-        let mut first = None;
+        let mut active = None;
         for (k, v) in config.clusters() {
-            let cluster = RemoteCluster::new(v.connstr().into(), v.username().into(), v.password().into());
-            clusters.insert(k.clone(), cluster);
-            if first.is_none() {
-                first = Some(k.clone());
+            let name = k.clone();
+            let cluster =
+                RemoteCluster::new(v.connstr().into(), v.username().into(), v.password().into());
+            clusters.insert(name.clone(), cluster);
+            if opt.cluster.as_ref().is_some() {
+                if &name == opt.cluster.as_ref().unwrap() {
+                    active = Some(name.clone())
+                }
+            } else {
+                if active.is_none() {
+                    active = Some(k.clone());
+                }
             }
         }
-        first.unwrap()
+        active.unwrap()
     };
 
     let state = Arc::new(State::new(clusters, active));
@@ -89,4 +97,6 @@ struct CliOptions {
     username: String,
     #[structopt(short = "p", long = "password", default_value = "password")]
     password: String,
+    #[structopt(long = "cluster")]
+    cluster: Option<String>,
 }

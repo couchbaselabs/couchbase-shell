@@ -1,7 +1,8 @@
-use std::collections::BTreeMap;
-use serde::Deserialize;
-use std::fs;
 use log::debug;
+use serde::Deserialize;
+use std::collections::BTreeMap;
+use std::fs;
+use std::path::PathBuf;
 
 #[derive(Debug, Deserialize)]
 pub struct ShellConfig {
@@ -9,17 +10,20 @@ pub struct ShellConfig {
 }
 
 impl ShellConfig {
-
     pub fn new() -> Self {
-        let read = fs::read_to_string(".cbshrc");
-        match read {
-            Ok(s) => Self::from_str(&s),
-            Err(e) => {
-                debug!("Could not locate .cbshrc becaue of {:?}", e);
-                ShellConfig {
-                    clusters: BTreeMap::new(),
-                }
-            }
+        // first, try current dir
+        if let Some(c) = try_config_from_path(std::env::current_dir().unwrap()) {
+            return c;
+        }
+
+        // then, try home dir
+        if let Some(c) = try_config_from_path(dirs::home_dir().unwrap()) {
+            return c;
+        }
+
+        // if both are not found, return an empty config
+        ShellConfig {
+            clusters: BTreeMap::new(),
         }
     }
 
@@ -29,6 +33,18 @@ impl ShellConfig {
 
     pub fn clusters(&self) -> &BTreeMap<String, ClusterConfig> {
         &self.clusters
+    }
+}
+
+fn try_config_from_path(mut path: PathBuf) -> Option<ShellConfig> {
+    path.push(".cbshrc");
+    let read = fs::read_to_string(&path);
+    match read {
+        Ok(r) => Some(ShellConfig::from_str(&r)),
+        Err(e) => {
+            debug!("Could not locate {:?} becaue of {:?}", path, e);
+            None
+        }
     }
 }
 
@@ -50,4 +66,3 @@ impl ClusterConfig {
         self.password.as_str()
     }
 }
-

@@ -13,6 +13,7 @@ warp = "0.2"
 tokio = { version = "0.2", features = ["full"] }
 reqwest = { version = "0.10", features = ["json"] }
 toml = "0.5"
+dirs = "2.0"
 
 nu = { git = "https://github.com/daschl/nushell.git", branch = "custom", features = ["default", "stable"] }
 nu-protocol = { git = "https://github.com/daschl/nushell.git", branch = "custom" }

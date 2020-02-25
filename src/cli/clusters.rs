@@ -41,7 +41,8 @@ impl nu::WholeStreamCommand for Clusters {
 
 async fn clusters(state: Arc<State>) -> Result<OutputStream, ShellError> {
     let active = state.active();
-    let clusters = state.clusters()
+    let clusters = state
+        .clusters()
         .iter()
         .map(|(k, v)| {
             let mut collected = TaggedDictBuilder::new(Tag::default());

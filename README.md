@@ -46,6 +46,50 @@ This is heavily in flux right now, but you can try these commands (always try wi
  - `kv-get <id>`
  - `nodes`
  - `buckets`
+ - `clusters`
+
+# Config & Multiple Clusters
+
+While quickly connecting with command line arguments is convenient, if you manage multiple clusters it can get tedious. For this reason, the shell supports managing multiple clusters at the same time. This works by adding a `.cbshrc` to either the path where you run the binary from, or more practical, from your home directory (`~/.cbshrc`).
+
+The format of the rc file is `toml`, and the default looks pretty much like this:
+
+```toml
+[clusters.default]
+connstr = "couchbase://127.0.0.1"
+username = "Administrator"
+password = "password"
+```
+
+You can modify it so that it contains all the clusters you need:
+
+```toml
+[clusters.cluster1]
+connstr = "couchbase://10.143.193.101"
+username = "user1"
+password = "pw1"
+
+[clusters.cluster2]
+connstr = "couchbase://10.143.193.102"
+username = "user2"
+password = "pw2"
+```
+
+You can use the `clusters` command to list them:
+
+```
+❯ clusters
+───┬────────┬──────────┬────────────────────────────┬───────────────
+ # │ active │ name     │ connstr                    │ username 
+───┼────────┼──────────┼────────────────────────────┼───────────────
+ 0 │ Yes    │ cluster1 │ couchbase://10.143.193.101 │ Administrator 
+ 1 │ No     │ cluster2 │ couchbase://10.143.193.102 │ Administrator 
+───┴────────┴──────────┴────────────────────────────┴───────────────
+```
+
+By default the first alphabetically first one (in this case `cluster1`) will be active, but you can override this on the command line with `./cbsh --cluster=cluster2` for example. This allows you to store all cluster references in one rc file and then activate the one you need.
+
+In the future we're going to add support for switching the cluster while in the shell.
 
 # Installing into bin
 
