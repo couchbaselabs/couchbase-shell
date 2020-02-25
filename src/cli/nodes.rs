@@ -5,8 +5,8 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
 use serde::Deserialize;
-use std::sync::Arc;
 use std::fmt;
+use std::sync::Arc;
 
 pub struct Nodes {
     state: Arc<State>,
@@ -65,10 +65,18 @@ async fn nodes(state: Arc<State>) -> Result<OutputStream, ShellError> {
         .into_iter()
         .map(|n| {
             let mut collected = TaggedDictBuilder::new(Tag::default());
-            let services = n.services.iter().map(|n| format!("{}", n)).collect::<Vec<_>>().join(",");
+            let services = n
+                .services
+                .iter()
+                .map(|n| format!("{}", n))
+                .collect::<Vec<_>>()
+                .join(",");
+
             collected.insert_value("hostname", n.hostname);
             collected.insert_value("status", n.status);
             collected.insert_value("services", services);
+            collected.insert_value("version", n.version);
+            collected.insert_value("os", n.os);
             collected.insert_value(
                 "memory_total",
                 UntaggedValue::bytes(n.memory_total).into_untagged_value(),
@@ -100,6 +108,8 @@ struct NodeInfo {
     #[serde(rename = "memoryFree")]
     memory_free: u64,
     services: Vec<NodeService>,
+    version: String,
+    os: String,
 }
 
 #[derive(Debug, Deserialize)]
