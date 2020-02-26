@@ -42,23 +42,21 @@ impl nu::WholeStreamCommand for Query {
         let statement = args.nth(0).expect("need statement").as_string()?;
 
         debug!("Running n1ql query {}", &statement);
-        let mut result = block_on(
+        let result = block_on(
             self.state
                 .active_cluster()
                 .cluster()
                 .query(statement, QueryOptions::default()),
         );
-        
+
         match result {
             Ok(mut r) => {
                 let stream = r
-                .rows::<serde_json::Value>()
-                .map(|v| convert_json_value_to_nu_value(&v.unwrap(), Tag::default()));
+                    .rows::<serde_json::Value>()
+                    .map(|v| convert_json_value_to_nu_value(&v.unwrap(), Tag::default()));
                 Ok(OutputStream::from_input(stream))
-            },
-            Err(e) => {
-                Err(ShellError::untagged_runtime_error(format!("{}", e)))
             }
+            Err(e) => Err(ShellError::untagged_runtime_error(format!("{}", e))),
         }
     }
 }

@@ -23,14 +23,14 @@ impl State {
         self.active.lock().unwrap().clone()
     }
 
-    pub fn set_active(&self, active: String) -> Result<(), u32> {
-        if !self.clusters.contains_key(&active) {
-            return Err(1); // make me proper!
-        }
-        let mut guard = self.active.lock().unwrap();
-        *guard = active;
-        Ok(())
-    }
+    // pub fn set_active(&self, active: String) -> Result<(), u32> {
+    //     if !self.clusters.contains_key(&active) {
+    //         return Err(1); // make me proper!
+    //     }
+    //     let mut guard = self.active.lock().unwrap();
+    //     *guard = active;
+    //     Ok(())
+    // }
 
     pub fn active_cluster(&self) -> &RemoteCluster {
         let active = self.active.lock().unwrap();
