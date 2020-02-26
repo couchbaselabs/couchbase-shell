@@ -47,11 +47,18 @@ impl nu::WholeStreamCommand for Query {
                 .active_cluster()
                 .cluster()
                 .query(statement, QueryOptions::default()),
-        )
-        .unwrap();
-        let stream = result
-            .rows::<serde_json::Value>()
-            .map(|v| convert_json_value_to_nu_value(&v.unwrap(), Tag::default()));
-        Ok(OutputStream::from_input(stream))
+        );
+        
+        match result {
+            Ok(mut r) => {
+                let stream = r
+                .rows::<serde_json::Value>()
+                .map(|v| convert_json_value_to_nu_value(&v.unwrap(), Tag::default()));
+                Ok(OutputStream::from_input(stream))
+            },
+            Err(e) => {
+                Err(ShellError::untagged_runtime_error(format!("{}", e)))
+            }
+        }
     }
 }
