@@ -11,7 +11,12 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::sync::Arc;
 use structopt::StructOpt;
-use warp::Filter;
+use http::Uri;
+use warp::{http::header::HeaderValue, path::Tail, reply::Response, Filter, Rejection, Reply};
+use rust_embed::RustEmbed;
+#[derive(RustEmbed)]
+#[folder = "ui-assets/"]
+struct Asset;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -53,9 +58,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     if opt.ui {
         tokio::task::spawn(async {
-            let hello =
-                warp::path!("hello" / String).map(|name| format!("Couchbase says, {}!", name));
-            warp::serve(hello).run(([127, 0, 0, 1], 1908)).await;
+            let index = warp::path::end().and_then(serve_index);
+            let ui_assets = warp::path("ui").and(warp::path::tail()).and_then(serve);
+
+            let routes = index.or(ui_assets);
+            warp::serve(routes).run(([127, 0, 0, 1], 1908)).await;
         });
     }
 
@@ -78,6 +85,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     nu::cli(Some(syncer), Some(context)).await
 }
+
+async fn serve_index() -> Result<impl Reply, Rejection> {
+    Ok(warp::redirect(Uri::from_static("/ui/index.html")))
+}
+
+async fn serve(path: Tail) -> Result<impl Reply, Rejection> {
+    serve_impl(path.as_str())
+  }
+  
+  fn serve_impl(path: &str) -> Result<impl Reply, Rejection> {
+    let asset = Asset::get(path).ok_or_else(warp::reject::not_found)?;
+    let mime = mime_guess::from_path(path).first_or_octet_stream();
+  
+    let mut res = Response::new(asset.into());
+    res.headers_mut().insert("content-type", HeaderValue::from_str(mime.as_ref()).unwrap());
+    Ok(res)
+  }
 
 #[derive(Debug, StructOpt)]
 #[structopt(
