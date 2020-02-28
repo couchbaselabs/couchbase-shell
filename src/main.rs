@@ -65,7 +65,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let pools = warp::path("pools")
                 .and(warp::any().map(move || p_state.clone()))
                 .and_then(serve_pools);
-            let serve_query_service = warp::post().and(warp::path!("_p" / "query" / "query" / "service"))
+            let serve_query_service = warp::post()
+                .and(warp::path!("_p" / "query" / "query" / "service"))
                 .and(warp::any().map(move || web_state.clone()))
                 .and(warp::body::json())
                 .and_then(serve_query_service);
@@ -123,7 +124,10 @@ async fn serve_pools(state: Arc<State>) -> Result<impl Reply, Rejection> {
     Ok(warp::reply::json(&resp))
 }
 
-async fn serve_query_service(state: Arc<State>, body: serde_json::Value) -> Result<impl Reply, Rejection> {
+async fn serve_query_service(
+    state: Arc<State>,
+    body: serde_json::Value,
+) -> Result<impl Reply, Rejection> {
     let client = reqwest::Client::new();
 
     let host = state.active_cluster().connstr().replace("couchbase://", "");
