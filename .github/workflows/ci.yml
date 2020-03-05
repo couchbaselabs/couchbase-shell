@@ -52,7 +52,7 @@ jobs:
         echo "##[add-path]$HOME/.cargo/bin"
       if: matrix.os == 'macos-latest'
     - name: Install libcouchbase dependencies (linux)
-      if: matrox.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-latest'
       run: sudo apt-get install libevent-dev
     - name: Build
       run: cargo build --verbose
