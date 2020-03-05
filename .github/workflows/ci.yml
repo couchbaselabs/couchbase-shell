@@ -13,7 +13,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        build: [linux, macos, windows]
+        # build: [linux, macos, windows]
+        build: [linux, macos]
         include:
           - build: linux
             os: ubuntu-latest
@@ -21,9 +22,9 @@ jobs:
           - build: macos
             os: macos-latest
             rust: stable
-          - build: windows
-            os: windows-latest
-            rust: stable
+          #- build: windows
+          #  os: windows-latest
+          #  rust: stable
 
     steps:
     - uses: actions/checkout@v1
@@ -67,14 +68,3 @@ jobs:
     - name: Install Rust
       run: rustup update stable && rustup default stable && rustup component add rustfmt
     - run: cargo fmt -- --check
-
-  clippy_check:
-    name: Clippy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v1
-      - run: rustup component add clippy
-      - uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features
