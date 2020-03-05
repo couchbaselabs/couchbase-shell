@@ -47,12 +47,13 @@ jobs:
       if: matrix.os != 'macos-latest'
       shell: bash
     - name: Install Rust (macos)
-      # As of 7.12.2019 rust is not installed on MacOS
-      # https://help.github.com/en/actions/automating-your-workflow-with-github-actions/software-installed-on-github-hosted-runners#macos-1015
       run: |
         curl https://sh.rustup.rs | sh -s -- -y
         echo "##[add-path]$HOME/.cargo/bin"
       if: matrix.os == 'macos-latest'
+    - name: Install libcouchbase dependencies (linux)
+      if: matrox.os == 'ubuntu-latest'
+      run: sudo apt-get install libevent-dev
     - name: Build
       run: cargo build --verbose
     - name: Run tests
