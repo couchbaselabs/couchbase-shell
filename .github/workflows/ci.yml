@@ -51,9 +51,9 @@ jobs:
         curl https://sh.rustup.rs | sh -s -- -y
         echo "##[add-path]$HOME/.cargo/bin"
       if: matrix.os == 'macos-latest'
-    - name: Install libcouchbase dependencies (linux)
+    - name: Install dependencies (linux)
       if: matrix.os == 'ubuntu-latest'
-      run: sudo apt-get install libevent-dev
+      run: sudo apt-get install libevent-dev libxcb-composite0-dev libx11-dev
     - name: Build
       run: cargo build --verbose
     - name: Run tests
