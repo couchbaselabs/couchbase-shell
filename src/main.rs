@@ -78,24 +78,24 @@ async fn main() -> Result<(), Box<dyn Error>> {
         });
     }
 
-    let mut syncer = nu::EnvironmentSyncer::new();
-    let mut context = nu::create_default_context(&mut syncer)?;
+    let mut syncer = nu_cli::EnvironmentSyncer::new();
+    let mut context = nu_cli::create_default_context(&mut syncer)?;
     context.add_commands(vec![
         // Performs analytics queries
-        nu::whole_stream_command(Analytics::new(state.clone())),
+        nu_cli::whole_stream_command(Analytics::new(state.clone())),
         // Performs kv get operations
-        nu::whole_stream_command(Get::new(state.clone())),
+        nu_cli::whole_stream_command(Get::new(state.clone())),
         // Displays cluster manager node infos
-        nu::whole_stream_command(Nodes::new(state.clone())),
+        nu_cli::whole_stream_command(Nodes::new(state.clone())),
         // Displays cluster manager bucket infos
-        nu::whole_stream_command(Buckets::new(state.clone())),
+        nu_cli::whole_stream_command(Buckets::new(state.clone())),
         // Performs n1ql queries
-        nu::whole_stream_command(Query::new(state.clone())),
+        nu_cli::whole_stream_command(Query::new(state.clone())),
         // Manages local cluster references
-        nu::whole_stream_command(Clusters::new(state.clone())),
+        nu_cli::whole_stream_command(Clusters::new(state.clone())),
     ]);
 
-    nu::cli(Some(syncer), Some(context)).await
+    nu_cli::cli(Some(syncer), Some(context)).await
 }
 
 async fn serve_index() -> Result<impl Reply, Rejection> {

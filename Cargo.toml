@@ -22,6 +22,7 @@ nu = { git = "https://github.com/daschl/nushell.git", branch = "custom", feature
 nu-protocol = { git = "https://github.com/daschl/nushell.git", branch = "custom" }
 nu-errors = { git = "https://github.com/daschl/nushell.git", branch = "custom" }
 nu-source = { git = "https://github.com/daschl/nushell.git", branch = "custom"}
+nu-cli = { git = "https://github.com/daschl/nushell.git", branch = "custom"}
 
 serde = "1.0"
 serde_json = "1.0"

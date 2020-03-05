@@ -15,27 +15,29 @@ use nu_protocol::{
 use nu_source::Tag;
 use std::sync::Arc;
 
-pub struct Get {
+pub struct Upsert {
     state: Arc<State>,
 }
 
-impl Get {
+impl Upsert {
     pub fn new(state: Arc<State>) -> Self {
         Self { state }
     }
 }
 
-impl nu_cli::WholeStreamCommand for Get {
+impl nu_cli::WholeStreamCommand for Upsert {
     fn name(&self) -> &str {
-        "kv-get"
+        "kv-upsert"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("kv-get").optional("id", SyntaxShape::String, "the document id")
+        Signature::build("kv-upsert")
+            .optional("id", SyntaxShape::String, "the document id")
+            .optional("content", SyntaxShape::String, "the document content")
     }
 
     fn usage(&self) -> &str {
-        "Fetches a document through Key/Value"
+        "Upsert a document through Key/Value"
     }
 
     fn run(
@@ -43,11 +45,11 @@ impl nu_cli::WholeStreamCommand for Get {
         args: CommandArgs,
         registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
-        block_on(run_get(self.state.clone(), args, registry))
+        block_on(run_upsert(self.state.clone(), args, registry))
     }
 }
 
-async fn run_get(
+async fn run_upsert(
     state: Arc<State>,
     args: CommandArgs,
     registry: &CommandRegistry,

@@ -1,6 +1,6 @@
 use crate::state::State;
 use futures::executor::block_on;
-use nu::{CommandArgs, CommandRegistry, OutputStream};
+use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, TaggedDictBuilder};
 use nu_source::Tag;
@@ -17,7 +17,7 @@ impl Buckets {
     }
 }
 
-impl nu::WholeStreamCommand for Buckets {
+impl nu_cli::WholeStreamCommand for Buckets {
     fn name(&self) -> &str {
         "buckets"
     }

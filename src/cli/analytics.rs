@@ -4,7 +4,7 @@ use couchbase::AnalyticsOptions;
 use futures::executor::block_on;
 use futures::stream::StreamExt;
 use log::debug;
-use nu::{CommandArgs, CommandRegistry, OutputStream};
+use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
@@ -20,7 +20,7 @@ impl Analytics {
     }
 }
 
-impl nu::WholeStreamCommand for Analytics {
+impl nu_cli::WholeStreamCommand for Analytics {
     fn name(&self) -> &str {
         "analytics"
     }

@@ -1,6 +1,6 @@
 use crate::state::State;
 use futures::executor::block_on;
-use nu::{CommandArgs, CommandRegistry, OutputStream};
+use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
@@ -17,7 +17,7 @@ impl Clusters {
     }
 }
 
-impl nu::WholeStreamCommand for Clusters {
+impl nu_cli::WholeStreamCommand for Clusters {
     fn name(&self) -> &str {
         "clusters"
     }

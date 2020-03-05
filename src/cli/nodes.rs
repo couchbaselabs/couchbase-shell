@@ -1,6 +1,6 @@
 use crate::state::State;
 use futures::executor::block_on;
-use nu::{CommandArgs, CommandRegistry, OutputStream};
+use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
@@ -18,7 +18,7 @@ impl Nodes {
     }
 }
 
-impl nu::WholeStreamCommand for Nodes {
+impl nu_cli::WholeStreamCommand for Nodes {
     fn name(&self) -> &str {
         "nodes"
     }

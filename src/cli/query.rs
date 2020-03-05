@@ -4,7 +4,7 @@ use couchbase::QueryOptions;
 use futures::executor::block_on;
 use futures::stream::StreamExt;
 use log::debug;
-use nu::{CommandArgs, CommandRegistry, OutputStream};
+use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
@@ -20,7 +20,7 @@ impl Query {
     }
 }
 
-impl nu::WholeStreamCommand for Query {
+impl nu_cli::WholeStreamCommand for Query {
     fn name(&self) -> &str {
         "query"
     }
