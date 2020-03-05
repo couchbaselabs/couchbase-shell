@@ -9,7 +9,9 @@ use futures::stream::StreamExt;
 use log::debug;
 use nu::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
-use nu_protocol::{Primitive, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, MaybeOwned};
+use nu_protocol::{
+    MaybeOwned, Primitive, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue,
+};
 use nu_source::Tag;
 use std::sync::Arc;
 
@@ -69,7 +71,6 @@ async fn run_get(
                         }
                     }
                 }
-
             }
             _ => {}
         }
