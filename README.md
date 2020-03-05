@@ -1,3 +1,5 @@
+![CI](https://github.com/couchbaselabs/couchbase-shell/workflows/CI/badge.svg)
+
 # cbsh - a new couchbase shell!
 
 This project is a work in progress, come back later.
