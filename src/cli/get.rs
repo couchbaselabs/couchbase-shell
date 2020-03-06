@@ -31,7 +31,10 @@ impl nu_cli::WholeStreamCommand for Get {
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("kv-get").optional("id", SyntaxShape::String, "the document id")
+        Signature::build("kv-get")
+        .optional("id", SyntaxShape::String, "the document id")
+        .named("id-column", SyntaxShape::String, "the name of the id column if used with an input stream", None)
+        .switch("flatten", "If set, flattens the content into the toplevel", None)
     }
 
     fn usage(&self) -> &str {
@@ -54,6 +57,8 @@ async fn run_get(
 ) -> Result<OutputStream, ShellError> {
     let mut args = args.evaluate_once(registry)?;
 
+    let id_column = args.get("id-column").map(|id| id.as_string().unwrap()).unwrap_or(String::from("id"));
+
     let mut ids = vec![];
     while let Some(item) = args.input.next().await {
         let untagged = item.into();
@@ -63,7 +68,7 @@ async fn run_get(
                 _ => {}
             },
             UntaggedValue::Row(d) => {
-                if let MaybeOwned::Borrowed(d) = d.get_data("id") {
+                if let MaybeOwned::Borrowed(d) = d.get_data(id_column.as_ref()) {
                     let untagged = &d.value;
                     if let UntaggedValue::Primitive(p) = untagged {
                         if let Primitive::String(s) = p {
@@ -80,6 +85,8 @@ async fn run_get(
         ids.push(id.as_string()?);
     }
 
+    let flatten = args.get("flatten").is_some();
+
     let bucket = state.active_cluster().cluster().bucket("travel-sample");
     let collection = bucket.default_collection();
 
@@ -91,11 +98,19 @@ async fn run_get(
             Ok(res) => {
                 let tag = Tag::default();
                 let mut collected = TaggedDictBuilder::new(&tag);
-                collected.insert_value("id", id);
+                collected.insert_value(&id_column, id);
                 collected.insert_value("cas", UntaggedValue::int(res.cas()).into_untagged_value());
                 let content = res.content::<serde_json::Value>().unwrap();
                 let content_converted = convert_json_value_to_nu_value(&content, Tag::default());
-                collected.insert_value("content", content_converted);
+                if flatten {
+                    if let UntaggedValue::Row(d) = content_converted.value {
+                        for (k, v) in d.entries {
+                            collected.insert_value(k, v);
+                        }
+                    }
+                } else {
+                    collected.insert_value("content", content_converted);
+                }
                 results.push(collected.into_value());
             }
             Err(_e) => {}
