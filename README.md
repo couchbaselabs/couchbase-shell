@@ -91,7 +91,7 @@ You can use the `clusters` command to list them:
 
 By default the first alphabetically first one (in this case `cluster1`) will be active, but you can override this on the command line with `./cbsh --cluster=cluster2` for example. This allows you to store all cluster references in one rc file and then activate the one you need.
 
-In the future we're going to add support for switching the cluster while in the shell.
+You can switch the cluster by identifier while being in the shell `clusters --activate identifier`.
 
 # Installing into bin
 
