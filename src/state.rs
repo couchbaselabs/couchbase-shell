@@ -1,7 +1,7 @@
 use couchbase::Cluster;
 use std::collections::HashMap;
-use std::sync::Mutex;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 pub struct State {
     active: Mutex<String>,
@@ -25,24 +25,24 @@ impl State {
     }
 
     pub fn set_active(&self, active: String) -> Result<(), u32> {
-         if !self.clusters.contains_key(&active) {
-             return Err(1); // make me proper!
-         }
+        if !self.clusters.contains_key(&active) {
+            return Err(1); // make me proper!
+        }
 
-         {
+        {
             let mut guard = self.active.lock().unwrap();
             *guard = active.clone();
-         }
+        }
 
-         let _ignored = self.active_cluster().cluster();
+        let _ignored = self.active_cluster().cluster();
 
-         for (k, v) in &self.clusters {
-             if k != &active {
+        for (k, v) in &self.clusters {
+            if k != &active {
                 v.deactivate()
-             }
-         }
+            }
+        }
 
-         Ok(())
+        Ok(())
     }
 
     pub fn active_cluster(&self) -> &RemoteCluster {
@@ -74,7 +74,11 @@ impl RemoteCluster {
     pub fn cluster(&self) -> Arc<Cluster> {
         let mut c = self.cluster.lock().unwrap();
         if c.is_none() {
-            *c = Some(Arc::new(Cluster::connect(&self.connstr, &self.username, &self.password)));
+            *c = Some(Arc::new(Cluster::connect(
+                &self.connstr,
+                &self.username,
+                &self.password,
+            )));
         }
         c.as_ref().unwrap().clone()
     }

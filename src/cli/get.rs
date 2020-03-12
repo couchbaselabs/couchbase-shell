@@ -32,9 +32,18 @@ impl nu_cli::WholeStreamCommand for Get {
 
     fn signature(&self) -> Signature {
         Signature::build("kv-get")
-        .optional("id", SyntaxShape::String, "the document id")
-        .named("id-column", SyntaxShape::String, "the name of the id column if used with an input stream", None)
-        .switch("flatten", "If set, flattens the content into the toplevel", None)
+            .optional("id", SyntaxShape::String, "the document id")
+            .named(
+                "id-column",
+                SyntaxShape::String,
+                "the name of the id column if used with an input stream",
+                None,
+            )
+            .switch(
+                "flatten",
+                "If set, flattens the content into the toplevel",
+                None,
+            )
     }
 
     fn usage(&self) -> &str {
@@ -57,7 +66,10 @@ async fn run_get(
 ) -> Result<OutputStream, ShellError> {
     let mut args = args.evaluate_once(registry)?;
 
-    let id_column = args.get("id-column").map(|id| id.as_string().unwrap()).unwrap_or(String::from("id"));
+    let id_column = args
+        .get("id-column")
+        .map(|id| id.as_string().unwrap())
+        .unwrap_or(String::from("id"));
 
     let mut ids = vec![];
     while let Some(item) = args.input.next().await {

@@ -2,7 +2,7 @@ use crate::state::State;
 use futures::executor::block_on;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
-use nu_protocol::{Signature, TaggedDictBuilder, UntaggedValue, SyntaxShape};
+use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -23,9 +23,12 @@ impl nu_cli::WholeStreamCommand for Clusters {
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("clusters")
-        .named("activate", SyntaxShape::String, "the id of the cluster to activate", None)
-
+        Signature::build("clusters").named(
+            "activate",
+            SyntaxShape::String,
+            "the id of the cluster to activate",
+            None,
+        )
     }
 
     fn usage(&self) -> &str {
@@ -41,7 +44,11 @@ impl nu_cli::WholeStreamCommand for Clusters {
     }
 }
 
-async fn clusters(args: CommandArgs, registry: &CommandRegistry, state: Arc<State>) -> Result<OutputStream, ShellError> {
+async fn clusters(
+    args: CommandArgs,
+    registry: &CommandRegistry,
+    state: Arc<State>,
+) -> Result<OutputStream, ShellError> {
     let args = args.evaluate_once(registry)?;
 
     if let Some(id) = args.get("activate") {
