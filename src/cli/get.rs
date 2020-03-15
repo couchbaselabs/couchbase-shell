@@ -69,7 +69,7 @@ async fn run_get(
     let id_column = args
         .get("id-column")
         .map(|id| id.as_string().unwrap())
-        .unwrap_or(String::from("id"));
+        .unwrap_or_else(|| String::from("id"));
 
     let mut ids = vec![];
     while let Some(item) = args.input.next().await {

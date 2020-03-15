@@ -48,10 +48,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 if &name == opt.cluster.as_ref().unwrap() {
                     active = Some(name.clone())
                 }
-            } else {
-                if active.is_none() {
-                    active = Some(k.clone());
-                }
+            } else if active.is_none() {
+                active = Some(k.clone());
             }
         }
         active.unwrap()
@@ -101,7 +99,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     ]);
 
     if let Some(c) = opt.command {
-        nu_cli::run_pipeline_standalone(c.into(), opt.stdin, &mut context).await?;
+        nu_cli::run_pipeline_standalone(c, opt.stdin, &mut context).await?;
         return Ok(());
     }
 

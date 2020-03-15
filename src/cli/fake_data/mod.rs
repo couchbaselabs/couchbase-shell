@@ -160,21 +160,23 @@ fn register_functions(tera: &mut Tera) {
     tera.register_function("ipV6", |_: &HashMap<String, Value>| {
         Ok(Value::from(IPv6(EN).fake::<String>()))
     });
-   tera.register_function("password", |args: &HashMap<String, Value>| {
-    let length = match args.get("length") {
-        Some(val) => match from_value::<usize>(val.clone()) {
-            Ok(v) => v,
-            Err(_) => {
-                return Err(tera::Error::msg(format!(
-                    "Function `password` received length={} but `length` can only be a number",
-                    val
-                )));
-            }
-        },
-        None => 10,
-    };
-        Ok(Value::from(Password(EN, length..length+1).fake::<String>()))
-   });
+    tera.register_function("password", |args: &HashMap<String, Value>| {
+        let length = match args.get("length") {
+            Some(val) => match from_value::<usize>(val.clone()) {
+                Ok(v) => v,
+                Err(_) => {
+                    return Err(tera::Error::msg(format!(
+                        "Function `password` received length={} but `length` can only be a number",
+                        val
+                    )));
+                }
+            },
+            None => 10,
+        };
+        Ok(Value::from(
+            Password(EN, length..length + 1).fake::<String>(),
+        ))
+    });
     tera.register_function("safeEmail", |_: &HashMap<String, Value>| {
         Ok(Value::from(SafeEmail(EN).fake::<String>()))
     });
