@@ -1,5 +1,9 @@
 {
     "id": "{{ uuid() }}",
     "name": "{{ name() }}",
-    "username": "{{ userName() }}"
+    "username": "{{ userName() }}",
+    "email": "{{ safeEmail() }}",
+    "last_access": {
+        "from": "{{ ipV4() }}"
+    }
 }
