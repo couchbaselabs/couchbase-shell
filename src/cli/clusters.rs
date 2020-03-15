@@ -52,7 +52,7 @@ async fn clusters(
     let args = args.evaluate_once(registry)?;
 
     if let Some(id) = args.get("activate") {
-        state.set_active(id.as_string().unwrap());
+        state.set_active(id.as_string().unwrap()).unwrap();
     }
 
     let active = state.active();
