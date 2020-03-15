@@ -11,11 +11,11 @@ use rust_embed::RustEmbed;
 use state::State;
 use std::collections::HashMap;
 use std::error::Error;
+use std::fs::File;
+use std::io::{prelude::*, BufReader};
 use std::sync::Arc;
 use structopt::StructOpt;
 use warp::{http::header::HeaderValue, path::Tail, reply::Response, Filter, Rejection, Reply};
-use std::fs::File;
-use std::io::{prelude::*, BufReader};
 
 #[derive(RustEmbed)]
 #[folder = "ui-assets/"]
@@ -101,12 +101,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     ]);
 
     if let Some(c) = opt.command {
-        nu_cli::run_pipeline_standalone(
-            c.into(),
-            opt.stdin,
-            &mut context,
-        ).await?;
-        return Ok(())
+        nu_cli::run_pipeline_standalone(c.into(), opt.stdin, &mut context).await?;
+        return Ok(());
     }
 
     if let Some(s) = opt.script {
@@ -116,14 +112,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         for line in reader.lines() {
             let line = line?;
             if !line.starts_with('#') {
-                nu_cli::run_pipeline_standalone(
-                    line,
-                    opt.stdin,
-                    &mut context,
-                ).await?;
+                nu_cli::run_pipeline_standalone(line, opt.stdin, &mut context).await?;
             }
         }
-        return Ok(())
+        return Ok(());
     }
 
     nu_cli::cli(Some(syncer), Some(context)).await
@@ -203,10 +195,7 @@ fn serve_impl(path: &str) -> Result<impl Reply, Rejection> {
     about = "Alternative Shell and UI for Couchbase Server and Cloud"
 )]
 struct CliOptions {
-    #[structopt(
-        long = "connstring",
-        default_value = "couchbase://localhost"
-    )]
+    #[structopt(long = "connstring", default_value = "couchbase://localhost")]
     connection_string: String,
     #[structopt(long = "ui")]
     ui: bool,
@@ -216,14 +205,9 @@ struct CliOptions {
     password: String,
     #[structopt(long = "cluster")]
     cluster: Option<String>,
-    #[structopt(
-        long = "command",
-        short = "c",
-    )]
+    #[structopt(long = "command", short = "c")]
     command: Option<String>,
-    #[structopt(
-        long = "script",
-    )]
+    #[structopt(long = "script")]
     script: Option<String>,
     #[structopt(long = "stdin")]
     stdin: bool,
