@@ -1,4 +1,5 @@
 {
+    "id": "{{ uuid() }}",
     "name": "{{ name() }}",
-    "username": "{{ username() }}"
+    "username": "{{ userName() }}"
 }
