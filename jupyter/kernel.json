@@ -1,0 +1,4 @@
+{
+    "argv": ["python","-m","cbshkernel", "-f", "{connection_file}"],
+    "display_name": "Couchbase Shell"
+}
