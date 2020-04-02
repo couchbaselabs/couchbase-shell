@@ -96,6 +96,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         nu_cli::whole_stream_command(Clusters::new(state.clone())),
         // Create fake data based on templates
         nu_cli::whole_stream_command(FakeData::new(state.clone())),
+        // Displays indexes
+        nu_cli::whole_stream_command(Indexes::new(state.clone())),
     ]);
 
     if let Some(c) = opt.command {
