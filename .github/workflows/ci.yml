@@ -57,6 +57,8 @@ jobs:
       run: sudo apt-get install libevent-dev libxcb-composite0-dev libx11-dev
     - name: Build
       run: cargo build --verbose
+      env:
+        MACOSX_DEPLOYMENT_TARGET: 10.7
     - name: Run tests
       run: cargo test --verbose
 

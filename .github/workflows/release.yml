@@ -14,7 +14,7 @@ env:
   # Space separated paths to include in the archive.
   # Start relative paths with a dot if you don't want
   # paths to be preserved. Use "/" as a delimiter.
-  RELEASE_ADDS: README.md LICENSE .cbshrc-example
+  RELEASE_ADDS: README.md LICENSE .cbshrc-example examples
 
 
 jobs:
@@ -59,6 +59,8 @@ jobs:
 
     - name: Build
       run: cargo build --verbose --release
+      env:
+        MACOSX_DEPLOYMENT_TARGET: 10.7
 
     - name: Create artifact directory
       run: mkdir artifacts
