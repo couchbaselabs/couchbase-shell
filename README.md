@@ -2,24 +2,26 @@
 
 # cbsh - a new couchbase shell!
 
-This project is a work in progress, come back later.
+This project is a work in progress, but we'd love your early feedback!
 
 # Usage
 
-If you want to run it right now, the bad news is you have to build it yourself.
+You can either build it from source if you want the latest and greatest or download (semi regular) binaries. Check the
+[releases](https://github.com/couchbaselabs/couchbase-shell/releases) page for the latest binaries available for
+your platform. For now we only build for linux and OSX.
+
+For the latest and greatest, build for yourself:
 
 Prerequisites:
 
  - Make sure to have a recent rust version installed (recommended: [rustup](https://rustup.rs/))
- - Install libcouchbase 3.0.0
+ - Depending on your platform you'll need some libraries installed through homebrew or apt etc.
+    - This should work for ubuntu (`sudo apt-get install git libssl-dev pkg-config cmake libevent-dev libxcb-composite0-dev libx11-dev llvm-dev libclang-dev clang`)
 
 Next, clone the repository and then run `cargo run`. The first time it will take some time since it builds all the dependencies, but you should end up in a shell. You can use `cargo run -- -h` to see all the available flags:
 
 ```
-/couchbase-shell$ cargo run -- -h
-   Compiling couchbase-shell v0.1.0 (/couchbase-shell)
-    Finished dev [unoptimized + debuginfo] target(s) in 13.54s
-     Running `target/debug/cbsh -h`
+$ ./cbsh --help
 The Couchbase Shell 0.1.0
 Alternative Shell and UI for Couchbase Server and Cloud
 
@@ -28,27 +30,34 @@ USAGE:
 
 FLAGS:
     -h, --help       Prints help information
+        --stdin      
         --ui         
     -V, --version    Prints version information
 
 OPTIONS:
-    -c, --connstring <connection-string>     [default: couchbase://localhost]
+        --cluster <cluster>                 
+    -c, --command <command>                 
+        --connstring <connection-string>     [default: couchbase://localhost]
     -p, --password <password>                [default: password]
+        --script <script>                   
     -u, --username <username>                [default: Administrator]
 ```
 
-Note that if you want to spawn the ui, use the `--ui` flag.
+Note that if you want to spawn the highly experimental ui, use the `--ui` flag.
 
 # Supported Commands
 
 This is heavily in flux right now, but you can try these commands (always try with `--help` if you are unsure about args and flags).
 
- - `query <statement>`
- - `analytics <statement>`
- - `kv-get <id>`
- - `nodes`
- - `buckets`
- - `clusters`
+ - `query <statement>`: Perform a N1QL query
+ - `analytics <statement>`: Perform an analytics query
+ - `kv-get <id>`: Perform a KV get operation
+ - `kv-upsert`: Perform a KV upsert operation
+ - `nodes`: List all nodes in the active cluster
+ - `buckets`: List all buckets in the active cluster
+ - `clusters`: List and manage (active) clusters
+ - `indexes`: List all indexes in the active cluster
+ - `fake`: Generate fake/mock data
 
 # Config & Multiple Clusters
 
@@ -119,5 +128,3 @@ Grab a quick coffee or tea since this will take some time to compile (since it c
 /couchbase-shell$ cbsh
 /couchbase-shell(master)> 
 ```
-
-We are going to provide standalone binaries to download later down the road once we have the CI pipelines setup.
