@@ -46,8 +46,6 @@ jobs:
       shell: bash
 
     - name: Install Rust (macos)
-      # As of 7.12.2019 rust is not installed on MacOS
-      # https://help.github.com/en/actions/automating-your-workflow-with-github-actions/software-installed-on-github-hosted-runners#macos-1015
       run: |
         curl https://sh.rustup.rs | sh -s -- -y
         echo "##[add-path]$HOME/.cargo/bin"
@@ -60,7 +58,7 @@ jobs:
     - name: Build
       run: cargo build --verbose --release
       env:
-        MACOSX_DEPLOYMENT_TARGET: 10.7
+        MACOSX_DEPLOYMENT_TARGET: 10.9
 
     - name: Create artifact directory
       run: mkdir artifacts
