@@ -606,7 +606,7 @@ checksum = "b3a71ab494c0b5b860bdc8407ae08978052417070c2ced38573a9157ad75b8ac"
 [[package]]
 name = "couchbase"
 version = "1.0.0-alpha.4"
-source = "git+https://github.com/couchbaselabs/couchbase-rs#4f79ea1024a4a4839a394f8d3e15af3a03022765"
+source = "git+https://github.com/couchbaselabs/couchbase-rs#634426cfdd99d00b385215a16b60c02b1e849005"
 dependencies = [
  "cc",
  "couchbase-sys",
@@ -653,7 +653,7 @@ dependencies = [
 [[package]]
 name = "couchbase-sys"
 version = "1.0.0-alpha.4"
-source = "git+https://github.com/couchbaselabs/couchbase-rs#4f79ea1024a4a4839a394f8d3e15af3a03022765"
+source = "git+https://github.com/couchbaselabs/couchbase-rs#634426cfdd99d00b385215a16b60c02b1e849005"
 dependencies = [
  "bindgen",
  "cmake",
@@ -2583,7 +2583,7 @@ dependencies = [
 [[package]]
 name = "nu"
 version = "0.12.0"
-source = "git+https://github.com/daschl/nushell.git?branch=custom#ff96aadd2d4ee897c307bc3d2719dffc902c7c9d"
+source = "git+https://github.com/daschl/nushell.git?branch=custom#3a8b2dc63225024acfa5f174a28c80e5f1e0349b"
 dependencies = [
  "clap",
  "crossterm",
@@ -2623,7 +2623,7 @@ dependencies = [
 [[package]]
 name = "nu-build"
 version = "0.12.0"
-source = "git+https://github.com/daschl/nushell.git?branch=custom#ff96aadd2d4ee897c307bc3d2719dffc902c7c9d"
+source = "git+https://github.com/daschl/nushell.git?branch=custom#3a8b2dc63225024acfa5f174a28c80e5f1e0349b"
 dependencies = [
  "lazy_static 1.4.0",
  "serde 1.0.105",
@@ -2634,7 +2634,7 @@ dependencies = [
 [[package]]
 name = "nu-cli"
 version = "0.12.0"
-source = "git+https://github.com/daschl/nushell.git?branch=custom#ff96aadd2d4ee897c307bc3d2719dffc902c7c9d"
+source = "git+https://github.com/daschl/nushell.git?branch=custom#3a8b2dc63225024acfa5f174a28c80e5f1e0349b"
 dependencies = [
  "ansi_term 0.12.1",
  "app_dirs",
@@ -2722,7 +2722,7 @@ dependencies = [
 [[package]]
 name = "nu-errors"
 version = "0.12.0"
-source = "git+https://github.com/daschl/nushell.git?branch=custom#ff96aadd2d4ee897c307bc3d2719dffc902c7c9d"
+source = "git+https://github.com/daschl/nushell.git?branch=custom#3a8b2dc63225024acfa5f174a28c80e5f1e0349b"
 dependencies = [
  "ansi_term 0.12.1",
  "bigdecimal",
@@ -2744,7 +2744,7 @@ dependencies = [
 [[package]]
 name = "nu-macros"
 version = "0.12.0"
-source = "git+https://github.com/daschl/nushell.git?branch=custom#ff96aadd2d4ee897c307bc3d2719dffc902c7c9d"
+source = "git+https://github.com/daschl/nushell.git?branch=custom#3a8b2dc63225024acfa5f174a28c80e5f1e0349b"
 dependencies = [
  "nu-protocol",
 ]
@@ -2752,7 +2752,7 @@ dependencies = [
 [[package]]
 name = "nu-parser"
 version = "0.12.0"
-source = "git+https://github.com/daschl/nushell.git?branch=custom#ff96aadd2d4ee897c307bc3d2719dffc902c7c9d"
+source = "git+https://github.com/daschl/nushell.git?branch=custom#3a8b2dc63225024acfa5f174a28c80e5f1e0349b"
 dependencies = [
  "ansi_term 0.12.1",
  "bigdecimal",
@@ -2785,7 +2785,7 @@ dependencies = [
 [[package]]
 name = "nu-plugin"
 version = "0.12.0"
-source = "git+https://github.com/daschl/nushell.git?branch=custom#ff96aadd2d4ee897c307bc3d2719dffc902c7c9d"
+source = "git+https://github.com/daschl/nushell.git?branch=custom#3a8b2dc63225024acfa5f174a28c80e5f1e0349b"
 dependencies = [
  "indexmap",
  "nu-build",
@@ -2801,7 +2801,7 @@ dependencies = [
 [[package]]
 name = "nu-protocol"
 version = "0.12.0"
-source = "git+https://github.com/daschl/nushell.git?branch=custom#ff96aadd2d4ee897c307bc3d2719dffc902c7c9d"
+source = "git+https://github.com/daschl/nushell.git?branch=custom#3a8b2dc63225024acfa5f174a28c80e5f1e0349b"
 dependencies = [
  "ansi_term 0.12.1",
  "bigdecimal",
@@ -2832,7 +2832,7 @@ dependencies = [
 [[package]]
 name = "nu-source"
 version = "0.12.0"
-source = "git+https://github.com/daschl/nushell.git?branch=custom#ff96aadd2d4ee897c307bc3d2719dffc902c7c9d"
+source = "git+https://github.com/daschl/nushell.git?branch=custom#3a8b2dc63225024acfa5f174a28c80e5f1e0349b"
 dependencies = [
  "derive-new",
  "getset 0.0.9",
@@ -2848,7 +2848,7 @@ dependencies = [
 [[package]]
 name = "nu-test-support"
 version = "0.12.0"
-source = "git+https://github.com/daschl/nushell.git?branch=custom#ff96aadd2d4ee897c307bc3d2719dffc902c7c9d"
+source = "git+https://github.com/daschl/nushell.git?branch=custom#3a8b2dc63225024acfa5f174a28c80e5f1e0349b"
 dependencies = [
  "app_dirs",
  "dunce",
@@ -2865,7 +2865,7 @@ dependencies = [
 [[package]]
 name = "nu-value-ext"
 version = "0.12.0"
-source = "git+https://github.com/daschl/nushell.git?branch=custom#ff96aadd2d4ee897c307bc3d2719dffc902c7c9d"
+source = "git+https://github.com/daschl/nushell.git?branch=custom#3a8b2dc63225024acfa5f174a28c80e5f1e0349b"
 dependencies = [
  "indexmap",
  "itertools 0.8.2",
@@ -2880,7 +2880,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_average"
 version = "0.12.0"
-source = "git+https://github.com/daschl/nushell.git?branch=custom#ff96aadd2d4ee897c307bc3d2719dffc902c7c9d"
+source = "git+https://github.com/daschl/nushell.git?branch=custom#3a8b2dc63225024acfa5f174a28c80e5f1e0349b"
 dependencies = [
  "nu-build",
  "nu-errors",
@@ -2892,7 +2892,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_binaryview"
 version = "0.12.0"
-source = "git+https://github.com/daschl/nushell.git?branch=custom#ff96aadd2d4ee897c307bc3d2719dffc902c7c9d"
+source = "git+https://github.com/daschl/nushell.git?branch=custom#3a8b2dc63225024acfa5f174a28c80e5f1e0349b"
 dependencies = [
  "ansi_term 0.12.1",
  "crossterm",
@@ -2910,7 +2910,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_fetch"
 version = "0.12.0"
-source = "git+https://github.com/daschl/nushell.git?branch=custom#ff96aadd2d4ee897c307bc3d2719dffc902c7c9d"
+source = "git+https://github.com/daschl/nushell.git?branch=custom#3a8b2dc63225024acfa5f174a28c80e5f1e0349b"
 dependencies = [
  "futures 0.3.4",
  "nu-build",
@@ -2925,7 +2925,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_inc"
 version = "0.12.0"
-source = "git+https://github.com/daschl/nushell.git?branch=custom#ff96aadd2d4ee897c307bc3d2719dffc902c7c9d"
+source = "git+https://github.com/daschl/nushell.git?branch=custom#3a8b2dc63225024acfa5f174a28c80e5f1e0349b"
 dependencies = [
  "nu-build",
  "nu-errors",
@@ -2939,7 +2939,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_match"
 version = "0.12.0"
-source = "git+https://github.com/daschl/nushell.git?branch=custom#ff96aadd2d4ee897c307bc3d2719dffc902c7c9d"
+source = "git+https://github.com/daschl/nushell.git?branch=custom#3a8b2dc63225024acfa5f174a28c80e5f1e0349b"
 dependencies = [
  "futures 0.3.4",
  "nu-build",
@@ -2953,7 +2953,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_post"
 version = "0.12.0"
-source = "git+https://github.com/daschl/nushell.git?branch=custom#ff96aadd2d4ee897c307bc3d2719dffc902c7c9d"
+source = "git+https://github.com/daschl/nushell.git?branch=custom#3a8b2dc63225024acfa5f174a28c80e5f1e0349b"
 dependencies = [
  "base64 0.11.0",
  "futures 0.3.4",
@@ -2971,7 +2971,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_ps"
 version = "0.12.0"
-source = "git+https://github.com/daschl/nushell.git?branch=custom#ff96aadd2d4ee897c307bc3d2719dffc902c7c9d"
+source = "git+https://github.com/daschl/nushell.git?branch=custom#3a8b2dc63225024acfa5f174a28c80e5f1e0349b"
 dependencies = [
  "futures 0.3.4",
  "futures-timer 3.0.2",
@@ -2986,7 +2986,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_str"
 version = "0.12.0"
-source = "git+https://github.com/daschl/nushell.git?branch=custom#ff96aadd2d4ee897c307bc3d2719dffc902c7c9d"
+source = "git+https://github.com/daschl/nushell.git?branch=custom#3a8b2dc63225024acfa5f174a28c80e5f1e0349b"
 dependencies = [
  "chrono",
  "nu-build",
@@ -3002,7 +3002,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_sys"
 version = "0.12.0"
-source = "git+https://github.com/daschl/nushell.git?branch=custom#ff96aadd2d4ee897c307bc3d2719dffc902c7c9d"
+source = "git+https://github.com/daschl/nushell.git?branch=custom#3a8b2dc63225024acfa5f174a28c80e5f1e0349b"
 dependencies = [
  "battery",
  "futures 0.3.4",
@@ -3018,7 +3018,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_textview"
 version = "0.12.0"
-source = "git+https://github.com/daschl/nushell.git?branch=custom#ff96aadd2d4ee897c307bc3d2719dffc902c7c9d"
+source = "git+https://github.com/daschl/nushell.git?branch=custom#3a8b2dc63225024acfa5f174a28c80e5f1e0349b"
 dependencies = [
  "ansi_term 0.12.1",
  "crossterm",
@@ -3035,7 +3035,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_tree"
 version = "0.12.0"
-source = "git+https://github.com/daschl/nushell.git?branch=custom#ff96aadd2d4ee897c307bc3d2719dffc902c7c9d"
+source = "git+https://github.com/daschl/nushell.git?branch=custom#3a8b2dc63225024acfa5f174a28c80e5f1e0349b"
 dependencies = [
  "derive-new",
  "nu-build",
