@@ -31,7 +31,7 @@ tera = "1.1"
 fake = "2.2"
 uuid = { version = "0.8", features = ["v4"] }
 
-couchbase = { git = "https://github.com/couchbaselabs/couchbase-rs" }
+couchbase = { git = "https://github.com/couchbaselabs/couchbase-rs", features = ["libcouchbase-static"] }
 
 [[bin]]
 name = "cbsh"
