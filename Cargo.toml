@@ -28,8 +28,9 @@ serde = "1.0"
 serde_json = "1.0"
 
 tera = "1.1"
-fake = "2.2"
+fake = { version = "2.2", features = ["chrono"] }
 uuid = { version = "0.8", features = ["v4"] }
+chrono = { version = "0.4.11", features = ["serde"] }
 
 couchbase = { git = "https://github.com/couchbaselabs/couchbase-rs", features = ["libcouchbase-static"] }
 

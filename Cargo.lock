@@ -625,6 +625,7 @@ dependencies = [
 name = "couchbase-shell"
 version = "0.0.2"
 dependencies = [
+ "chrono",
  "couchbase",
  "dirs 2.0.2",
  "fake",
@@ -1074,6 +1075,7 @@ version = "2.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a9b6b8a18de362ebd309e840fa4504a524a06f565f585962d836cecd4c08026"
 dependencies = [
+ "chrono",
  "rand 0.7.3",
 ]
 
