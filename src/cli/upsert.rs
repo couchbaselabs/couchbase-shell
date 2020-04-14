@@ -1,8 +1,7 @@
-//! The `kv-get` command performs a KV get operation.
+//! The `kv-upsert` command performs a KV upsert operation.
 
-use super::util::convert_json_value_to_nu_value;
 use crate::state::State;
-use couchbase::GetOptions;
+use couchbase::UpsertOptions;
 
 use futures::executor::block_on;
 use futures::stream::StreamExt;
@@ -13,6 +12,7 @@ use nu_protocol::{
     MaybeOwned, Primitive, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue,
 };
 use nu_source::Tag;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 pub struct Upsert {
@@ -34,6 +34,18 @@ impl nu_cli::WholeStreamCommand for Upsert {
         Signature::build("kv-upsert")
             .optional("id", SyntaxShape::String, "the document id")
             .optional("content", SyntaxShape::String, "the document content")
+            .named(
+                "id-column",
+                SyntaxShape::String,
+                "the name of the id column if used with an input stream",
+                None,
+            )
+            .named(
+                "content-column",
+                SyntaxShape::String,
+                "the name of the content column if used with an input stream",
+                None,
+            )
     }
 
     fn usage(&self) -> &str {
@@ -56,20 +68,41 @@ async fn run_upsert(
 ) -> Result<OutputStream, ShellError> {
     let mut args = args.evaluate_once(registry)?;
 
-    let mut ids = vec![];
+    let mut rows = HashMap::new();
+
+    let id_column = args
+        .get("id-column")
+        .map(|id| id.as_string().unwrap())
+        .unwrap_or_else(|| String::from("id"));
+
+    let content_column = args
+        .get("content-column")
+        .map(|content| content.as_string().unwrap())
+        .unwrap_or_else(|| String::from("content"));
+
     while let Some(item) = args.input.next().await {
         let untagged = item.into();
         match untagged {
-            UntaggedValue::Primitive(p) => match p {
-                Primitive::String(s) => ids.push(s.clone()),
-                _ => {}
-            },
             UntaggedValue::Row(d) => {
-                if let MaybeOwned::Borrowed(d) = d.get_data("id") {
+                let mut id = String::from("");
+                if let MaybeOwned::Borrowed(d) = d.get_data(id_column.as_ref()) {
                     let untagged = &d.value;
                     if let UntaggedValue::Primitive(p) = untagged {
                         if let Primitive::String(s) = p {
-                            ids.push(s.clone())
+                            id = s.clone()
+                        }
+                    }
+                }
+
+                if id == "" {
+                    continue;
+                }
+
+                if let MaybeOwned::Borrowed(d) = d.get_data(content_column.as_ref()) {
+                    let untagged = &d.value;
+                    if let UntaggedValue::Primitive(p) = untagged {
+                        if let Primitive::String(s) = p {
+                            rows.insert(id, s.clone());
                         }
                     }
                 }
@@ -78,26 +111,36 @@ async fn run_upsert(
         }
     }
 
+    let mut arg_id = String::from("");
     if let Some(id) = args.nth(0) {
-        ids.push(id.as_string()?);
+        arg_id = id.as_string()?;
+    }
+
+    if arg_id != "" {
+        let mut arg_content = String::from("");
+        if let Some(content) = args.nth(1) {
+            arg_content = content.as_string()?;
+        }
+
+        // An empty value is a legitimate document
+        rows.insert(arg_id, arg_content);
     }
 
     let bucket = state.active_cluster().cluster().bucket("travel-sample");
     let collection = bucket.default_collection();
 
-    debug!("Running kv get for docs {:?}", &ids);
+    debug!("Running kv get for docs {:?}", &rows);
 
     let mut results = vec![];
-    for id in ids {
-        match collection.get(&id, GetOptions::default()).await {
-            Ok(res) => {
+    for (id, content) in rows.iter() {
+        match collection
+            .upsert(id, content, UpsertOptions::default())
+            .await
+        {
+            Ok(_) => {
                 let tag = Tag::default();
                 let mut collected = TaggedDictBuilder::new(&tag);
-                collected.insert_value("id", id);
-                collected.insert_value("cas", UntaggedValue::int(res.cas()).into_untagged_value());
-                let content = res.content::<serde_json::Value>().unwrap();
-                let content_converted = convert_json_value_to_nu_value(&content, Tag::default());
-                collected.insert_value("content", content_converted);
+                collected.insert_value(&id_column, id.clone());
                 results.push(collected.into_value());
             }
             Err(_e) => {}

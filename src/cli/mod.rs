@@ -6,6 +6,7 @@ mod get;
 mod indexes;
 mod nodes;
 mod query;
+mod upsert;
 mod util;
 
 pub use analytics::Analytics;
@@ -16,3 +17,4 @@ pub use get::Get;
 pub use indexes::Indexes;
 pub use nodes::Nodes;
 pub use query::Query;
+pub use upsert::Upsert;
