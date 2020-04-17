@@ -112,6 +112,9 @@ async fn run_upsert(
                         UntaggedValue::Row(_) => {
                             rows.insert(id, convert_nu_value_to_json_value(d)?);
                         }
+                        UntaggedValue::Table(_) => {
+                            rows.insert(id, convert_nu_value_to_json_value(d)?);
+                        }
                         _ => {}
                     }
                 }
