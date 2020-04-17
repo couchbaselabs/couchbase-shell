@@ -1,5 +1,7 @@
 //! The `kv-upsert` command performs a KV upsert operation.
 
+use super::util::convert_nu_value_to_json_value;
+
 use crate::state::State;
 use couchbase::UpsertOptions;
 
@@ -100,10 +102,17 @@ async fn run_upsert(
 
                 if let MaybeOwned::Borrowed(d) = d.get_data(content_column.as_ref()) {
                     let untagged = &d.value;
-                    if let UntaggedValue::Primitive(p) = untagged {
-                        if let Primitive::String(s) = p {
-                            rows.insert(id, s.clone());
+                    match untagged {
+                        UntaggedValue::Primitive(p) => {
+                            if let Primitive::String(s) = p {
+                                let content = serde_json::to_value(s)?;
+                                rows.insert(id, content);
+                            }
                         }
+                        UntaggedValue::Row(_) => {
+                            rows.insert(id, convert_nu_value_to_json_value(d)?);
+                        }
+                        _ => {}
                     }
                 }
             }
@@ -117,9 +126,9 @@ async fn run_upsert(
     }
 
     if arg_id != "" {
-        let mut arg_content = String::from("");
+        let mut arg_content = serde_json::to_value("")?;
         if let Some(content) = args.nth(1) {
-            arg_content = content.as_string()?;
+            arg_content = convert_nu_value_to_json_value(&content)?;
         }
 
         // An empty value is a legitimate document
@@ -129,7 +138,7 @@ async fn run_upsert(
     let bucket = state.active_cluster().cluster().bucket("travel-sample");
     let collection = bucket.default_collection();
 
-    debug!("Running kv get for docs {:?}", &rows);
+    debug!("Running kv upsert for docs {:?}", &rows);
 
     let mut results = vec![];
     for (id, content) in rows.iter() {
@@ -143,7 +152,9 @@ async fn run_upsert(
                 collected.insert_value(&id_column, id.clone());
                 results.push(collected.into_value());
             }
-            Err(_e) => {}
+            Err(e) => {
+                debug!("Error received running upsert {:?}", e);
+            }
         };
     }
     Ok(OutputStream::from(results))
