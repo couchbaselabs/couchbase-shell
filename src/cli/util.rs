@@ -1,7 +1,11 @@
-use nu_cli::ToPrimitive;
+use futures::stream::StreamExt;
+use nu_cli::{EvaluatedWholeStreamCommandArgs, ToPrimitive};
 use nu_errors::ShellError;
-use nu_protocol::{Primitive, TaggedDictBuilder, UnspannedPathMember, UntaggedValue, Value};
+use nu_protocol::{
+    MaybeOwned, Primitive, TaggedDictBuilder, UnspannedPathMember, UntaggedValue, Value,
+};
 use nu_source::Tag;
+use std::collections::HashMap;
 
 pub fn convert_json_value_to_nu_value(v: &serde_json::Value, tag: impl Into<Tag>) -> Value {
     let tag = tag.into();
@@ -133,4 +137,77 @@ fn json_list(input: &[Value]) -> Result<Vec<serde_json::Value>, ShellError> {
     }
 
     Ok(out)
+}
+
+pub async fn json_rows_from_input_columns(
+    args: &mut EvaluatedWholeStreamCommandArgs,
+    id_column: &String,
+    content_column: &String,
+) -> Result<HashMap<String, serde_json::Value>, ShellError> {
+    let mut rows = HashMap::new();
+
+    while let Some(item) = args.input.next().await {
+        let untagged = item.into();
+        match untagged {
+            UntaggedValue::Row(d) => {
+                let mut id = String::from("");
+                if let MaybeOwned::Borrowed(d) = d.get_data(id_column.as_ref()) {
+                    let untagged = &d.value;
+                    if let UntaggedValue::Primitive(p) = untagged {
+                        if let Primitive::String(s) = p {
+                            id = s.clone()
+                        }
+                    }
+                }
+
+                if id == "" {
+                    continue;
+                }
+
+                if let MaybeOwned::Borrowed(d) = d.get_data(content_column.as_ref()) {
+                    let untagged = &d.value;
+                    match untagged {
+                        UntaggedValue::Primitive(p) => {
+                            if let Primitive::String(s) = p {
+                                let content = serde_json::to_value(s)?;
+                                rows.insert(id, content);
+                            }
+                        }
+                        UntaggedValue::Row(_) => {
+                            rows.insert(id, convert_nu_value_to_json_value(d)?);
+                        }
+                        UntaggedValue::Table(_) => {
+                            rows.insert(id, convert_nu_value_to_json_value(d)?);
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    Ok(rows)
+}
+
+pub fn json_rows_from_input_optionals(
+    args: &mut EvaluatedWholeStreamCommandArgs,
+) -> Result<HashMap<String, serde_json::Value>, ShellError> {
+    let mut rows = HashMap::new();
+    let mut arg_id = String::from("");
+    if let Some(id) = args.nth(0) {
+        arg_id = id.as_string()?;
+    }
+
+    if arg_id != "" {
+        let mut arg_content = serde_json::to_value("")?;
+        if let Some(content) = args.nth(1) {
+            arg_content = convert_nu_value_to_json_value(&content)?;
+        }
+
+        // An empty value is a legitimate document
+        rows.insert(arg_id, arg_content);
+    }
+
+    Ok(rows)
 }
