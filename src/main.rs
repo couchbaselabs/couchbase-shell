@@ -105,7 +105,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     ]);
 
     if let Some(c) = opt.command {
-        nu_cli::run_pipeline_standalone(c, opt.stdin, &mut context).await?;
+        nu_cli::run_pipeline_standalone(c, opt.stdin, &mut context, true).await?;
         return Ok(());
     }
 
@@ -116,7 +116,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         for line in reader.lines() {
             let line = line?;
             if !line.starts_with('#') {
-                nu_cli::run_pipeline_standalone(line, opt.stdin, &mut context).await?;
+                nu_cli::run_pipeline_standalone(line, opt.stdin, &mut context, true).await?;
             }
         }
         return Ok(());
