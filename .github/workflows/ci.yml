@@ -6,6 +6,18 @@ on:
     branches:         # array of glob patterns matching against refs/heads. Optional; defaults to all
       - master        # triggers on pushes that contain changes in master
 
+env:
+  # Could, potentially automatically parse
+  # the bin name, but let's do it automatically for now.
+  ARTIFACT_BIN: cbsh
+
+  # Space separated paths to include in the archive.
+  # Start relative paths with a dot if you don't want
+  # paths to be preserved. Use "/" as a delimiter.
+  ARTIFACT_ADDS: README.md LICENSE .cbshrc-example examples
+
+  SHA8: ${GITHUB_SHA::8}
+
 jobs:
   build:
     name: Build
@@ -61,6 +73,30 @@ jobs:
         MACOSX_DEPLOYMENT_TARGET: 10.9
     - name: Run tests
       run: cargo test --verbose
+
+    - name: Create artifact directory
+      run: mkdir artifacts
+
+    - name: Create archive for Linux
+      run: 7z a -ttar -so -an ./target/release/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }} | 7z a -si ./artifacts/${{ env.ARTIFACT_BIN }}-${{ env.SHA8 }}-linux-x86_64.tar.gz
+      if: matrix.os == 'ubuntu-latest'
+
+    - name: Install p7zip
+      # 7Zip not available on MacOS, install p7zip via homebrew.
+      run: brew install p7zip
+      if: matrix.os == 'macos-latest'
+
+    - name: Create archive for MacOS
+      run: 7z a -tzip ./artifacts/${{ env.ARTIFACT_BIN }}-${{ env.SHA8 }}-mac-x86_64.zip ./target/release/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }}
+      if: matrix.os == 'macos-latest'
+
+    # This will double-zip
+    # See - https://github.com/actions/upload-artifact/issues/39
+    - uses: actions/upload-artifact@v1
+      name: Upload archive
+      with:
+        name: ${{ runner.os }}
+        path: artifacts/
 
   rustfmt:
     name: Rustfmt
