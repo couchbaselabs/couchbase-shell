@@ -32,7 +32,7 @@ fake = { version = "2.2", features = ["chrono"] }
 uuid = { version = "0.8", features = ["v4"] }
 chrono = { version = "0.4.11", features = ["serde"] }
 
-couchbase = { git = "https://github.com/couchbaselabs/couchbase-rs", rev="a4866a5696b025bd9e9774dcf4796a1765ef65fd", features = ["libcouchbase-static"] }
+couchbase = { git = "https://github.com/couchbaselabs/couchbase-rs", features = ["libcouchbase-static"] }
 
 [[bin]]
 name = "cbsh"
