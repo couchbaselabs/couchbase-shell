@@ -88,6 +88,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         nu_cli::whole_stream_command(Get::new(state.clone())),
         // Performs kv upsert operations
         nu_cli::whole_stream_command(Upsert::new(state.clone())),
+        // Performs kv insert operations
+        nu_cli::whole_stream_command(Insert::new(state.clone())),
         // Displays cluster manager node infos
         nu_cli::whole_stream_command(Nodes::new(state.clone())),
         // Displays cluster manager bucket infos

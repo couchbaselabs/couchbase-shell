@@ -3,7 +3,7 @@
 use super::util::{json_rows_from_input_columns, json_rows_from_input_optionals};
 
 use crate::state::State;
-use couchbase::UpsertOptions;
+use couchbase::InsertOptions;
 
 use futures::executor::block_on;
 use log::debug;
@@ -13,23 +13,23 @@ use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder};
 use nu_source::Tag;
 use std::sync::Arc;
 
-pub struct Upsert {
+pub struct Insert {
     state: Arc<State>,
 }
 
-impl Upsert {
+impl Insert {
     pub fn new(state: Arc<State>) -> Self {
         Self { state }
     }
 }
 
-impl nu_cli::WholeStreamCommand for Upsert {
+impl nu_cli::WholeStreamCommand for Insert {
     fn name(&self) -> &str {
-        "kv-upsert"
+        "kv-insert"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("kv-upsert")
+        Signature::build("kv-insert")
             .optional("id", SyntaxShape::String, "the document id")
             .optional("content", SyntaxShape::String, "the document content")
             .named(
@@ -47,7 +47,7 @@ impl nu_cli::WholeStreamCommand for Upsert {
     }
 
     fn usage(&self) -> &str {
-        "Upsert a document through Key/Value"
+        "Insert a document through Key/Value"
     }
 
     fn run(
@@ -55,11 +55,11 @@ impl nu_cli::WholeStreamCommand for Upsert {
         args: CommandArgs,
         registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
-        block_on(run_upsert(self.state.clone(), args, registry))
+        block_on(run_insert(self.state.clone(), args, registry))
     }
 }
 
-async fn run_upsert(
+async fn run_insert(
     state: Arc<State>,
     args: CommandArgs,
     registry: &CommandRegistry,
@@ -82,12 +82,12 @@ async fn run_upsert(
     let bucket = state.active_cluster().cluster().bucket("travel-sample");
     let collection = bucket.default_collection();
 
-    debug!("Running kv upsert for docs {:?}", &rows);
+    debug!("Running kv insert for docs {:?}", &rows);
 
     let mut results = vec![];
     for (id, content) in rows.iter() {
         match collection
-            .upsert(id, content, UpsertOptions::default())
+            .insert(id, content, InsertOptions::default())
             .await
         {
             Ok(_) => {
@@ -97,7 +97,7 @@ async fn run_upsert(
                 results.push(collected.into_value());
             }
             Err(e) => {
-                debug!("Error received running upsert {:?}", e);
+                return Err(ShellError::untagged_runtime_error(format!("{}", e)));
             }
         };
     }
