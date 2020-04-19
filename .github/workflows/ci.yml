@@ -78,7 +78,7 @@ jobs:
       run: mkdir artifacts
 
     - name: Create archive for Linux
-      run: 7z a -ttar -so -an ./target/release/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }} | 7z a -si ./artifacts/${{ env.ARTIFACT_BIN }}-${{ env.SHA8 }}-linux-x86_64.tar.gz
+      run: 7z a -ttar -so -an ./target/debug/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }} | 7z a -si ./artifacts/${{ env.ARTIFACT_BIN }}-${{ env.SHA8 }}-linux-x86_64.tar.gz
       if: matrix.os == 'ubuntu-latest'
 
     - name: Install p7zip
@@ -87,7 +87,7 @@ jobs:
       if: matrix.os == 'macos-latest'
 
     - name: Create archive for MacOS
-      run: 7z a -tzip ./artifacts/${{ env.ARTIFACT_BIN }}-${{ env.SHA8 }}-mac-x86_64.zip ./target/release/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }}
+      run: 7z a -tzip ./artifacts/${{ env.ARTIFACT_BIN }}-${{ env.SHA8 }}-mac-x86_64.zip ./target/debug/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }}
       if: matrix.os == 'macos-latest'
 
     # This will double-zip
