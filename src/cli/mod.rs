@@ -7,6 +7,7 @@ mod indexes;
 mod insert;
 mod nodes;
 mod query;
+mod replace;
 mod upsert;
 mod util;
 
@@ -19,4 +20,5 @@ pub use indexes::Indexes;
 pub use insert::Insert;
 pub use nodes::Nodes;
 pub use query::Query;
+pub use replace::Replace;
 pub use upsert::Upsert;
