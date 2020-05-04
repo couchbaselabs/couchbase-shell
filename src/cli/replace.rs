@@ -39,6 +39,12 @@ impl nu_cli::WholeStreamCommand for Replace {
                 None,
             )
             .named(
+                "bucket",
+                SyntaxShape::String,
+                "the name of the bucket",
+                None,
+            )
+            .named(
                 "content-column",
                 SyntaxShape::String,
                 "the name of the content column if used with an input stream",
@@ -66,6 +72,19 @@ async fn run_replace(
 ) -> Result<OutputStream, ShellError> {
     let mut args = args.evaluate_once(registry)?;
 
+    let bucket_name = match args
+        .get("bucket")
+        .map(|id| id.as_string().unwrap())
+        .or_else(|| state.active_cluster().unique_bucket_name())
+    {
+        Some(v) => v,
+        None => {
+            return Err(ShellError::untagged_runtime_error(format!(
+                "Could not auto-select a bucket - please use --bucket instead"
+            )))
+        }
+    };
+
     let id_column = args
         .get("id-column")
         .map(|id| id.as_string().unwrap())
@@ -79,7 +98,7 @@ async fn run_replace(
     let mut rows = json_rows_from_input_columns(&mut args, &id_column, &content_column).await?;
     rows.extend(json_rows_from_input_optionals(&mut args)?);
 
-    let bucket = state.active_cluster().cluster().bucket("travel-sample");
+    let bucket = state.active_cluster().bucket(&bucket_name);
     let collection = bucket.default_collection();
 
     debug!("Running kv replace for docs {:?}", &rows);

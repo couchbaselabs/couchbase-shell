@@ -34,15 +34,19 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut clusters = HashMap::new();
 
     let active = if config.clusters().is_empty() {
-        let cluster = RemoteCluster::new(opt.connection_string, opt.username, opt.password);
+        let cluster = RemoteCluster::new(opt.connection_string, opt.username, opt.password, opt.bucket);
         clusters.insert("default".into(), cluster);
         String::from("default")
     } else {
         let mut active = None;
         for (k, v) in config.clusters() {
             let name = k.clone();
-            let cluster =
-                RemoteCluster::new(v.connstr().into(), v.username().into(), v.password().into());
+            let cluster = RemoteCluster::new(
+                v.connstr().into(),
+                v.username().into(),
+                v.password().into(),
+                v.default_bucket(),
+            );
             clusters.insert(name.clone(), cluster);
             if opt.cluster.as_ref().is_some() {
                 if &name == opt.cluster.as_ref().unwrap() {
@@ -211,6 +215,8 @@ struct CliOptions {
     password: String,
     #[structopt(long = "cluster")]
     cluster: Option<String>,
+    #[structopt(long = "bucket")]
+    bucket: Option<String>,
     #[structopt(long = "command", short = "c")]
     command: Option<String>,
     #[structopt(long = "script")]

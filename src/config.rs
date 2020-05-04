@@ -53,6 +53,8 @@ pub struct ClusterConfig {
     connstr: String,
     username: String,
     password: String,
+    #[serde(rename(deserialize = "default-bucket"))]
+    default_bucket: Option<String>,
 }
 
 impl ClusterConfig {
@@ -64,5 +66,8 @@ impl ClusterConfig {
     }
     pub fn password(&self) -> &str {
         self.password.as_str()
+    }
+    pub fn default_bucket(&self) -> Option<String> {
+        self.default_bucket.as_ref().map(|s| s.clone())
     }
 }

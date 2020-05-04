@@ -2,3 +2,4 @@
 connstr = "couchbase://127.0.0.1"
 username = "Administrator"
 password = "password"
+default-bucket = "travel-sample"

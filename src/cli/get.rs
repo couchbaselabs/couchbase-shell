@@ -39,6 +39,12 @@ impl nu_cli::WholeStreamCommand for Get {
                 "the name of the id column if used with an input stream",
                 None,
             )
+            .named(
+                "bucket",
+                SyntaxShape::String,
+                "the name of the bucket",
+                None,
+            )
             .switch(
                 "flatten",
                 "If set, flattens the content into the toplevel",
@@ -71,6 +77,19 @@ async fn run_get(
         .map(|id| id.as_string().unwrap())
         .unwrap_or_else(|| String::from("id"));
 
+    let bucket_name = match args
+        .get("bucket")
+        .map(|id| id.as_string().unwrap())
+        .or_else(|| state.active_cluster().unique_bucket_name())
+    {
+        Some(v) => v,
+        None => {
+            return Err(ShellError::untagged_runtime_error(format!(
+                "Could not auto-select a bucket - please use --bucket instead"
+            )))
+        }
+    };
+
     let mut ids = vec![];
     while let Some(item) = args.input.next().await {
         let untagged = item.into();
@@ -99,7 +118,7 @@ async fn run_get(
 
     let flatten = args.get("flatten").is_some();
 
-    let bucket = state.active_cluster().cluster().bucket("travel-sample");
+    let bucket = state.active_cluster().bucket(&bucket_name);
     let collection = bucket.default_collection();
 
     debug!("Running kv get for docs {:?}", &ids);

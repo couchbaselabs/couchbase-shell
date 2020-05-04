@@ -1,4 +1,4 @@
-use couchbase::Cluster;
+use couchbase::{Bucket, Cluster};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -10,10 +10,12 @@ pub struct State {
 
 impl State {
     pub fn new(clusters: HashMap<String, RemoteCluster>, active: String) -> Self {
-        Self {
-            active: Mutex::new(active),
+        let state = Self {
+            active: Mutex::new(active.clone()),
             clusters,
-        }
+        };
+        state.set_active(active).unwrap();
+        state
     }
 
     pub fn clusters(&self) -> &HashMap<String, RemoteCluster> {
@@ -34,7 +36,12 @@ impl State {
             *guard = active.clone();
         }
 
-        let _ignored = self.active_cluster().cluster();
+        let remote = self.active_cluster();
+        let _ = remote.cluster();
+
+        if remote.bucket_on_active().is_some() {
+            let _ = remote.bucket(remote.bucket_on_active().unwrap());
+        }
 
         for (k, v) in &self.clusters {
             if k != &active {
@@ -59,15 +66,24 @@ pub struct RemoteCluster {
     username: String,
     password: String,
     cluster: Mutex<Option<Arc<Cluster>>>,
+    buckets: Mutex<HashMap<String, Arc<Bucket>>>,
+    bucket_on_active: Option<String>,
 }
 
 impl RemoteCluster {
-    pub fn new(connstr: String, username: String, password: String) -> Self {
+    pub fn new(
+        connstr: String,
+        username: String,
+        password: String,
+        bucket_on_active: Option<String>,
+    ) -> Self {
         Self {
             cluster: Mutex::new(None),
+            buckets: Mutex::new(HashMap::new()),
             connstr,
             username,
             password,
+            bucket_on_active,
         }
     }
 
@@ -81,6 +97,27 @@ impl RemoteCluster {
             )));
         }
         c.as_ref().unwrap().clone()
+    }
+
+    pub fn bucket(&self, name: &str) -> Arc<Bucket> {
+        let mut buckets = self.buckets.lock().unwrap();
+        if !buckets.contains_key(name) {
+            let bucket = self.cluster().bucket(name);
+            buckets.insert(name.into(), Arc::new(bucket));
+        }
+        buckets.get(name).unwrap().clone()
+    }
+
+    pub fn unique_bucket_name(&self) -> Option<String> {
+        let buckets = self.buckets.lock().unwrap();
+        if buckets.len() == 1 {
+            return buckets.keys().next().map(|s| s.clone());
+        }
+        None
+    }
+
+    pub fn bucket_on_active(&self) -> Option<&String> {
+        self.bucket_on_active.as_ref()
     }
 
     pub fn deactivate(&self) {
