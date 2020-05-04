@@ -61,7 +61,7 @@ This is heavily in flux right now, but you can try these commands (always try wi
 
 # Config & Multiple Clusters
 
-While quickly connecting with command line arguments is convenient, if you manage multiple clusters it can get tedious. For this reason, the shell supports managing multiple clusters at the same time. This works by adding a `.cbshrc` to either the path where you run the binary from, or more practical, from your home directory (`~/.cbshrc`).
+While quickly connecting with command line arguments is convenient, if you manage multiple clusters it can get tedious. For this reason, the shell supports managing multiple clusters at the same time. This works by adding a `.cbsh` to either the path where you run the binary from, or more practical, from your home directory (`~/.cbsh`).
 
 The format of the rc file is `toml`, and the default looks pretty much like this:
 
