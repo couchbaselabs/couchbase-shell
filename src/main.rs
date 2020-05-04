@@ -34,7 +34,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut clusters = HashMap::new();
 
     let active = if config.clusters().is_empty() {
-        let cluster = RemoteCluster::new(opt.connection_string, opt.username, opt.password, opt.bucket);
+        let cluster = RemoteCluster::new(
+            opt.connection_string,
+            opt.username,
+            opt.password,
+            opt.bucket,
+        );
         clusters.insert("default".into(), cluster);
         String::from("default")
     } else {

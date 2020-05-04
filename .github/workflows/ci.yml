@@ -14,7 +14,7 @@ env:
   # Space separated paths to include in the archive.
   # Start relative paths with a dot if you don't want
   # paths to be preserved. Use "/" as a delimiter.
-  ARTIFACT_ADDS: README.md LICENSE .cbshrc-example examples
+  ARTIFACT_ADDS: README.md LICENSE .cbsh-example examples
 
   SHA8: ${GITHUB_SHA::8}
 
