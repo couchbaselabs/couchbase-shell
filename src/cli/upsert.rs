@@ -9,7 +9,7 @@ use futures::executor::block_on;
 use log::debug;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder};
+use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
 use std::sync::Arc;
 
@@ -90,10 +90,11 @@ async fn run_upsert(
             .upsert(id, content, UpsertOptions::default())
             .await
         {
-            Ok(_) => {
+            Ok(res) => {
                 let tag = Tag::default();
                 let mut collected = TaggedDictBuilder::new(&tag);
                 collected.insert_value(&id_column, id.clone());
+                collected.insert_value("cas", UntaggedValue::int(res.cas()).into_untagged_value());
                 results.push(collected.into_value());
             }
             Err(e) => {
