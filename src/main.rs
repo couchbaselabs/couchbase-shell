@@ -4,9 +4,9 @@ mod state;
 mod ui;
 
 use crate::cli::*;
-use crate::ui::*;
 use crate::config::ShellConfig;
 use crate::state::RemoteCluster;
+use crate::ui::*;
 use log::{debug, warn};
 use state::State;
 use std::collections::HashMap;

@@ -1,8 +1,8 @@
-use warp::{http::header::HeaderValue, path::Tail, reply::Response, Filter, Rejection, Reply};
-use std::sync::Arc;
-use http::Uri;
 use crate::state::State;
+use http::Uri;
 use rust_embed::RustEmbed;
+use std::sync::Arc;
+use warp::{http::header::HeaderValue, path::Tail, reply::Response, Filter, Rejection, Reply};
 
 #[derive(RustEmbed)]
 #[folder = "ui-assets/"]
