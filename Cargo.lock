@@ -649,6 +649,7 @@ dependencies = [
  "nu-source",
  "pretty_env_logger 0.3.1",
  "reqwest",
+ "rpassword",
  "rust-embed",
  "serde 1.0.110",
  "serde_json",
@@ -3915,6 +3916,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4129743af505f674602b97d02c8ebe526752de8811e21ecb2fb166fcf4afe157"
 dependencies = [
  "xmlparser",
+]
+
+[[package]]
+name = "rpassword"
+version = "4.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "99371657d3c8e4d816fb6221db98fa408242b0b53bac08f8676a41f8554fe99f"
+dependencies = [
+ "libc",
+ "winapi 0.3.8",
 ]
 
 [[package]]

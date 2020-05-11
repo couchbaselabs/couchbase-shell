@@ -28,13 +28,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let mut clusters = HashMap::new();
 
+    let password = match opt.password {
+        true => rpassword::read_password_from_tty(Some("Password: ")).unwrap(),
+        false => String::from("password"),
+    };
+
     let active = if config.clusters().is_empty() {
-        let cluster = RemoteCluster::new(
-            opt.connection_string,
-            opt.username,
-            opt.password,
-            opt.bucket,
-        );
+        let cluster = RemoteCluster::new(opt.connection_string, opt.username, password, opt.bucket);
         clusters.insert("default".into(), cluster);
         String::from("default")
     } else {
@@ -131,8 +131,8 @@ struct CliOptions {
     ui: bool,
     #[structopt(short = "u", long = "username", default_value = "Administrator")]
     username: String,
-    #[structopt(short = "p", long = "password", default_value = "password")]
-    password: String,
+    #[structopt(short = "p", long = "password")]
+    password: bool,
     #[structopt(long = "cluster")]
     cluster: Option<String>,
     #[structopt(long = "bucket")]

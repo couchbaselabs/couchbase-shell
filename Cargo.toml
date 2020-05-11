@@ -17,6 +17,7 @@ toml = "0.5"
 dirs = "2.0"
 rust-embed = "5.5"
 mime_guess = "2.0"
+rpassword = "4.0"
 
 nu = { git = "https://github.com/daschl/nushell.git", branch = "custom", features = ["default", "stable"] }
 nu-protocol = { git = "https://github.com/daschl/nushell.git", branch = "custom" }
