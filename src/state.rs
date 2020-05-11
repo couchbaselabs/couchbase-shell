@@ -39,8 +39,8 @@ impl State {
         let remote = self.active_cluster();
         let _ = remote.cluster();
 
-        if remote.bucket_on_active().is_some() {
-            let _ = remote.bucket(remote.bucket_on_active().unwrap());
+        if remote.active_bucket().is_some() {
+            let _ = remote.bucket(remote.active_bucket().unwrap().as_str());
         }
 
         for (k, v) in &self.clusters {
@@ -59,6 +59,7 @@ impl State {
             .get(&*active)
             .expect("No active cluster, this is a bug :(")
     }
+
 }
 
 pub struct RemoteCluster {
@@ -67,7 +68,7 @@ pub struct RemoteCluster {
     password: String,
     cluster: Mutex<Option<Arc<Cluster>>>,
     buckets: Mutex<HashMap<String, Arc<Bucket>>>,
-    bucket_on_active: Option<String>,
+    active_bucket: Mutex<Option<String>>,
 }
 
 impl RemoteCluster {
@@ -75,7 +76,7 @@ impl RemoteCluster {
         connstr: String,
         username: String,
         password: String,
-        bucket_on_active: Option<String>,
+        active_bucket: Option<String>,
     ) -> Self {
         Self {
             cluster: Mutex::new(None),
@@ -83,7 +84,7 @@ impl RemoteCluster {
             connstr,
             username,
             password,
-            bucket_on_active,
+            active_bucket: Mutex::new(active_bucket),
         }
     }
 
@@ -108,16 +109,13 @@ impl RemoteCluster {
         buckets.get(name).unwrap().clone()
     }
 
-    pub fn unique_bucket_name(&self) -> Option<String> {
-        let buckets = self.buckets.lock().unwrap();
-        if buckets.len() == 1 {
-            return buckets.keys().next().map(|s| s.clone());
-        }
-        None
+    pub fn active_bucket(&self) -> Option<String> {
+        self.active_bucket.lock().unwrap().as_ref().map(|s| s.clone())
     }
 
-    pub fn bucket_on_active(&self) -> Option<&String> {
-        self.bucket_on_active.as_ref()
+    pub fn set_active_bucket(&self, name: String) {
+        let mut active = self.active_bucket.lock().unwrap();
+        *active = Some(name);
     }
 
     pub fn deactivate(&self) {

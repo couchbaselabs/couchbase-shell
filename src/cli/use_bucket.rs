@@ -2,31 +2,35 @@ use crate::state::State;
 use futures::executor::block_on;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
-use nu_protocol::{Signature, TaggedDictBuilder};
+use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder};
 use nu_source::Tag;
 use std::sync::Arc;
 
-pub struct UseCmd {
+pub struct UseBucket {
     state: Arc<State>,
 }
 
-impl UseCmd {
+impl UseBucket {
     pub fn new(state: Arc<State>) -> Self {
         Self { state }
     }
 }
 
-impl nu_cli::WholeStreamCommand for UseCmd {
+impl nu_cli::WholeStreamCommand for UseBucket {
     fn name(&self) -> &str {
-        "use"
+        "use bucket"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("use")
+        Signature::build("use bucket").required(
+            "identifier",
+            SyntaxShape::String,
+            "the name of the bucket",
+        )
     }
 
     fn usage(&self) -> &str {
-        "Modify the default execution environment of commands"
+        "Sets the active bucket based on its name"
     }
 
     fn run(
@@ -43,11 +47,15 @@ async fn use_cmd(
     registry: &CommandRegistry,
     state: Arc<State>,
 ) -> Result<OutputStream, ShellError> {
-    let _args = args.evaluate_once(registry)?;
+    let args = args.evaluate_once(registry)?;
 
     let active = state.active_cluster();
+
+     if let Some(id) = args.nth(0) {
+         active.set_active_bucket(id.as_string().unwrap());
+    }
+
     let mut using_now = TaggedDictBuilder::new(Tag::default());
-    using_now.insert_value("cluster", state.active());
     using_now.insert_value(
         "bucket",
         active
@@ -56,6 +64,5 @@ async fn use_cmd(
             .unwrap_or(String::from("<not set>")),
     );
     let clusters = vec![using_now.into_value()];
-
     Ok(clusters.into())
 }

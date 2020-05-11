@@ -80,7 +80,7 @@ async fn run_get(
     let bucket_name = match args
         .get("bucket")
         .map(|id| id.as_string().unwrap())
-        .or_else(|| state.active_cluster().unique_bucket_name())
+        .or_else(|| state.active_cluster().active_bucket())
     {
         Some(v) => v,
         None => {
