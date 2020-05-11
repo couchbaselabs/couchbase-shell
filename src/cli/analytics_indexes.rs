@@ -1,6 +1,6 @@
 use super::util::convert_json_value_to_nu_value;
 use crate::state::State;
-use couchbase::QueryOptions;
+use couchbase::AnalyticsOptions;
 use futures::executor::block_on;
 use futures::stream::StreamExt;
 use log::debug;
@@ -10,27 +10,27 @@ use nu_protocol::Signature;
 use nu_source::Tag;
 use std::sync::Arc;
 
-pub struct QueryIndexes {
+pub struct AnalyticsIndexes {
     state: Arc<State>,
 }
 
-impl QueryIndexes {
+impl AnalyticsIndexes {
     pub fn new(state: Arc<State>) -> Self {
         Self { state }
     }
 }
 
-impl nu_cli::WholeStreamCommand for QueryIndexes {
+impl nu_cli::WholeStreamCommand for AnalyticsIndexes {
     fn name(&self) -> &str {
-        "query indexes"
+        "analytics indexes"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("query indexes")
+        Signature::build("analytics indexes")
     }
 
     fn usage(&self) -> &str {
-        "Lists all query indexes"
+        "Lists all analytics indexes"
     }
 
     fn run(
@@ -43,13 +43,13 @@ impl nu_cli::WholeStreamCommand for QueryIndexes {
 }
 
 async fn indexes(state: Arc<State>) -> Result<OutputStream, ShellError> {
-    let statement = "select keyspace_id as `bucket`, name, state, `using` as `type`, ifmissing(condition, null) as condition, ifmissing(is_primary, false) as `primary`, index_key from system:indexes";
+    let statement = "SELECT d.* FROM Metadata.`Index` d WHERE d.DataverseName <> \"Metadata\"";
 
-    debug!("Running n1ql query {}", &statement);
+    debug!("Running analytics query {}", &statement);
     let result = state
         .active_cluster()
         .cluster()
-        .query(statement, QueryOptions::default())
+        .analytics_query(statement, AnalyticsOptions::default())
         .await;
 
     match result {
