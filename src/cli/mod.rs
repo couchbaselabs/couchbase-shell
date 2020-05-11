@@ -13,6 +13,7 @@ mod use_bucket;
 mod use_cluster;
 mod use_cmd;
 mod util;
+mod kv;
 
 pub use analytics::Analytics;
 pub use buckets::Buckets;
@@ -28,3 +29,4 @@ pub use upsert::Upsert;
 pub use use_bucket::UseBucket;
 pub use use_cluster::UseCluster;
 pub use use_cmd::UseCmd;
+pub use kv::Kv;

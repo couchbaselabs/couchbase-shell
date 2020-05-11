@@ -25,11 +25,11 @@ impl Insert {
 
 impl nu_cli::WholeStreamCommand for Insert {
     fn name(&self) -> &str {
-        "kv-insert"
+        "kv insert"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("kv-insert")
+        Signature::build("kv insert")
             .optional("id", SyntaxShape::String, "the document id")
             .optional("content", SyntaxShape::String, "the document content")
             .named(

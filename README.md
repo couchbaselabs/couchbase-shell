@@ -52,8 +52,10 @@ This is heavily in flux right now, but you can try these commands (always try wi
  - `query <statement>`: Perform a N1QL query
  - `analytics <statement>`: Perform an analytics query
  - `use`: Change the active bucket or cluster on the fly
- - `kv-get <id>`: Perform a KV get operation
- - `kv-upsert`: Perform a KV upsert operation
+ - `kv get`: Perform a KV get operation
+ - `kv upsert`: Perform a KV upsert operation
+ - `kv insert`: Perform a KV insert operation
+ - `kv replace`: Perform a KV replace operation
  - `nodes`: List all nodes in the active cluster
  - `buckets`: List all buckets in the active cluster
  - `clusters`: List and manage (active) clusters

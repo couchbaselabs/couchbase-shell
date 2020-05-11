@@ -27,11 +27,11 @@ impl Get {
 
 impl nu_cli::WholeStreamCommand for Get {
     fn name(&self) -> &str {
-        "kv-get"
+        "kv get"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("kv-get")
+        Signature::build("kv get")
             .optional("id", SyntaxShape::String, "the document id")
             .named(
                 "id-column",

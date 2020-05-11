@@ -25,11 +25,11 @@ impl Replace {
 
 impl nu_cli::WholeStreamCommand for Replace {
     fn name(&self) -> &str {
-        "kv-replace"
+        "kv replace"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("kv-replace")
+        Signature::build("kv replace")
             .optional("id", SyntaxShape::String, "the document id")
             .optional("content", SyntaxShape::String, "the document content")
             .named(

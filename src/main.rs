@@ -94,6 +94,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         nu_cli::whole_stream_command(UseCmd::new(state.clone())),
         nu_cli::whole_stream_command(UseCluster::new(state.clone())),
         nu_cli::whole_stream_command(UseBucket::new(state.clone())),
+        nu_cli::whole_stream_command(Kv{}),
     ]);
 
     if let Some(c) = opt.command {
