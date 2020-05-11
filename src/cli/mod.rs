@@ -9,6 +9,8 @@ mod nodes;
 mod query;
 mod replace;
 mod upsert;
+mod use_cluster;
+mod use_cmd;
 mod util;
 
 pub use analytics::Analytics;
@@ -22,3 +24,5 @@ pub use nodes::Nodes;
 pub use query::Query;
 pub use replace::Replace;
 pub use upsert::Upsert;
+pub use use_cluster::UseCluster;
+pub use use_cmd::UseCmd;

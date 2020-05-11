@@ -90,6 +90,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         nu_cli::whole_stream_command(FakeData::new(state.clone())),
         // Displays indexes
         nu_cli::whole_stream_command(Indexes::new(state.clone())),
+        // Allows to switch clusters, buckets and collections on the fly
+        nu_cli::whole_stream_command(UseCmd::new(state.clone())),
+        nu_cli::whole_stream_command(UseCluster::new(state.clone())),
     ]);
 
     if let Some(c) = opt.command {
