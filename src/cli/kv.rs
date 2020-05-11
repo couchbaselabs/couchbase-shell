@@ -1,6 +1,6 @@
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
+use nu_protocol::Signature;
 
 pub struct Kv;
 

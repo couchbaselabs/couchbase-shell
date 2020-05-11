@@ -10,27 +10,27 @@ use nu_protocol::Signature;
 use nu_source::Tag;
 use std::sync::Arc;
 
-pub struct Indexes {
+pub struct QueryIndexes {
     state: Arc<State>,
 }
 
-impl Indexes {
+impl QueryIndexes {
     pub fn new(state: Arc<State>) -> Self {
         Self { state }
     }
 }
 
-impl nu_cli::WholeStreamCommand for Indexes {
+impl nu_cli::WholeStreamCommand for QueryIndexes {
     fn name(&self) -> &str {
-        "indexes"
+        "query indexes"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("indexes")
+        Signature::build("query indexes")
     }
 
     fn usage(&self) -> &str {
-        "Lists all indexes"
+        "Lists all query indexes"
     }
 
     fn run(

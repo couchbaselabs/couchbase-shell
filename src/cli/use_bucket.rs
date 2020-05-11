@@ -51,8 +51,8 @@ async fn use_cmd(
 
     let active = state.active_cluster();
 
-     if let Some(id) = args.nth(0) {
-         active.set_active_bucket(id.as_string().unwrap());
+    if let Some(id) = args.nth(0) {
+        active.set_active_bucket(id.as_string().unwrap());
     }
 
     let mut using_now = TaggedDictBuilder::new(Tag::default());

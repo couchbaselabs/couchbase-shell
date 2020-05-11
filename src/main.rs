@@ -89,12 +89,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         // Create fake data based on templates
         nu_cli::whole_stream_command(FakeData::new(state.clone())),
         // Displays indexes
-        nu_cli::whole_stream_command(Indexes::new(state.clone())),
+        nu_cli::whole_stream_command(QueryIndexes::new(state.clone())),
         // Allows to switch clusters, buckets and collections on the fly
         nu_cli::whole_stream_command(UseCmd::new(state.clone())),
         nu_cli::whole_stream_command(UseCluster::new(state.clone())),
         nu_cli::whole_stream_command(UseBucket::new(state.clone())),
-        nu_cli::whole_stream_command(Kv{}),
+        nu_cli::whole_stream_command(Kv {}),
     ]);
 
     if let Some(c) = opt.command {

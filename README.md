@@ -50,6 +50,7 @@ Note that if you want to spawn the highly experimental ui, use the `--ui` flag.
 This is heavily in flux right now, but you can try these commands (always try with `--help` if you are unsure about args and flags).
 
  - `query <statement>`: Perform a N1QL query
+- `query indexes`: list query indexes
  - `analytics <statement>`: Perform an analytics query
  - `use`: Change the active bucket or cluster on the fly
  - `kv get`: Perform a KV get operation
@@ -59,7 +60,6 @@ This is heavily in flux right now, but you can try these commands (always try wi
  - `nodes`: List all nodes in the active cluster
  - `buckets`: List all buckets in the active cluster
  - `clusters`: List and manage (active) clusters
- - `indexes`: List all indexes in the active cluster
  - `fake`: Generate fake/mock data
 
 # Config & Multiple Clusters

@@ -59,7 +59,6 @@ impl State {
             .get(&*active)
             .expect("No active cluster, this is a bug :(")
     }
-
 }
 
 pub struct RemoteCluster {
@@ -110,7 +109,11 @@ impl RemoteCluster {
     }
 
     pub fn active_bucket(&self) -> Option<String> {
-        self.active_bucket.lock().unwrap().as_ref().map(|s| s.clone())
+        self.active_bucket
+            .lock()
+            .unwrap()
+            .as_ref()
+            .map(|s| s.clone())
     }
 
     pub fn set_active_bucket(&self, name: String) {
