@@ -23,7 +23,7 @@ impl nu_cli::WholeStreamCommand for Kv {
         registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
         Ok(
-            nu_cli::commands::help::get_help(self.name(), self.usage(), self.signature(), registry)
+            nu_cli::commands::help::get_help(self, registry)
                 .into(),
         )
     }
