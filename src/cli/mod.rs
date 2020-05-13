@@ -1,6 +1,7 @@
 mod analytics;
 mod analytics_indexes;
 mod buckets;
+mod buckets_config;
 mod clusters;
 mod fake_data;
 mod kv;
@@ -20,6 +21,7 @@ mod util;
 pub use analytics::Analytics;
 pub use analytics_indexes::AnalyticsIndexes;
 pub use buckets::Buckets;
+pub use buckets_config::BucketsConfig;
 pub use clusters::Clusters;
 pub use fake_data::FakeData;
 pub use kv::Kv;
