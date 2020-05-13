@@ -13,17 +13,17 @@ use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
 use std::sync::Arc;
 
-pub struct Upsert {
+pub struct KvUpsert {
     state: Arc<State>,
 }
 
-impl Upsert {
+impl KvUpsert {
     pub fn new(state: Arc<State>) -> Self {
         Self { state }
     }
 }
 
-impl nu_cli::WholeStreamCommand for Upsert {
+impl nu_cli::WholeStreamCommand for KvUpsert {
     fn name(&self) -> &str {
         "kv upsert"
     }

@@ -15,17 +15,17 @@ use nu_protocol::{
 use nu_source::Tag;
 use std::sync::Arc;
 
-pub struct Get {
+pub struct KvGet {
     state: Arc<State>,
 }
 
-impl Get {
+impl KvGet {
     pub fn new(state: Arc<State>) -> Self {
         Self { state }
     }
 }
 
-impl nu_cli::WholeStreamCommand for Get {
+impl nu_cli::WholeStreamCommand for KvGet {
     fn name(&self) -> &str {
         "kv get"
     }
