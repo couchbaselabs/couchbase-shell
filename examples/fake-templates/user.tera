@@ -1,9 +1,11 @@
 {
     "id": "{{ uuid() }}",
-    "name": "{{ name() }}",
-    "username": "{{ userName() }}",
-    "email": "{{ safeEmail() }}",
-    "last_access": {
-        "from": "{{ ipV4() }}"
+    "content": {
+        "name": "{{ name() }}",
+        "username": "{{ userName() }}",
+        "email": "{{ safeEmail() }}",
+        "last_access": {
+            "from": "{{ ipV4() }}"
+        }
     }
 }
