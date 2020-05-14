@@ -118,7 +118,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
-    nu_cli::cli(Some(syncer), Some(context)).await
+    nu_cli::cli(syncer, context).await
 }
 
 #[derive(Debug, StructOpt)]
