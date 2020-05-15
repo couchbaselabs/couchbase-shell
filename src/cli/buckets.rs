@@ -1,4 +1,6 @@
 use crate::state::State;
+use couchbase::{GenericManagementRequest, Request};
+use futures::channel::oneshot;
 use futures::executor::block_on;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
@@ -40,24 +42,17 @@ impl nu_cli::WholeStreamCommand for Buckets {
 }
 
 async fn buckets(state: Arc<State>) -> Result<OutputStream, ShellError> {
-    let client = reqwest::Client::new();
+    let core = state.active_cluster().cluster().core();
 
-    // todo: hack! need to actually use proper hostname from a parsed connstr...
-    let host = state.active_cluster().connstr().replace("couchbase://", "");
-    let uri = format!("http://{}:8091/pools/default/buckets", host);
+    let (sender, receiver) = oneshot::channel();
+    let request =
+        GenericManagementRequest::new(sender, "/pools/default/buckets".into(), "get".into(), None);
+    core.send(Request::GenericManagementRequest(request));
 
-    let resp = client
-        .get(&uri)
-        .basic_auth(
-            state.active_cluster().username(),
-            Some(state.active_cluster().password()),
-        )
-        .send()
-        .await
-        .unwrap()
-        .json::<Vec<BucketInfo>>()
-        .await
-        .unwrap();
+    let result = receiver.await;
+
+    let resp: Vec<BucketInfo> =
+        serde_json::from_slice(result.unwrap().unwrap().payload().unwrap()).unwrap();
 
     let buckets = resp
         .into_iter()

@@ -615,7 +615,7 @@ checksum = "b3a71ab494c0b5b860bdc8407ae08978052417070c2ced38573a9157ad75b8ac"
 [[package]]
 name = "couchbase"
 version = "1.0.0-alpha.4"
-source = "git+https://github.com/couchbaselabs/couchbase-rs#729e2a67fcb48ffd18c127aa1b8e83b9b277ae79"
+source = "git+https://github.com/couchbaselabs/couchbase-rs#a580c48898cc1929bf9ef5323fe0f9b59be7045b"
 dependencies = [
  "cc",
  "couchbase-sys",
@@ -657,6 +657,7 @@ dependencies = [
  "tera",
  "tokio",
  "toml 0.5.6",
+ "url",
  "uuid",
  "warp",
 ]
@@ -664,7 +665,7 @@ dependencies = [
 [[package]]
 name = "couchbase-sys"
 version = "1.0.0-alpha.4"
-source = "git+https://github.com/couchbaselabs/couchbase-rs#729e2a67fcb48ffd18c127aa1b8e83b9b277ae79"
+source = "git+https://github.com/couchbaselabs/couchbase-rs#a580c48898cc1929bf9ef5323fe0f9b59be7045b"
 dependencies = [
  "bindgen",
  "cmake",
