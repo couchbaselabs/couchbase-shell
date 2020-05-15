@@ -1,3 +1,4 @@
+use crate::cli::convert_cb_error;
 use crate::state::State;
 use couchbase::{GenericManagementRequest, Request};
 use futures::channel::oneshot;
@@ -49,10 +50,8 @@ async fn buckets(state: Arc<State>) -> Result<OutputStream, ShellError> {
         GenericManagementRequest::new(sender, "/pools/default/buckets".into(), "get".into(), None);
     core.send(Request::GenericManagementRequest(request));
 
-    let result = receiver.await;
-
-    let resp: Vec<BucketInfo> =
-        serde_json::from_slice(result.unwrap().unwrap().payload().unwrap()).unwrap();
+    let result = convert_cb_error(receiver.await.unwrap())?;
+    let resp: Vec<BucketInfo> = serde_json::from_slice(result.payload().unwrap()).unwrap();
 
     let buckets = resp
         .into_iter()

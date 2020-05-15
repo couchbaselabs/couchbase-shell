@@ -36,3 +36,10 @@ pub use query_indexes::QueryIndexes;
 pub use use_bucket::UseBucket;
 pub use use_cluster::UseCluster;
 pub use use_cmd::UseCmd;
+
+use couchbase::CouchbaseError;
+use nu_errors::ShellError;
+
+fn convert_cb_error<T>(input: Result<T, CouchbaseError>) -> Result<T, ShellError> {
+    input.map_err(|e| ShellError::untagged_runtime_error(format!("Couchbase SDK Error: {}", e)))
+}

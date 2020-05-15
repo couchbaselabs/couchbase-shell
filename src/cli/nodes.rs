@@ -1,4 +1,7 @@
+use crate::cli::convert_cb_error;
 use crate::state::State;
+use couchbase::{GenericManagementRequest, Request};
+use futures::channel::oneshot;
 use futures::executor::block_on;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
@@ -7,7 +10,6 @@ use nu_source::Tag;
 use serde::Deserialize;
 use std::fmt;
 use std::sync::Arc;
-
 pub struct Nodes {
     state: Arc<State>,
 }
@@ -41,24 +43,15 @@ impl nu_cli::WholeStreamCommand for Nodes {
 }
 
 async fn nodes(state: Arc<State>) -> Result<OutputStream, ShellError> {
-    let client = reqwest::Client::new();
+    let core = state.active_cluster().cluster().core();
 
-    // todo: hack! need to actually use proper hostname from a parsed connstr...
-    let host = state.active_cluster().connstr().replace("couchbase://", "");
-    let uri = format!("http://{}:8091/pools/default", host);
+    let (sender, receiver) = oneshot::channel();
+    let request =
+        GenericManagementRequest::new(sender, "/pools/default".into(), "get".into(), None);
+    core.send(Request::GenericManagementRequest(request));
 
-    let resp = client
-        .get(&uri)
-        .basic_auth(
-            state.active_cluster().username(),
-            Some(state.active_cluster().password()),
-        )
-        .send()
-        .await
-        .unwrap()
-        .json::<PoolInfo>()
-        .await
-        .unwrap();
+    let result = convert_cb_error(receiver.await.unwrap())?;
+    let resp: PoolInfo = serde_json::from_slice(result.payload().unwrap()).unwrap();
 
     let nodes = resp
         .nodes

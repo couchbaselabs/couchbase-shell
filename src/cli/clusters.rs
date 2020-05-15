@@ -4,7 +4,6 @@ use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
-use serde::Deserialize;
 use std::sync::Arc;
 
 pub struct Clusters {
@@ -61,11 +60,4 @@ async fn clusters(
         .collect::<Vec<_>>();
 
     Ok(clusters.into())
-}
-
-#[derive(Debug, Deserialize)]
-struct BucketInfo {
-    name: String,
-    #[serde(rename = "bucketType")]
-    bucket_type: String,
 }
