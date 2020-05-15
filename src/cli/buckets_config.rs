@@ -1,5 +1,8 @@
+use crate::cli::convert_cb_error;
 use crate::cli::util::convert_json_value_to_nu_value;
 use crate::state::State;
+use couchbase::{GenericManagementRequest, Request};
+use futures::channel::oneshot;
 use futures::executor::block_on;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
@@ -53,28 +56,26 @@ async fn buckets(
 
     let bucket_name = args.nth(0).unwrap().as_string().unwrap();
 
-    let client = reqwest::Client::new();
+    let core = state.active_cluster().cluster().core();
 
-    // todo: hack! need to actually use proper hostname from a parsed connstr...
-    let host = state.active_cluster().connstr().replace("couchbase://", "");
-    let uri = format!(
-        "http://{}:8091/pools/default/buckets/{}",
-        host, &bucket_name
+    let (sender, receiver) = oneshot::channel();
+    let request = GenericManagementRequest::new(
+        sender,
+        format!("/pools/default/buckets/{}", &bucket_name),
+        "get".into(),
+        None,
     );
+    core.send(Request::GenericManagementRequest(request));
 
-    let resp = client
-        .get(&uri)
-        .basic_auth(
-            state.active_cluster().username(),
-            Some(state.active_cluster().password()),
-        )
-        .send()
-        .await
-        .unwrap()
-        .json::<Value>()
-        .await
-        .unwrap();
+    let result = convert_cb_error(receiver.await.unwrap())?;
 
+    if !result.payload().is_some() {
+        return Err(ShellError::untagged_runtime_error(
+            "Empty response from cluster even though got 200 ok",
+        ));
+    }
+
+    let resp: Value = serde_json::from_slice(result.payload().unwrap()).unwrap();
     let converted = convert_json_value_to_nu_value(&resp, Tag::default());
 
     Ok(vec![converted].into())
