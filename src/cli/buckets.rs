@@ -51,6 +51,13 @@ async fn buckets(state: Arc<State>) -> Result<OutputStream, ShellError> {
     core.send(Request::GenericManagementRequest(request));
 
     let result = convert_cb_error(receiver.await.unwrap())?;
+
+    if !result.payload().is_some() {
+        return Err(ShellError::untagged_runtime_error(
+            "Empty response from cluster even though got 200 ok",
+        ));
+    }
+
     let resp: Vec<BucketInfo> = serde_json::from_slice(result.payload().unwrap()).unwrap();
 
     let buckets = resp
