@@ -1,8 +1,9 @@
+use crate::cli::util::cluster_identifiers_from;
 use crate::state::State;
 use futures::executor::block_on;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
-use nu_protocol::{Signature, TaggedDictBuilder, UntaggedValue};
+use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
 use std::sync::Arc;
 
@@ -22,7 +23,12 @@ impl nu_cli::WholeStreamCommand for Clusters {
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("clusters")
+        Signature::build("clusters").named(
+            "clusters",
+            SyntaxShape::String,
+            "the clusters which should be contacted",
+            None,
+        )
     }
 
     fn usage(&self) -> &str {
@@ -43,16 +49,24 @@ async fn clusters(
     registry: &CommandRegistry,
     state: Arc<State>,
 ) -> Result<OutputStream, ShellError> {
-    let _args = args.evaluate_once(registry).await?;
+    let args = args.evaluate_once(registry).await?;
+
+    let identifier_arg = args
+        .get("clusters")
+        .map(|id| id.as_string().unwrap())
+        .unwrap_or_else(|| ".*".to_string());
+
+    let identifiers = cluster_identifiers_from(&state, identifier_arg.as_str());
 
     let active = state.active();
     let clusters = state
         .clusters()
         .iter()
+        .filter(|(k, _)| identifiers.contains(k))
         .map(|(k, v)| {
             let mut collected = TaggedDictBuilder::new(Tag::default());
             collected.insert_untagged("active", UntaggedValue::boolean(k == &active));
-            collected.insert_value("identifier", k.clone());
+            collected.insert_value("cluster", k.clone());
             collected.insert_value("connstr", String::from(v.connstr()));
             collected.insert_value("username", String::from(v.username()));
             collected.into_value()

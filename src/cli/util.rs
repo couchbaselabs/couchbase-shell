@@ -1,3 +1,4 @@
+use crate::state::State;
 use futures::stream::StreamExt;
 use nu_cli::{EvaluatedWholeStreamCommandArgs, ToPrimitive};
 use nu_errors::ShellError;
@@ -5,7 +6,9 @@ use nu_protocol::{
     MaybeOwned, Primitive, TaggedDictBuilder, UnspannedPathMember, UntaggedValue, Value,
 };
 use nu_source::Tag;
+use regex::Regex;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 pub fn convert_json_value_to_nu_value(v: &serde_json::Value, tag: impl Into<Tag>) -> Value {
     let tag = tag.into();
@@ -210,4 +213,14 @@ pub fn json_rows_from_input_optionals(
     }
 
     Ok(rows)
+}
+
+pub fn cluster_identifiers_from(state: &Arc<State>, input: &str) -> Vec<String> {
+    let re = Regex::new(input).unwrap();
+    state
+        .clusters()
+        .keys()
+        .filter(|k| re.is_match(k))
+        .map(|v| v.clone())
+        .collect()
 }
