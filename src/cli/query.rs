@@ -38,25 +38,32 @@ impl nu_cli::WholeStreamCommand for Query {
         args: CommandArgs,
         registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
-        let args = args.evaluate_once(registry)?;
-        let statement = args.nth(0).expect("need statement").as_string()?;
+        block_on(run(self.state.clone(), args, registry))
+    }
+}
 
-        debug!("Running n1ql query {}", &statement);
-        let result = block_on(
-            self.state
-                .active_cluster()
-                .cluster()
-                .query(statement, QueryOptions::default()),
-        );
+async fn run(
+    state: Arc<State>,
+    args: CommandArgs,
+    registry: &CommandRegistry,
+) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once(registry).await?;
+    let statement = args.nth(0).expect("need statement").as_string()?;
 
-        match result {
-            Ok(mut r) => {
-                let stream = r
-                    .rows::<serde_json::Value>()
-                    .map(|v| convert_json_value_to_nu_value(&v.unwrap(), Tag::default()));
-                Ok(OutputStream::from_input(stream))
-            }
-            Err(e) => Err(ShellError::untagged_runtime_error(format!("{}", e))),
+    debug!("Running n1ql query {}", &statement);
+    let result = state
+        .active_cluster()
+        .cluster()
+        .query(statement, QueryOptions::default())
+        .await;
+
+    match result {
+        Ok(mut r) => {
+            let stream = r
+                .rows::<serde_json::Value>()
+                .map(|v| convert_json_value_to_nu_value(&v.unwrap(), Tag::default()));
+            Ok(OutputStream::from_input(stream))
         }
+        Err(e) => Err(ShellError::untagged_runtime_error(format!("{}", e))),
     }
 }

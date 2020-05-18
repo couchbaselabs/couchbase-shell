@@ -92,6 +92,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-recursion"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e5444eec77a9ec2bfe4524139e09195862e981400c4358d3b760cae634e4c4ee"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "async-std"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -150,9 +161,9 @@ dependencies = [
 
 [[package]]
 name = "attohttpc"
-version = "0.12.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de33d017f0add8b019c6d98c3132c82c8815ca96bbed8e8006e7402c840562b3"
+checksum = "d5db1932a9d70d5091139d6b0e04ec6a4d9f9184041c15d71a5ef954cb3c5312"
 dependencies = [
  "http 0.2.1",
  "log 0.4.8",
@@ -439,9 +450,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.0.52"
+version = "1.0.53"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3d87b23d6a92cd03af510a5ade527033f6aa6fa92161e2d5863a907d4c5e31d"
+checksum = "404b1fe4f65288577753b17e3b36a04596ee784493ec249bf81c7f2d2acd751c"
 dependencies = [
  "jobserver",
 ]
@@ -542,9 +553,9 @@ dependencies = [
 
 [[package]]
 name = "cmake"
-version = "0.1.42"
+version = "0.1.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81fb25b677f8bf1eb325017cb6bb8452f87969db0fedb4f757b297bee78a7c62"
+checksum = "49f97562167906afc51aa3fd7e6c83c10a5c96d33bd18f98a4c06a1413134caa"
 dependencies = [
  "cc",
 ]
@@ -634,6 +645,7 @@ dependencies = [
 name = "couchbase-shell"
 version = "0.0.2"
 dependencies = [
+ "async-stream",
  "chrono",
  "couchbase",
  "dirs 2.0.2",
@@ -933,6 +945,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "directories"
+version = "2.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "551a778172a450d7fc12e629ca3b0428d00f6afa9a43da1b630d54604e97371c"
+dependencies = [
+ "cfg-if",
+ "dirs-sys",
+]
+
+[[package]]
 name = "dirs"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1137,9 +1159,9 @@ dependencies = [
 
 [[package]]
 name = "fnv"
-version = "1.0.6"
+version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2fad85553e09a6f881f739c29f0b00b0f01357c743266d478b68951ce23285f3"
+checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
 name = "foreign-types"
@@ -1706,9 +1728,9 @@ dependencies = [
 
 [[package]]
 name = "hermit-abi"
-version = "0.1.12"
+version = "0.1.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61565ff7aaace3525556587bd2dc31d4a07071957be715e63ce7b1eccf51a8f4"
+checksum = "91780f809e750b0a89f5544be56617ff6b1227ee485bcb06ebe10cdf89bd3b71"
 dependencies = [
  "libc",
 ]
@@ -2132,9 +2154,9 @@ dependencies = [
 
 [[package]]
 name = "libsqlite3-sys"
-version = "0.17.3"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56d90181c2904c287e5390186be820e5ef311a3c62edebb7d6ca3d6a48ce041d"
+checksum = "1e704a02bcaecd4a08b93a23f6be59d0bd79cd161e0963e9499165a0a35df7bd"
 dependencies = [
  "cc",
  "pkg-config",
@@ -2547,7 +2569,7 @@ dependencies = [
 [[package]]
 name = "nu"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#f78536333a52d0308463a4de1c73541e215190d8"
+source = "git+https://github.com/nushell/nushell.git#c475be2df8c5f98f49a1a9e80bcf6f4e242f79c7"
 dependencies = [
  "clap",
  "crossterm",
@@ -2568,6 +2590,7 @@ dependencies = [
  "nu_plugin_fetch",
  "nu_plugin_inc",
  "nu_plugin_match",
+ "nu_plugin_parse",
  "nu_plugin_post",
  "nu_plugin_ps",
  "nu_plugin_start",
@@ -2586,7 +2609,7 @@ dependencies = [
 [[package]]
 name = "nu-build"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#f78536333a52d0308463a4de1c73541e215190d8"
+source = "git+https://github.com/nushell/nushell.git#c475be2df8c5f98f49a1a9e80bcf6f4e242f79c7"
 dependencies = [
  "lazy_static 1.4.0",
  "serde 1.0.110",
@@ -2597,10 +2620,11 @@ dependencies = [
 [[package]]
 name = "nu-cli"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#f78536333a52d0308463a4de1c73541e215190d8"
+source = "git+https://github.com/nushell/nushell.git#c475be2df8c5f98f49a1a9e80bcf6f4e242f79c7"
 dependencies = [
  "ansi_term 0.12.1",
  "app_dirs",
+ "async-recursion",
  "async-stream",
  "base64 0.12.1",
  "bigdecimal",
@@ -2615,6 +2639,7 @@ dependencies = [
  "csv",
  "ctrlc",
  "derive-new",
+ "directories 2.0.2",
  "dirs 2.0.2",
  "dunce",
  "eml-parser",
@@ -2684,7 +2709,7 @@ dependencies = [
 [[package]]
 name = "nu-errors"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#f78536333a52d0308463a4de1c73541e215190d8"
+source = "git+https://github.com/nushell/nushell.git#c475be2df8c5f98f49a1a9e80bcf6f4e242f79c7"
 dependencies = [
  "ansi_term 0.12.1",
  "bigdecimal",
@@ -2705,7 +2730,7 @@ dependencies = [
 [[package]]
 name = "nu-parser"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#f78536333a52d0308463a4de1c73541e215190d8"
+source = "git+https://github.com/nushell/nushell.git#c475be2df8c5f98f49a1a9e80bcf6f4e242f79c7"
 dependencies = [
  "bigdecimal",
  "derive-new",
@@ -2725,7 +2750,7 @@ dependencies = [
 [[package]]
 name = "nu-plugin"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#f78536333a52d0308463a4de1c73541e215190d8"
+source = "git+https://github.com/nushell/nushell.git#c475be2df8c5f98f49a1a9e80bcf6f4e242f79c7"
 dependencies = [
  "indexmap",
  "nu-build",
@@ -2741,7 +2766,7 @@ dependencies = [
 [[package]]
 name = "nu-protocol"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#f78536333a52d0308463a4de1c73541e215190d8"
+source = "git+https://github.com/nushell/nushell.git#c475be2df8c5f98f49a1a9e80bcf6f4e242f79c7"
 dependencies = [
  "ansi_term 0.12.1",
  "bigdecimal",
@@ -2770,7 +2795,7 @@ dependencies = [
 [[package]]
 name = "nu-source"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#f78536333a52d0308463a4de1c73541e215190d8"
+source = "git+https://github.com/nushell/nushell.git#c475be2df8c5f98f49a1a9e80bcf6f4e242f79c7"
 dependencies = [
  "derive-new",
  "getset",
@@ -2784,9 +2809,9 @@ dependencies = [
 [[package]]
 name = "nu-test-support"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#f78536333a52d0308463a4de1c73541e215190d8"
+source = "git+https://github.com/nushell/nushell.git#c475be2df8c5f98f49a1a9e80bcf6f4e242f79c7"
 dependencies = [
- "app_dirs",
+ "directories 2.0.2",
  "dunce",
  "getset",
  "glob",
@@ -2801,7 +2826,7 @@ dependencies = [
 [[package]]
 name = "nu-value-ext"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#f78536333a52d0308463a4de1c73541e215190d8"
+source = "git+https://github.com/nushell/nushell.git#c475be2df8c5f98f49a1a9e80bcf6f4e242f79c7"
 dependencies = [
  "indexmap",
  "itertools 0.9.0",
@@ -2816,7 +2841,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_average"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#f78536333a52d0308463a4de1c73541e215190d8"
+source = "git+https://github.com/nushell/nushell.git#c475be2df8c5f98f49a1a9e80bcf6f4e242f79c7"
 dependencies = [
  "nu-build",
  "nu-errors",
@@ -2828,7 +2853,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_binaryview"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#f78536333a52d0308463a4de1c73541e215190d8"
+source = "git+https://github.com/nushell/nushell.git#c475be2df8c5f98f49a1a9e80bcf6f4e242f79c7"
 dependencies = [
  "ansi_term 0.12.1",
  "crossterm",
@@ -2846,7 +2871,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_fetch"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#f78536333a52d0308463a4de1c73541e215190d8"
+source = "git+https://github.com/nushell/nushell.git#c475be2df8c5f98f49a1a9e80bcf6f4e242f79c7"
 dependencies = [
  "futures 0.3.5",
  "nu-build",
@@ -2861,7 +2886,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_inc"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#f78536333a52d0308463a4de1c73541e215190d8"
+source = "git+https://github.com/nushell/nushell.git#c475be2df8c5f98f49a1a9e80bcf6f4e242f79c7"
 dependencies = [
  "nu-build",
  "nu-errors",
@@ -2875,7 +2900,21 @@ dependencies = [
 [[package]]
 name = "nu_plugin_match"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#f78536333a52d0308463a4de1c73541e215190d8"
+source = "git+https://github.com/nushell/nushell.git#c475be2df8c5f98f49a1a9e80bcf6f4e242f79c7"
+dependencies = [
+ "futures 0.3.5",
+ "nu-build",
+ "nu-errors",
+ "nu-plugin",
+ "nu-protocol",
+ "nu-source",
+ "regex",
+]
+
+[[package]]
+name = "nu_plugin_parse"
+version = "0.14.1"
+source = "git+https://github.com/nushell/nushell.git#c475be2df8c5f98f49a1a9e80bcf6f4e242f79c7"
 dependencies = [
  "futures 0.3.5",
  "nu-build",
@@ -2889,7 +2928,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_post"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#f78536333a52d0308463a4de1c73541e215190d8"
+source = "git+https://github.com/nushell/nushell.git#c475be2df8c5f98f49a1a9e80bcf6f4e242f79c7"
 dependencies = [
  "base64 0.12.1",
  "futures 0.3.5",
@@ -2907,7 +2946,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_ps"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#f78536333a52d0308463a4de1c73541e215190d8"
+source = "git+https://github.com/nushell/nushell.git#c475be2df8c5f98f49a1a9e80bcf6f4e242f79c7"
 dependencies = [
  "futures 0.3.5",
  "futures-timer 3.0.2",
@@ -2922,7 +2961,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_start"
 version = "0.1.0"
-source = "git+https://github.com/nushell/nushell.git#f78536333a52d0308463a4de1c73541e215190d8"
+source = "git+https://github.com/nushell/nushell.git#c475be2df8c5f98f49a1a9e80bcf6f4e242f79c7"
 dependencies = [
  "nu-build",
  "nu-errors",
@@ -2936,7 +2975,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_str"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#f78536333a52d0308463a4de1c73541e215190d8"
+source = "git+https://github.com/nushell/nushell.git#c475be2df8c5f98f49a1a9e80bcf6f4e242f79c7"
 dependencies = [
  "chrono",
  "nu-build",
@@ -2952,7 +2991,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_sys"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#f78536333a52d0308463a4de1c73541e215190d8"
+source = "git+https://github.com/nushell/nushell.git#c475be2df8c5f98f49a1a9e80bcf6f4e242f79c7"
 dependencies = [
  "battery",
  "futures 0.3.5",
@@ -2968,7 +3007,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_textview"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#f78536333a52d0308463a4de1c73541e215190d8"
+source = "git+https://github.com/nushell/nushell.git#c475be2df8c5f98f49a1a9e80bcf6f4e242f79c7"
 dependencies = [
  "ansi_term 0.12.1",
  "crossterm",
@@ -2984,7 +3023,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_tree"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#f78536333a52d0308463a4de1c73541e215190d8"
+source = "git+https://github.com/nushell/nushell.git#c475be2df8c5f98f49a1a9e80bcf6f4e242f79c7"
 dependencies = [
  "derive-new",
  "nu-build",
@@ -3449,9 +3488,9 @@ checksum = "780fb4b6698bbf9cf2444ea5d22411cef2953f0824b98f33cf454ec5615645bd"
 
 [[package]]
 name = "ppv-lite86"
-version = "0.2.6"
+version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74490b50b9fbe561ac330df47c08f3f33073d2d00c150f719147d7c54522fa1b"
+checksum = "237a5ed80e274dbc66f86bd59c1e25edc039660be53194b5fe0a482e0f2612ea"
 
 [[package]]
 name = "pretty"
@@ -3543,9 +3582,9 @@ checksum = "8e946095f9d3ed29ec38de908c22f95d9ac008e424c7bcae54c75a79c527c694"
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.12"
+version = "1.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8872cf6f48eee44265156c111456a700ab3483686b3f96df4cf5481c89157319"
+checksum = "53f5ffe53a6b28e37c9c1ce74893477864d64f74778a93a4beb43c8fa167f639"
 dependencies = [
  "unicode-xid",
 ]
@@ -3558,7 +3597,7 @@ checksum = "6b0a3be00b19ee7bd33238c1c523a7ab4df697345f6b36f90827a7860ea938d4"
 dependencies = [
  "ansi_term 0.11.0",
  "config",
- "directories",
+ "directories 1.0.2",
  "isatty",
  "petgraph",
  "serde 1.0.110",
@@ -3591,9 +3630,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.5"
+version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42934bc9c8ab0d3b273a16d8551c8f0fcff46be73276ca083ec2414c15c4ba5e"
+checksum = "54a21852a652ad6f610c9510194f398ff6f8692e334fd1145fed931f7fbe44ea"
 dependencies = [
  "proc-macro2",
 ]
@@ -3915,9 +3954,9 @@ checksum = "194d8e591e405d1eecf28819740abed6d719d1a2db87fc0bcdedee9a26d55560"
 
 [[package]]
 name = "roxmltree"
-version = "0.10.1"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4129743af505f674602b97d02c8ebe526752de8811e21ecb2fb166fcf4afe157"
+checksum = "d5001f134077069d87f77c8b9452b690df2445f7a43f1c7ca4a1af8dd505789d"
 dependencies = [
  "xmlparser",
 ]
@@ -3934,9 +3973,9 @@ dependencies = [
 
 [[package]]
 name = "rusqlite"
-version = "0.22.0"
+version = "0.23.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57edf4c4cea4d7e0fab069acb5da9e8e8e5403c78abc81b1f37d83af02148ea5"
+checksum = "45d0fd62e1df63d254714e6cb40d0a0e82e7a1623e7a27f679d851af092ae58b"
 dependencies = [
  "bitflags",
  "fallible-iterator",
@@ -3944,6 +3983,7 @@ dependencies = [
  "libsqlite3-sys",
  "lru-cache",
  "memchr",
+ "smallvec",
  "time",
 ]
 
@@ -4386,9 +4426,9 @@ dependencies = [
 
 [[package]]
 name = "starship"
-version = "0.39.0"
+version = "0.41.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "596bca871e5a61006c78fb59ca7a03ee822ab7d91f65af8e3d8492ece9ae7df1"
+checksum = "891dec63d2b8ffed3d2388c0449dbd939f6da1b26747ba0ed1a01e4d47f32fce"
 dependencies = [
  "ansi_term 0.12.1",
  "attohttpc",
@@ -4405,6 +4445,8 @@ dependencies = [
  "open",
  "os_info",
  "path-slash",
+ "pest",
+ "pest_derive",
  "pretty_env_logger 0.4.0",
  "rayon",
  "regex",
@@ -4500,9 +4542,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.21"
+version = "1.0.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4696caa4048ac7ce2bcd2e484b3cef88c1004e41b8e945a277e2c25dc0b72060"
+checksum = "1425de3c33b0941002740a420b1a906a350b88d08b82b2c8a01035a3f9447bac"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4556,9 +4598,9 @@ dependencies = [
 
 [[package]]
 name = "sysinfo"
-version = "0.12.0"
+version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ccb41798287e8e299a701b5560d886d6ca2c3e7115e9ea2cb68c123aec339b7"
+checksum = "70bbf8e10fc10b83e71bc19f4374ce17209d45c7c4c99b5067ac554aba3bfd08"
 dependencies = [
  "cfg-if",
  "doc-comment",
@@ -4585,9 +4627,9 @@ dependencies = [
 
 [[package]]
 name = "tera"
-version = "1.2.0"
+version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "19d25bed9d2cf684de6ffdaa9ac35373739eeed0d6bef1de545bbe6cf571ad07"
+checksum = "44567278e3f16c6f888f4a1426d1af33827e6bffbe3911fe24aec2c594f0dfcb"
 dependencies = [
  "chrono",
  "chrono-tz",
@@ -4647,18 +4689,18 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.17"
+version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "467e5ff447618a916519a4e0d62772ab14f434897f3d63f05d8700ef1e9b22c1"
+checksum = "5976891d6950b4f68477850b5b9e5aa64d955961466f9e174363f573e54e8ca7"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.17"
+version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e63c1091225b9834089b429bc4a2e01223470e3183e891582909e9d1c4cb55d9"
+checksum = "ab81dbd1cd69cd2ce22ecfbdd3bdb73334ba25350649408cc6c085f46d89573d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4800,6 +4842,7 @@ version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ffc92d160b1eef40665be3a05630d003936a3bc7da7421277846c2613e92c71a"
 dependencies = [
+ "indexmap",
  "serde 1.0.110",
 ]
 
@@ -4811,9 +4854,9 @@ checksum = "e987b6bf443f4b5b3b6f38704195592cca41c5bb7aedd3c3693c7081f8289860"
 
 [[package]]
 name = "trash"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2f24d31505f49e989b1ee2c03c323251f6763d5907d471b71192dac92e323f8"
+checksum = "a3d3efa66f2eb71069c3ba9582361e823626067b728ec882490e68c9c43b5e32"
 dependencies = [
  "winapi 0.3.8",
 ]

@@ -74,7 +74,7 @@ async fn run_fake(
     args: CommandArgs,
     registry: &CommandRegistry,
 ) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once(registry)?;
+    let args = args.evaluate_once(registry).await?;
 
     let list_functions = args.get("list-functions").is_some();
 

@@ -52,7 +52,7 @@ async fn buckets(
     registry: &CommandRegistry,
     state: Arc<State>,
 ) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once(registry)?;
+    let args = args.evaluate_once(registry).await?;
 
     let bucket_name = args.nth(0).unwrap().as_string().unwrap();
 

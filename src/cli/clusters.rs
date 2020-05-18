@@ -43,7 +43,7 @@ async fn clusters(
     registry: &CommandRegistry,
     state: Arc<State>,
 ) -> Result<OutputStream, ShellError> {
-    let _args = args.evaluate_once(registry)?;
+    let _args = args.evaluate_once(registry).await?;
 
     let active = state.active();
     let clusters = state

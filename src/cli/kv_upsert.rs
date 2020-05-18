@@ -70,7 +70,7 @@ async fn run_upsert(
     args: CommandArgs,
     registry: &CommandRegistry,
 ) -> Result<OutputStream, ShellError> {
-    let mut args = args.evaluate_once(registry)?;
+    let mut args = args.evaluate_once(registry).await?;
 
     let id_column = args
         .get("id-column")

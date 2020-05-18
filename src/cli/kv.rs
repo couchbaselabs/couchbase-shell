@@ -1,6 +1,8 @@
+use async_stream::stream;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
-use nu_protocol::Signature;
+use nu_protocol::{Signature, UntaggedValue};
+use nu_source::Tag;
 
 pub struct Kv;
 
@@ -22,6 +24,11 @@ impl nu_cli::WholeStreamCommand for Kv {
         _args: CommandArgs,
         registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
-        Ok(nu_cli::get_help(self, registry).into())
+        let registry = registry.clone();
+        let stream = stream! {
+            yield UntaggedValue::string(nu_cli::get_help(&Kv, &registry))
+            .into_value(Tag::unknown())
+        };
+        Ok(OutputStream::from_input(stream))
     }
 }

@@ -42,20 +42,27 @@ impl nu_cli::WholeStreamCommand for Analytics {
         args: CommandArgs,
         registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
-        let args = args.evaluate_once(registry)?;
-        let statement = args.nth(0).expect("need statement").as_string()?;
-
-        debug!("Running analytics query {}", &statement);
-        let mut result = block_on(
-            self.state
-                .active_cluster()
-                .cluster()
-                .analytics_query(statement, AnalyticsOptions::default()),
-        )
-        .unwrap();
-        let stream = result
-            .rows::<serde_json::Value>()
-            .map(|v| convert_json_value_to_nu_value(&v.unwrap(), Tag::default()));
-        Ok(OutputStream::from_input(stream))
+        block_on(run(self.state.clone(), args, registry))
     }
+}
+
+async fn run(
+    state: Arc<State>,
+    args: CommandArgs,
+    registry: &CommandRegistry,
+) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once(registry).await?;
+    let statement = args.nth(0).expect("need statement").as_string()?;
+
+    debug!("Running analytics query {}", &statement);
+    let mut result = state
+        .active_cluster()
+        .cluster()
+        .analytics_query(statement, AnalyticsOptions::default())
+        .await
+        .unwrap();
+    let stream = result
+        .rows::<serde_json::Value>()
+        .map(|v| convert_json_value_to_nu_value(&v.unwrap(), Tag::default()));
+    Ok(OutputStream::from_input(stream))
 }

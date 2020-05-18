@@ -70,7 +70,7 @@ async fn run_insert(
     args: CommandArgs,
     registry: &CommandRegistry,
 ) -> Result<OutputStream, ShellError> {
-    let mut args = args.evaluate_once(registry)?;
+    let mut args = args.evaluate_once(registry).await?;
 
     let bucket_name = match args
         .get("bucket")

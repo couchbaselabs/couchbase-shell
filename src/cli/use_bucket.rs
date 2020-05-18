@@ -47,7 +47,7 @@ async fn use_cmd(
     registry: &CommandRegistry,
     state: Arc<State>,
 ) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once(registry)?;
+    let args = args.evaluate_once(registry).await?;
 
     let active = state.active_cluster();
 
