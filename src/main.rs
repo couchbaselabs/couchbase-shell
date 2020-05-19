@@ -8,12 +8,14 @@ use crate::config::ShellConfig;
 use crate::state::RemoteCluster;
 use crate::ui::*;
 use log::{debug, warn};
+use serde::Deserialize;
 use state::State;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs::File;
 use std::io::{prelude::*, BufReader};
 use std::sync::Arc;
+use std::time::Duration;
 use structopt::StructOpt;
 
 #[tokio::main]
@@ -63,6 +65,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     if opt.ui {
         tokio::task::spawn(spawn_and_serve(state.clone()));
+    }
+
+    if !opt.no_motd {
+        fetch_and_print_motd().await;
     }
 
     let mut syncer = nu_cli::EnvironmentSyncer::new();
@@ -121,6 +127,58 @@ async fn main() -> Result<(), Box<dyn Error>> {
     nu_cli::cli(syncer, context).await
 }
 
+/// Fetches a helpful MOTD from couchbase.sh
+///
+/// Note that this can be disabled with the --no-motd cli flag if needed.
+async fn fetch_and_print_motd() {
+    let agent = format!(
+        "cbsh {} {}/{}",
+        option_env!("CARGO_PKG_VERSION").unwrap_or("0.0.0"),
+        std::env::consts::OS,
+        std::env::consts::ARCH
+    );
+
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_millis(500))
+        .user_agent(agent)
+        .build();
+    if client.is_err() {
+        debug!(
+            "Could not request MOTD because building the client failed: {}",
+            client.err().unwrap()
+        );
+        return;
+    }
+    let client = client.unwrap();
+
+    let resp = client.get("http://couchbase.sh/motd").send().await;
+
+    if resp.is_err() {
+        debug!(
+            "Could not request MOTD because fetching the response failed: {}",
+            resp.err().unwrap()
+        );
+        return;
+    }
+    let resp = resp.unwrap();
+
+    let data = resp.json::<Motd>().await;
+    if data.is_err() {
+        debug!(
+            "Could not request MOTD because converting the response data failed: {}",
+            data.err().unwrap()
+        );
+        return;
+    }
+    let data = data.unwrap();
+    println!("{}", data.msg);
+}
+
+#[derive(Debug, Deserialize)]
+struct Motd {
+    msg: String,
+}
+
 #[derive(Debug, StructOpt)]
 #[structopt(
     name = "The Couchbase Shell",
@@ -145,4 +203,6 @@ struct CliOptions {
     script: Option<String>,
     #[structopt(long = "stdin")]
     stdin: bool,
+    #[structopt(long = "no-motd")]
+    no_motd: bool,
 }
