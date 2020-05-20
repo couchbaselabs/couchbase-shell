@@ -67,7 +67,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         tokio::task::spawn(spawn_and_serve(state.clone()));
     }
 
-    if !opt.no_motd  && opt.script.is_none() && opt.command.is_none() {
+    if !opt.no_motd && opt.script.is_none() && opt.command.is_none() {
         fetch_and_print_motd().await;
     }
 

@@ -1,7 +1,7 @@
 mod analytics;
-mod analytics_indexes;
 mod analytics_datasets;
 mod analytics_dataverses;
+mod analytics_indexes;
 mod buckets;
 mod buckets_config;
 mod clusters;
@@ -21,9 +21,9 @@ mod use_cmd;
 mod util;
 
 pub use analytics::Analytics;
-pub use analytics_indexes::AnalyticsIndexes;
 pub use analytics_datasets::AnalyticsDatasets;
 pub use analytics_dataverses::AnalyticsDataverses;
+pub use analytics_indexes::AnalyticsIndexes;
 pub use buckets::Buckets;
 pub use buckets_config::BucketsConfig;
 pub use clusters::Clusters;
