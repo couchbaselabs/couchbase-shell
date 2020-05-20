@@ -99,6 +99,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         // Displays indexes
         nu_cli::whole_stream_command(QueryIndexes::new(state.clone())),
         nu_cli::whole_stream_command(AnalyticsIndexes::new(state.clone())),
+        nu_cli::whole_stream_command(AnalyticsDatasets::new(state.clone())),
+        nu_cli::whole_stream_command(AnalyticsDataverses::new(state.clone())),
         // Allows to switch clusters, buckets and collections on the fly
         nu_cli::whole_stream_command(UseCmd::new(state.clone())),
         nu_cli::whole_stream_command(UseCluster::new(state.clone())),
