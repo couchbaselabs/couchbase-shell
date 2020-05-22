@@ -1,3 +1,5 @@
+#![recursion_limit = "256"]
+
 mod cli;
 mod config;
 mod state;
@@ -106,6 +108,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         nu_cli::whole_stream_command(UseCluster::new(state.clone())),
         nu_cli::whole_stream_command(UseBucket::new(state.clone())),
         nu_cli::whole_stream_command(Whoami::new(state.clone())),
+        nu_cli::whole_stream_command(Map::new(state.clone())),
         nu_cli::whole_stream_command(Kv {}),
     ]);
 
