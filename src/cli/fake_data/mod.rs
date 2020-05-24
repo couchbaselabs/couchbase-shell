@@ -1,5 +1,6 @@
 use super::util::convert_json_value_to_nu_value;
 use crate::state::State;
+use async_stream::stream;
 use fake::faker::address::raw::*;
 use fake::faker::boolean::raw::*;
 use fake::faker::chrono::raw::*;
@@ -83,17 +84,20 @@ async fn run_fake(
 
     register_functions(&mut tera);
 
-    let mut results = Vec::new();
-
     if list_functions {
         let generated = tera.render_str(LIST_FUNCTIONS, &ctx).unwrap();
         let content = serde_json::from_str(&generated).unwrap();
         match content {
             serde_json::Value::Array(values) => {
-                for value in values {
-                    let content_converted = convert_json_value_to_nu_value(&value, Tag::default());
-                    results.push(content_converted);
-                }
+                let stream = stream! {
+                    for value in values {
+                        let content_converted = convert_json_value_to_nu_value(&value, Tag::default());
+                        yield content_converted;
+                        //results.push(content_converted);
+                    }
+                };
+
+                return Ok(OutputStream::from_input(stream));
             }
             _ => unimplemented!(),
         }
@@ -113,15 +117,16 @@ async fn run_fake(
         let path = path.as_path().unwrap();
         let template = fs::read_to_string(path).unwrap();
 
-        for _ in 0..num_rows {
-            let generated = tera.render_str(&template, &ctx).unwrap();
-            let content = serde_json::from_str(&generated).unwrap();
-            let content_converted = convert_json_value_to_nu_value(&content, Tag::default());
-            results.push(content_converted);
-        }
+        let stream = stream! {
+            for _ in 0..num_rows {
+                let generated = tera.render_str(&template, &ctx).unwrap();
+                let content = serde_json::from_str(&generated).unwrap();
+                let content_converted = convert_json_value_to_nu_value(&content, Tag::default());
+                yield content_converted
+            }
+        };
+        Ok(OutputStream::from_input(stream))
     }
-
-    Ok(OutputStream::from(results))
 }
 
 fn register_functions(tera: &mut Tera) {

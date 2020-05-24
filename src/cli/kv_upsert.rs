@@ -129,7 +129,7 @@ async fn run_upsert(
 
     let mapped = filtered
         .chain(futures::stream::iter(input_args))
-        .then(move |(id, content)| {
+        .map(move |(id, content)| {
             let collection = collection.clone();
             async move {
                 collection
@@ -137,6 +137,7 @@ async fn run_upsert(
                     .await
             }
         })
+        .buffer_unordered(1000)
         .fold((0, 0), |(mut success, mut failed), res| async move {
             match res {
                 Ok(_) => success += 1,
