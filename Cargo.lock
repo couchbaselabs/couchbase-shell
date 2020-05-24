@@ -104,28 +104,27 @@ dependencies = [
 
 [[package]]
 name = "async-std"
-version = "1.5.0"
+version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "538ecb01eb64eecd772087e5b6f7540cbc917f047727339a472dafed2185b267"
+checksum = "a45cee2749d880d7066e328a7e161c7470ced883b2fd000ca4643e9f1dd5083a"
 dependencies = [
  "async-attributes",
  "async-task",
- "crossbeam-channel 0.4.2",
- "crossbeam-deque",
  "crossbeam-utils 0.7.2",
+ "futures-channel",
  "futures-core",
  "futures-io",
- "futures-timer 2.0.2",
+ "futures-timer",
  "kv-log-macro",
  "log 0.4.8",
  "memchr",
- "mio",
- "mio-uds",
  "num_cpus",
  "once_cell",
  "pin-project-lite",
  "pin-utils",
  "slab",
+ "smol",
+ "wasm-bindgen-futures 0.4.12",
 ]
 
 [[package]]
@@ -151,13 +150,9 @@ dependencies = [
 
 [[package]]
 name = "async-task"
-version = "1.3.1"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ac2c016b079e771204030951c366db398864f5026f84a44dafb0ff20f02085d"
-dependencies = [
- "libc",
- "winapi 0.3.8",
-]
+checksum = "c17772156ef2829aadc587461c7753af20b7e8db1529bc66855add962a3b35d3"
 
 [[package]]
 name = "attohttpc"
@@ -646,7 +641,7 @@ checksum = "b3a71ab494c0b5b860bdc8407ae08978052417070c2ced38573a9157ad75b8ac"
 [[package]]
 name = "couchbase"
 version = "1.0.0-alpha.4"
-source = "git+https://github.com/couchbaselabs/couchbase-rs#769b1dcb34327ffbe15c5016e22c20c90cf531f4"
+source = "git+https://github.com/couchbaselabs/couchbase-rs#9c19afc8e4506416ad9123c73ea2a8a05b9775c6"
 dependencies = [
  "cc",
  "couchbase-sys",
@@ -699,7 +694,7 @@ dependencies = [
 [[package]]
 name = "couchbase-sys"
 version = "1.0.0-alpha.4"
-source = "git+https://github.com/couchbaselabs/couchbase-rs#769b1dcb34327ffbe15c5016e22c20c90cf531f4"
+source = "git+https://github.com/couchbaselabs/couchbase-rs#9c19afc8e4506416ad9123c73ea2a8a05b9775c6"
 dependencies = [
  "bindgen",
  "cmake",
@@ -713,6 +708,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba125de2af0df55319f41944744ad91c71113bf74a4646efff39afe1f6842db1"
 dependencies = [
  "cfg-if",
+]
+
+[[package]]
+name = "crossbeam"
+version = "0.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "69323bff1fb41c635347b8ead484a5ca6c3f11914d784170b158d8449ab07f8e"
+dependencies = [
+ "cfg-if",
+ "crossbeam-channel 0.4.2",
+ "crossbeam-deque",
+ "crossbeam-epoch",
+ "crossbeam-queue",
+ "crossbeam-utils 0.7.2",
 ]
 
 [[package]]
@@ -1358,15 +1367,13 @@ dependencies = [
 
 [[package]]
 name = "futures-timer"
-version = "2.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1de7508b218029b0f01662ed8f61b1c964b3ae99d6f25462d0f55a595109df6"
-
-[[package]]
-name = "futures-timer"
 version = "3.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e64b03909df88034c26dc1547e8970b91f98bdb65165d6a4e9110d94263dbb2c"
+dependencies = [
+ "gloo-timers",
+ "send_wrapper",
+]
 
 [[package]]
 name = "futures-util"
@@ -1519,6 +1526,19 @@ dependencies = [
  "bitflags",
  "ignore",
  "walkdir",
+]
+
+[[package]]
+name = "gloo-timers"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "47204a46aaff920a1ea58b11d03dec6f704287d27561724a4631e450654a891f"
+dependencies = [
+ "futures-channel",
+ "futures-core",
+ "js-sys",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -2595,7 +2615,7 @@ dependencies = [
 [[package]]
 name = "nu"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#97b9c078b1695351d961a173df68710290fb21c8"
+source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
 dependencies = [
  "clap",
  "crossterm",
@@ -2635,7 +2655,7 @@ dependencies = [
 [[package]]
 name = "nu-build"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#97b9c078b1695351d961a173df68710290fb21c8"
+source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
 dependencies = [
  "lazy_static 1.4.0",
  "serde 1.0.110",
@@ -2646,7 +2666,7 @@ dependencies = [
 [[package]]
 name = "nu-cli"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#97b9c078b1695351d961a173df68710290fb21c8"
+source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
 dependencies = [
  "ansi_term 0.12.1",
  "app_dirs",
@@ -2735,7 +2755,7 @@ dependencies = [
 [[package]]
 name = "nu-errors"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#97b9c078b1695351d961a173df68710290fb21c8"
+source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
 dependencies = [
  "ansi_term 0.12.1",
  "bigdecimal",
@@ -2756,7 +2776,7 @@ dependencies = [
 [[package]]
 name = "nu-parser"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#97b9c078b1695351d961a173df68710290fb21c8"
+source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
 dependencies = [
  "bigdecimal",
  "codespan-reporting",
@@ -2776,7 +2796,7 @@ dependencies = [
 [[package]]
 name = "nu-plugin"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#97b9c078b1695351d961a173df68710290fb21c8"
+source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
 dependencies = [
  "indexmap",
  "nu-build",
@@ -2792,7 +2812,7 @@ dependencies = [
 [[package]]
 name = "nu-protocol"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#97b9c078b1695351d961a173df68710290fb21c8"
+source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
 dependencies = [
  "ansi_term 0.12.1",
  "bigdecimal",
@@ -2802,6 +2822,7 @@ dependencies = [
  "derive-new",
  "getset",
  "indexmap",
+ "itertools",
  "log 0.4.8",
  "natural",
  "nu-build",
@@ -2821,7 +2842,7 @@ dependencies = [
 [[package]]
 name = "nu-source"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#97b9c078b1695351d961a173df68710290fb21c8"
+source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
 dependencies = [
  "codespan-reporting",
  "derive-new",
@@ -2835,7 +2856,7 @@ dependencies = [
 [[package]]
 name = "nu-test-support"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#97b9c078b1695351d961a173df68710290fb21c8"
+source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
 dependencies = [
  "directories 2.0.2",
  "dunce",
@@ -2852,7 +2873,7 @@ dependencies = [
 [[package]]
 name = "nu-value-ext"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#97b9c078b1695351d961a173df68710290fb21c8"
+source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
 dependencies = [
  "indexmap",
  "itertools",
@@ -2867,7 +2888,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_average"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#97b9c078b1695351d961a173df68710290fb21c8"
+source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
 dependencies = [
  "nu-build",
  "nu-errors",
@@ -2879,7 +2900,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_binaryview"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#97b9c078b1695351d961a173df68710290fb21c8"
+source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
 dependencies = [
  "ansi_term 0.12.1",
  "crossterm",
@@ -2897,7 +2918,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_fetch"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#97b9c078b1695351d961a173df68710290fb21c8"
+source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
 dependencies = [
  "futures 0.3.5",
  "nu-build",
@@ -2912,7 +2933,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_inc"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#97b9c078b1695351d961a173df68710290fb21c8"
+source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
 dependencies = [
  "nu-build",
  "nu-errors",
@@ -2926,7 +2947,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_match"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#97b9c078b1695351d961a173df68710290fb21c8"
+source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
 dependencies = [
  "futures 0.3.5",
  "nu-build",
@@ -2940,7 +2961,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_parse"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#97b9c078b1695351d961a173df68710290fb21c8"
+source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
 dependencies = [
  "futures 0.3.5",
  "nu-build",
@@ -2954,7 +2975,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_post"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#97b9c078b1695351d961a173df68710290fb21c8"
+source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
 dependencies = [
  "base64 0.12.1",
  "futures 0.3.5",
@@ -2972,10 +2993,10 @@ dependencies = [
 [[package]]
 name = "nu_plugin_ps"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#97b9c078b1695351d961a173df68710290fb21c8"
+source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
 dependencies = [
  "futures 0.3.5",
- "futures-timer 3.0.2",
+ "futures-timer",
  "heim",
  "nu-build",
  "nu-errors",
@@ -2987,7 +3008,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_start"
 version = "0.1.0"
-source = "git+https://github.com/nushell/nushell.git#97b9c078b1695351d961a173df68710290fb21c8"
+source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
 dependencies = [
  "nu-build",
  "nu-errors",
@@ -3001,7 +3022,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_str"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#97b9c078b1695351d961a173df68710290fb21c8"
+source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
 dependencies = [
  "chrono",
  "nu-build",
@@ -3017,7 +3038,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_sys"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#97b9c078b1695351d961a173df68710290fb21c8"
+source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
 dependencies = [
  "battery",
  "futures 0.3.5",
@@ -3033,7 +3054,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_textview"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#97b9c078b1695351d961a173df68710290fb21c8"
+source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
 dependencies = [
  "ansi_term 0.12.1",
  "crossterm",
@@ -3049,7 +3070,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_tree"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#97b9c078b1695351d961a173df68710290fb21c8"
+source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
 dependencies = [
  "derive-new",
  "nu-build",
@@ -3469,6 +3490,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
+name = "piper"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b0deb65f46e873ba8aa7c6a8dbe3f23cb1bf59c339a81a1d56361dde4d66ac8"
+dependencies = [
+ "crossbeam-utils 0.7.2",
+ "futures-io",
+ "futures-sink",
+ "futures-util",
+]
+
+[[package]]
 name = "pkg-config"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3608,9 +3641,9 @@ checksum = "8e946095f9d3ed29ec38de908c22f95d9ac008e424c7bcae54c75a79c527c694"
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.13"
+version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53f5ffe53a6b28e37c9c1ce74893477864d64f74778a93a4beb43c8fa167f639"
+checksum = "70a50b9351bfa8d65a7d93ce712dc63d2fd15ddbf2c36990fc7cac344859c04f"
 dependencies = [
  "unicode-xid",
 ]
@@ -4140,6 +4173,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ea6a9290e3c9cf0f18145ef7ffa62d68ee0bf5fcd651017e586dc7fd5da448c2"
 
 [[package]]
+name = "scoped-tls-hkt"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c2e9d7eaddb227e8fbaaa71136ae0e1e913ca159b86c7da82f3e8f0044ad3a63"
+
+[[package]]
 name = "scopeguard"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4182,6 +4221,12 @@ name = "semver-parser"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
+
+[[package]]
+name = "send_wrapper"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f638d531eccd6e23b980caf34876660d38e265409d8e99b397ab71eb3612fad0"
 
 [[package]]
 name = "serde"
@@ -4405,6 +4450,25 @@ name = "smallvec"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c7cb5678e1615754284ec264d9bb5b4c27d2018577fd90ac0ceb578591ed5ee4"
+
+[[package]]
+name = "smol"
+version = "0.1.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "686c634ad1873fffef6aed20f180eede424fbf3bb31802394c90fd7335a661b7"
+dependencies = [
+ "async-task",
+ "crossbeam",
+ "futures-io",
+ "futures-util",
+ "nix 0.17.0",
+ "once_cell",
+ "piper",
+ "scoped-tls-hkt",
+ "slab",
+ "socket2",
+ "wepoll-binding",
+]
 
 [[package]]
 name = "snafu"
@@ -4704,18 +4768,18 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.18"
+version = "1.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5976891d6950b4f68477850b5b9e5aa64d955961466f9e174363f573e54e8ca7"
+checksum = "b13f926965ad00595dd129fa12823b04bbf866e9085ab0a5f2b05b850fbfc344"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.18"
+version = "1.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab81dbd1cd69cd2ce22ecfbdd3bdb73334ba25350649408cc6c085f46d89573d"
+checksum = "893582086c2f98cde18f906265a65b5030a074b1046c674ae898be6519a7f479"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5331,6 +5395,25 @@ checksum = "8bc359e5dd3b46cb9687a051d50a2fdd228e4ba7cf6fcf861a5365c3d671a642"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "wepoll-binding"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7511014d92edaa2cba607fd6dc62974915bebc3e16f91f911a4bb240b4a3a68c"
+dependencies = [
+ "bitflags",
+ "wepoll-sys",
+]
+
+[[package]]
+name = "wepoll-sys"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9082a777aed991f6769e2b654aa0cb29f1c3d615daf009829b07b66c7aff6a24"
+dependencies = [
+ "cc",
 ]
 
 [[package]]

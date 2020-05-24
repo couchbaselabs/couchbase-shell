@@ -1,15 +1,15 @@
 //! The `kv-upsert` command performs a KV upsert operation.
 
-use super::util::{json_rows_from_input_columns, json_rows_from_input_optionals};
+use super::util::convert_nu_value_to_json_value;
 
 use crate::state::State;
 use couchbase::UpsertOptions;
 
 use futures::executor::block_on;
-use log::debug;
+use futures::{FutureExt, StreamExt};
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
+use nu_protocol::{MaybeOwned, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
 use std::sync::Arc;
 
@@ -70,7 +70,7 @@ async fn run_upsert(
     args: CommandArgs,
     registry: &CommandRegistry,
 ) -> Result<OutputStream, ShellError> {
-    let mut args = args.evaluate_once(registry).await?;
+    let args = args.evaluate_once(registry).await?;
 
     let id_column = args
         .get("id-column")
@@ -95,31 +95,65 @@ async fn run_upsert(
         }
     };
 
-    let mut rows = json_rows_from_input_columns(&mut args, &id_column, &content_column).await?;
-    rows.extend(json_rows_from_input_optionals(&mut args)?);
-
     let bucket = state.active_cluster().bucket(&bucket_name);
-    let collection = bucket.default_collection();
+    let collection = Arc::new(bucket.default_collection());
 
-    debug!("Running kv upsert for docs {:?}", &rows);
+    let input_args = if args.nth(0).is_some() && args.nth(1).is_some() {
+        let id = args.nth(0).unwrap().as_string()?;
+        let content = serde_json::from_str(&args.nth(1).unwrap().as_string()?).unwrap();
+        vec![(id, content)]
+    } else {
+        vec![]
+    };
 
-    let mut results = vec![];
-    for (id, content) in rows.iter() {
-        match collection
-            .upsert(id, content, UpsertOptions::default())
-            .await
-        {
-            Ok(res) => {
-                let tag = Tag::default();
-                let mut collected = TaggedDictBuilder::new(&tag);
-                collected.insert_value(&id_column, id.clone());
-                collected.insert_value("cas", UntaggedValue::int(res.cas()).into_untagged_value());
-                results.push(collected.into_value());
+    let filtered = args.input.filter_map(move |i| {
+        let id_column = id_column.clone();
+        let content_column = content_column.clone();
+        async move {
+            if let UntaggedValue::Row(dict) = i.value {
+                let mut id = None;
+                let mut content = None;
+                if let MaybeOwned::Borrowed(d) = dict.get_data(id_column.as_ref()) {
+                    id = Some(d.as_string().unwrap());
+                }
+                if let MaybeOwned::Borrowed(d) = dict.get_data(content_column.as_ref()) {
+                    content = Some(convert_nu_value_to_json_value(d).unwrap());
+                }
+                if id.is_some() && content.is_some() {
+                    return Some((id.unwrap(), content.unwrap()));
+                }
             }
-            Err(e) => {
-                debug!("Error received running upsert {:?}", e);
+            None
+        }
+    });
+
+    let mapped = filtered
+        .chain(futures::stream::iter(input_args))
+        .then(move |(id, content)| {
+            let collection = collection.clone();
+            async move {
+                collection
+                    .upsert(id, content, UpsertOptions::default())
+                    .await
             }
-        };
-    }
-    Ok(OutputStream::from(results))
+        })
+        .fold((0, 0), |(mut success, mut failed), res| async move {
+            match res {
+                Ok(_) => success += 1,
+                Err(_) => failed += 1,
+            };
+            (success, failed)
+        })
+        .map(|(success, failed)| {
+            let tag = Tag::default();
+            let mut collected = TaggedDictBuilder::new(&tag);
+            collected.insert_untagged("processed", UntaggedValue::int(success + failed));
+            collected.insert_untagged("success", UntaggedValue::int(success));
+            collected.insert_untagged("failed", UntaggedValue::int(failed));
+
+            collected.into_value()
+        })
+        .into_stream();
+
+    Ok(OutputStream::from_input(mapped))
 }
