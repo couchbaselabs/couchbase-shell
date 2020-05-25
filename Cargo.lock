@@ -216,15 +216,6 @@ dependencies = [
 
 [[package]]
 name = "base64"
-version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b25d992356d2eb0ed82172f5248873db5560c4721f564b13cb5193bda5e668e"
-dependencies = [
- "byteorder",
-]
-
-[[package]]
-name = "base64"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b41b7ea54a0c9d92199de89e20e58d49f02f8e699814ef3fdf266f6f748d15c7"
@@ -658,7 +649,7 @@ dependencies = [
 
 [[package]]
 name = "couchbase-shell"
-version = "0.0.2"
+version = "0.2.0-dev"
 dependencies = [
  "async-stream",
  "chrono",
@@ -802,9 +793,9 @@ dependencies = [
 
 [[package]]
 name = "crossterm"
-version = "0.17.4"
+version = "0.17.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a880035bfe4707e344da9acf50cc94d003fe337f50afd94c8722c1bb4e0a933"
+checksum = "9851d20b9809e561297ec3ca85d7cba3a57507fe8d01d07ba7b52469e1c89a11"
 dependencies = [
  "bitflags",
  "crossterm_winapi",
@@ -2122,9 +2113,9 @@ dependencies = [
 
 [[package]]
 name = "kv-log-macro"
-version = "1.0.5"
+version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a2d3beed37e5483887d81eb39de6de03a8346531410e1306ca48a9a89bd3a51"
+checksum = "4ff57d6d215f7ca7eb35a9a64d656ba4d9d2bef114d741dc08048e75e2f5d418"
 dependencies = [
  "log 0.4.8",
 ]
@@ -2600,7 +2591,7 @@ checksum = "0b471253da97532da4b61552249c521e01e736071f71c1a4f7ebbfbf0a06aad6"
 dependencies = [
  "lexical-core",
  "memchr",
- "version_check 0.9.1",
+ "version_check 0.9.2",
 ]
 
 [[package]]
@@ -2615,7 +2606,7 @@ dependencies = [
 [[package]]
 name = "nu"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
+source = "git+https://github.com/nushell/nushell.git#07996ea93df72875e3c7dad41787a2a3c37c8d69"
 dependencies = [
  "clap",
  "crossterm",
@@ -2655,7 +2646,7 @@ dependencies = [
 [[package]]
 name = "nu-build"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
+source = "git+https://github.com/nushell/nushell.git#07996ea93df72875e3c7dad41787a2a3c37c8d69"
 dependencies = [
  "lazy_static 1.4.0",
  "serde 1.0.110",
@@ -2666,7 +2657,7 @@ dependencies = [
 [[package]]
 name = "nu-cli"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
+source = "git+https://github.com/nushell/nushell.git#07996ea93df72875e3c7dad41787a2a3c37c8d69"
 dependencies = [
  "ansi_term 0.12.1",
  "app_dirs",
@@ -2755,7 +2746,7 @@ dependencies = [
 [[package]]
 name = "nu-errors"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
+source = "git+https://github.com/nushell/nushell.git#07996ea93df72875e3c7dad41787a2a3c37c8d69"
 dependencies = [
  "ansi_term 0.12.1",
  "bigdecimal",
@@ -2776,7 +2767,7 @@ dependencies = [
 [[package]]
 name = "nu-parser"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
+source = "git+https://github.com/nushell/nushell.git#07996ea93df72875e3c7dad41787a2a3c37c8d69"
 dependencies = [
  "bigdecimal",
  "codespan-reporting",
@@ -2796,8 +2787,9 @@ dependencies = [
 [[package]]
 name = "nu-plugin"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
+source = "git+https://github.com/nushell/nushell.git#07996ea93df72875e3c7dad41787a2a3c37c8d69"
 dependencies = [
+ "bigdecimal",
  "indexmap",
  "nu-build",
  "nu-errors",
@@ -2812,7 +2804,7 @@ dependencies = [
 [[package]]
 name = "nu-protocol"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
+source = "git+https://github.com/nushell/nushell.git#07996ea93df72875e3c7dad41787a2a3c37c8d69"
 dependencies = [
  "ansi_term 0.12.1",
  "bigdecimal",
@@ -2842,7 +2834,7 @@ dependencies = [
 [[package]]
 name = "nu-source"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
+source = "git+https://github.com/nushell/nushell.git#07996ea93df72875e3c7dad41787a2a3c37c8d69"
 dependencies = [
  "codespan-reporting",
  "derive-new",
@@ -2856,7 +2848,7 @@ dependencies = [
 [[package]]
 name = "nu-test-support"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
+source = "git+https://github.com/nushell/nushell.git#07996ea93df72875e3c7dad41787a2a3c37c8d69"
 dependencies = [
  "directories 2.0.2",
  "dunce",
@@ -2873,7 +2865,7 @@ dependencies = [
 [[package]]
 name = "nu-value-ext"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
+source = "git+https://github.com/nushell/nushell.git#07996ea93df72875e3c7dad41787a2a3c37c8d69"
 dependencies = [
  "indexmap",
  "itertools",
@@ -2888,7 +2880,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_average"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
+source = "git+https://github.com/nushell/nushell.git#07996ea93df72875e3c7dad41787a2a3c37c8d69"
 dependencies = [
  "nu-build",
  "nu-errors",
@@ -2900,7 +2892,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_binaryview"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
+source = "git+https://github.com/nushell/nushell.git#07996ea93df72875e3c7dad41787a2a3c37c8d69"
 dependencies = [
  "ansi_term 0.12.1",
  "crossterm",
@@ -2918,7 +2910,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_fetch"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
+source = "git+https://github.com/nushell/nushell.git#07996ea93df72875e3c7dad41787a2a3c37c8d69"
 dependencies = [
  "futures 0.3.5",
  "nu-build",
@@ -2933,7 +2925,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_inc"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
+source = "git+https://github.com/nushell/nushell.git#07996ea93df72875e3c7dad41787a2a3c37c8d69"
 dependencies = [
  "nu-build",
  "nu-errors",
@@ -2947,7 +2939,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_match"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
+source = "git+https://github.com/nushell/nushell.git#07996ea93df72875e3c7dad41787a2a3c37c8d69"
 dependencies = [
  "futures 0.3.5",
  "nu-build",
@@ -2961,7 +2953,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_parse"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
+source = "git+https://github.com/nushell/nushell.git#07996ea93df72875e3c7dad41787a2a3c37c8d69"
 dependencies = [
  "futures 0.3.5",
  "nu-build",
@@ -2975,7 +2967,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_post"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
+source = "git+https://github.com/nushell/nushell.git#07996ea93df72875e3c7dad41787a2a3c37c8d69"
 dependencies = [
  "base64 0.12.1",
  "futures 0.3.5",
@@ -2993,7 +2985,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_ps"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
+source = "git+https://github.com/nushell/nushell.git#07996ea93df72875e3c7dad41787a2a3c37c8d69"
 dependencies = [
  "futures 0.3.5",
  "futures-timer",
@@ -3008,7 +3000,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_start"
 version = "0.1.0"
-source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
+source = "git+https://github.com/nushell/nushell.git#07996ea93df72875e3c7dad41787a2a3c37c8d69"
 dependencies = [
  "nu-build",
  "nu-errors",
@@ -3022,8 +3014,9 @@ dependencies = [
 [[package]]
 name = "nu_plugin_str"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
+source = "git+https://github.com/nushell/nushell.git#07996ea93df72875e3c7dad41787a2a3c37c8d69"
 dependencies = [
+ "bigdecimal",
  "chrono",
  "nu-build",
  "nu-errors",
@@ -3038,7 +3031,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_sys"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
+source = "git+https://github.com/nushell/nushell.git#07996ea93df72875e3c7dad41787a2a3c37c8d69"
 dependencies = [
  "battery",
  "futures 0.3.5",
@@ -3054,7 +3047,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_textview"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
+source = "git+https://github.com/nushell/nushell.git#07996ea93df72875e3c7dad41787a2a3c37c8d69"
 dependencies = [
  "ansi_term 0.12.1",
  "crossterm",
@@ -3070,7 +3063,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_tree"
 version = "0.14.1"
-source = "git+https://github.com/nushell/nushell.git#460daf029b6d60f503977c563c075025c854c85d"
+source = "git+https://github.com/nushell/nushell.git#07996ea93df72875e3c7dad41787a2a3c37c8d69"
 dependencies = [
  "derive-new",
  "nu-build",
@@ -3266,9 +3259,9 @@ checksum = "77af24da69f9d9341038eba93a073b1fdaaa1b788221b00a69bce9e762cb32de"
 
 [[package]]
 name = "openssl-sys"
-version = "0.9.56"
+version = "0.9.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f02309a7f127000ed50594f0b50ecc69e7c654e16d41b4e8156d1b3df8e0b52e"
+checksum = "7410fef80af8ac071d4f63755c0ab89ac3df0fd1ea91f1d1f37cf5cec4395990"
 dependencies = [
  "autocfg 1.0.0",
  "cc",
@@ -3294,9 +3287,9 @@ checksum = "a86ed3f5f244b372d6b1a00b72ef7f8876d0bc6a78a4c9985c53614041512063"
 
 [[package]]
 name = "os_info"
-version = "2.0.5"
+version = "2.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae61f9dcacbe39e64641baaff75d97d61a0e7409a60dc6c7fc83691511afb3fe"
+checksum = "67cc1fe7b45f7e51f755195fd86b0483dbae30fdcf831a3254438d29118d12c4"
 dependencies = [
  "log 0.4.8",
  "serde 1.0.110",
@@ -3515,11 +3508,11 @@ checksum = "feb3b2b1033b8a60b4da6ee470325f887758c95d5320f52f9ce0df055a55940e"
 
 [[package]]
 name = "plist"
-version = "0.5.5"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b59eb8d91dfa89208ec74a920e3b55f840476cf46568026c18dbaa2999e0d48"
+checksum = "7b336d94e8e4ce29bf15bba393164629764744c567e8ad306cc1fdd0119967fd"
 dependencies = [
- "base64 0.10.1",
+ "base64 0.12.1",
  "chrono",
  "indexmap",
  "line-wrap",
@@ -3611,7 +3604,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
- "version_check 0.9.1",
+ "version_check 0.9.2",
 ]
 
 [[package]]
@@ -3624,14 +3617,14 @@ dependencies = [
  "quote",
  "syn",
  "syn-mid",
- "version_check 0.9.1",
+ "version_check 0.9.2",
 ]
 
 [[package]]
 name = "proc-macro-hack"
-version = "0.5.15"
+version = "0.5.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d659fe7c6d27f25e9d80a1a094c223f5246f6a6596453e09d7229bf42750b63"
+checksum = "7e0456befd48169b9f13ef0f0ad46d492cf9d2dbb918bcf38e01eed4ce3ec5e4"
 
 [[package]]
 name = "proc-macro-nested"
@@ -3641,9 +3634,9 @@ checksum = "8e946095f9d3ed29ec38de908c22f95d9ac008e424c7bcae54c75a79c527c694"
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.15"
+version = "1.0.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70a50b9351bfa8d65a7d93ce712dc63d2fd15ddbf2c36990fc7cac344859c04f"
+checksum = "1502d12e458c49a4c9cbff560d0fe0060c252bc29799ed94ca2ed4bb665a0101"
 dependencies = [
  "unicode-xid",
 ]
@@ -4621,9 +4614,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.23"
+version = "1.0.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95b5f192649e48a5302a13f2feb224df883b98933222369e4b3b0fe2a5447269"
+checksum = "f87bc5b2815ebb664de0392fdf1b95b6d10e160f86d9f64ff65e5679841ca06a"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4655,9 +4648,9 @@ dependencies = [
 
 [[package]]
 name = "syntect"
-version = "4.1.1"
+version = "4.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6bc79276a4d38e39fbeb83c5fd9c23fbd027eeec7c50ee6a3d07deee33d7f621"
+checksum = "83b43a6ca1829ccb0c933b615c9ea83ffc8793ae240cecbd15119b13d741161d"
 dependencies = [
  "bincode",
  "bitflags",
@@ -5087,7 +5080,7 @@ version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "50f37be617794602aabbeee0be4f259dc1778fabe05e2d67ee8f79326d5cb4f6"
 dependencies = [
- "version_check 0.9.1",
+ "version_check 0.9.2",
 ]
 
 [[package]]
@@ -5231,9 +5224,9 @@ checksum = "914b1a6776c4c929a602fafd8bc742e06365d4bcbe48c30f9cca5824f70dc9dd"
 
 [[package]]
 name = "version_check"
-version = "0.9.1"
+version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "078775d0255232fb988e6fccf26ddc9d1ac274299aaedcedce21c6f72cc533ce"
+checksum = "b5a972e5669d67ba988ce3dc826706fb0a8b01471c088cb0b6110b805cc36aed"
 
 [[package]]
 name = "void"
@@ -5399,9 +5392,9 @@ dependencies = [
 
 [[package]]
 name = "wepoll-binding"
-version = "2.0.1"
+version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7511014d92edaa2cba607fd6dc62974915bebc3e16f91f911a4bb240b4a3a68c"
+checksum = "374fff4ff9701ff8b6ad0d14bacd3156c44063632d8c136186ff5967d48999a7"
 dependencies = [
  "bitflags",
  "wepoll-sys",
