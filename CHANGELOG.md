@@ -2,7 +2,15 @@
 
 All user visible changes to this project will be documented in this file.
 
-## 0.0.2 - In Progress
+## 0.2.0 - In Progress
+
+ - Added `whoami` command
+ - Added `map` command
+ - Converted `kv upsert` and `fake` to full streaming
+ - Bumped dependencies (including nushell)
+ - Added `expiry` option to `kv upsert`
+
+## 0.1.0 - 2020-05-20
 
  * Build `libcouchbase` statically and with OpenSSL
  * More `fake` functions added

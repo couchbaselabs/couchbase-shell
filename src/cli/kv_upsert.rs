@@ -12,6 +12,7 @@ use nu_errors::ShellError;
 use nu_protocol::{MaybeOwned, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
 use std::sync::Arc;
+use std::time::Duration;
 
 pub struct KvUpsert {
     state: Arc<State>,
@@ -48,6 +49,12 @@ impl nu_cli::WholeStreamCommand for KvUpsert {
                 "content-column",
                 SyntaxShape::String,
                 "the name of the content column if used with an input stream",
+                None,
+            )
+            .named(
+                "expiry",
+                SyntaxShape::Number,
+                "the expiry for the documents in seconds, or absolute",
                 None,
             )
     }
@@ -95,6 +102,10 @@ async fn run_upsert(
         }
     };
 
+    let expiry = args
+        .get("expiry")
+        .map(|e| Duration::from_secs(e.as_u64().unwrap()));
+
     let bucket = state.active_cluster().bucket(&bucket_name);
     let collection = Arc::new(bucket.default_collection());
 
@@ -132,9 +143,11 @@ async fn run_upsert(
         .map(move |(id, content)| {
             let collection = collection.clone();
             async move {
-                collection
-                    .upsert(id, content, UpsertOptions::default())
-                    .await
+                let mut options = UpsertOptions::default();
+                if let Some(e) = expiry {
+                    options = options.expiry(e);
+                }
+                collection.upsert(id, content, options).await
             }
         })
         .buffer_unordered(1000)
