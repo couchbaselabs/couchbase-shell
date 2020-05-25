@@ -20,6 +20,7 @@ mod use_bucket;
 mod use_cluster;
 mod use_cmd;
 mod util;
+mod version;
 mod whoami;
 
 pub use analytics::Analytics;
@@ -43,6 +44,7 @@ pub use query_indexes::QueryIndexes;
 pub use use_bucket::UseBucket;
 pub use use_cluster::UseCluster;
 pub use use_cmd::UseCmd;
+pub use version::Version;
 pub use whoami::Whoami;
 
 use couchbase::CouchbaseError;

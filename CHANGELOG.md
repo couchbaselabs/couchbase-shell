@@ -9,6 +9,7 @@ All user visible changes to this project will be documented in this file.
  - Converted `kv upsert` and `fake` to full streaming
  - Bumped dependencies (including nushell)
  - Added `expiry` option to `kv upsert`
+ - Override `version` command to show cbsh version
 
 ## 0.1.0 - 2020-05-20
 
