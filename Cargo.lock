@@ -632,7 +632,7 @@ checksum = "b3a71ab494c0b5b860bdc8407ae08978052417070c2ced38573a9157ad75b8ac"
 [[package]]
 name = "couchbase"
 version = "1.0.0-alpha.4"
-source = "git+https://github.com/couchbaselabs/couchbase-rs#9c19afc8e4506416ad9123c73ea2a8a05b9775c6"
+source = "git+https://github.com/couchbaselabs/couchbase-rs#79730a45f6eba4e17aafa8481b4c8604d3bf3065"
 dependencies = [
  "cc",
  "couchbase-sys",
@@ -643,6 +643,7 @@ dependencies = [
  "serde 1.0.110",
  "serde_derive",
  "serde_json",
+ "serde_urlencoded",
  "snafu",
  "uuid",
 ]
@@ -685,7 +686,7 @@ dependencies = [
 [[package]]
 name = "couchbase-sys"
 version = "1.0.0-alpha.4"
-source = "git+https://github.com/couchbaselabs/couchbase-rs#9c19afc8e4506416ad9123c73ea2a8a05b9775c6"
+source = "git+https://github.com/couchbaselabs/couchbase-rs#79730a45f6eba4e17aafa8481b4c8604d3bf3065"
 dependencies = [
  "bindgen",
  "cmake",

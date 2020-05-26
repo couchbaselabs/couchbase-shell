@@ -112,6 +112,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         nu_cli::whole_stream_command(Version::new()),
         nu_cli::whole_stream_command(Map::new(state.clone())),
         nu_cli::whole_stream_command(Kv {}),
+        nu_cli::whole_stream_command(Users::new(state.clone())),
+        nu_cli::whole_stream_command(UsersGet::new(state.clone())),
+        nu_cli::whole_stream_command(UsersUpsert::new(state.clone())),
     ]);
 
     if let Some(c) = opt.command {
