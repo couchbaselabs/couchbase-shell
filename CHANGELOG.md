@@ -2,7 +2,7 @@
 
 All user visible changes to this project will be documented in this file.
 
-## 0.2.0 - In Progress
+## 0.2.0 - 2020-05-26
 
  - Added `whoami` command
  - Added `map` command
@@ -12,6 +12,7 @@ All user visible changes to this project will be documented in this file.
  - Override `version` command to show cbsh version
  - Add simple `query advise` subcommand
  - Add user management through `users`, `users get` and `users upsert`
+ - Added `analytics dataverses` and `analytics datasets`
 
 ## 0.1.0 - 2020-05-20
 

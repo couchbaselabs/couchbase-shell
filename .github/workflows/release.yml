@@ -54,6 +54,9 @@ jobs:
     - name: Install dependencies (linux)
       if: matrix.os == 'ubuntu-latest'
       run: sudo apt-get install libevent-dev libxcb-composite0-dev libx11-dev
+    - name: Install dependencies (macos)
+      if: matrix.os == 'macos-latest'
+      run: brew install automake
 
     - name: Build
       run: cargo build --verbose --release

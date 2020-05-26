@@ -17,30 +17,34 @@ Prerequisites:
  - Make sure to have a recent rust version installed (recommended: [rustup](https://rustup.rs/))
  - Depending on your platform you'll need some libraries installed through homebrew or apt etc.
     - This should work for ubuntu (`sudo apt-get install git libssl-dev pkg-config cmake libevent-dev libxcb-composite0-dev libx11-dev llvm-dev libclang-dev clang`)
+    - On osx make sure you brew install automake
 
 Next, clone the repository and then run `cargo run`. The first time it will take some time since it builds all the dependencies, but you should end up in a shell. You can use `cargo run -- -h` to see all the available flags:
 
 ```
 $ ./cbsh --help
-The Couchbase Shell 0.1.0
+The Couchbase Shell 0.2.0
 Alternative Shell and UI for Couchbase Server and Cloud
 
 USAGE:
     cbsh [FLAGS] [OPTIONS]
 
 FLAGS:
-    -h, --help       Prints help information
-        --stdin      
-        --ui         
-    -V, --version    Prints version information
+    -h, --help        Prints help information
+        --no-motd     
+    -p, --password    
+        --stdin       
+        --ui          
+    -V, --version     Prints version information
 
 OPTIONS:
+        --bucket <bucket>                   
         --cluster <cluster>                 
     -c, --command <command>                 
         --connstring <connection-string>     [default: couchbase://localhost]
-    -p, --password <password>                [default: password]
         --script <script>                   
     -u, --username <username>                [default: Administrator]
+
 ```
 
 Note that if you want to spawn the highly experimental ui, use the `--ui` flag.
@@ -50,8 +54,11 @@ Note that if you want to spawn the highly experimental ui, use the `--ui` flag.
 This is heavily in flux right now, but you can try these commands (always try with `--help` if you are unsure about args and flags).
 
  - `query <statement>`: Perform a N1QL query
-- `query indexes`: list query indexes
+ - `query indexes`: list query indexes
+ - `query advise`: ask the query advisor
  - `analytics <statement>`: Perform an analytics query
+ - `analytics dataverses`: List all dataverses
+ - `analytics datasets`: List all datasets
  - `use`: Change the active bucket or cluster on the fly
  - `kv get`: Perform a KV get operation
  - `kv upsert`: Perform a KV upsert operation
@@ -61,6 +68,9 @@ This is heavily in flux right now, but you can try these commands (always try wi
  - `buckets`: List all buckets in the active cluster
  - `clusters`: List and manage (active) clusters
  - `fake`: Generate fake/mock data
+ - `users`: List all users
+ - `users get`: show a specific user
+ - `users upsert`: create a new user or replace one
 
 # Config & Multiple Clusters
 
