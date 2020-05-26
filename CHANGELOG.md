@@ -11,6 +11,7 @@ All user visible changes to this project will be documented in this file.
  - Added `expiry` option to `kv upsert`
  - Override `version` command to show cbsh version
  - Add simple `query advise` subcommand
+ - Add user management through `users`, `users get` and `users upsert`
 
 ## 0.1.0 - 2020-05-20
 
