@@ -100,6 +100,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         nu_cli::whole_stream_command(FakeData::new(state.clone())),
         // Displays indexes
         nu_cli::whole_stream_command(QueryIndexes::new(state.clone())),
+        nu_cli::whole_stream_command(QueryAdvise::new(state.clone())),
         nu_cli::whole_stream_command(AnalyticsIndexes::new(state.clone())),
         nu_cli::whole_stream_command(AnalyticsDatasets::new(state.clone())),
         nu_cli::whole_stream_command(AnalyticsDataverses::new(state.clone())),
