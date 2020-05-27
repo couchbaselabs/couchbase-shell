@@ -16,8 +16,10 @@ Prerequisites:
 
  - Make sure to have a recent rust version installed (recommended: [rustup](https://rustup.rs/))
  - Depending on your platform you'll need some libraries installed through homebrew or apt etc.
-    - This should work for ubuntu (`sudo apt-get install git libssl-dev pkg-config cmake libevent-dev libxcb-composite0-dev libx11-dev llvm-dev libclang-dev clang`)
-    - On osx make sure you brew install automake
+ - This should work for ubuntu (`sudo apt-get install git libssl-dev pkg-config cmake libevent-dev libxcb-composite0-dev libx11-dev llvm-dev libclang-dev clang`)
+ - On macOS make sure you brew install automake and brew install libtool
+ - By default cbshell connects to the locahost instance of couchbase server, ensure that a local instance of couchbase       server is installed and running.
+
 
 Next, clone the repository and then run `cargo run`. The first time it will take some time since it builds all the dependencies, but you should end up in a shell. You can use `cargo run -- -h` to see all the available flags:
 
