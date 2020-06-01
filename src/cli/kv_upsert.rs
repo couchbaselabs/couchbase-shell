@@ -5,6 +5,7 @@ use super::util::convert_nu_value_to_json_value;
 use crate::state::State;
 use couchbase::UpsertOptions;
 
+use async_trait::async_trait;
 use futures::{FutureExt, StreamExt};
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
@@ -12,7 +13,6 @@ use nu_protocol::{MaybeOwned, Signature, SyntaxShape, TaggedDictBuilder, Untagge
 use nu_source::Tag;
 use std::sync::Arc;
 use std::time::Duration;
-use async_trait::async_trait;
 
 pub struct KvUpsert {
     state: Arc<State>,

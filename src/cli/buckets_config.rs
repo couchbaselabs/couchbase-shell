@@ -1,6 +1,7 @@
 use crate::cli::convert_cb_error;
 use crate::cli::util::convert_json_value_to_nu_value;
 use crate::state::State;
+use async_trait::async_trait;
 use couchbase::{GenericManagementRequest, Request};
 use futures::channel::oneshot;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
@@ -9,7 +10,6 @@ use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
 use serde_json::Value;
 use std::sync::Arc;
-use async_trait::async_trait;
 
 pub struct BucketsConfig {
     state: Arc<State>,

@@ -1,6 +1,7 @@
 use super::util::convert_json_value_to_nu_value;
 use crate::state::State;
 use async_stream::stream;
+use async_trait::async_trait;
 use fake::faker::address::raw::*;
 use fake::faker::boolean::raw::*;
 use fake::faker::chrono::raw::*;
@@ -24,7 +25,6 @@ use std::fs;
 use std::sync::Arc;
 use tera::{Context, Tera};
 use uuid::Uuid;
-use async_trait::async_trait;
 
 pub struct FakeData {
     state: Arc<State>,

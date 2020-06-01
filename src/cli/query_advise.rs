@@ -1,5 +1,6 @@
 use super::util::convert_json_value_to_nu_value;
 use crate::state::State;
+use async_trait::async_trait;
 use couchbase::QueryOptions;
 use futures::stream::StreamExt;
 use log::debug;
@@ -9,7 +10,6 @@ use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
 use serde::Deserialize;
 use std::sync::Arc;
-use async_trait::async_trait;
 
 pub struct QueryAdvise {
     state: Arc<State>,

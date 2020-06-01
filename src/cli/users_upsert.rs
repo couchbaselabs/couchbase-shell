@@ -1,11 +1,11 @@
 use crate::state::State;
+use async_trait::async_trait;
 use couchbase::{Role, UpsertUserOptions, UserBuilder};
 use log::debug;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use std::sync::Arc;
-use async_trait::async_trait;
 
 pub struct UsersUpsert {
     state: Arc<State>,

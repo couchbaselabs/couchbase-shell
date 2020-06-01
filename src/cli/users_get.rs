@@ -1,4 +1,5 @@
 use crate::state::State;
+use async_trait::async_trait;
 use couchbase::GetUserOptions;
 use log::debug;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream, TaggedDictBuilder};
@@ -6,7 +7,6 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
 use std::sync::Arc;
-use async_trait::async_trait;
 
 pub struct UsersGet {
     state: Arc<State>,

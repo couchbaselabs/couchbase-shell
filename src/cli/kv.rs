@@ -1,9 +1,9 @@
 use async_stream::stream;
+use async_trait::async_trait;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, UntaggedValue};
 use nu_source::Tag;
-use async_trait::async_trait;
 
 pub struct Kv;
 

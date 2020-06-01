@@ -5,13 +5,13 @@ use super::util::{json_rows_from_input_columns, json_rows_from_input_optionals};
 use crate::state::State;
 use couchbase::ReplaceOptions;
 
+use async_trait::async_trait;
 use log::debug;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
 use std::sync::Arc;
-use async_trait::async_trait;
 
 pub struct KvReplace {
     state: Arc<State>,

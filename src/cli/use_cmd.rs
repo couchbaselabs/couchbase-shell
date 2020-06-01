@@ -1,10 +1,10 @@
 use crate::state::State;
+use async_trait::async_trait;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, TaggedDictBuilder};
 use nu_source::Tag;
 use std::sync::Arc;
-use async_trait::async_trait;
 
 pub struct UseCmd {
     state: Arc<State>,

@@ -3,6 +3,7 @@
 use crate::state::State;
 use couchbase::RemoveOptions;
 
+use async_trait::async_trait;
 use futures::stream::StreamExt;
 use log::debug;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
@@ -12,7 +13,6 @@ use nu_protocol::{
 };
 use nu_source::Tag;
 use std::sync::Arc;
-use async_trait::async_trait;
 
 pub struct KvRemove {
     state: Arc<State>,

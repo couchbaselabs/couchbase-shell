@@ -2,6 +2,7 @@ use crate::cli::convert_cb_error;
 use crate::cli::util::cluster_identifiers_from;
 use crate::state::State;
 
+use async_trait::async_trait;
 use couchbase::{GenericManagementRequest, Request};
 use futures::channel::oneshot;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
@@ -11,7 +12,6 @@ use nu_source::Tag;
 use serde::Deserialize;
 use std::fmt;
 use std::sync::Arc;
-use async_trait::async_trait;
 
 pub struct Nodes {
     state: Arc<State>,
