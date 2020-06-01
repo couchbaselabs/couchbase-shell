@@ -1,7 +1,6 @@
 use super::util::convert_json_value_to_nu_value;
 use crate::state::State;
 use couchbase::AnalyticsOptions;
-use futures::executor::block_on;
 use futures::stream::StreamExt;
 use log::debug;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
@@ -9,6 +8,7 @@ use nu_errors::ShellError;
 use nu_protocol::Signature;
 use nu_source::Tag;
 use std::sync::Arc;
+use async_trait::async_trait;
 
 pub struct AnalyticsDataverses {
     state: Arc<State>,
@@ -20,6 +20,7 @@ impl AnalyticsDataverses {
     }
 }
 
+#[async_trait]
 impl nu_cli::WholeStreamCommand for AnalyticsDataverses {
     fn name(&self) -> &str {
         "analytics dataverses"
@@ -33,12 +34,12 @@ impl nu_cli::WholeStreamCommand for AnalyticsDataverses {
         "Lists all analytics dataverses"
     }
 
-    fn run(
+    async fn run(
         &self,
         _args: CommandArgs,
         _registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
-        block_on(dataverses(self.state.clone()))
+        dataverses(self.state.clone()).await
     }
 }
 

@@ -5,7 +5,6 @@ use super::util::convert_nu_value_to_json_value;
 use crate::state::State;
 use couchbase::UpsertOptions;
 
-use futures::executor::block_on;
 use futures::{FutureExt, StreamExt};
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
@@ -13,6 +12,7 @@ use nu_protocol::{MaybeOwned, Signature, SyntaxShape, TaggedDictBuilder, Untagge
 use nu_source::Tag;
 use std::sync::Arc;
 use std::time::Duration;
+use async_trait::async_trait;
 
 pub struct KvUpsert {
     state: Arc<State>,
@@ -24,6 +24,7 @@ impl KvUpsert {
     }
 }
 
+#[async_trait]
 impl nu_cli::WholeStreamCommand for KvUpsert {
     fn name(&self) -> &str {
         "kv upsert"
@@ -63,12 +64,12 @@ impl nu_cli::WholeStreamCommand for KvUpsert {
         "Upsert a document through Key/Value"
     }
 
-    fn run(
+    async fn run(
         &self,
         args: CommandArgs,
         registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
-        block_on(run_upsert(self.state.clone(), args, registry))
+        run_upsert(self.state.clone(), args, registry).await
     }
 }
 

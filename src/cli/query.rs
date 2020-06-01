@@ -1,7 +1,6 @@
 use super::util::convert_json_value_to_nu_value;
 use crate::state::State;
 use couchbase::QueryOptions;
-use futures::executor::block_on;
 use futures::stream::StreamExt;
 use log::debug;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
@@ -9,6 +8,7 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
 use std::sync::Arc;
+use async_trait::async_trait;
 
 pub struct Query {
     state: Arc<State>,
@@ -20,6 +20,7 @@ impl Query {
     }
 }
 
+#[async_trait]
 impl nu_cli::WholeStreamCommand for Query {
     fn name(&self) -> &str {
         "query"
@@ -33,12 +34,12 @@ impl nu_cli::WholeStreamCommand for Query {
         "Performs a n1ql query"
     }
 
-    fn run(
+    async fn run(
         &self,
         args: CommandArgs,
         registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
-        block_on(run(self.state.clone(), args, registry))
+        run(self.state.clone(), args, registry).await
     }
 }
 

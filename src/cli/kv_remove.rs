@@ -3,7 +3,6 @@
 use crate::state::State;
 use couchbase::RemoveOptions;
 
-use futures::executor::block_on;
 use futures::stream::StreamExt;
 use log::debug;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
@@ -13,6 +12,7 @@ use nu_protocol::{
 };
 use nu_source::Tag;
 use std::sync::Arc;
+use async_trait::async_trait;
 
 pub struct KvRemove {
     state: Arc<State>,
@@ -24,6 +24,7 @@ impl KvRemove {
     }
 }
 
+#[async_trait]
 impl nu_cli::WholeStreamCommand for KvRemove {
     fn name(&self) -> &str {
         "kv remove"
@@ -50,12 +51,12 @@ impl nu_cli::WholeStreamCommand for KvRemove {
         "Removes a document through Key/Value"
     }
 
-    fn run(
+    async fn run(
         &self,
         args: CommandArgs,
         registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
-        block_on(run_get(self.state.clone(), args, registry))
+        run_get(self.state.clone(), args, registry).await
     }
 }
 

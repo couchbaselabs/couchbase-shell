@@ -5,13 +5,13 @@ use super::util::{json_rows_from_input_columns, json_rows_from_input_optionals};
 use crate::state::State;
 use couchbase::InsertOptions;
 
-use futures::executor::block_on;
 use log::debug;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
 use std::sync::Arc;
+use async_trait::async_trait;
 
 pub struct KvInsert {
     state: Arc<State>,
@@ -23,6 +23,7 @@ impl KvInsert {
     }
 }
 
+#[async_trait]
 impl nu_cli::WholeStreamCommand for KvInsert {
     fn name(&self) -> &str {
         "kv insert"
@@ -56,12 +57,12 @@ impl nu_cli::WholeStreamCommand for KvInsert {
         "Insert a document through Key/Value"
     }
 
-    fn run(
+    async fn run(
         &self,
         args: CommandArgs,
         registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
-        block_on(run_insert(self.state.clone(), args, registry))
+        run_insert(self.state.clone(), args, registry).await
     }
 }
 

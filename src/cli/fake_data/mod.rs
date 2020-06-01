@@ -14,7 +14,6 @@ use fake::faker::number::raw::*;
 use fake::faker::phone_number::raw::*;
 use fake::locales::*;
 use fake::Fake;
-use futures::executor::block_on;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
@@ -25,6 +24,7 @@ use std::fs;
 use std::sync::Arc;
 use tera::{Context, Tera};
 use uuid::Uuid;
+use async_trait::async_trait;
 
 pub struct FakeData {
     state: Arc<State>,
@@ -36,6 +36,7 @@ impl FakeData {
     }
 }
 
+#[async_trait]
 impl nu_cli::WholeStreamCommand for FakeData {
     fn name(&self) -> &str {
         "fake"
@@ -61,12 +62,12 @@ impl nu_cli::WholeStreamCommand for FakeData {
         "Creates fake data from a template"
     }
 
-    fn run(
+    async fn run(
         &self,
         args: CommandArgs,
         registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
-        block_on(run_fake(self.state.clone(), args, registry))
+        run_fake(self.state.clone(), args, registry).await
     }
 }
 

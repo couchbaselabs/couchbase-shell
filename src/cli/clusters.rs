@@ -1,11 +1,11 @@
 use crate::cli::util::cluster_identifiers_from;
 use crate::state::State;
-use futures::executor::block_on;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
 use std::sync::Arc;
+use async_trait::async_trait;
 
 pub struct Clusters {
     state: Arc<State>,
@@ -17,6 +17,7 @@ impl Clusters {
     }
 }
 
+#[async_trait]
 impl nu_cli::WholeStreamCommand for Clusters {
     fn name(&self) -> &str {
         "clusters"
@@ -35,12 +36,12 @@ impl nu_cli::WholeStreamCommand for Clusters {
         "Lists all managed clusters"
     }
 
-    fn run(
+    async fn run(
         &self,
         args: CommandArgs,
         registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
-        block_on(clusters(args, registry, self.state.clone()))
+        clusters(args, registry, self.state.clone()).await
     }
 }
 

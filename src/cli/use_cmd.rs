@@ -1,10 +1,10 @@
 use crate::state::State;
-use futures::executor::block_on;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, TaggedDictBuilder};
 use nu_source::Tag;
 use std::sync::Arc;
+use async_trait::async_trait;
 
 pub struct UseCmd {
     state: Arc<State>,
@@ -16,6 +16,7 @@ impl UseCmd {
     }
 }
 
+#[async_trait]
 impl nu_cli::WholeStreamCommand for UseCmd {
     fn name(&self) -> &str {
         "use"
@@ -29,12 +30,12 @@ impl nu_cli::WholeStreamCommand for UseCmd {
         "Modify the default execution environment of commands"
     }
 
-    fn run(
+    async fn run(
         &self,
         args: CommandArgs,
         registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
-        block_on(use_cmd(args, registry, self.state.clone()))
+        use_cmd(args, registry, self.state.clone()).await
     }
 }
 

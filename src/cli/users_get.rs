@@ -1,12 +1,12 @@
 use crate::state::State;
 use couchbase::GetUserOptions;
-use futures::executor::block_on;
 use log::debug;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream, TaggedDictBuilder};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
 use std::sync::Arc;
+use async_trait::async_trait;
 
 pub struct UsersGet {
     state: Arc<State>,
@@ -18,6 +18,7 @@ impl UsersGet {
     }
 }
 
+#[async_trait]
 impl nu_cli::WholeStreamCommand for UsersGet {
     fn name(&self) -> &str {
         "users get"
@@ -35,12 +36,12 @@ impl nu_cli::WholeStreamCommand for UsersGet {
         "Fetches a user"
     }
 
-    fn run(
+    async fn run(
         &self,
         args: CommandArgs,
         registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
-        block_on(users_get(self.state.clone(), args, registry))
+        users_get(self.state.clone(), args, registry).await
     }
 }
 

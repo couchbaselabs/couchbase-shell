@@ -3,13 +3,13 @@ use crate::cli::util::convert_json_value_to_nu_value;
 use crate::state::State;
 use couchbase::{GenericManagementRequest, Request};
 use futures::channel::oneshot;
-use futures::executor::block_on;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
 use serde_json::Value;
 use std::sync::Arc;
+use async_trait::async_trait;
 
 pub struct BucketsConfig {
     state: Arc<State>,
@@ -21,6 +21,7 @@ impl BucketsConfig {
     }
 }
 
+#[async_trait]
 impl nu_cli::WholeStreamCommand for BucketsConfig {
     fn name(&self) -> &str {
         "buckets config"
@@ -38,12 +39,12 @@ impl nu_cli::WholeStreamCommand for BucketsConfig {
         "Shows the bucket config (low level)"
     }
 
-    fn run(
+    async fn run(
         &self,
         args: CommandArgs,
         registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
-        block_on(buckets(args, registry, self.state.clone()))
+        buckets(args, registry, self.state.clone()).await
     }
 }
 

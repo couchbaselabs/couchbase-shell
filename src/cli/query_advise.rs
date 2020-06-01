@@ -1,7 +1,6 @@
 use super::util::convert_json_value_to_nu_value;
 use crate::state::State;
 use couchbase::QueryOptions;
-use futures::executor::block_on;
 use futures::stream::StreamExt;
 use log::debug;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
@@ -10,6 +9,7 @@ use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
 use serde::Deserialize;
 use std::sync::Arc;
+use async_trait::async_trait;
 
 pub struct QueryAdvise {
     state: Arc<State>,
@@ -21,6 +21,7 @@ impl QueryAdvise {
     }
 }
 
+#[async_trait]
 impl nu_cli::WholeStreamCommand for QueryAdvise {
     fn name(&self) -> &str {
         "query advise"
@@ -38,12 +39,12 @@ impl nu_cli::WholeStreamCommand for QueryAdvise {
         "Calls the query adviser and lists recommended indexes"
     }
 
-    fn run(
+    async fn run(
         &self,
         args: CommandArgs,
         registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
-        block_on(run(self.state.clone(), args, registry))
+        run(self.state.clone(), args, registry).await
     }
 }
 

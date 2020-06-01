@@ -1,7 +1,6 @@
 use super::util::convert_json_value_to_nu_value;
 use crate::state::State;
 use couchbase::QueryOptions;
-use futures::executor::block_on;
 use futures::stream::StreamExt;
 use log::debug;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
@@ -9,6 +8,7 @@ use nu_errors::ShellError;
 use nu_protocol::Signature;
 use nu_source::Tag;
 use std::sync::Arc;
+use async_trait::async_trait;
 
 pub struct QueryIndexes {
     state: Arc<State>,
@@ -20,6 +20,7 @@ impl QueryIndexes {
     }
 }
 
+#[async_trait]
 impl nu_cli::WholeStreamCommand for QueryIndexes {
     fn name(&self) -> &str {
         "query indexes"
@@ -33,12 +34,12 @@ impl nu_cli::WholeStreamCommand for QueryIndexes {
         "Lists all query indexes"
     }
 
-    fn run(
+    async fn run(
         &self,
         _args: CommandArgs,
         _registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
-        block_on(indexes(self.state.clone()))
+        indexes(self.state.clone()).await
     }
 }
 

@@ -4,7 +4,6 @@ use crate::state::State;
 
 use couchbase::{GenericManagementRequest, Request};
 use futures::channel::oneshot;
-use futures::executor::block_on;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
@@ -12,6 +11,8 @@ use nu_source::Tag;
 use serde::Deserialize;
 use std::fmt;
 use std::sync::Arc;
+use async_trait::async_trait;
+
 pub struct Nodes {
     state: Arc<State>,
 }
@@ -22,6 +23,7 @@ impl Nodes {
     }
 }
 
+#[async_trait]
 impl nu_cli::WholeStreamCommand for Nodes {
     fn name(&self) -> &str {
         "nodes"
@@ -40,12 +42,12 @@ impl nu_cli::WholeStreamCommand for Nodes {
         "Lists all nodes of the connected cluster"
     }
 
-    fn run(
+    async fn run(
         &self,
         args: CommandArgs,
         registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
-        block_on(nodes(self.state.clone(), args, registry))
+        nodes(self.state.clone(), args, registry).await
     }
 }
 

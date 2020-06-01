@@ -4,13 +4,13 @@ use crate::cli::util::cluster_identifiers_from;
 use crate::state::State;
 use couchbase::{GenericManagementRequest, Request};
 use futures::channel::oneshot;
-use futures::executor::block_on;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
 use serde_json::{json, Map, Value};
 use std::sync::Arc;
+use async_trait::async_trait;
 
 pub struct Whoami {
     state: Arc<State>,
@@ -22,6 +22,7 @@ impl Whoami {
     }
 }
 
+#[async_trait]
 impl nu_cli::WholeStreamCommand for Whoami {
     fn name(&self) -> &str {
         "whoami"
@@ -40,12 +41,12 @@ impl nu_cli::WholeStreamCommand for Whoami {
         "Shows roles and domain for the connected user"
     }
 
-    fn run(
+    async fn run(
         &self,
         args: CommandArgs,
         registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
-        block_on(whoami(self.state.clone(), args, registry))
+        whoami(self.state.clone(), args, registry).await
     }
 }
 

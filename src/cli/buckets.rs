@@ -3,13 +3,13 @@ use crate::cli::util::cluster_identifiers_from;
 use crate::state::State;
 use couchbase::{GenericManagementRequest, Request};
 use futures::channel::oneshot;
-use futures::executor::block_on;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder};
 use nu_source::Tag;
 use serde::Deserialize;
 use std::sync::Arc;
+use async_trait::async_trait;
 
 pub struct Buckets {
     state: Arc<State>,
@@ -21,6 +21,7 @@ impl Buckets {
     }
 }
 
+#[async_trait]
 impl nu_cli::WholeStreamCommand for Buckets {
     fn name(&self) -> &str {
         "buckets"
@@ -39,12 +40,12 @@ impl nu_cli::WholeStreamCommand for Buckets {
         "Lists all buckets of the connected cluster"
     }
 
-    fn run(
+    async fn run(
         &self,
         args: CommandArgs,
         registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
-        block_on(buckets(self.state.clone(), args, registry))
+        buckets(self.state.clone(), args, registry).await
     }
 }
 

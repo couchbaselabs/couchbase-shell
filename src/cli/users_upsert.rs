@@ -1,11 +1,11 @@
 use crate::state::State;
 use couchbase::{Role, UpsertUserOptions, UserBuilder};
-use futures::executor::block_on;
 use log::debug;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use std::sync::Arc;
+use async_trait::async_trait;
 
 pub struct UsersUpsert {
     state: Arc<State>,
@@ -17,6 +17,7 @@ impl UsersUpsert {
     }
 }
 
+#[async_trait]
 impl nu_cli::WholeStreamCommand for UsersUpsert {
     fn name(&self) -> &str {
         "users upsert"
@@ -60,12 +61,12 @@ impl nu_cli::WholeStreamCommand for UsersUpsert {
         "Upserts a user"
     }
 
-    fn run(
+    async fn run(
         &self,
         args: CommandArgs,
         registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
-        block_on(users_upsert(self.state.clone(), args, registry))
+        users_upsert(self.state.clone(), args, registry).await
     }
 }
 

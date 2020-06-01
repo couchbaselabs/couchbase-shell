@@ -1,7 +1,6 @@
 use super::util::{convert_json_value_to_nu_value, convert_nu_value_to_json_value};
 use crate::state::State;
 use async_stream::stream;
-use futures::executor::block_on;
 use futures::stream::StreamExt;
 use jq_rs;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
@@ -10,6 +9,7 @@ use nu_protocol::{ReturnSuccess, Signature, SyntaxShape};
 use nu_source::Tag;
 use serde_json::{Map as JsonMap, Value};
 use std::sync::Arc;
+use async_trait::async_trait;
 
 pub struct Map {
     state: Arc<State>,
@@ -21,6 +21,7 @@ impl Map {
     }
 }
 
+#[async_trait]
 impl nu_cli::WholeStreamCommand for Map {
     fn name(&self) -> &str {
         "map"
@@ -38,12 +39,12 @@ impl nu_cli::WholeStreamCommand for Map {
         "Map from one table structure to another. Much flexible, so wow."
     }
 
-    fn run(
+    async fn run(
         &self,
         args: CommandArgs,
         registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
-        block_on(map(self.state.clone(), args, registry))
+        map(self.state.clone(), args, registry).await
     }
 }
 

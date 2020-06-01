@@ -1,8 +1,8 @@
-use futures::executor::block_on;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, TaggedDictBuilder};
 use nu_source::Tag;
+use async_trait::async_trait;
 
 pub struct Version {}
 
@@ -12,6 +12,7 @@ impl Version {
     }
 }
 
+#[async_trait]
 impl nu_cli::WholeStreamCommand for Version {
     fn name(&self) -> &str {
         "version"
@@ -25,12 +26,12 @@ impl nu_cli::WholeStreamCommand for Version {
         "The cbsh version"
     }
 
-    fn run(
+    async fn run(
         &self,
         _args: CommandArgs,
         _registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
-        block_on(version())
+        version().await
     }
 }
 
