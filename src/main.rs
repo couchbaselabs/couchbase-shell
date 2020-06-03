@@ -87,6 +87,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         // Performs kv replace operations
         nu_cli::whole_stream_command(KvReplace::new(state.clone())),
         nu_cli::whole_stream_command(KvRemove::new(state.clone())),
+        nu_cli::whole_stream_command(KvStats::new(state.clone())),
         // Displays cluster manager node infos
         nu_cli::whole_stream_command(Nodes::new(state.clone())),
         // Displays cluster manager bucket infos
