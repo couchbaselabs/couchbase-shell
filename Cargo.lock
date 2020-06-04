@@ -156,9 +156,9 @@ checksum = "c17772156ef2829aadc587461c7753af20b7e8db1529bc66855add962a3b35d3"
 
 [[package]]
 name = "async-trait"
-version = "0.1.31"
+version = "0.1.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26c4f3195085c36ea8d24d32b2f828d23296a9370a28aa39d111f6f16bef9f3b"
+checksum = "8f1c13101a3224fb178860ae372a031ce350bbd92d39968518f016744dde0bf7"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -401,9 +401,9 @@ dependencies = [
 
 [[package]]
 name = "bumpalo"
-version = "3.3.0"
+version = "3.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5356f1d23ee24a1f785a56d1d1a5f0fd5b0f6a0c0fb2412ce11da71649ab78f6"
+checksum = "2e8c087f005730276d1096a652e92a8bacee2e2472bcc9715a74d2bec38b5820"
 
 [[package]]
 name = "byte-tools"
@@ -643,7 +643,7 @@ checksum = "b3a71ab494c0b5b860bdc8407ae08978052417070c2ced38573a9157ad75b8ac"
 [[package]]
 name = "couchbase"
 version = "1.0.0-alpha.4"
-source = "git+https://github.com/couchbaselabs/couchbase-rs?rev=503c9d92fd724805d2ee042ec7897adca70649a1#503c9d92fd724805d2ee042ec7897adca70649a1"
+source = "git+https://github.com/couchbaselabs/couchbase-rs?rev=89b5a6a74cff821552971c8375e0ef0e2ac2d292#89b5a6a74cff821552971c8375e0ef0e2ac2d292"
 dependencies = [
  "cc",
  "couchbase-sys",
@@ -698,7 +698,7 @@ dependencies = [
 [[package]]
 name = "couchbase-sys"
 version = "1.0.0-alpha.4"
-source = "git+https://github.com/couchbaselabs/couchbase-rs?rev=503c9d92fd724805d2ee042ec7897adca70649a1#503c9d92fd724805d2ee042ec7897adca70649a1"
+source = "git+https://github.com/couchbaselabs/couchbase-rs?rev=89b5a6a74cff821552971c8375e0ef0e2ac2d292#89b5a6a74cff821552971c8375e0ef0e2ac2d292"
 dependencies = [
  "bindgen",
  "cmake",
@@ -712,20 +712,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba125de2af0df55319f41944744ad91c71113bf74a4646efff39afe1f6842db1"
 dependencies = [
  "cfg-if",
-]
-
-[[package]]
-name = "crossbeam"
-version = "0.7.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "69323bff1fb41c635347b8ead484a5ca6c3f11914d784170b158d8449ab07f8e"
-dependencies = [
- "cfg-if",
- "crossbeam-channel 0.4.2",
- "crossbeam-deque",
- "crossbeam-epoch",
- "crossbeam-queue",
- "crossbeam-utils 0.7.2",
 ]
 
 [[package]]
@@ -1036,9 +1022,9 @@ checksum = "4358a9e11b9a09cf52383b451b49a169e8d797b68aa02301ff586d70d9661ea3"
 
 [[package]]
 name = "dunce"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0ad6bf6a88548d1126045c413548df1453d9be094a8ab9fd59bf1fdd338da4f"
+checksum = "b2641c4a7c0c4101df53ea572bffdc561c146f6c2eb09e4df02bc4811e3feeb4"
 
 [[package]]
 name = "either"
@@ -1949,9 +1935,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "1.3.2"
+version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "076f042c5b7b98f31d205f1249267e12a6518c1481e9dae9764af19b707d2292"
+checksum = "c398b2b113b55809ceb9ee3e753fcbac793f1956663f3c36549c1346015c2afe"
 dependencies = [
  "autocfg 1.0.0",
  "serde 1.0.111",
@@ -2166,9 +2152,9 @@ checksum = "9457b06509d27052635f90d6466700c65095fdf75409b3fbdd903e988b886f49"
 
 [[package]]
 name = "libgit2-sys"
-version = "0.12.6+1.0.0"
+version = "0.12.7+1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf81b43f9b45ab07897a780c9b7b26b1504497e469c7a78162fc29e3b8b1c1b3"
+checksum = "bcd07968649bcb7b9351ecfde53ca4d27673cccfdf57c84255ec18710f3153e0"
 dependencies = [
  "cc",
  "libc",
@@ -2188,9 +2174,9 @@ dependencies = [
 
 [[package]]
 name = "libnghttp2-sys"
-version = "0.1.3"
+version = "0.1.4+1.41.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b359f5ec8106bc297694c9a562ace312be2cfd17a5fc68dc12249845aa144b11"
+checksum = "03624ec6df166e79e139a2310ca213283d6b3c30810c54844f307086d4488df1"
 dependencies = [
  "cc",
  "libc",
@@ -4439,15 +4425,17 @@ checksum = "c7cb5678e1615754284ec264d9bb5b4c27d2018577fd90ac0ceb578591ed5ee4"
 
 [[package]]
 name = "smol"
-version = "0.1.10"
+version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "686c634ad1873fffef6aed20f180eede424fbf3bb31802394c90fd7335a661b7"
+checksum = "845f5e7db6b614a8f4f59e565c3035f0fab2f71c9537ff0119eddb60d866cae3"
 dependencies = [
  "async-task",
- "crossbeam",
+ "crossbeam-deque",
+ "crossbeam-queue",
+ "crossbeam-utils 0.7.2",
  "futures-io",
  "futures-util",
- "nix 0.17.0",
+ "libc",
  "once_cell",
  "piper",
  "scoped-tls-hkt",
