@@ -79,15 +79,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
         // Performs analytics queries
         nu_cli::whole_stream_command(Analytics::new(state.clone())),
         // Performs kv get operations
-        nu_cli::whole_stream_command(KvGet::new(state.clone())),
+        nu_cli::whole_stream_command(DocGet::new(state.clone())),
         // Performs kv upsert operations
-        nu_cli::whole_stream_command(KvUpsert::new(state.clone())),
+        nu_cli::whole_stream_command(DocUpsert::new(state.clone())),
         // Performs kv insert operations
-        nu_cli::whole_stream_command(KvInsert::new(state.clone())),
+        nu_cli::whole_stream_command(DocInsert::new(state.clone())),
         // Performs kv replace operations
-        nu_cli::whole_stream_command(KvReplace::new(state.clone())),
-        nu_cli::whole_stream_command(KvRemove::new(state.clone())),
-        nu_cli::whole_stream_command(KvStats::new(state.clone())),
+        nu_cli::whole_stream_command(DocReplace::new(state.clone())),
+        nu_cli::whole_stream_command(DocRemove::new(state.clone())),
+        nu_cli::whole_stream_command(DataStats::new(state.clone())),
         // Displays cluster manager node infos
         nu_cli::whole_stream_command(Nodes::new(state.clone())),
         // Displays cluster manager bucket infos
@@ -112,7 +112,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         nu_cli::whole_stream_command(Whoami::new(state.clone())),
         nu_cli::whole_stream_command(Version::new()),
         nu_cli::whole_stream_command(Map::new(state.clone())),
-        nu_cli::whole_stream_command(Kv {}),
+        nu_cli::whole_stream_command(Doc {}),
+        nu_cli::whole_stream_command(Data {}),
         nu_cli::whole_stream_command(Users::new(state.clone())),
         nu_cli::whole_stream_command(UsersGet::new(state.clone())),
         nu_cli::whole_stream_command(UsersUpsert::new(state.clone())),

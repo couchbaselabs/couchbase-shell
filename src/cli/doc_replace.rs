@@ -1,9 +1,9 @@
-//! The `kv-upsert` command performs a KV upsert operation.
+//! The `kv-replace` command performs a KV replace operation.
 
 use super::util::{json_rows_from_input_columns, json_rows_from_input_optionals};
 
 use crate::state::State;
-use couchbase::InsertOptions;
+use couchbase::ReplaceOptions;
 
 use async_trait::async_trait;
 use log::debug;
@@ -13,24 +13,24 @@ use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
 use std::sync::Arc;
 
-pub struct KvInsert {
+pub struct DocReplace {
     state: Arc<State>,
 }
 
-impl KvInsert {
+impl DocReplace {
     pub fn new(state: Arc<State>) -> Self {
         Self { state }
     }
 }
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for KvInsert {
+impl nu_cli::WholeStreamCommand for DocReplace {
     fn name(&self) -> &str {
-        "kv insert"
+        "doc replace"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("kv insert")
+        Signature::build("doc replace")
             .optional("id", SyntaxShape::String, "the document id")
             .optional("content", SyntaxShape::String, "the document content")
             .named(
@@ -54,7 +54,7 @@ impl nu_cli::WholeStreamCommand for KvInsert {
     }
 
     fn usage(&self) -> &str {
-        "Insert a document through Key/Value"
+        "Replace a document through the data service"
     }
 
     async fn run(
@@ -62,11 +62,11 @@ impl nu_cli::WholeStreamCommand for KvInsert {
         args: CommandArgs,
         registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
-        run_insert(self.state.clone(), args, registry).await
+        run_replace(self.state.clone(), args, registry).await
     }
 }
 
-async fn run_insert(
+async fn run_replace(
     state: Arc<State>,
     args: CommandArgs,
     registry: &CommandRegistry,
@@ -102,12 +102,12 @@ async fn run_insert(
     let bucket = state.active_cluster().bucket(&bucket_name);
     let collection = bucket.default_collection();
 
-    debug!("Running kv insert for docs {:?}", &rows);
+    debug!("Running kv replace for docs {:?}", &rows);
 
     let mut results = vec![];
     for (id, content) in rows.iter() {
         match collection
-            .insert(id, content, InsertOptions::default())
+            .replace(id, content, ReplaceOptions::default())
             .await
         {
             Ok(res) => {

@@ -11,24 +11,24 @@ use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder};
 use nu_source::Tag;
 use std::sync::Arc;
 
-pub struct KvStats {
+pub struct DataStats {
     state: Arc<State>,
 }
 
-impl KvStats {
+impl DataStats {
     pub fn new(state: Arc<State>) -> Self {
         Self { state }
     }
 }
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for KvStats {
+impl nu_cli::WholeStreamCommand for DataStats {
     fn name(&self) -> &str {
-        "kv stats"
+        "data stats"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("kv stats").named(
+        Signature::build("data stats").named(
             "clusters",
             SyntaxShape::String,
             "the clusters which should be contacted",

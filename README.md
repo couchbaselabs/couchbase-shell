@@ -62,10 +62,11 @@ This is heavily in flux right now, but you can try these commands (always try wi
  - `analytics dataverses`: List all dataverses
  - `analytics datasets`: List all datasets
  - `use`: Change the active bucket or cluster on the fly
- - `kv get`: Perform a KV get operation
- - `kv upsert`: Perform a KV upsert operation
- - `kv insert`: Perform a KV insert operation
- - `kv replace`: Perform a KV replace operation
+ - `doc get`: Perform a KV get operation
+ - `doc upsert`: Perform a KV upsert operation
+ - `doc insert`: Perform a KV insert operation
+ - `doc replace`: Perform a KV replace operation
+ - `doc remove`: Removes a KV document
  - `nodes`: List all nodes in the active cluster
  - `buckets`: List all buckets in the active cluster
  - `clusters`: List and manage (active) clusters
@@ -73,6 +74,8 @@ This is heavily in flux right now, but you can try these commands (always try wi
  - `users`: List all users
  - `users get`: show a specific user
  - `users upsert`: create a new user or replace one
+ - `data stats`: displays kv service statistics
+ - `search`: runs a query against a search index
 
 # Config & Multiple Clusters
 

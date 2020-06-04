@@ -15,24 +15,24 @@ use nu_protocol::{
 use nu_source::Tag;
 use std::sync::Arc;
 
-pub struct KvGet {
+pub struct DocGet {
     state: Arc<State>,
 }
 
-impl KvGet {
+impl DocGet {
     pub fn new(state: Arc<State>) -> Self {
         Self { state }
     }
 }
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for KvGet {
+impl nu_cli::WholeStreamCommand for DocGet {
     fn name(&self) -> &str {
-        "kv get"
+        "doc get"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("kv get")
+        Signature::build("doc get")
             .optional("id", SyntaxShape::String, "the document id")
             .named(
                 "id-column",
@@ -54,7 +54,7 @@ impl nu_cli::WholeStreamCommand for KvGet {
     }
 
     fn usage(&self) -> &str {
-        "Fetches a document through Key/Value"
+        "Fetches a document through the data service"
     }
 
     async fn run(

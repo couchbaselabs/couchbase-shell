@@ -14,24 +14,24 @@ use nu_source::Tag;
 use std::sync::Arc;
 use std::time::Duration;
 
-pub struct KvUpsert {
+pub struct DocUpsert {
     state: Arc<State>,
 }
 
-impl KvUpsert {
+impl DocUpsert {
     pub fn new(state: Arc<State>) -> Self {
         Self { state }
     }
 }
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for KvUpsert {
+impl nu_cli::WholeStreamCommand for DocUpsert {
     fn name(&self) -> &str {
-        "kv upsert"
+        "doc upsert"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("kv upsert")
+        Signature::build("doc upsert")
             .optional("id", SyntaxShape::String, "the document id")
             .optional("content", SyntaxShape::String, "the document content")
             .named(
@@ -61,7 +61,7 @@ impl nu_cli::WholeStreamCommand for KvUpsert {
     }
 
     fn usage(&self) -> &str {
-        "Upsert a document through Key/Value"
+        "Upsert a document through the data service"
     }
 
     async fn run(

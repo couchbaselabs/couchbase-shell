@@ -2,6 +2,12 @@
 
 All user visible changes to this project will be documented in this file.
 
+## 1.0.0 - In Progress
+
+ - Renamed `kv` to `doc`
+ - Added `data stats` command to display KV raw stats
+ - Added `search` command to run an FTS query
+
 ## 0.2.0 - 2020-05-26
 
  - Added `whoami` command
