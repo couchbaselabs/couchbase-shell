@@ -1,0 +1,71 @@
+== Introduction
+
+Couchbase Shell is fully featured, so it does not only contain commands related to couchbase but is actually built on top of a general purpose shell called https://www.nushell.sh/[nushell]. This allows you to interact with the file system or any other command available on your machine, making it a great tool for both operational and development tasks on top of Couchbase.
+
+The following introduction only touches on the basic concepts to make you productive quickly. We recommend also checking out the great https://www.nushell.sh/documentation.html[nushell documentation] so you can get the most out of it.
+
+=== Navigating the Shell
+
+Commands take inputs and produce output in a structured manner, most often represented as tables. Note how both the generic `ls` command and the couchbase-specific `buckets` command both produce a table as their output:
+
+```
+❯ ls
+────┬──────────────┬──────┬──────────┬──────────────
+ #  │ name         │ type │ size     │ modified
+────┼──────────────┼──────┼──────────┼──────────────
+  0 │ CHANGELOG.md │ File │    977 B │ 3 hours ago
+  1 │ Cargo.lock   │ File │ 133.8 KB │ 6 hours ago
+  2 │ Cargo.toml   │ File │   1.6 KB │ 3 hours ago
+  3 │ LICENSE      │ File │  11.4 KB │ 2 months ago
+  4 │ README.md    │ File │   6.3 KB │ 3 hours ago
+  5 │ docs         │ Dir  │    288 B │ 27 mins ago
+  6 │ examples     │ Dir  │     96 B │ 2 months ago
+  7 │ jupyter      │ Dir  │    128 B │ 2 weeks ago
+  8 │ src          │ Dir  │    224 B │ 3 hours ago
+  9 │ target       │ Dir  │    192 B │ 2 months ago
+ 10 │ ui-assets    │ Dir  │    832 B │ 3 weeks ago
+────┴──────────────┴──────┴──────────┴──────────────
+```
+
+```
+❯ buckets
+───┬─────────┬──────────────────────────────────────┬─────────
+ # │ cluster │ name                                 │ type
+───┼─────────┼──────────────────────────────────────┼─────────
+ 0 │ local   │ beer-sample                          │ membase
+ 1 │ local   │ default                              │ membase
+ 2 │ local   │ travel-sample                        │ membase
+───┴─────────┴──────────────────────────────────────┴─────────
+```
+
+You can pipe the output into other commands, for example if you only want to see buckets that have `sample` in their name you can utilize the `where` command:
+
+```
+❯ buckets | where name =~ "sample"
+───┬─────────┬───────────────┬─────────
+ # │ cluster │ name          │ type
+───┼─────────┼───────────────┼─────────
+ 0 │ local   │ beer-sample   │ membase
+ 1 │ local   │ travel-sample │ membase
+───┴─────────┴───────────────┴─────────
+```
+
+In a similar fashion you can turn this structured table into other output formats, for example JSON:
+
+```
+❯ buckets | where name =~ "sample" | to json --pretty 2
+[
+  {
+    "cluster": "local",
+    "name": "beer-sample",
+    "type": "membase"
+  },
+  {
+    "cluster": "local",
+    "name": "travel-sample",
+    "type": "membase"
+  }
+]
+```
+
+Exactly this type of composition takes the unix philosophy of "do one thing well" and meshes it together with the idea of flexible structured pipelines. This allows to build powerful compositions that help you in your daily operations with Couchbase, both from a developer or operations point of view.

@@ -1,0 +1,12 @@
+= Couchbase Shell Documentation =
+(c) Copyright 2020, All Rights Reserved
+
+:sectnums:
+
+Welcome to the Couchbase Shell `cbsh` documentation! If you are new, you will want to start with the <<_quickstart,quickstart>> section and then proceed with the <<_introduction,introduction>>. If you are already familar with the shell, feel free to jump right into the <<_reference,command reference>>.
+
+include::quickstart.adoc[]
+
+include::intro.adoc[]
+
+include::reference.adoc[]

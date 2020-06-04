@@ -1,0 +1,81 @@
+== Quickstart
+
+=== Installation
+
+The current latest version is *0.2.0*.
+
+There are a couple ways you can get access to `cbsh`, the easiest one is to download our pre-built binaries for your platform of choice:
+
+ - Linux: https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.2.0/cbsh-0.2.0-linux.zip[cbsh-0.2.0-linux.zip]
+ - macOS: https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.2.0/cbsh-0.2.0-osx.zip[cbsh-0.2.0-osx.zip]
+ - Windows: _not yet available, but will be soon!_
+
+Once you've downloaded the `zip` file, extract it and switch into the just created directory. The following example shows it for mac, but it works very similar if you are on linux (just align the commands with the file you just downloaded):
+
+```
+$ unzip cbsh-0.2.0-osx.zip
+$ cd cbsh-mac-x86_64
+$ ls
+cbsh  examples  LICENSE  README.md
+```
+
+You can now run the `cbsh` binary:
+
+```
+$ ./cbsh
+~/cbsh-mac-x86_64
+❯ version
+─────────┬───────
+ version │ 0.2.0
+─────────┴───────
+```
+
+TIP: If you are running a recent macOS release (i.e. 10.15.x), you'll likely see an error similar to *"cbsh" was blocked from use because it is not from an identified developer*. This is because our binaries are not yet signed. To run it nonetheless you need to navigate to `System Preferences -> Security & Privacy` and click `Allow Anyway`. Next time you run the binary you'll get another prompt but then it should run fine. 
+
+image::mac-binary-unsigned.png[macOS Warning,600]
+
+=== Connecting to a Cluster
+
+If all you do is launch the shell through `./cbsh` it will try to connect to `localhost` using the `Administrator` username and the `password` password. You can modify this through CLI arguments (see `./cbsh -h` for more information). If `-p` is passed in, you will be prompted to enter a password upon start:
+
+```
+$ ./cbsh --username Administrator --connstring 127.0.0.1 -p
+Password:
+Thanks for trying CBSH!
+~/cbsh-mac-x86_64
+❯
+```
+
+While passing in command line arguments is great for exploring, you likely want to look at dotfile configuration support further down in the documentation which allows you to configure multiple clusters and more.
+
+Once in the shell, you can start to execute commands (see the introduction section for more information). As a quick sanity check, list the nodes in the cluster:
+
+```
+❯ nodes
+──────────────┬─────────────────────────────────────────────
+ cluster      │ local
+ hostname     │ 127.0.0.1:8091
+ status       │ healthy
+ services     │ analytics,eventing,search,indexing,kv,query
+ version      │ 6.5.1-6299-enterprise
+ os           │ x86_64-apple-darwin17.7.0
+ memory_total │ 34.4 GB
+ memory_free  │ 13.7 GB
+──────────────┴─────────────────────────────────────────────
+```
+
+Or if you have the `travel-sample` bucket installed you can switch to it and then fetch a document:
+
+```
+❯ doc get airline_10 --bucket travel-sample --flatten
+──────────┬─────────────────────
+ id       │ airline_10
+ cas      │ 1585811206390153216
+ country  │ United States
+ iata     │ Q5
+ callsign │ MILE-AIR
+ name     │ 40-Mile Air
+ icao     │ MLA
+ type     │ airline
+──────────┴─────────────────────
+```
