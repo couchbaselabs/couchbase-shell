@@ -38,7 +38,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
 
     let active = if config.clusters().is_empty() {
-        let cluster = RemoteCluster::new(opt.connection_string, opt.username, password, opt.bucket);
+        let connstr = format!("couchbase://{}", opt.hostnames);
+        let cluster = RemoteCluster::new(connstr, opt.username, password, opt.bucket);
         clusters.insert("default".into(), cluster);
         String::from("default")
     } else {
@@ -46,7 +47,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         for (k, v) in config.clusters() {
             let name = k.clone();
             let cluster = RemoteCluster::new(
-                v.connstr().into(),
+                format!("couchbase://{}", v.hostnames().join(",")),
                 v.username().into(),
                 v.password().into(),
                 v.default_bucket(),
@@ -199,8 +200,8 @@ struct Motd {
     about = "Alternative Shell and UI for Couchbase Server and Cloud"
 )]
 struct CliOptions {
-    #[structopt(long = "connstring", default_value = "couchbase://localhost")]
-    connection_string: String,
+    #[structopt(long = "hostnames", default_value = "localhost")]
+    hostnames: String,
     #[structopt(long = "ui")]
     ui: bool,
     #[structopt(short = "u", long = "username", default_value = "Administrator")]

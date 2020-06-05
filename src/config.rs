@@ -21,7 +21,7 @@ impl ShellConfig {
             .unwrap_or(ShellConfig::default())
     }
 
-    /// Builds the config from a raw input string, useful for testing.
+    /// Builds the config from a raw input string.
     pub fn from_str(input: &str) -> Self {
         toml::from_str(input).unwrap()
     }
@@ -56,7 +56,7 @@ fn try_config_from_path(mut path: PathBuf) -> Option<ShellConfig> {
 
 #[derive(Debug, Deserialize)]
 pub struct ClusterConfig {
-    connstr: String,
+    hostnames: Vec<String>,
     username: String,
     password: String,
     #[serde(rename(deserialize = "default-bucket"))]
@@ -64,8 +64,8 @@ pub struct ClusterConfig {
 }
 
 impl ClusterConfig {
-    pub fn connstr(&self) -> &str {
-        self.connstr.as_str()
+    pub fn hostnames(&self) -> &Vec<String> {
+        &self.hostnames
     }
     pub fn username(&self) -> &str {
         self.username.as_str()
