@@ -61,7 +61,7 @@ impl nu_cli::WholeStreamCommand for DocUpsert {
     }
 
     fn usage(&self) -> &str {
-        "Upsert a document through the data service"
+        "Upsert (insert or override) a document through the data service"
     }
 
     async fn run(
