@@ -4,42 +4,46 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::PathBuf;
 
+/// Holds the complete config in an aggregated manner.
 #[derive(Debug, Deserialize)]
 pub struct ShellConfig {
     clusters: BTreeMap<String, ClusterConfig>,
 }
 
 impl ShellConfig {
+    /// Tries to load the configuration from different paths.
+    ///
+    /// It first tries the `.cbsh/config` in the current directory, and if not found there
+    /// it then tries the home directory (so `~/.cbsh/config`).
     pub fn new() -> Self {
-        // first, try current dir
-        if let Some(c) = try_config_from_path(std::env::current_dir().unwrap()) {
-            return c;
-        }
-
-        // then, try home dir
-        if let Some(c) = try_config_from_path(dirs::home_dir().unwrap()) {
-            return c;
-        }
-
-        // if both are not found, return an empty config
-        ShellConfig {
-            clusters: BTreeMap::new(),
-        }
+        try_config_from_path(std::env::current_dir().unwrap())
+            .or_else(|| try_config_from_path(dirs::home_dir().unwrap()))
+            .unwrap_or(ShellConfig::default())
     }
 
+    /// Builds the config from a raw input string, useful for testing.
     pub fn from_str(input: &str) -> Self {
         toml::from_str(input).unwrap()
     }
 
+    /// Returns the individual configurations for all the clusters configured.
     pub fn clusters(&self) -> &BTreeMap<String, ClusterConfig> {
         &self.clusters
+    }
+}
+
+impl Default for ShellConfig {
+    fn default() -> Self {
+        Self {
+            clusters: BTreeMap::new(),
+        }
     }
 }
 
 fn try_config_from_path(mut path: PathBuf) -> Option<ShellConfig> {
     path.push(".cbsh");
     path.push("config");
-    
+
     let read = fs::read_to_string(&path);
     match read {
         Ok(r) => Some(ShellConfig::from_str(&r)),
