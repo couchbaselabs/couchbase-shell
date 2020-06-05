@@ -38,6 +38,8 @@ impl ShellConfig {
 
 fn try_config_from_path(mut path: PathBuf) -> Option<ShellConfig> {
     path.push(".cbsh");
+    path.push("config");
+    
     let read = fs::read_to_string(&path);
     match read {
         Ok(r) => Some(ShellConfig::from_str(&r)),
