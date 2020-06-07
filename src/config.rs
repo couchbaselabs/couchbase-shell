@@ -7,6 +7,7 @@ use std::path::PathBuf;
 /// Holds the complete config in an aggregated manner.
 #[derive(Debug, Deserialize)]
 pub struct ShellConfig {
+    version: usize,
     clusters: BTreeMap<String, ClusterConfig>,
 }
 
@@ -36,6 +37,7 @@ impl Default for ShellConfig {
     fn default() -> Self {
         Self {
             clusters: BTreeMap::new(),
+            version: 1,
         }
     }
 }

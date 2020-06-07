@@ -1,3 +1,6 @@
+# Allows us to evolve in the future without breaking old config files
+version = 1
+
 [clusters.default]
 hostnames = ["127.0.0.1"]
 username = "Administrator"
