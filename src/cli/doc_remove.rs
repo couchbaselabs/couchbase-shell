@@ -5,12 +5,10 @@ use couchbase::RemoveOptions;
 
 use async_trait::async_trait;
 use futures::stream::StreamExt;
-use log::debug;
+use futures::FutureExt;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
-use nu_protocol::{
-    MaybeOwned, Primitive, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue,
-};
+use nu_protocol::{MaybeOwned, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
 use std::sync::Arc;
 
@@ -65,7 +63,7 @@ async fn run_get(
     args: CommandArgs,
     registry: &CommandRegistry,
 ) -> Result<OutputStream, ShellError> {
-    let mut args = args.evaluate_once(registry).await?;
+    let args = args.evaluate_once(registry).await?;
 
     let id_column = args
         .get("id-column")
@@ -85,49 +83,56 @@ async fn run_get(
         }
     };
 
-    let mut ids = vec![];
-    while let Some(item) = args.input.next().await {
-        let untagged = item.into();
-        match untagged {
-            UntaggedValue::Primitive(p) => match p {
-                Primitive::String(s) => ids.push(s.clone()),
-                _ => {}
-            },
-            UntaggedValue::Row(d) => {
-                if let MaybeOwned::Borrowed(d) = d.get_data(id_column.as_ref()) {
-                    let untagged = &d.value;
-                    if let UntaggedValue::Primitive(p) = untagged {
-                        if let Primitive::String(s) = p {
-                            ids.push(s.clone())
-                        }
-                    }
+    let bucket = state.active_cluster().bucket(&bucket_name);
+    let collection = Arc::new(bucket.default_collection());
+
+    let input_args = if args.nth(0).is_some() {
+        let id = args.nth(0).unwrap().as_string()?;
+        vec![id]
+    } else {
+        vec![]
+    };
+
+    let filtered = args.input.filter_map(move |i| {
+        let id_column = id_column.clone();
+        async move {
+            if let UntaggedValue::Row(dict) = i.value {
+                let mut id = None;
+                if let MaybeOwned::Borrowed(d) = dict.get_data(id_column.as_ref()) {
+                    id = Some(d.as_string().unwrap());
+                }
+                if id.is_some() {
+                    return Some(id.unwrap());
                 }
             }
-            _ => {}
+            None
         }
-    }
+    });
 
-    if let Some(id) = args.nth(0) {
-        ids.push(id.as_string()?);
-    }
+    let mapped = filtered
+        .chain(futures::stream::iter(input_args))
+        .map(move |id| {
+            let collection = collection.clone();
+            async move { collection.remove(id, RemoveOptions::default()).await }
+        })
+        .buffer_unordered(1000)
+        .fold((0, 0), |(mut success, mut failed), res| async move {
+            match res {
+                Ok(_) => success += 1,
+                Err(_) => failed += 1,
+            };
+            (success, failed)
+        })
+        .map(|(success, failed)| {
+            let tag = Tag::default();
+            let mut collected = TaggedDictBuilder::new(&tag);
+            collected.insert_untagged("processed", UntaggedValue::int(success + failed));
+            collected.insert_untagged("success", UntaggedValue::int(success));
+            collected.insert_untagged("failed", UntaggedValue::int(failed));
 
-    let bucket = state.active_cluster().bucket(&bucket_name);
-    let collection = bucket.default_collection();
+            collected.into_value()
+        })
+        .into_stream();
 
-    debug!("Running kv remove for docs {:?}", &ids);
-
-    let mut results = vec![];
-    for id in ids {
-        match collection.remove(&id, RemoveOptions::default()).await {
-            Ok(res) => {
-                let tag = Tag::default();
-                let mut collected = TaggedDictBuilder::new(&tag);
-                collected.insert_value(&id_column, id);
-                collected.insert_value("cas", UntaggedValue::int(res.cas()).into_untagged_value());
-                results.push(collected.into_value());
-            }
-            Err(_e) => {}
-        };
-    }
-    Ok(OutputStream::from(results))
+    Ok(OutputStream::from_input(mapped))
 }
