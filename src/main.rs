@@ -38,7 +38,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
 
     let active = if config.clusters().is_empty() {
-        let connstr = format!("couchbase://{}", opt.hostnames);
+        let connstr = if let Some(certpath) = opt.cert_path {
+            format!("couchbases://{}?certpath={}", opt.hostnames, certpath)
+        } else {
+            format!("couchbase://{}", opt.hostnames)
+        };
         let cluster = RemoteCluster::new(connstr, opt.username, password, opt.bucket);
         clusters.insert("default".into(), cluster);
         String::from("default")
@@ -46,8 +50,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let mut active = None;
         for (k, v) in config.clusters() {
             let name = k.clone();
+            let connstr = if let Some(certpath) = v.cert_path() {
+                format!(
+                    "couchbases://{}?certpath={}",
+                    v.hostnames().join(","),
+                    certpath
+                )
+            } else {
+                format!("couchbase://{}", v.hostnames().join(","))
+            };
             let cluster = RemoteCluster::new(
-                format!("couchbase://{}", v.hostnames().join(",")),
+                connstr,
                 v.username().into(),
                 v.password().into(),
                 v.default_bucket(),
@@ -220,4 +233,6 @@ struct CliOptions {
     stdin: bool,
     #[structopt(long = "no-motd")]
     no_motd: bool,
+    #[structopt(long = "cert-path")]
+    cert_path: Option<String>,
 }

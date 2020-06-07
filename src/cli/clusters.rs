@@ -67,8 +67,11 @@ async fn clusters(
         .map(|(k, v)| {
             let mut collected = TaggedDictBuilder::new(Tag::default());
             collected.insert_untagged("active", UntaggedValue::boolean(k == &active));
+            collected.insert_value(
+                "tls",
+                UntaggedValue::boolean(v.connstr().starts_with("couchbases://")),
+            );
             collected.insert_value("cluster", k.clone());
-            collected.insert_value("connstr", String::from(v.connstr()));
             collected.insert_value("username", String::from(v.username()));
             collected.into_value()
         })

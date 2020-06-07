@@ -3,3 +3,4 @@ hostnames = ["127.0.0.1"]
 username = "Administrator"
 password = "password"
 default-bucket = "travel-sample"
+# cert-path = "/absolute/path/to/server.cert"

@@ -57,10 +57,11 @@ fn try_config_from_path(mut path: PathBuf) -> Option<ShellConfig> {
 #[derive(Debug, Deserialize)]
 pub struct ClusterConfig {
     hostnames: Vec<String>,
-    username: String,
-    password: String,
     #[serde(rename(deserialize = "default-bucket"))]
     default_bucket: Option<String>,
+
+    #[serde(flatten)]
+    credentials: ClusterCredentials,
 }
 
 impl ClusterConfig {
@@ -68,12 +69,23 @@ impl ClusterConfig {
         &self.hostnames
     }
     pub fn username(&self) -> &str {
-        self.username.as_str()
+        self.credentials.username.as_str()
     }
     pub fn password(&self) -> &str {
-        self.password.as_str()
+        self.credentials.password.as_str()
+    }
+    pub fn cert_path(&self) -> &Option<String> {
+        &self.credentials.cert_path
     }
     pub fn default_bucket(&self) -> Option<String> {
         self.default_bucket.as_ref().map(|s| s.clone())
     }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ClusterCredentials {
+    username: String,
+    password: String,
+    #[serde(rename(deserialize = "cert-path"))]
+    cert_path: Option<String>,
 }
