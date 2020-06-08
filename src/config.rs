@@ -3,6 +3,7 @@ use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::PathBuf;
+use std::time::Duration;
 
 /// Holds the complete config in an aggregated manner.
 #[derive(Debug, Deserialize)]
@@ -64,6 +65,8 @@ pub struct ClusterConfig {
 
     #[serde(flatten)]
     credentials: ClusterCredentials,
+    #[serde(flatten)]
+    timeouts: ClusterTimeouts,
 }
 
 impl ClusterConfig {
@@ -82,6 +85,9 @@ impl ClusterConfig {
     pub fn default_bucket(&self) -> Option<String> {
         self.default_bucket.as_ref().map(|s| s.clone())
     }
+    pub fn timeouts(&self) -> &ClusterTimeouts {
+        &self.timeouts
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -90,4 +96,34 @@ pub struct ClusterCredentials {
     password: String,
     #[serde(rename(deserialize = "cert-path"))]
     cert_path: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct ClusterTimeouts {
+    #[serde(rename(deserialize = "data-timeout"))]
+    data_timeout: Option<Duration>,
+    #[serde(rename(deserialize = "connect-timeout"))]
+    connect_timeout: Option<Duration>,
+    #[serde(rename(deserialize = "query-timeout"))]
+    query_timeout: Option<Duration>,
+}
+
+impl ClusterTimeouts {
+    pub fn export_lcb_args(&self) -> String {
+        format!(
+            "operation_timeout={}&config_total_timeout={}&config_node_timeout={}&query_timeout={}",
+            self.data_timeout
+                .unwrap_or(Duration::from_secs(30))
+                .as_secs(),
+            self.connect_timeout
+                .unwrap_or(Duration::from_secs(30))
+                .as_secs(),
+            self.connect_timeout
+                .unwrap_or(Duration::from_secs(30))
+                .as_secs(),
+            self.query_timeout
+                .unwrap_or(Duration::from_secs(75))
+                .as_secs(),
+        )
+    }
 }

@@ -6,7 +6,7 @@ mod state;
 mod ui;
 
 use crate::cli::*;
-use crate::config::ShellConfig;
+use crate::config::{ClusterTimeouts, ShellConfig};
 use crate::state::RemoteCluster;
 use crate::ui::*;
 use log::{debug, warn};
@@ -38,10 +38,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
 
     let active = if config.clusters().is_empty() {
+        let timeouts = ClusterTimeouts::default().export_lcb_args();
         let connstr = if let Some(certpath) = opt.cert_path {
-            format!("couchbases://{}?certpath={}", opt.hostnames, certpath)
+            format!(
+                "couchbases://{}?certpath={}&{}",
+                opt.hostnames, certpath, timeouts,
+            )
         } else {
-            format!("couchbase://{}", opt.hostnames)
+            format!("couchbase://{}?{}", opt.hostnames, timeouts)
         };
         let cluster = RemoteCluster::new(connstr, opt.username, password, opt.bucket);
         clusters.insert("default".into(), cluster);
@@ -52,12 +56,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let name = k.clone();
             let connstr = if let Some(certpath) = v.cert_path() {
                 format!(
-                    "couchbases://{}?certpath={}",
+                    "couchbases://{}?certpath={}&{}",
                     v.hostnames().join(","),
-                    certpath
+                    certpath,
+                    v.timeouts().export_lcb_args()
                 )
             } else {
-                format!("couchbase://{}", v.hostnames().join(","))
+                format!(
+                    "couchbase://{}?{}",
+                    v.hostnames().join(","),
+                    v.timeouts().export_lcb_args()
+                )
             };
             let cluster = RemoteCluster::new(
                 connstr,
