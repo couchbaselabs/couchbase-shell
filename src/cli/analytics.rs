@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use couchbase::AnalyticsOptions;
 use futures::stream::StreamExt;
 use log::debug;
-use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
+use nu_cli::{CommandArgs, CommandRegistry, InterruptibleStream, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
@@ -53,6 +53,7 @@ async fn run(
     registry: &CommandRegistry,
 ) -> Result<OutputStream, ShellError> {
     let args = args.evaluate_once(registry).await?;
+    let ctrl_c = args.ctrl_c.clone();
     let statement = args.nth(0).expect("need statement").as_string()?;
 
     debug!("Running analytics query {}", &statement);
@@ -65,5 +66,7 @@ async fn run(
     let stream = result
         .rows::<serde_json::Value>()
         .map(|v| convert_json_value_to_nu_value(&v.unwrap(), Tag::default()));
-    Ok(OutputStream::from_input(stream))
+    Ok(OutputStream::from_input(InterruptibleStream::new(
+        stream, ctrl_c,
+    )))
 }
