@@ -69,16 +69,17 @@ jobs:
     - name: Install dependencies (macos)
       if: matrix.os == 'macos-latest'
       run: brew install automake
-    - name: Set vcpkg root (windows)
+    - name: Install dependencies - Set vcpkg root (windows)
       if: matrix.os == 'windows-latest'
       run: echo "::set-env name=VCPKG_ROOT::$Env:VCPKG_INSTALLATION_ROOT"
-    - name: Install OpenSSL
+    - name: Install dependencies - OpenSSL via vcpkg (windows)
       run: vcpkg install openssl:x64-windows
       if: matrix.os == 'windows-latest'
     - name: Build
       run: cargo build --verbose
       env:
         MACOSX_DEPLOYMENT_TARGET: 10.9
+        VCPKGRS_DYNAMIC: 1
     - name: Run tests
       run: cargo test --verbose
 
