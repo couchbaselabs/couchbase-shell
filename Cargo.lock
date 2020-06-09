@@ -2620,7 +2620,7 @@ dependencies = [
 [[package]]
 name = "nu"
 version = "0.14.1"
-source = "git+https://github.com/daschl/nushell.git?branch=expose-interruptss#521780d65c85a1084211e0ceaf16c054efd54c22"
+source = "git+https://github.com/nushell/nushell.git?rev=3bb2c9beedc1feff72b08ebb28467957c00c2f70#3bb2c9beedc1feff72b08ebb28467957c00c2f70"
 dependencies = [
  "clap",
  "crossterm",
@@ -2657,7 +2657,7 @@ dependencies = [
 [[package]]
 name = "nu-build"
 version = "0.14.1"
-source = "git+https://github.com/daschl/nushell.git?branch=expose-interruptss#521780d65c85a1084211e0ceaf16c054efd54c22"
+source = "git+https://github.com/nushell/nushell.git?rev=3bb2c9beedc1feff72b08ebb28467957c00c2f70#3bb2c9beedc1feff72b08ebb28467957c00c2f70"
 dependencies = [
  "lazy_static 1.4.0",
  "serde 1.0.111",
@@ -2668,7 +2668,7 @@ dependencies = [
 [[package]]
 name = "nu-cli"
 version = "0.14.1"
-source = "git+https://github.com/daschl/nushell.git?branch=expose-interruptss#521780d65c85a1084211e0ceaf16c054efd54c22"
+source = "git+https://github.com/nushell/nushell.git?rev=3bb2c9beedc1feff72b08ebb28467957c00c2f70#3bb2c9beedc1feff72b08ebb28467957c00c2f70"
 dependencies = [
  "ansi_term 0.12.1",
  "app_dirs",
@@ -2758,7 +2758,7 @@ dependencies = [
 [[package]]
 name = "nu-errors"
 version = "0.14.1"
-source = "git+https://github.com/daschl/nushell.git?branch=expose-interruptss#521780d65c85a1084211e0ceaf16c054efd54c22"
+source = "git+https://github.com/nushell/nushell.git?rev=3bb2c9beedc1feff72b08ebb28467957c00c2f70#3bb2c9beedc1feff72b08ebb28467957c00c2f70"
 dependencies = [
  "ansi_term 0.12.1",
  "bigdecimal",
@@ -2779,7 +2779,7 @@ dependencies = [
 [[package]]
 name = "nu-parser"
 version = "0.14.1"
-source = "git+https://github.com/daschl/nushell.git?branch=expose-interruptss#521780d65c85a1084211e0ceaf16c054efd54c22"
+source = "git+https://github.com/nushell/nushell.git?rev=3bb2c9beedc1feff72b08ebb28467957c00c2f70#3bb2c9beedc1feff72b08ebb28467957c00c2f70"
 dependencies = [
  "bigdecimal",
  "codespan-reporting",
@@ -2799,7 +2799,7 @@ dependencies = [
 [[package]]
 name = "nu-plugin"
 version = "0.14.1"
-source = "git+https://github.com/daschl/nushell.git?branch=expose-interruptss#521780d65c85a1084211e0ceaf16c054efd54c22"
+source = "git+https://github.com/nushell/nushell.git?rev=3bb2c9beedc1feff72b08ebb28467957c00c2f70#3bb2c9beedc1feff72b08ebb28467957c00c2f70"
 dependencies = [
  "bigdecimal",
  "indexmap",
@@ -2816,7 +2816,7 @@ dependencies = [
 [[package]]
 name = "nu-protocol"
 version = "0.14.1"
-source = "git+https://github.com/daschl/nushell.git?branch=expose-interruptss#521780d65c85a1084211e0ceaf16c054efd54c22"
+source = "git+https://github.com/nushell/nushell.git?rev=3bb2c9beedc1feff72b08ebb28467957c00c2f70#3bb2c9beedc1feff72b08ebb28467957c00c2f70"
 dependencies = [
  "ansi_term 0.12.1",
  "bigdecimal",
@@ -2846,7 +2846,7 @@ dependencies = [
 [[package]]
 name = "nu-source"
 version = "0.14.1"
-source = "git+https://github.com/daschl/nushell.git?branch=expose-interruptss#521780d65c85a1084211e0ceaf16c054efd54c22"
+source = "git+https://github.com/nushell/nushell.git?rev=3bb2c9beedc1feff72b08ebb28467957c00c2f70#3bb2c9beedc1feff72b08ebb28467957c00c2f70"
 dependencies = [
  "codespan-reporting",
  "derive-new",
@@ -2860,7 +2860,7 @@ dependencies = [
 [[package]]
 name = "nu-test-support"
 version = "0.14.1"
-source = "git+https://github.com/daschl/nushell.git?branch=expose-interruptss#521780d65c85a1084211e0ceaf16c054efd54c22"
+source = "git+https://github.com/nushell/nushell.git?rev=3bb2c9beedc1feff72b08ebb28467957c00c2f70#3bb2c9beedc1feff72b08ebb28467957c00c2f70"
 dependencies = [
  "directories 2.0.2",
  "dunce",
@@ -2877,7 +2877,7 @@ dependencies = [
 [[package]]
 name = "nu-value-ext"
 version = "0.14.1"
-source = "git+https://github.com/daschl/nushell.git?branch=expose-interruptss#521780d65c85a1084211e0ceaf16c054efd54c22"
+source = "git+https://github.com/nushell/nushell.git?rev=3bb2c9beedc1feff72b08ebb28467957c00c2f70#3bb2c9beedc1feff72b08ebb28467957c00c2f70"
 dependencies = [
  "indexmap",
  "itertools",
@@ -2892,7 +2892,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_binaryview"
 version = "0.14.1"
-source = "git+https://github.com/daschl/nushell.git?branch=expose-interruptss#521780d65c85a1084211e0ceaf16c054efd54c22"
+source = "git+https://github.com/nushell/nushell.git?rev=3bb2c9beedc1feff72b08ebb28467957c00c2f70#3bb2c9beedc1feff72b08ebb28467957c00c2f70"
 dependencies = [
  "ansi_term 0.12.1",
  "crossterm",
@@ -2910,7 +2910,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_fetch"
 version = "0.14.1"
-source = "git+https://github.com/daschl/nushell.git?branch=expose-interruptss#521780d65c85a1084211e0ceaf16c054efd54c22"
+source = "git+https://github.com/nushell/nushell.git?rev=3bb2c9beedc1feff72b08ebb28467957c00c2f70#3bb2c9beedc1feff72b08ebb28467957c00c2f70"
 dependencies = [
  "base64 0.12.1",
  "futures 0.3.5",
@@ -2926,7 +2926,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_inc"
 version = "0.14.1"
-source = "git+https://github.com/daschl/nushell.git?branch=expose-interruptss#521780d65c85a1084211e0ceaf16c054efd54c22"
+source = "git+https://github.com/nushell/nushell.git?rev=3bb2c9beedc1feff72b08ebb28467957c00c2f70#3bb2c9beedc1feff72b08ebb28467957c00c2f70"
 dependencies = [
  "nu-build",
  "nu-errors",
@@ -2940,7 +2940,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_match"
 version = "0.14.1"
-source = "git+https://github.com/daschl/nushell.git?branch=expose-interruptss#521780d65c85a1084211e0ceaf16c054efd54c22"
+source = "git+https://github.com/nushell/nushell.git?rev=3bb2c9beedc1feff72b08ebb28467957c00c2f70#3bb2c9beedc1feff72b08ebb28467957c00c2f70"
 dependencies = [
  "futures 0.3.5",
  "nu-build",
@@ -2954,7 +2954,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_post"
 version = "0.14.1"
-source = "git+https://github.com/daschl/nushell.git?branch=expose-interruptss#521780d65c85a1084211e0ceaf16c054efd54c22"
+source = "git+https://github.com/nushell/nushell.git?rev=3bb2c9beedc1feff72b08ebb28467957c00c2f70#3bb2c9beedc1feff72b08ebb28467957c00c2f70"
 dependencies = [
  "base64 0.12.1",
  "futures 0.3.5",
@@ -2972,7 +2972,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_ps"
 version = "0.14.1"
-source = "git+https://github.com/daschl/nushell.git?branch=expose-interruptss#521780d65c85a1084211e0ceaf16c054efd54c22"
+source = "git+https://github.com/nushell/nushell.git?rev=3bb2c9beedc1feff72b08ebb28467957c00c2f70#3bb2c9beedc1feff72b08ebb28467957c00c2f70"
 dependencies = [
  "futures 0.3.5",
  "futures-timer",
@@ -2987,7 +2987,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_start"
 version = "0.1.0"
-source = "git+https://github.com/daschl/nushell.git?branch=expose-interruptss#521780d65c85a1084211e0ceaf16c054efd54c22"
+source = "git+https://github.com/nushell/nushell.git?rev=3bb2c9beedc1feff72b08ebb28467957c00c2f70#3bb2c9beedc1feff72b08ebb28467957c00c2f70"
 dependencies = [
  "glob",
  "nu-build",
@@ -3002,7 +3002,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_sys"
 version = "0.14.1"
-source = "git+https://github.com/daschl/nushell.git?branch=expose-interruptss#521780d65c85a1084211e0ceaf16c054efd54c22"
+source = "git+https://github.com/nushell/nushell.git?rev=3bb2c9beedc1feff72b08ebb28467957c00c2f70#3bb2c9beedc1feff72b08ebb28467957c00c2f70"
 dependencies = [
  "battery",
  "futures 0.3.5",
@@ -3018,7 +3018,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_textview"
 version = "0.14.1"
-source = "git+https://github.com/daschl/nushell.git?branch=expose-interruptss#521780d65c85a1084211e0ceaf16c054efd54c22"
+source = "git+https://github.com/nushell/nushell.git?rev=3bb2c9beedc1feff72b08ebb28467957c00c2f70#3bb2c9beedc1feff72b08ebb28467957c00c2f70"
 dependencies = [
  "ansi_term 0.12.1",
  "crossterm",
@@ -3034,7 +3034,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_tree"
 version = "0.14.1"
-source = "git+https://github.com/daschl/nushell.git?branch=expose-interruptss#521780d65c85a1084211e0ceaf16c054efd54c22"
+source = "git+https://github.com/nushell/nushell.git?rev=3bb2c9beedc1feff72b08ebb28467957c00c2f70#3bb2c9beedc1feff72b08ebb28467957c00c2f70"
 dependencies = [
  "derive-new",
  "nu-build",
