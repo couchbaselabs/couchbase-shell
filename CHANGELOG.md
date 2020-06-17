@@ -7,6 +7,7 @@ All user visible changes to this project will be documented in this file.
  - Renamed `kv` to `doc`
  - Added `data stats` command to display KV raw stats
  - Added `search` command to run an FTS query
+ - Add `ping` command to ping all services
 
 ## 0.2.0 - 2020-05-26
 
