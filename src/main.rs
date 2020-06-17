@@ -141,6 +141,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         nu_cli::whole_stream_command(UsersGet::new(state.clone())),
         nu_cli::whole_stream_command(UsersUpsert::new(state.clone())),
         nu_cli::whole_stream_command(Search::new(state.clone())),
+        nu_cli::whole_stream_command(Ping::new(state.clone())),
     ]);
 
     if let Some(c) = opt.command {
