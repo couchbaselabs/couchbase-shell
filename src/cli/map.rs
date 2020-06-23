@@ -1,3 +1,5 @@
+#![cfg(not(target_os="windows"))]
+
 use super::util::{convert_json_value_to_nu_value, convert_nu_value_to_json_value};
 use crate::state::State;
 use async_stream::stream;

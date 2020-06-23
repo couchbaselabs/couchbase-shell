@@ -14,6 +14,7 @@ mod doc_remove;
 mod doc_replace;
 mod doc_upsert;
 mod fake_data;
+#[cfg(not(target_os = "windows"))]
 mod map;
 mod nodes;
 mod ping;
@@ -47,6 +48,7 @@ pub use doc_remove::DocRemove;
 pub use doc_replace::DocReplace;
 pub use doc_upsert::DocUpsert;
 pub use fake_data::FakeData;
+#[cfg(not(target_os = "windows"))]
 pub use map::Map;
 pub use nodes::Nodes;
 pub use ping::Ping;
