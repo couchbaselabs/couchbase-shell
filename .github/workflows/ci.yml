@@ -10,6 +10,7 @@ env:
   # Could, potentially automatically parse
   # the bin name, but let's do it automatically for now.
   ARTIFACT_BIN: cbsh
+  ARTIFACT_BIN_WINDOWS: cbsh.exe
 
   # Space separated paths to include in the archive.
   # Start relative paths with a dot if you don't want
@@ -34,9 +35,9 @@ jobs:
           - build: macos
             os: macos-latest
             rust: stable
-          #- build: windows
-          #  os: windows-latest
-          #  rust: stable
+          - build: windows
+            os: windows-2016
+            rust: stable
 
     steps:
     - uses: actions/checkout@v1
@@ -70,12 +71,17 @@ jobs:
     - name: Install dependencies (macos)
       if: matrix.os == 'macos-latest'
       run: brew install automake
-    - name: Install dependencies - Set vcpkg root (windows)
-      if: matrix.os == 'windows-latest'
-      run: echo "::set-env name=VCPKG_ROOT::$Env:VCPKG_INSTALLATION_ROOT"
-    - name: Install dependencies - OpenSSL via vcpkg (windows)
-      run: vcpkg install openssl:x64-windows
-      if: matrix.os == 'windows-latest'
+
+    - name: Install dependencies - LLVM via choco (windows)
+      shell: powershell
+      run: choco install llvm
+      if: matrix.os == 'windows-2016'
+    - name: Install dependencies - OpenSSL via choco (windows)
+      run: |
+        choco install openssl
+        echo "::set-env name=OPENSSL_DIR::C:\Program Files\OpenSSL-Win64"
+      if: matrix.os == 'windows-2016'
+
     - name: Build
       run: cargo build --verbose
       env:
@@ -99,6 +105,13 @@ jobs:
     - name: Create archive for MacOS
       run: 7z a -tzip ./artifacts/${{ env.ARTIFACT_BIN }}-${{ env.SHA8 }}-mac-x86_64.zip ./target/debug/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }}
       if: matrix.os == 'macos-latest'
+
+
+    - name: Create archive for Windows
+      run: |
+        choco install 7zip
+        7z a -tzip ./artifacts/${{ env.ARTIFACT_BIN }}-${{ env.SHA8 }}-windows-x86_64.zip ./target/debug/${{ env.ARTIFACT_BIN_WINDOWS }} ${{ env.ARTIFACT_ADDS }}
+      if: matrix.os == 'windows-2016'
 
     # This will double-zip
     # See - https://github.com/actions/upload-artifact/issues/39

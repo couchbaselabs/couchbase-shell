@@ -651,8 +651,7 @@ dependencies = [
 [[package]]
 name = "cmake"
 version = "0.1.44"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e56268c17a6248366d66d4a47a3381369d068cce8409bb1716ed77ea32163bb"
+source = "git+https://github.com/chvck/cmake-rs?rev=381b60b8fa093737d176de91140902496c78a3c2#381b60b8fa093737d176de91140902496c78a3c2"
 dependencies = [
  "cc",
 ]
@@ -769,7 +768,7 @@ checksum = "b3a71ab494c0b5b860bdc8407ae08978052417070c2ced38573a9157ad75b8ac"
 [[package]]
 name = "couchbase"
 version = "1.0.0-alpha.4"
-source = "git+https://github.com/couchbaselabs/couchbase-rs?rev=0111ef63c19f9ca56c4ec52f82ea261ec3646823#0111ef63c19f9ca56c4ec52f82ea261ec3646823"
+source = "git+https://github.com/couchbaselabs/couchbase-rs?rev=991b6d602f63a4db6ee153ed0d1b7f69142c6a09#991b6d602f63a4db6ee153ed0d1b7f69142c6a09"
 dependencies = [
  "cc",
  "couchbase-sys",
@@ -826,7 +825,7 @@ dependencies = [
 [[package]]
 name = "couchbase-sys"
 version = "1.0.0-alpha.4"
-source = "git+https://github.com/couchbaselabs/couchbase-rs?rev=0111ef63c19f9ca56c4ec52f82ea261ec3646823#0111ef63c19f9ca56c4ec52f82ea261ec3646823"
+source = "git+https://github.com/couchbaselabs/couchbase-rs?rev=991b6d602f63a4db6ee153ed0d1b7f69142c6a09#991b6d602f63a4db6ee153ed0d1b7f69142c6a09"
 dependencies = [
  "bindgen",
  "cmake",
