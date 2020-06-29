@@ -1,8 +1,7 @@
-use async_stream::stream;
 use async_trait::async_trait;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
-use nu_protocol::{Signature, UntaggedValue};
+use nu_protocol::{ReturnSuccess, Signature, UntaggedValue};
 use nu_source::Tag;
 
 pub struct Doc;
@@ -27,10 +26,8 @@ impl nu_cli::WholeStreamCommand for Doc {
         registry: &CommandRegistry,
     ) -> Result<OutputStream, ShellError> {
         let registry = registry.clone();
-        let stream = stream! {
-            yield UntaggedValue::string(nu_cli::get_help(&Doc, &registry))
-            .into_value(Tag::unknown())
-        };
-        Ok(OutputStream::from_input(stream))
+        Ok(OutputStream::one(ReturnSuccess::value(
+            UntaggedValue::string(nu_cli::get_help(&Doc, &registry)).into_value(Tag::unknown()),
+        )))
     }
 }

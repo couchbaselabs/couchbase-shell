@@ -313,9 +313,9 @@ dependencies = [
 
 [[package]]
 name = "bindgen"
-version = "0.52.0"
+version = "0.54.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1c85344eb535a31b62f0af37be84441ba9e7f0f4111eb0530f43d15e513fe57"
+checksum = "66c0bb6167449588ff70803f4127f0684f9063097eca5016f37eb52b92c2cf36"
 dependencies = [
  "bitflags",
  "cexpr",
@@ -522,11 +522,11 @@ dependencies = [
 
 [[package]]
 name = "cexpr"
-version = "0.3.6"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fce5b5fb86b0c57c20c834c1b412fd09c77c8a59b9473f86272709e78874cd1d"
+checksum = "f4aedb84272dbe89af497cf81375129abda4fc0a9e7c5d317498c15cc30c0d27"
 dependencies = [
- "nom 4.2.3",
+ "nom 5.1.2",
 ]
 
 [[package]]
@@ -559,9 +559,9 @@ dependencies = [
 
 [[package]]
 name = "clang-sys"
-version = "0.28.1"
+version = "0.29.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81de550971c976f176130da4b2978d3b524eaa0fd9ac31f3ceb5ae1231fb4853"
+checksum = "fe6837df1d5cba2397b835c8530f51723267e16abbf83892e9e5af4f0e5dd10a"
 dependencies = [
  "glob",
  "libc",
@@ -736,7 +736,7 @@ checksum = "b3a71ab494c0b5b860bdc8407ae08978052417070c2ced38573a9157ad75b8ac"
 [[package]]
 name = "couchbase"
 version = "1.0.0-alpha.4"
-source = "git+https://github.com/couchbaselabs/couchbase-rs?rev=93c9425822a98bb83cf386c191e45b4d2039df59#93c9425822a98bb83cf386c191e45b4d2039df59"
+source = "git+https://github.com/couchbaselabs/couchbase-rs?rev=27d4443d1205ffe49a9d2658ad264a48c2e2ca0f#27d4443d1205ffe49a9d2658ad264a48c2e2ca0f"
 dependencies = [
  "cc",
  "couchbase-sys",
@@ -791,7 +791,7 @@ dependencies = [
 [[package]]
 name = "couchbase-sys"
 version = "1.0.0-alpha.4"
-source = "git+https://github.com/couchbaselabs/couchbase-rs?rev=93c9425822a98bb83cf386c191e45b4d2039df59#93c9425822a98bb83cf386c191e45b4d2039df59"
+source = "git+https://github.com/couchbaselabs/couchbase-rs?rev=27d4443d1205ffe49a9d2658ad264a48c2e2ca0f#27d4443d1205ffe49a9d2658ad264a48c2e2ca0f"
 dependencies = [
  "bindgen",
  "cmake",
