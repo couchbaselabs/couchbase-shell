@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
-use nu_protocol::{Signature, UntaggedValue, ReturnSuccess};
+use nu_protocol::{ReturnSuccess, Signature, UntaggedValue};
 use nu_source::Tag;
 
 pub struct Data;
