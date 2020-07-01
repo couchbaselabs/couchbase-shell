@@ -4,10 +4,14 @@ All user visible changes to this project will be documented in this file.
 
 ## 1.0.0 - In Progress
 
+## 0.3.0 - 2020-07-01
+
  - Renamed `kv` to `doc`
  - Added `data stats` command to display KV raw stats
  - Added `search` command to run an FTS query
  - Add `ping` command to ping all services
+ - Fixed a bug where cloud node and buckets would not work
+ - Bumped nushell to 0.16
 
 ## 0.2.0 - 2020-05-26
 
