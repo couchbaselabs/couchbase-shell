@@ -9,6 +9,7 @@ use crate::cli::*;
 use crate::config::{ClusterTimeouts, ShellConfig};
 use crate::state::RemoteCluster;
 use crate::ui::*;
+use ansi_term::Color;
 use log::{debug, warn};
 use serde::Deserialize;
 use state::State;
@@ -162,7 +163,43 @@ async fn main() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
-    nu_cli::cli(syncer, context).await
+    let prompt = CouchbasePrompt {
+        state: state.clone(),
+    };
+
+    nu_cli::cli(syncer, context, Some(Box::new(prompt))).await
+}
+
+struct CouchbasePrompt {
+    state: Arc<State>,
+}
+
+impl nu_cli::Prompt for CouchbasePrompt {
+    fn get(&self) -> String {
+        let ac = self.state.active_cluster();
+
+        if let Some(b) = ac.active_bucket() {
+            let bucket_emoji = match b.to_lowercase().as_ref() {
+                "travel-sample" => "🛫",
+                "beer-sample" => "🍺",
+                _ => "🗄",
+            };
+
+            format!(
+                "👤{} at 🏠{} in {} {}\n> ",
+                Color::Blue.bold().paint(ac.username()),
+                Color::Yellow.bold().paint(self.state.active()),
+                bucket_emoji,
+                Color::White.bold().paint(b)
+            )
+        } else {
+            format!(
+                "👤{} at 🏠{}\n> ",
+                Color::Blue.bold().paint(ac.username()),
+                Color::Yellow.bold().paint(self.state.active())
+            )
+        }
+    }
 }
 
 /// Fetches a helpful MOTD from couchbase.sh

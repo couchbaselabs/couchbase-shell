@@ -110,7 +110,7 @@ async fn run_ping(
                         collected.insert_value("remote", endpoint.remote().unwrap_or_default());
                         collected.insert_value(
                             "latency",
-                            UntaggedValue::duration(endpoint.latency().as_secs() as i64)
+                            UntaggedValue::duration(endpoint.latency().as_secs().into())
                                 .into_untagged_value(),
                         );
                         collected.insert_value("state", endpoint.state().to_string());

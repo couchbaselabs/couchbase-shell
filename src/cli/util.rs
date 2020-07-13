@@ -43,11 +43,11 @@ pub fn convert_json_value_to_nu_value(v: &serde_json::Value, tag: impl Into<Tag>
 pub fn convert_nu_value_to_json_value(v: &Value) -> Result<serde_json::Value, ShellError> {
     Ok(match &v.value {
         UntaggedValue::Primitive(Primitive::Boolean(b)) => serde_json::Value::Bool(*b),
-        UntaggedValue::Primitive(Primitive::Bytes(b)) => {
+        UntaggedValue::Primitive(Primitive::Filesize(b)) => {
             serde_json::Value::Number(serde_json::Number::from(*b))
         }
-        UntaggedValue::Primitive(Primitive::Duration(secs)) => {
-            serde_json::Value::Number(serde_json::Number::from(*secs))
+        UntaggedValue::Primitive(Primitive::Duration(i)) => {
+            serde_json::Value::String(i.to_string())
         }
         UntaggedValue::Primitive(Primitive::Date(d)) => serde_json::Value::String(d.to_string()),
         UntaggedValue::Primitive(Primitive::EndOfStream) => serde_json::Value::Null,

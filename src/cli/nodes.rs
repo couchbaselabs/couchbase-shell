@@ -102,11 +102,11 @@ async fn nodes(
                 collected.insert_value("os", n.os);
                 collected.insert_value(
                     "memory_total",
-                    UntaggedValue::bytes(n.memory_total).into_untagged_value(),
+                    UntaggedValue::filesize(n.memory_total).into_untagged_value(),
                 );
                 collected.insert_value(
                     "memory_free",
-                    UntaggedValue::bytes(n.memory_free).into_untagged_value(),
+                    UntaggedValue::filesize(n.memory_free).into_untagged_value(),
                 );
 
                 collected.into_value()
