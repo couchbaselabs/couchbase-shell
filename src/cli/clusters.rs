@@ -71,7 +71,7 @@ async fn clusters(
                 "tls",
                 UntaggedValue::boolean(v.connstr().starts_with("couchbases://")),
             );
-            collected.insert_value("cluster", k.clone());
+            collected.insert_value("identifier", k.clone());
             collected.insert_value("username", String::from(v.username()));
             collected.into_value()
         })
