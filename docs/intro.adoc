@@ -69,3 +69,130 @@ In a similar fashion you can turn this structured table into other output format
 ```
 
 Exactly this type of composition takes the unix philosophy of "do one thing well" and meshes it together with the idea of flexible structured pipelines. This allows to build powerful compositions that help you in your daily operations with Couchbase, both from a developer or operations point of view.
+
+=== Getting Help
+
+Other than using this documentation for help, each command can be called with `-h` or `--help` to get information about potential flags, arguments and subcommands. Also, some commands provide additional examples.
+
+```
+> buckets -h
+Lists all buckets of the connected cluster
+
+Usage:
+  > buckets <subcommand> {flags} 
+
+Subcommands:
+  buckets config - Shows the bucket config (low level)
+
+Flags:
+  -h, --help: Display this help message
+  --clusters <string>: the clusters which should be contacted
+```
+
+Some commands only act as groupings for subcommands, like `from`, `to` or `doc`. Since they do not serve a purpose on their own, they will render their help output automatically:
+
+```
+> doc
+Perform document operations against a bucket or collection
+
+Usage:
+  > doc <subcommand> {flags} 
+
+Subcommands:
+  doc get - Fetches a document through the data service
+  doc upsert - Upsert (insert or override) a document through the data service
+  doc insert - Insert a document through the data service
+  doc replace - Replace a document through the data service
+  doc remove - Removes a document through the data service
+
+Flags:
+```
+
+=== The Prompt explained
+Couchbase Shell uses a custom, two line prompt to show you exactly in what environment you are working in right now. Since you can connect to different clusters, switch buckets etc. it is important to know what is currently "active". Here is a sample prompt that will greet you when starting the shell:
+
+```
+👤Administrator at 🏠local in 🛫 travel-sample
+>
+```
+
+It tells you that your user is `Administrator`, the current active cluster identifier is `local` and the active bucket is `travel-sample`. Note that the emoji for the active bucket changes if you use a regular bucket vs. the sample buckets we ship (if you are curious, try loading the `beer-sample` as well!).
+
+In the second line, your actual user prompt starts.
+
+=== Loading Data into the Shell
+
+If you want to import data into Couchbase, or just load it into the shell for further processing, there are different commands available to help you. Once the data is loaded into the shell it can be sent to one of the couchbase save commands like `doc upsert`. Depending on the structure of the data, you may also need to tweak it a little bit so it can be properly stored.
+
+The `open` command will look at file endings and try to decode it automatically. Imagine a file named `user.json` in your current directy with the following content: `{"name": "Michael", "age": 32}`.
+
+```
+> open user.json
+──────┬─────────
+ name │ Michael 
+ age  │ 32      
+──────┴─────────
+```
+
+As you can see, the `open` command already decoded the JSON document into the tabular format. If the filename would only be `user`, the import would look like this instead:
+
+```
+> open user
+{"name": "Michael", "age": 32}
+```
+
+If you are dealing with data that cannot be decoded automatically, you can use the various `from` subcommands to help with decoding. In our case we use `from json`:
+
+```
+> open user | from json
+──────┬─────────
+ name │ Michael 
+ age  │ 32      
+──────┴─────────
+```
+
+TIP: look at the many different import formats `from` supports, including csv, xml, yaml and even sqlite. With this simple tool at hand you are able to load many different data formats quickly and import them into couchbase!
+
+=== Exporting Data from the Shell
+
+The export counterparts to `open` and `from`, are `save` and `to`. You can use both command to take tabular data from the shell and store it in files of the needed target format.
+
+Like `open`, `save` will try to discern the format from the file ending. The following example will load a JSON file and save it as CSV:
+
+```
+> cat user.json
+{"name":"Michael","age":32}
+```
+
+```
+> open user.json | save user.csv
+```
+
+```
+> cat user.csv
+name,age
+Michael,32
+```
+
+This example is dealing with only one row for simplicity, but you can save as many rows as you need in one file. 
+
+As a motivating example, the following snippet runs a N1QL query and stores the result as a csv file:
+
+```
+> query "select airportname,city,country from `travel-sample` where type = 'airport' limit 10" | save output.csv
+```
+
+```
+> cat output.csv
+airportname,city,country
+Calais Dunkerque,Calais,France
+Peronne St Quentin,Peronne,France
+Les Loges,Nangis,France
+Couterne,Bagnole-de-l'orne,France
+Bray,Albert,France
+Le Touquet Paris Plage,Le Tourquet,France
+Denain,Valenciennes,France
+Glisy,Amiens,France
+La Garenne,Agen,France
+Cazaux,Cazaux,France
+```

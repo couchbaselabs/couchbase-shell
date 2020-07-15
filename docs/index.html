@@ -452,8 +452,25 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_connecting_to_a_cluster">1.2. Connecting to a Cluster</a></li>
 </ul>
 </li>
-<li><a href="#_introduction">2. Introduction</a></li>
-<li><a href="#_reference">3. Reference</a></li>
+<li><a href="#_introduction">2. Introduction</a>
+<ul class="sectlevel2">
+<li><a href="#_navigating_the_shell">2.1. Navigating the Shell</a></li>
+<li><a href="#_getting_help">2.2. Getting Help</a></li>
+<li><a href="#_the_prompt_explained">2.3. The Prompt explained</a></li>
+<li><a href="#_loading_data_into_the_shell">2.4. Loading Data into the Shell</a></li>
+<li><a href="#_exporting_data_from_the_shell">2.5. Exporting Data from the Shell</a></li>
+</ul>
+</li>
+<li><a href="#_couchbase_commands">3. Couchbase Commands</a>
+<ul class="sectlevel2">
+<li><a href="#_preface_the_clusters_option">3.1. Preface: the <code>--clusters</code> option</a></li>
+<li><a href="#_use_and_the_environment">3.2. <code>use</code> and the Environment</a></li>
+<li><a href="#_working_with_clusters">3.3. Working with <code>clusters</code></a></li>
+<li><a href="#_working_with_buckets">3.4. Working with <code>buckets</code></a></li>
+<li><a href="#_listing_nodes">3.5. Listing <code>nodes</code></a></li>
+</ul>
+</li>
+<li><a href="#_reference">4. Reference</a></li>
 </ul>
 </div>
 </div>
@@ -471,7 +488,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <div class="sect2">
 <h3 id="_installation">1.1. Installation</h3>
 <div class="paragraph">
-<p>The current latest version is <strong>0.2.0</strong>.</p>
+<p>The current latest version is <strong>0.3.0</strong>.</p>
 </div>
 <div class="paragraph">
 <p>There are a couple ways you can get access to <code>cbsh</code>, the easiest one is to download our pre-built binaries for your platform of choice:</p>
@@ -479,10 +496,10 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <div class="ulist">
 <ul>
 <li>
-<p>Linux: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.2.0/cbsh-0.2.0-linux.zip">cbsh-0.2.0-linux.zip</a></p>
+<p>Linux: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.3.0/cbsh-0.3.0-linux.zip">cbsh-0.3.0-linux.zip</a></p>
 </li>
 <li>
-<p>macOS: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.2.0/cbsh-0.2.0-osx.zip">cbsh-0.2.0-osx.zip</a></p>
+<p>macOS: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.3.0/cbsh-0.3.0-osx.zip">cbsh-0.3.0-osx.zip</a></p>
 </li>
 <li>
 <p>Windows: <em>not yet available, but will be soon!</em></p>
@@ -494,7 +511,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>$ unzip cbsh-0.2.0-osx.zip
+<pre class="CodeRay highlight"><code>$ unzip cbsh-0.3.0-osx.zip
 $ cd cbsh-mac-x86_64
 $ ls
 cbsh  examples  LICENSE  README.md</code></pre>
@@ -509,7 +526,7 @@ cbsh  examples  LICENSE  README.md</code></pre>
 ~/cbsh-mac-x86_64
 ❯ version
 ─────────┬───────
- version │ 0.2.0
+ version │ 0.3.0
 ─────────┴───────</code></pre>
 </div>
 </div>
@@ -596,6 +613,8 @@ Thanks for trying CBSH!
 <div class="paragraph">
 <p>The following introduction only touches on the basic concepts to make you productive quickly. We recommend also checking out the great <a href="https://www.nushell.sh/documentation.html">nushell documentation</a> so you can get the most out of it.</p>
 </div>
+<div class="sect2">
+<h3 id="_navigating_the_shell">2.1. Navigating the Shell</h3>
 <div class="paragraph">
 <p>Commands take inputs and produce output in a structured manner, most often represented as tables. Note how both the generic <code>ls</code> command and the couchbase-specific <code>buckets</code> command both produce a table as their output:</p>
 </div>
@@ -669,9 +688,320 @@ Thanks for trying CBSH!
 <p>Exactly this type of composition takes the unix philosophy of "do one thing well" and meshes it together with the idea of flexible structured pipelines. This allows to build powerful compositions that help you in your daily operations with Couchbase, both from a developer or operations point of view.</p>
 </div>
 </div>
+<div class="sect2">
+<h3 id="_getting_help">2.2. Getting Help</h3>
+<div class="paragraph">
+<p>Other than using this documentation for help, each command can be called with <code>-h</code> or <code>--help</code> to get information about potential flags, arguments and subcommands. Also, some commands provide additional examples.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; buckets -h
+Lists all buckets of the connected cluster
+
+Usage:
+  &gt; buckets &lt;subcommand&gt; {flags}
+
+Subcommands:
+  buckets config - Shows the bucket config (low level)
+
+Flags:
+  -h, --help: Display this help message
+  --clusters &lt;string&gt;: the clusters which should be contacted</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Some commands only act as groupings for subcommands, like <code>from</code>, <code>to</code> or <code>doc</code>. Since they do not serve a purpose on their own, they will render their help output automatically:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; doc
+Perform document operations against a bucket or collection
+
+Usage:
+  &gt; doc &lt;subcommand&gt; {flags}
+
+Subcommands:
+  doc get - Fetches a document through the data service
+  doc upsert - Upsert (insert or override) a document through the data service
+  doc insert - Insert a document through the data service
+  doc replace - Replace a document through the data service
+  doc remove - Removes a document through the data service
+
+Flags:</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_the_prompt_explained">2.3. The Prompt explained</h3>
+<div class="paragraph">
+<p>Couchbase Shell uses a custom, two line prompt to show you exactly in what environment you are working in right now. Since you can connect to different clusters, switch buckets etc. it is important to know what is currently "active". Here is a sample prompt that will greet you when starting the shell:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤Administrator at 🏠local in 🛫 travel-sample
+&gt;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>It tells you that your user is <code>Administrator</code>, the current active cluster identifier is <code>local</code> and the active bucket is <code>travel-sample</code>. Note that the emoji for the active bucket changes if you use a regular bucket vs. the sample buckets we ship (if you are curious, try loading the <code>beer-sample</code> as well!).</p>
+</div>
+<div class="paragraph">
+<p>In the second line, your actual user prompt starts.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_loading_data_into_the_shell">2.4. Loading Data into the Shell</h3>
+<div class="paragraph">
+<p>If you want to import data into Couchbase, or just load it into the shell for further processing, there are different commands available to help you. Once the data is loaded into the shell it can be sent to one of the couchbase save commands like <code>doc upsert</code>. Depending on the structure of the data, you may also need to tweak it a little bit so it can be properly stored.</p>
+</div>
+<div class="paragraph">
+<p>The <code>open</code> command will look at file endings and try to decode it automatically. Imagine a file named <code>user.json</code> in your current directy with the following content: <code>{"name": "Michael", "age": 32}</code>.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; open user.json
+──────┬─────────
+ name │ Michael
+ age  │ 32
+──────┴─────────</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>As you can see, the <code>open</code> command already decoded the JSON document into the tabular format. If the filename would only be <code>user</code>, the import would look like this instead:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; open user
+{&quot;name&quot;: &quot;Michael&quot;, &quot;age&quot;: 32}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>If you are dealing with data that cannot be decoded automatically, you can use the various <code>from</code> subcommands to help with decoding. In our case we use <code>from json</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; open user | from json
+──────┬─────────
+ name │ Michael
+ age  │ 32
+──────┴─────────</code></pre>
+</div>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Tip</div>
+</td>
+<td class="content">
+look at the many different import formats <code>from</code> supports, including csv, xml, yaml and even sqlite. With this simple tool at hand you are able to load many different data formats quickly and import them into couchbase!
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_exporting_data_from_the_shell">2.5. Exporting Data from the Shell</h3>
+<div class="paragraph">
+<p>The export counterparts to <code>open</code> and <code>from</code>, are <code>save</code> and <code>to</code>. You can use both command to take tabular data from the shell and store it in files of the needed target format.</p>
+</div>
+<div class="paragraph">
+<p>Like <code>open</code>, <code>save</code> will try to discern the format from the file ending. The following example will load a JSON file and save it as CSV:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; cat user.json
+{&quot;name&quot;:&quot;Michael&quot;,&quot;age&quot;:32}</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; open user.json | save user.csv</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; cat user.csv
+name,age
+Michael,32</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This example is dealing with only one row for simplicity, but you can save as many rows as you need in one file.</p>
+</div>
+<div class="paragraph">
+<p>As a motivating example, the following snippet runs a N1QL query and stores the result as a csv file:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; query &quot;select airportname,city,country from `travel-sample` where type = 'airport' limit 10&quot; | save output.csv</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; cat output.csv
+airportname,city,country
+Calais Dunkerque,Calais,France
+Peronne St Quentin,Peronne,France
+Les Loges,Nangis,France
+Couterne,Bagnole-de-l'orne,France
+Bray,Albert,France
+Le Touquet Paris Plage,Le Tourquet,France
+Denain,Valenciennes,France
+Glisy,Amiens,France
+La Garenne,Agen,France
+Cazaux,Cazaux,France</code></pre>
+</div>
+</div>
+</div>
+</div>
 </div>
 <div class="sect1">
-<h2 id="_reference">3. Reference</h2>
+<h2 id="_couchbase_commands">3. Couchbase Commands</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The following sections discuss the individual couchbase specific commands in greater detail. Remember, you can always mix and match them with built-in other shell commands as well as executables from your environment.</p>
+</div>
+<div class="sect2">
+<h3 id="_preface_the_clusters_option">3.1. Preface: the <code>--clusters</code> option</h3>
+
+</div>
+<div class="sect2">
+<h3 id="_use_and_the_environment">3.2. <code>use</code> and the Environment</h3>
+<div class="paragraph">
+<p>While mulitple clusters can be connected at the same time, there is only ever one cluster (at most) active. The same is true for a bucket inside that cluster.</p>
+</div>
+<div class="paragraph">
+<p>You can run the <code>use</code> command, which will tell you which cluster and bucket are currently active (you are also able to tell from the prompt):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; use
+─────────┬───────────────
+ cluster │ local
+ bucket  │ travel-sample
+─────────┴───────────────</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Changing the active cluster is done via <code>use cluster</code>, and changing the active bucket via <code>use bucket</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; use bucket beer-sample
+────────┬─────────────
+ bucket │ beer-sample
+────────┴─────────────</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; use
+─────────┬─────────────
+ cluster │ local
+ bucket  │ beer-sample
+─────────┴─────────────</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Both the output of <code>use</code> and the prompt will reflect the changes.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_working_with_clusters">3.3. Working with <code>clusters</code></h3>
+<div class="paragraph">
+<p>The <code>clusters</code> command lists all the clusters you specified in your configuration and the shell might be connected to.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; clusters
+───┬────────┬─────┬─────────┬───────────────
+ # │ active │ tls │ cluster │ username
+───┼────────┼─────┼─────────┼───────────────
+ 0 │ No     │ No  │ local   │ Administrator
+ 1 │ Yes    │ No  │ remote  │ Administrator
+───┴────────┴─────┴─────────┴───────────────</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_working_with_buckets">3.4. Working with <code>buckets</code></h3>
+<div class="paragraph">
+<p>The <code>buckets</code> command lists all the buckets from your active cluster:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; buckets
+───┬─────────┬─────────────────────┬─────────
+ # │ cluster │ name                │ type
+───┼─────────┼─────────────────────┼─────────
+ 0 │ local   │ beer-sample         │ membase
+ 1 │ local   │ default             │ membase
+ 3 │ local   │ travel-sample       │ membase
+───┴─────────┴─────────────────────┴─────────</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>As an advanced command, it is also possible to get the configuration for a bucket:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; buckets config beer-sample
+────────────────────────┬──────────────────────────────────────────────────────────────────────────────────────────
+ name                   │ beer-sample
+ uuid                   │ 0af4496fe0612c76885d5dcd3e010c0d
+ bucketType             │ membase
+ authType               │ sasl
+ uri                    │ /pools/default/buckets/beer-sample?bucket_uuid=0af4496fe0612c76885d5dcd3e010c0d
+ streamingUri           │ /pools/default/bucketsStreaming/beer-sample?bucket_uuid=0af4496fe0612c76885d5dcd3e010c0d
+ localRandomKeyUri      │ /pools/default/buckets/beer-sample/localRandomKey
+ controllers            │ [row compactAll compactDB purgeDeletes startRecovery]
+ nodes                  │ [table 1 rows]
+ stats                  │ [row directoryURI nodeStatsListURI uri]
+ nodeLocator            │ vbucket
+ saslPassword           │ 7fd7338a6b8fb30dbfb80205834db634
+ ddocs                  │ [row uri]
+ replicaIndex           │ Yes
+ autoCompactionSettings │ No
+ vBucketServerMap       │ [row hashAlgorithm numReplicas serverList vBucketMap]
+ maxTTL                 │ 0
+ compressionMode        │ passive
+ replicaNumber          │ 1
+ threadsNumber          │ 3
+ quota                  │ [row ram rawRAM]
+ basicStats             │ [row 8 columns]
+ evictionPolicy         │ valueOnly
+ conflictResolutionType │ seqno
+ bucketCapabilitiesVer  │
+ bucketCapabilities     │ [table 9 rows]
+────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>If you are unsure what you would use this for, you probably don&#8217;t need it.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_listing_nodes">3.5. Listing <code>nodes</code></h3>
+<div class="paragraph">
+<p>The <code>nodes</code> command allows you to list all the nodes of the cluster you are currently connected to.</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>&gt; nodes
+───┬─────────┬─────────────────────┬─────────┬───────────────────┬───────────────────────┬──────────────────────────┬──────────────┬─────────────
+ # │ cluster │ hostname            │ status  │ services          │ version               │ os                       │ memory_total │ memory_free
+───┼─────────┼─────────────────────┼─────────┼───────────────────┼───────────────────────┼──────────────────────────┼──────────────┼─────────────
+ 0 │ remote  │ 10.143.200.101:8091 │ healthy │ indexing,kv,query │ 6.5.0-4960-enterprise │ x86_64-unknown-linux-gnu │       2.1 GB │    837.7 MB
+ 1 │ remote  │ 10.143.200.102:8091 │ healthy │ indexing,kv,query │ 6.5.0-4960-enterprise │ x86_64-unknown-linux-gnu │       2.1 GB │      1.0 GB
+───┴─────────┴─────────────────────┴─────────┴───────────────────┴───────────────────────┴──────────────────────────┴──────────────┴─────────────</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_reference">4. Reference</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>reference</p>
@@ -681,7 +1011,7 @@ Thanks for trying CBSH!
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2020-06-04 16:05:51 +0200
+Last updated 2020-07-15 13:18:04 +0200
 </div>
 </div>
 <style>

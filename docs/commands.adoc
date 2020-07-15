@@ -1,0 +1,120 @@
+== Couchbase Commands
+
+The following sections discuss the individual couchbase specific commands in greater detail. Remember, you can always mix and match them with built-in other shell commands as well as executables from your environment.
+
+=== Preface: the `--clusters` option
+
+=== `use` and the Environment
+
+While mulitple clusters can be connected at the same time, there is only ever one cluster (at most) active. The same is true for a bucket inside that cluster.
+
+You can run the `use` command, which will tell you which cluster and bucket are currently active (you are also able to tell from the prompt):
+
+```
+> use
+─────────┬───────────────
+ cluster │ local         
+ bucket  │ travel-sample 
+─────────┴───────────────
+```
+
+Changing the active cluster is done via `use cluster`, and changing the active bucket via `use bucket`:
+
+```
+> use bucket beer-sample
+────────┬─────────────
+ bucket │ beer-sample 
+────────┴─────────────
+```
+
+```
+> use
+─────────┬─────────────
+ cluster │ local       
+ bucket  │ beer-sample 
+─────────┴─────────────
+```
+
+Both the output of `use` and the prompt will reflect the changes.
+
+=== Working with `clusters`
+
+The `clusters` command lists all the clusters you specified in your configuration and the shell might be connected to.
+
+```
+> clusters
+───┬────────┬─────┬─────────┬───────────────
+ # │ active │ tls │ cluster │ username      
+───┼────────┼─────┼─────────┼───────────────
+ 0 │ No     │ No  │ local   │ Administrator 
+ 1 │ Yes    │ No  │ remote  │ Administrator
+───┴────────┴─────┴─────────┴───────────────
+```
+
+=== Working with `buckets`
+
+The `buckets` command lists all the buckets from your active cluster:
+
+```
+> buckets
+───┬─────────┬─────────────────────┬─────────
+ # │ cluster │ name                │ type    
+───┼─────────┼─────────────────────┼─────────
+ 0 │ local   │ beer-sample         │ membase 
+ 1 │ local   │ default             │ membase 
+ 3 │ local   │ travel-sample       │ membase 
+───┴─────────┴─────────────────────┴─────────
+```
+
+As an advanced command, it is also possible to get the configuration for a bucket:
+
+```
+> buckets config beer-sample
+────────────────────────┬──────────────────────────────────────────────────────────────────────────────────────────
+ name                   │ beer-sample                                                                              
+ uuid                   │ 0af4496fe0612c76885d5dcd3e010c0d                                                         
+ bucketType             │ membase                                                                                  
+ authType               │ sasl                                                                                     
+ uri                    │ /pools/default/buckets/beer-sample?bucket_uuid=0af4496fe0612c76885d5dcd3e010c0d          
+ streamingUri           │ /pools/default/bucketsStreaming/beer-sample?bucket_uuid=0af4496fe0612c76885d5dcd3e010c0d 
+ localRandomKeyUri      │ /pools/default/buckets/beer-sample/localRandomKey                                        
+ controllers            │ [row compactAll compactDB purgeDeletes startRecovery]                                    
+ nodes                  │ [table 1 rows]                                                                           
+ stats                  │ [row directoryURI nodeStatsListURI uri]                                                  
+ nodeLocator            │ vbucket                                                                                  
+ saslPassword           │ 7fd7338a6b8fb30dbfb80205834db634                                                         
+ ddocs                  │ [row uri]                                                                                
+ replicaIndex           │ Yes                                                                                      
+ autoCompactionSettings │ No                                                                                       
+ vBucketServerMap       │ [row hashAlgorithm numReplicas serverList vBucketMap]                                    
+ maxTTL                 │ 0                                                                                        
+ compressionMode        │ passive                                                                                  
+ replicaNumber          │ 1                                                                                        
+ threadsNumber          │ 3                                                                                        
+ quota                  │ [row ram rawRAM]                                                                         
+ basicStats             │ [row 8 columns]                                                                          
+ evictionPolicy         │ valueOnly                                                                                
+ conflictResolutionType │ seqno                                                                                    
+ bucketCapabilitiesVer  │                                                                                          
+ bucketCapabilities     │ [table 9 rows]                                                                           
+────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────
+```
+
+If you are unsure what you would use this for, you probably don't need it.
+
+=== Listing `nodes`
+
+The `nodes` command allows you to list all the nodes of the cluster you are currently connected to.
+
+```
+> nodes
+───┬─────────┬─────────────────────┬─────────┬───────────────────┬───────────────────────┬──────────────────────────┬──────────────┬─────────────
+ # │ cluster │ hostname            │ status  │ services          │ version               │ os                       │ memory_total │ memory_free 
+───┼─────────┼─────────────────────┼─────────┼───────────────────┼───────────────────────┼──────────────────────────┼──────────────┼─────────────
+ 0 │ remote  │ 10.143.200.101:8091 │ healthy │ indexing,kv,query │ 6.5.0-4960-enterprise │ x86_64-unknown-linux-gnu │       2.1 GB │    837.7 MB 
+ 1 │ remote  │ 10.143.200.102:8091 │ healthy │ indexing,kv,query │ 6.5.0-4960-enterprise │ x86_64-unknown-linux-gnu │       2.1 GB │      1.0 GB 
+───┴─────────┴─────────────────────┴─────────┴───────────────────┴───────────────────────┴──────────────────────────┴──────────────┴─────────────
+```
+
+
+
