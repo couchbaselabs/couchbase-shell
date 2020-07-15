@@ -450,6 +450,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <ul class="sectlevel2">
 <li><a href="#_installation">1.1. Installation</a></li>
 <li><a href="#_connecting_to_a_cluster">1.2. Connecting to a Cluster</a></li>
+<li><a href="#_the_config_dotfiles">1.3. The config dotfiles</a></li>
 </ul>
 </li>
 <li><a href="#_introduction">2. Introduction</a>
@@ -473,7 +474,12 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_version">3.8. <code>version</code></a></li>
 </ul>
 </li>
-<li><a href="#_reference">4. Reference</a></li>
+<li><a href="#_reference">4. Reference</a>
+<ul class="sectlevel2">
+<li><a href="#_config_file_format">4.1. Config File Format</a></li>
+<li><a href="#_credentials_file_format">4.2. Credentials File Format</a></li>
+</ul>
+</li>
 </ul>
 </div>
 </div>
@@ -603,6 +609,38 @@ Thanks for trying CBSH!
  type     │ airline
 ──────────┴─────────────────────</code></pre>
 </div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_the_config_dotfiles">1.3. The config dotfiles</h3>
+<div class="paragraph">
+<p>Connecting to a single cluster through the command line is nice when you are starting out, but later on you will likely either connect to the same cluster all the time or even to a multitude of them. To help with this, you can create a <code>.cbsh</code> dot folder in your home directory and place a <code>config</code> file in it that the shell will read on startup.</p>
+</div>
+<div class="paragraph">
+<p>The downloaded zip contains an example already, but here is a small sample config to help you get started as well:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>version = 1
+
+[clusters.local]
+hostnames = [&quot;127.0.0.1&quot;]
+default-bucket = &quot;travel-sample&quot;
+username = &quot;Administrator&quot;
+password = &quot;password&quot;
+
+# [clusters.remote]
+# hostnames = [&quot;10.143.200.101&quot;]
+# default-bucket = &quot;myapp&quot;
+# username = &quot;user&quot;
+# password = &quot;pass&quot;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This will connect to two clusters, one called <code>local</code> and one called <code>remote</code> (commented out). The file format is <code>toml</code> in case you wonder. Now when you start the shell, it will connect to <code>local</code> automatically and you are all set.</p>
+</div>
+<div class="paragraph">
+<p>Please check out the reference section on additional parameters you can set as well as how to move the credentials to a separate <code>credentials</code> file in case you want to share your config with other people and they do not use the same credentials.</p>
 </div>
 </div>
 </div>
@@ -1097,8 +1135,42 @@ Cazaux,Cazaux,France</code></pre>
 <div class="sect1">
 <h2 id="_reference">4. Reference</h2>
 <div class="sectionbody">
+<div class="sect2">
+<h3 id="_config_file_format">4.1. Config File Format</h3>
 <div class="paragraph">
-<p>reference</p>
+<p>The <code>~/.cbsh/config</code> file with examples:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="toml"># Allows us to evolve in the future without breaking old config files
+version = 1
+
+[clusters.default]
+hostnames = [&quot;127.0.0.1&quot;]
+default-bucket = &quot;travel-sample&quot;
+# The following can be part of the config or credentials
+username = &quot;Administrator&quot;
+password = &quot;password&quot;
+cert-path = &quot;/absolute/path/to/server.cert&quot;</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_credentials_file_format">4.2. Credentials File Format</h3>
+<div class="paragraph">
+<p>The optional <code>~/.cbsh/credentials</code> file with examples:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="toml"># Allows us to evolve in the future without breaking old config files
+version = 1
+
+[clusters.default]
+username = &quot;Administrator&quot;
+password = &quot;password&quot;
+cert-path = &quot;/absolute/path/to/server.cert&quot;</code></pre>
+</div>
+</div>
 </div>
 </div>
 </div>

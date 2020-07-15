@@ -1,3 +1,34 @@
 == Reference
 
-reference
+=== Config File Format
+
+The `~/.cbsh/config` file with examples:
+
+[source,toml]
+----
+# Allows us to evolve in the future without breaking old config files
+version = 1
+
+[clusters.default]
+hostnames = ["127.0.0.1"]
+default-bucket = "travel-sample"
+# The following can be part of the config or credentials
+username = "Administrator"
+password = "password"
+cert-path = "/absolute/path/to/server.cert"
+----
+
+=== Credentials File Format
+
+The optional `~/.cbsh/credentials` file with examples:
+
+[source,toml]
+----
+# Allows us to evolve in the future without breaking old config files
+version = 1
+
+[clusters.default]
+username = "Administrator"
+password = "password"
+cert-path = "/absolute/path/to/server.cert"
+----

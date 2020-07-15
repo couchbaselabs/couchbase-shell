@@ -79,3 +79,29 @@ Or if you have the `travel-sample` bucket installed you can switch to it and the
  type     │ airline
 ──────────┴─────────────────────
 ```
+
+=== The config dotfiles
+
+Connecting to a single cluster through the command line is nice when you are starting out, but later on you will likely either connect to the same cluster all the time or even to a multitude of them. To help with this, you can create a `.cbsh` dot folder in your home directory and place a `config` file in it that the shell will read on startup.
+
+The downloaded zip contains an example already, but here is a small sample config to help you get started as well:
+
+```
+version = 1
+
+[clusters.local]
+hostnames = ["127.0.0.1"]
+default-bucket = "travel-sample"
+username = "Administrator"
+password = "password"
+
+# [clusters.remote]
+# hostnames = ["10.143.200.101"]
+# default-bucket = "myapp"
+# username = "user"
+# password = "pass"
+```
+
+This will connect to two clusters, one called `local` and one called `remote` (commented out). The file format is `toml` in case you wonder. Now when you start the shell, it will connect to `local` automatically and you are all set. 
+
+Please check out the reference section on additional parameters you can set as well as how to move the credentials to a separate `credentials` file in case you want to share your config with other people and they do not use the same credentials.
