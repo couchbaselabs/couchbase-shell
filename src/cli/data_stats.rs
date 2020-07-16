@@ -58,7 +58,8 @@ async fn run_stats(
 
     let identifier_arg = args
         .get("clusters")
-        .map(|id| id.as_string().unwrap())
+        .map(|id| id.as_string().ok())
+        .flatten()
         .unwrap_or_else(|| state.active());
 
     let cluster_identifiers = cluster_identifiers_from(&state, identifier_arg.as_str());
@@ -78,8 +79,9 @@ async fn run_stats(
                 let mut collected = TaggedDictBuilder::new(Tag::default());
                 collected.insert_value("cluster", identifier.clone());
 
-                let node = stat.server().split(':').nth(0).unwrap();
-                collected.insert_value("node", String::from(node));
+                if let Some(node) = stat.server().split(':').nth(0) {
+                    collected.insert_value("node", String::from(node));
+                }
 
                 collected.insert_value("key", String::from(stat.key()));
                 collected.insert_value("value", String::from(stat.value()));
