@@ -1,4 +1,4 @@
-//! The `kv-replace` command performs a KV replace operation.
+//! The `doc replace` command performs a KV replace operation.
 
 use super::util::convert_nu_value_to_json_value;
 use crate::state::State;
@@ -81,17 +81,20 @@ async fn run_replace(
 
     let id_column = args
         .get("id-column")
-        .map(|id| id.as_string().unwrap())
+        .map(|id| id.as_string().ok())
+        .flatten()
         .unwrap_or_else(|| String::from("id"));
 
     let content_column = args
         .get("content-column")
-        .map(|content| content.as_string().unwrap())
+        .map(|content| content.as_string().ok())
+        .flatten()
         .unwrap_or_else(|| String::from("content"));
 
     let bucket_name = match args
         .get("bucket")
-        .map(|id| id.as_string().unwrap())
+        .map(|bucket| bucket.as_string().ok())
+        .flatten()
         .or_else(|| state.active_cluster().active_bucket())
     {
         Some(v) => v,
@@ -104,15 +107,19 @@ async fn run_replace(
 
     let expiry = args
         .get("expiry")
-        .map(|e| Duration::from_secs(e.as_u64().unwrap()));
+        .map(|e| Duration::from_secs(e.as_u64().unwrap_or_else(|_| 0)));
 
     let bucket = state.active_cluster().bucket(&bucket_name);
     let collection = Arc::new(bucket.default_collection());
 
-    let input_args = if args.nth(0).is_some() && args.nth(1).is_some() {
-        let id = args.nth(0).unwrap().as_string()?;
-        let content = serde_json::from_str(&args.nth(1).unwrap().as_string()?).unwrap();
-        vec![(id, content)]
+    let input_args = if let Some(id) = args.nth(0) {
+        if let Some(content) = args.nth(1) {
+            let id = id.as_string()?;
+            let content = serde_json::from_str(&content.as_string()?)?;
+            vec![(id, content)]
+        } else {
+            vec![]
+        }
     } else {
         vec![]
     };
@@ -125,13 +132,15 @@ async fn run_replace(
                 let mut id = None;
                 let mut content = None;
                 if let MaybeOwned::Borrowed(d) = dict.get_data(id_column.as_ref()) {
-                    id = Some(d.as_string().unwrap());
+                    id = d.as_string().ok();
                 }
                 if let MaybeOwned::Borrowed(d) = dict.get_data(content_column.as_ref()) {
-                    content = Some(convert_nu_value_to_json_value(d).unwrap());
+                    content = convert_nu_value_to_json_value(d).ok();
                 }
-                if id.is_some() && content.is_some() {
-                    return Some((id.unwrap(), content.unwrap()));
+                if let Some(i) = id {
+                    if let Some(c) = content {
+                        return Some((i, c));
+                    }
                 }
             }
             None

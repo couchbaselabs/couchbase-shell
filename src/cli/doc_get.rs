@@ -1,6 +1,6 @@
-//! The `kv-get` command performs a KV get operation.
+//! The `doc get` command performs a KV get operation.
 
-use super::util::convert_json_value_to_nu_value;
+use super::util::{convert_json_value_to_nu_value, couchbase_error_to_shell_error};
 use crate::state::State;
 use couchbase::GetOptions;
 
@@ -75,12 +75,14 @@ async fn run_get(
 
     let id_column = args
         .get("id-column")
-        .map(|id| id.as_string().unwrap())
+        .map(|id| id.as_string().ok())
+        .flatten()
         .unwrap_or_else(|| String::from("id"));
 
     let bucket_name = match args
         .get("bucket")
-        .map(|id| id.as_string().unwrap())
+        .map(|bucket| bucket.as_string().ok())
+        .flatten()
         .or_else(|| state.active_cluster().active_bucket())
     {
         Some(v) => v,
@@ -132,7 +134,9 @@ async fn run_get(
                 let mut collected = TaggedDictBuilder::new(&tag);
                 collected.insert_value(&id_column, id);
                 collected.insert_value("cas", UntaggedValue::int(res.cas()).into_untagged_value());
-                let content = res.content::<serde_json::Value>().unwrap();
+                let content = res
+                    .content::<serde_json::Value>()
+                    .map_err(|e| couchbase_error_to_shell_error(e))?;
                 let content_converted = convert_json_value_to_nu_value(&content, Tag::default());
                 if flatten {
                     if let UntaggedValue::Row(d) = content_converted.value {

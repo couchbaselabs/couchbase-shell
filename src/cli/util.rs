@@ -1,10 +1,15 @@
 use crate::state::State;
+use couchbase::CouchbaseError;
 use nu_cli::ToPrimitive;
 use nu_errors::ShellError;
 use nu_protocol::{Primitive, TaggedDictBuilder, UnspannedPathMember, UntaggedValue, Value};
 use nu_source::Tag;
 use regex::Regex;
 use std::sync::Arc;
+
+pub fn couchbase_error_to_shell_error(error: CouchbaseError) -> ShellError {
+    ShellError::untagged_runtime_error(format!("{}", error))
+}
 
 pub fn convert_json_value_to_nu_value(v: &serde_json::Value, tag: impl Into<Tag>) -> Value {
     let tag = tag.into();

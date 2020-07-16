@@ -1,4 +1,4 @@
-//! The `kv remove` command performs a KV remove operation.
+//! The `doc remove` command performs a KV remove operation.
 
 use crate::state::State;
 use couchbase::RemoveOptions;
@@ -67,12 +67,14 @@ async fn run_get(
 
     let id_column = args
         .get("id-column")
-        .map(|id| id.as_string().unwrap())
+        .map(|id| id.as_string().ok())
+        .flatten()
         .unwrap_or_else(|| String::from("id"));
 
     let bucket_name = match args
         .get("bucket")
-        .map(|id| id.as_string().unwrap())
+        .map(|bucket| bucket.as_string().ok())
+        .flatten()
         .or_else(|| state.active_cluster().active_bucket())
     {
         Some(v) => v,
@@ -86,9 +88,8 @@ async fn run_get(
     let bucket = state.active_cluster().bucket(&bucket_name);
     let collection = Arc::new(bucket.default_collection());
 
-    let input_args = if args.nth(0).is_some() {
-        let id = args.nth(0).unwrap().as_string()?;
-        vec![id]
+    let input_args = if let Some(id) = args.nth(0) {
+        vec![id.as_string()?]
     } else {
         vec![]
     };
@@ -97,12 +98,8 @@ async fn run_get(
         let id_column = id_column.clone();
         async move {
             if let UntaggedValue::Row(dict) = i.value {
-                let mut id = None;
                 if let MaybeOwned::Borrowed(d) = dict.get_data(id_column.as_ref()) {
-                    id = Some(d.as_string().unwrap());
-                }
-                if id.is_some() {
-                    return Some(id.unwrap());
+                    return d.as_string().ok();
                 }
             }
             None
