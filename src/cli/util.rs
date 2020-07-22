@@ -143,12 +143,23 @@ fn json_list(input: &[Value]) -> Result<Vec<serde_json::Value>, ShellError> {
     Ok(out)
 }
 
-pub fn cluster_identifiers_from(state: &Arc<State>, input: &str) -> Vec<String> {
-    let re = Regex::new(input).unwrap();
-    state
+pub fn cluster_identifiers_from(
+    state: &Arc<State>,
+    input: &str,
+) -> Result<Vec<String>, ShellError> {
+    let re = match Regex::new(input) {
+        Ok(v) => v,
+        Err(e) => {
+            return Err(ShellError::untagged_runtime_error(format!(
+                "Could not parse regex {}",
+                e
+            )))
+        }
+    };
+    Ok(state
         .clusters()
         .keys()
         .filter(|k| re.is_match(k))
         .map(|v| v.clone())
-        .collect()
+        .collect())
 }

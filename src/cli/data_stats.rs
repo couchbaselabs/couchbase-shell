@@ -62,7 +62,7 @@ async fn run_stats(
         .flatten()
         .unwrap_or_else(|| state.active());
 
-    let cluster_identifiers = cluster_identifiers_from(&state, identifier_arg.as_str());
+    let cluster_identifiers = cluster_identifiers_from(&state, identifier_arg.as_str())?;
 
     let mut stats = vec![];
 

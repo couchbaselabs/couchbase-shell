@@ -66,7 +66,8 @@ async fn run_ping(
 
     let bucket_name = match args
         .get("bucket")
-        .map(|id| id.as_string().unwrap())
+        .map(|id| id.as_string().ok())
+        .flatten()
         .or_else(|| state.active_cluster().active_bucket())
     {
         Some(v) => v,
@@ -79,22 +80,22 @@ async fn run_ping(
 
     let identifier_arg = args
         .get("clusters")
-        .map(|id| id.as_string().unwrap())
+        .map(|id| id.as_string().ok())
+        .flatten()
         .unwrap_or_else(|| state.active());
 
-    let cluster_identifiers = cluster_identifiers_from(&state, identifier_arg.as_str());
+    let cluster_identifiers = cluster_identifiers_from(&state, identifier_arg.as_str())?;
 
     debug!("Running ping");
 
     let clusters_len = cluster_identifiers.len();
     let mut results = vec![];
     for identifier in cluster_identifiers {
-        let bucket = state
-            .clusters()
-            .get(&identifier)
-            .unwrap()
-            .cluster()
-            .bucket(&bucket_name);
+        let cluster = match state.clusters().get(&identifier) {
+            Some(c) => c,
+            None => continue, //This can't actually happen, we filter the clusters in cluster_identifiers_from
+        };
+        let bucket = cluster.cluster().bucket(&bucket_name);
         match bucket.ping(PingOptions::default()).await {
             Ok(res) => {
                 for (service_type, endpoints) in res.endpoints().iter() {
