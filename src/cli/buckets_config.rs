@@ -8,7 +8,6 @@ use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
-use serde_json::Value;
 use std::sync::Arc;
 
 pub struct BucketsConfig {
@@ -55,7 +54,14 @@ async fn buckets(
 ) -> Result<OutputStream, ShellError> {
     let args = args.evaluate_once(registry).await?;
 
-    let bucket_name = args.nth(0).unwrap().as_string().unwrap();
+    let bucket_name = match args.nth(0) {
+        Some(n) => n.as_string()?,
+        None => {
+            return Err(ShellError::untagged_runtime_error(format!(
+                "No bucket name was specified"
+            )))
+        }
+    };
 
     let core = state.active_cluster().cluster().core();
 
@@ -68,15 +74,26 @@ async fn buckets(
     );
     core.send(Request::GenericManagementRequest(request));
 
-    let result = convert_cb_error(receiver.await.unwrap())?;
+    let input = match receiver.await {
+        Ok(i) => i,
+        Err(e) => {
+            return Err(ShellError::untagged_runtime_error(format!(
+                "Error streaming result {}",
+                e
+            )))
+        }
+    };
+    let result = convert_cb_error(input)?;
 
-    if !result.payload().is_some() {
-        return Err(ShellError::untagged_runtime_error(
-            "Empty response from cluster even though got 200 ok",
-        ));
-    }
-
-    let resp: Value = serde_json::from_slice(result.payload().unwrap()).unwrap();
+    let payload = match result.payload() {
+        Some(p) => p,
+        None => {
+            return Err(ShellError::untagged_runtime_error(
+                "Empty response from cluster even though got 200 ok",
+            ));
+        }
+    };
+    let resp = serde_json::from_slice(payload)?;
     let converted = convert_json_value_to_nu_value(&resp, Tag::default());
 
     Ok(vec![converted].into())

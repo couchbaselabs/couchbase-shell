@@ -62,7 +62,7 @@ async fn whoami(
         .map(|id| id.as_string().unwrap())
         .unwrap_or_else(|| state.active());
 
-    let cluster_identifiers = cluster_identifiers_from(&state, identifier_arg.as_str());
+    let cluster_identifiers = cluster_identifiers_from(&state, identifier_arg.as_str())?;
 
     let mut entries = vec![];
     for identifier in cluster_identifiers {

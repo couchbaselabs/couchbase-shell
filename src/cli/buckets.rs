@@ -61,7 +61,7 @@ async fn buckets(
         .map(|id| id.as_string().unwrap())
         .unwrap_or_else(|| state.active());
 
-    let cluster_identifiers = cluster_identifiers_from(&state, identifier_arg.as_str());
+    let cluster_identifiers = cluster_identifiers_from(&state, identifier_arg.as_str())?;
 
     let mut buckets = vec![];
     for identifier in cluster_identifiers {
