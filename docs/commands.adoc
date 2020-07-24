@@ -135,6 +135,8 @@ The `nodes` command allows you to list all the nodes of the cluster you are curr
 
 The fastest way to interact with documents is through the key value service (as long as you know the document ID). All those commands are located as subcommands under the `doc` namespace.
 
+==== Reading
+
 You can retrieve a document with `doc get`:
 
 ```
@@ -178,6 +180,47 @@ To perform a bulk get operation, the incoming stream can be utilized.
 ```
 
 If `doc get` operates on an incoming stream it will extract the document id from the `id` column. This behavior can be customized through the `--id-column` flag.
+
+==== Mutating
+
+Documents can be mutated with `doc insert`, `doc upsert` and `doc replace`.
+
+All those three commands take similar arguments. If you only want to mutate a single document, passing in the ID and the content as arguments is the simplest way:
+
+```
+> doc upsert my-doc {"hello": "world"}
+───────────┬───
+ processed │ 1 
+ success   │ 1 
+ failed    │ 0 
+───────────┴───
+```
+
+Multiple documents can be mutated through an input stream as well, defaulting to the `id` and `content` columns:
+
+==== Removing
+
+Documents can be removed with `doc remove`.
+
+```
+> doc remove airline_10
+───────────┬───
+ processed │ 1 
+ success   │ 1 
+ failed    │ 0 
+───────────┴───
+```
+
+Similar to `doc get`, if you want to delete more than one document at the same time, provide a stream of ids with an `id` column:
+
+```
+> echo [airline_10 airline_10748 airline_137] | wrap id | doc remove
+───────────┬───
+ processed │ 3 
+ success   │ 2 
+ failed    │ 1 
+───────────┴───
+```
 
 === Interacting with the `data` service
 
