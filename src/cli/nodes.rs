@@ -100,14 +100,8 @@ async fn nodes(
                 collected.insert_value("services", services);
                 collected.insert_value("version", n.version);
                 collected.insert_value("os", n.os);
-                collected.insert_value(
-                    "memory_total",
-                    UntaggedValue::filesize(n.memory_total).into_untagged_value(),
-                );
-                collected.insert_value(
-                    "memory_free",
-                    UntaggedValue::filesize(n.memory_free).into_untagged_value(),
-                );
+                collected.insert_value("memory_total", UntaggedValue::filesize(n.memory_total));
+                collected.insert_value("memory_free", UntaggedValue::filesize(n.memory_free));
 
                 collected.into_value()
             })

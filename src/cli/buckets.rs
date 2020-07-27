@@ -6,7 +6,7 @@ use couchbase::{GenericManagementRequest, Request};
 use futures::channel::oneshot;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder};
+use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -92,7 +92,10 @@ async fn buckets(
                 let mut collected = TaggedDictBuilder::new(Tag::default());
                 collected.insert_value("cluster", identifier.clone());
                 collected.insert_value("name", n.name);
-                collected.insert_value("type", n.bucket_type);
+                collected.insert_value("type", format!("{:?}", n.bucket_type).to_lowercase());
+                collected.insert_value("replicas", UntaggedValue::int(n.replicas));
+                collected.insert_value("quota_per_node", UntaggedValue::filesize(n.quota.per_node));
+                collected.insert_value("quota_total", UntaggedValue::filesize(n.quota.total));
                 collected.into_value()
             })
             .collect::<Vec<_>>();
@@ -107,5 +110,26 @@ async fn buckets(
 struct BucketInfo {
     name: String,
     #[serde(rename = "bucketType")]
-    bucket_type: String,
+    bucket_type: BucketType,
+    quota: Quota,
+    #[serde(rename = "replicaNumber")]
+    replicas: u32,
+}
+
+#[derive(Debug, Deserialize)]
+enum BucketType {
+    #[serde(rename = "membase")]
+    Couchbase,
+    #[serde(rename = "memcached")]
+    Memcached,
+    #[serde(rename = "ephemeral")]
+    Ephemeral,
+}
+
+#[derive(Debug, Deserialize)]
+struct Quota {
+    #[serde(rename = "ram")]
+    total: u64,
+    #[serde(rename = "rawRAM")]
+    per_node: u64,
 }
