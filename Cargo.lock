@@ -768,7 +768,7 @@ checksum = "b3a71ab494c0b5b860bdc8407ae08978052417070c2ced38573a9157ad75b8ac"
 [[package]]
 name = "couchbase"
 version = "1.0.0-alpha.4"
-source = "git+https://github.com/couchbaselabs/couchbase-rs?rev=991b6d602f63a4db6ee153ed0d1b7f69142c6a09#991b6d602f63a4db6ee153ed0d1b7f69142c6a09"
+source = "git+https://github.com/couchbaselabs/couchbase-rs?rev=69607974cd19934ae7bad62e901b755603cc0fa2#69607974cd19934ae7bad62e901b755603cc0fa2"
 dependencies = [
  "cc",
  "couchbase-sys",
@@ -825,7 +825,7 @@ dependencies = [
 [[package]]
 name = "couchbase-sys"
 version = "1.0.0-alpha.4"
-source = "git+https://github.com/couchbaselabs/couchbase-rs?rev=991b6d602f63a4db6ee153ed0d1b7f69142c6a09#991b6d602f63a4db6ee153ed0d1b7f69142c6a09"
+source = "git+https://github.com/couchbaselabs/couchbase-rs?rev=69607974cd19934ae7bad62e901b755603cc0fa2#69607974cd19934ae7bad62e901b755603cc0fa2"
 dependencies = [
  "bindgen",
  "cmake",
