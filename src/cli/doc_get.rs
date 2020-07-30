@@ -137,7 +137,7 @@ async fn run_get(
                 let content = res
                     .content::<serde_json::Value>()
                     .map_err(|e| couchbase_error_to_shell_error(e))?;
-                let content_converted = convert_json_value_to_nu_value(&content, Tag::default());
+                let content_converted = convert_json_value_to_nu_value(&content, Tag::default())?;
                 if flatten {
                     if let UntaggedValue::Row(d) = content_converted.value {
                         for (k, v) in d.entries {
