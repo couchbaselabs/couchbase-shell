@@ -1,47 +1,72 @@
 use crate::state::State;
 use couchbase::CouchbaseError;
-use nu_cli::ToPrimitive;
+use futures::{Stream, StreamExt};
+use nu_cli::{InterruptibleStream, OutputStream, ToPrimitive};
 use nu_errors::ShellError;
-use nu_protocol::{Primitive, TaggedDictBuilder, UnspannedPathMember, UntaggedValue, Value};
+use nu_protocol::{
+    Primitive, ReturnSuccess, TaggedDictBuilder, UnspannedPathMember, UntaggedValue, Value,
+};
 use nu_source::Tag;
 use regex::Regex;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 pub fn couchbase_error_to_shell_error(error: CouchbaseError) -> ShellError {
     ShellError::untagged_runtime_error(format!("{}", error))
 }
 
-pub fn convert_json_value_to_nu_value(v: &serde_json::Value, tag: impl Into<Tag>) -> Value {
+pub fn convert_json_value_to_nu_value(
+    v: &serde_json::Value,
+    tag: impl Into<Tag>,
+) -> Result<Value, ShellError> {
     let tag = tag.into();
 
-    match v {
+    let result = match v {
         serde_json::Value::Null => UntaggedValue::Primitive(Primitive::Nothing).into_value(&tag),
         serde_json::Value::Bool(b) => UntaggedValue::boolean(*b).into_value(&tag),
         serde_json::Value::Number(n) => {
             if n.is_i64() {
-                UntaggedValue::int(n.as_i64().unwrap()).into_value(&tag)
+                if let Some(nas) = n.as_i64() {
+                    UntaggedValue::int(nas).into_value(&tag)
+                } else {
+                    return Err(ShellError::untagged_runtime_error(format!(
+                        "Could not get value as number {}",
+                        v
+                    )));
+                }
             } else {
-                UntaggedValue::decimal(n.as_f64().unwrap()).into_value(&tag)
+                if let Some(nas) = n.as_f64() {
+                    UntaggedValue::decimal(nas).into_value(&tag)
+                } else {
+                    return Err(ShellError::untagged_runtime_error(format!(
+                        "Could not get value as number {}",
+                        v
+                    )));
+                }
             }
         }
         serde_json::Value::String(s) => {
             UntaggedValue::Primitive(Primitive::String(String::from(s))).into_value(&tag)
         }
-        serde_json::Value::Array(a) => UntaggedValue::Table(
-            a.iter()
-                .map(|x| convert_json_value_to_nu_value(x, &tag))
-                .collect(),
-        )
-        .into_value(tag),
+        serde_json::Value::Array(a) => {
+            let t = a
+                .iter()
+                .map(|x| convert_json_value_to_nu_value(x, &tag).ok())
+                .flatten()
+                .collect();
+            UntaggedValue::Table(t).into_value(tag)
+        }
         serde_json::Value::Object(o) => {
             let mut collected = TaggedDictBuilder::new(&tag);
             for (k, v) in o.iter() {
-                collected.insert_value(k.clone(), convert_json_value_to_nu_value(v, &tag));
+                collected.insert_value(k.clone(), convert_json_value_to_nu_value(v, &tag)?);
             }
 
             collected.into_value()
         }
-    }
+    };
+
+    Ok(result)
 }
 
 // Adapted from https://github.com/nushell/nushell/blob/master/crates/nu-cli/src/commands/to_json.rs
@@ -80,7 +105,14 @@ pub fn convert_nu_value_to_json_value(v: &Value) -> Result<serde_json::Value, Sh
         }
 
         UntaggedValue::Primitive(Primitive::Int(i)) => {
-            serde_json::Value::Number(serde_json::Number::from(i.to_i64().unwrap()))
+            if let Some(ias) = i.to_i64() {
+                serde_json::Value::Number(serde_json::Number::from(ias))
+            } else {
+                return Err(ShellError::untagged_runtime_error(format!(
+                    "Could not get value as number {}",
+                    i
+                )));
+            }
         }
         UntaggedValue::Primitive(Primitive::Nothing) => serde_json::Value::Null,
         UntaggedValue::Primitive(Primitive::Pattern(s)) => serde_json::Value::String(s.clone()),
@@ -92,9 +124,16 @@ pub fn convert_nu_value_to_json_value(v: &Value) -> Result<serde_json::Value, Sh
                     UnspannedPathMember::String(string) => {
                         Ok(serde_json::Value::String(string.clone()))
                     }
-                    UnspannedPathMember::Int(int) => Ok(serde_json::Value::Number(
-                        serde_json::Number::from(int.to_i64().unwrap()),
-                    )),
+                    UnspannedPathMember::Int(int) => {
+                        if let Some(ias) = int.to_i64() {
+                            Ok(serde_json::Value::Number(serde_json::Number::from(ias)))
+                        } else {
+                            return Err(ShellError::untagged_runtime_error(format!(
+                                "Could not get value as number {}",
+                                int
+                            )));
+                        }
+                    }
                 })
                 .collect::<Result<Vec<serde_json::Value>, ShellError>>()?,
         ),
@@ -162,4 +201,18 @@ pub fn cluster_identifiers_from(
         .filter(|k| re.is_match(k))
         .map(|v| v.clone())
         .collect())
+}
+
+pub fn convert_couchbase_rows_json_to_nu_stream(
+    ctrl_c: Arc<AtomicBool>,
+    rows: impl Stream<Item = Result<serde_json::Value, CouchbaseError>> + Send + 'static,
+) -> Result<OutputStream, ShellError> {
+    let stream = rows.map(|v| match v {
+        Ok(res) => match convert_json_value_to_nu_value(&res, Tag::default()) {
+            Ok(cv) => Ok(ReturnSuccess::Value(cv)),
+            Err(e) => Err(e),
+        },
+        Err(e) => Err(ShellError::untagged_runtime_error(format!("{}", e))),
+    });
+    Ok(OutputStream::new(InterruptibleStream::new(stream, ctrl_c)))
 }

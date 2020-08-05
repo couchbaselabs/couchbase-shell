@@ -1,13 +1,11 @@
-use super::util::convert_json_value_to_nu_value;
+use super::util::convert_couchbase_rows_json_to_nu_stream;
 use crate::state::State;
 use async_trait::async_trait;
 use couchbase::AnalyticsOptions;
-use futures::stream::StreamExt;
 use log::debug;
-use nu_cli::{CommandArgs, CommandRegistry, InterruptibleStream, OutputStream};
+use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
-use nu_source::Tag;
 use std::sync::Arc;
 
 pub struct Analytics {
@@ -57,16 +55,17 @@ async fn run(
     let statement = args.nth(0).expect("need statement").as_string()?;
 
     debug!("Running analytics query {}", &statement);
-    let mut result = state
+    let mut result = match state
         .active_cluster()
         .cluster()
         .analytics_query(statement, AnalyticsOptions::default())
         .await
-        .unwrap();
-    let stream = result
-        .rows::<serde_json::Value>()
-        .map(|v| convert_json_value_to_nu_value(&v.unwrap(), Tag::default()));
-    Ok(OutputStream::from_input(InterruptibleStream::new(
-        stream, ctrl_c,
-    )))
+    {
+        Ok(r) => r,
+        Err(e) => {
+            return Err(ShellError::untagged_runtime_error(format!("{}", e)));
+        }
+    };
+
+    convert_couchbase_rows_json_to_nu_stream(ctrl_c, result.rows())
 }

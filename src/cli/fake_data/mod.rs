@@ -17,7 +17,7 @@ use fake::locales::*;
 use fake::Fake;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape};
+use nu_protocol::{ReturnSuccess, Signature, SyntaxShape};
 use nu_source::Tag;
 use serde_json::{from_value, Value};
 use std::collections::HashMap;
@@ -92,13 +92,14 @@ async fn run_fake(
             serde_json::Value::Array(values) => {
                 let stream = stream! {
                     for value in values {
-                        let content_converted = convert_json_value_to_nu_value(&value, Tag::default());
-                        yield content_converted;
-                        //results.push(content_converted);
+                        match convert_json_value_to_nu_value(&value, Tag::default()) {
+                            Ok(c) => yield Ok(ReturnSuccess::Value(c)),
+                            Err(e) => yield Err(e)
+                        }
                     }
                 };
 
-                return Ok(OutputStream::from_input(stream));
+                return Ok(OutputStream::new(stream));
             }
             _ => unimplemented!(),
         }
@@ -122,11 +123,13 @@ async fn run_fake(
             for _ in 0..num_rows {
                 let generated = tera.render_str(&template, &ctx).unwrap();
                 let content = serde_json::from_str(&generated).unwrap();
-                let content_converted = convert_json_value_to_nu_value(&content, Tag::default());
-                yield content_converted
+                match convert_json_value_to_nu_value(&content, Tag::default()) {
+                    Ok(c) => yield Ok(ReturnSuccess::Value(c)),
+                    Err(e) => yield Err(e)
+                }
             }
         };
-        Ok(OutputStream::from_input(stream))
+        Ok(OutputStream::new(stream))
     }
 }
 

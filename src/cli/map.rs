@@ -1,4 +1,4 @@
-#![cfg(not(target_os="windows"))]
+#![cfg(not(target_os = "windows"))]
 
 use super::util::{convert_json_value_to_nu_value, convert_nu_value_to_json_value};
 use crate::state::State;
@@ -61,24 +61,27 @@ async fn map(
 
     let stream = stream! {
         while let Some(item) = args.input.next().await {
-            let converted_json_value = convert_nu_value_to_json_value(&item);
-            if converted_json_value.is_err() {
+            if let Ok(converted_json_value) = convert_nu_value_to_json_value(&item) {
+                let encoded_json = serde_json::to_string(&converted_json_value);
+                if encoded_json.is_err() {
+                    yield Err(ShellError::unexpected("Could not turn json value into encoded format"));
+                }
+                let modified = jq_rs::run(&pattern, encoded_json.unwrap().as_str());
+                if modified.is_err() {
+                    yield Err(ShellError::unexpected("Could not run map operation, likely the pattern is malformed or unsupported"));
+                }
+                let modified_json_value: Result<JsonMap<String, Value>, serde_json::Error> = serde_json::from_str(modified.unwrap().as_str());
+                if modified_json_value.is_err() {
+                    yield Err(ShellError::unexpected("Could not turn mapped data back into tabular format, use a different pattern"));
+                }
+                if let Ok(decoded) = convert_json_value_to_nu_value(&Value::Object(modified_json_value.unwrap()), Tag::default()){
+                    yield ReturnSuccess::value(decoded)
+                } else{
+                    yield Err(ShellError::unexpected("Could not convert encoded value into nu value"));
+                }
+            } else {
                 yield Err(ShellError::unexpected("Could not convert nu value into encoded format"));
             }
-            let encoded_json = serde_json::to_string(&converted_json_value.unwrap());
-            if encoded_json.is_err() {
-                yield Err(ShellError::unexpected("Could not turn json value into encoded format"));
-            }
-            let modified = jq_rs::run(&pattern, encoded_json.unwrap().as_str());
-            if modified.is_err() {
-                yield Err(ShellError::unexpected("Could not run map operation, likely the pattern is malformed or unsupported"));
-            }
-            let modified_json_value: Result<JsonMap<String, Value>, serde_json::Error> = serde_json::from_str(modified.unwrap().as_str());
-            if modified_json_value.is_err() {
-                yield Err(ShellError::unexpected("Could not turn mapped data back into tabular format, use a different pattern"));
-            }
-            let decoded = convert_json_value_to_nu_value(&Value::Object(modified_json_value.unwrap()), Tag::default());
-            yield ReturnSuccess::value(decoded)
         }
     };
     Ok(OutputStream::new(stream))

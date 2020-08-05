@@ -94,7 +94,7 @@ async fn buckets(
         }
     };
     let resp = serde_json::from_slice(payload)?;
-    let converted = convert_json_value_to_nu_value(&resp, Tag::default());
+    let converted = convert_json_value_to_nu_value(&resp, Tag::default())?;
 
     Ok(vec![converted].into())
 }

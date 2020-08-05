@@ -66,13 +66,27 @@ async fn whoami(
 
     let mut entries = vec![];
     for identifier in cluster_identifiers {
-        let core = state.clusters().get(&identifier).unwrap().cluster().core();
+        let core = match state.clusters().get(&identifier) {
+            Some(c) => c.cluster().core(),
+            None => {
+                return Err(ShellError::untagged_runtime_error("Cluster not found"));
+            }
+        };
 
         let (sender, receiver) = oneshot::channel();
         let request = GenericManagementRequest::new(sender, "/whoami".into(), "get".into(), None);
         core.send(Request::GenericManagementRequest(request));
 
-        let result = convert_cb_error(receiver.await.unwrap())?;
+        let input = match receiver.await {
+            Ok(i) => i,
+            Err(e) => {
+                return Err(ShellError::untagged_runtime_error(format!(
+                    "Error streaming result {}",
+                    e
+                )))
+            }
+        };
+        let result = convert_cb_error(input)?;
 
         if result.payload().is_none() {
             return Err(ShellError::untagged_runtime_error(
@@ -80,10 +94,17 @@ async fn whoami(
             ));
         }
 
-        let mut resp: Map<String, Value> =
-            serde_json::from_slice(result.payload().unwrap()).unwrap();
+        let payload = match result.payload() {
+            Some(p) => p,
+            None => {
+                return Err(ShellError::untagged_runtime_error(
+                    "Empty response from cluster even though got 200 ok",
+                ));
+            }
+        };
+        let mut resp: Map<String, Value> = serde_json::from_slice(payload)?;
         resp.insert("cluster".into(), json!(identifier.clone()));
-        let converted = convert_json_value_to_nu_value(&Value::Object(resp), Tag::default());
+        let converted = convert_json_value_to_nu_value(&Value::Object(resp), Tag::default())?;
 
         entries.push(converted);
     }

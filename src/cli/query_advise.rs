@@ -1,13 +1,11 @@
-use super::util::convert_json_value_to_nu_value;
+use super::util::convert_couchbase_rows_json_to_nu_stream;
 use crate::state::State;
 use async_trait::async_trait;
 use couchbase::QueryOptions;
-use futures::stream::StreamExt;
 use log::debug;
-use nu_cli::{CommandArgs, CommandRegistry, InterruptibleStream, OutputStream};
+use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
-use nu_source::Tag;
 use serde::Deserialize;
 use std::sync::Arc;
 
@@ -68,18 +66,7 @@ async fn run(
         .await;
 
     match result {
-        Ok(mut r) => {
-            let stream = r
-                .rows::<AdviseResult>()
-                .flat_map(|r| {
-                    let advices = r.unwrap().advice.adviseinfo;
-                    futures::stream::iter(advices)
-                })
-                .map(|v| convert_json_value_to_nu_value(&v, Tag::default()));
-            Ok(OutputStream::from_input(InterruptibleStream::new(
-                stream, ctrl_c,
-            )))
-        }
+        Ok(mut r) => convert_couchbase_rows_json_to_nu_stream(ctrl_c, r.rows()),
         Err(e) => Err(ShellError::untagged_runtime_error(format!("{}", e))),
     }
 }
