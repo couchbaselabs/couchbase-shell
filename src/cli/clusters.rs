@@ -54,8 +54,9 @@ async fn clusters(
 
     let identifier_arg = args
         .get("clusters")
-        .map(|id| id.as_string().unwrap())
-        .unwrap_or_else(|| ".*".to_string());
+        .map(|id| id.as_string().ok())
+        .flatten()
+        .unwrap_or_else(|| state.active());
 
     let identifiers = cluster_identifiers_from(&state, identifier_arg.as_str())?;
 

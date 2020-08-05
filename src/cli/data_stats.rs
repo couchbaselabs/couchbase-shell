@@ -67,12 +67,27 @@ async fn run_stats(
     let mut stats = vec![];
 
     for identifier in cluster_identifiers {
-        let core = state.clusters().get(&identifier).unwrap().cluster().core();
+        let core = match state.clusters().get(&identifier) {
+            Some(c) => c.cluster().core(),
+            None => {
+                return Err(ShellError::untagged_runtime_error("Cluster not found"));
+            }
+        };
+
         let (sender, receiver) = oneshot::channel();
         let request = KvStatsRequest::new(sender);
         core.send(Request::KvStatsRequest(request));
 
-        let mut result = convert_cb_error(receiver.await.unwrap())?;
+        let input = match receiver.await {
+            Ok(i) => i,
+            Err(e) => {
+                return Err(ShellError::untagged_runtime_error(format!(
+                    "Error streaming result {}",
+                    e
+                )))
+            }
+        };
+        let mut result = convert_cb_error(input)?;
         let mut s = result
             .stats()
             .map(|stat| {
