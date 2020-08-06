@@ -86,8 +86,11 @@ async fn run_fake(
     register_functions(&mut tera);
 
     if list_functions {
-        let generated = tera.render_str(LIST_FUNCTIONS, &ctx).unwrap();
-        let content = serde_json::from_str(&generated).unwrap();
+        let generated = tera
+            .render_str(LIST_FUNCTIONS, &ctx)
+            .map_err(|e| ShellError::untagged_runtime_error(format!("{}", e)))?;
+        let content = serde_json::from_str(&generated)
+            .map_err(|e| ShellError::untagged_runtime_error(format!("{}", e)))?;
         match content {
             serde_json::Value::Array(values) => {
                 let stream = stream! {
@@ -114,19 +117,30 @@ async fn run_fake(
 
         let num_rows = args
             .get("num-rows")
-            .map(|v| v.as_u64().unwrap())
+            .map(|v| v.as_u64().ok())
+            .flatten()
             .unwrap_or(1);
-        let path = path.as_path().unwrap();
-        let template = fs::read_to_string(path).unwrap();
+
+        let path = path.as_path()?;
+        let template = fs::read_to_string(path)
+            .map_err(|e| ShellError::untagged_runtime_error(format!("{}", e)))?;
 
         let stream = stream! {
             for _ in 0..num_rows {
-                let generated = tera.render_str(&template, &ctx).unwrap();
-                let content = serde_json::from_str(&generated).unwrap();
-                match convert_json_value_to_nu_value(&content, Tag::default()) {
-                    Ok(c) => yield Ok(ReturnSuccess::Value(c)),
-                    Err(e) => yield Err(e)
-                }
+                match tera.render_str(&template, &ctx) {
+                    Ok(generated) => {
+                        match serde_json::from_str(&generated) {
+                            Ok(content) => {
+                                match convert_json_value_to_nu_value(&content, Tag::default()) {
+                                    Ok(c) => yield Ok(ReturnSuccess::Value(c)),
+                                    Err(e) => yield Err(e)
+                                }
+                            },
+                            Err(e) => yield Err(ShellError::untagged_runtime_error(format!("{}", e))),
+                        }
+                    },
+                    Err(e) => yield Err(ShellError::untagged_runtime_error(format!("{}", e))),
+                };
             }
         };
         Ok(OutputStream::new(stream))
@@ -341,7 +355,8 @@ fn register_functions(tera: &mut Tera) {
 
     // Group "filesystem"
     tera.register_function("filePath", |_: &HashMap<String, Value>| {
-        Ok(Value::from(FilePath(EN).fake::<String>()))
+        let p = FilePath(EN).fake::<String>();
+        Ok(Value::from(p))
     });
     tera.register_function("fileName", |_: &HashMap<String, Value>| {
         Ok(Value::from(FileName(EN).fake::<String>()))

@@ -51,7 +51,14 @@ async fn use_cmd(
     let args = args.evaluate_once(registry).await?;
 
     if let Some(id) = args.nth(0) {
-        state.set_active(id.as_string().unwrap()).unwrap();
+        match state.set_active(id.as_string()?) {
+            Ok(v) => v,
+            Err(_) => {
+                return Err(ShellError::untagged_runtime_error(
+                    "Could not set active cluster",
+                ));
+            }
+        }
     }
 
     let mut using_now = TaggedDictBuilder::new(Tag::default());

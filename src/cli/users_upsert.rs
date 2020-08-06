@@ -76,13 +76,41 @@ async fn users_upsert(
     registry: &CommandRegistry,
 ) -> Result<OutputStream, ShellError> {
     let args = args.evaluate_once(registry).await?;
-    let username = args.get("username").expect("need username").as_string()?;
-    let roles_string = args.get("roles").expect("need roles").as_string()?;
-    let password = args
-        .get("password")
-        .map(|password| password.as_string().unwrap());
-    let display_name = args.get("display_name").map(|dn| dn.as_string().unwrap());
-    let groups = args.get("groups").map(|g| g.as_string().unwrap());
+    let username = match args.get("username") {
+        Some(v) => match v.as_string() {
+            Ok(uname) => uname,
+            Err(e) => return Err(e),
+        },
+        None => return Err(ShellError::unexpected("username is required")),
+    };
+    let roles_string = match args.get("roles") {
+        Some(v) => match v.as_string() {
+            Ok(roles) => roles,
+            Err(e) => return Err(e),
+        },
+        None => return Err(ShellError::unexpected("username is required")),
+    };
+    let password = match args.get("password") {
+        Some(v) => match v.as_string() {
+            Ok(pwd) => Some(pwd),
+            Err(e) => return Err(e),
+        },
+        None => None,
+    };
+    let display_name = match args.get("display_name") {
+        Some(v) => match v.as_string() {
+            Ok(pwd) => Some(pwd),
+            Err(e) => return Err(e),
+        },
+        None => None,
+    };
+    let groups = match args.get("groups") {
+        Some(v) => match v.as_string() {
+            Ok(pwd) => Some(pwd),
+            Err(e) => return Err(e),
+        },
+        None => None,
+    };
 
     let roles = roles_string
         .split(",")

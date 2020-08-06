@@ -5,7 +5,7 @@ use futures::stream::StreamExt;
 use log::debug;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream, TaggedDictBuilder};
 use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape};
+use nu_protocol::{ReturnSuccess, Signature, SyntaxShape};
 use nu_source::Tag;
 use std::sync::Arc;
 
@@ -71,15 +71,17 @@ async fn run(
 
     match result {
         Ok(mut r) => {
-            let stream = r.rows().map(|v| {
-                let row = v.unwrap();
-                let mut collected = TaggedDictBuilder::new(Tag::default());
-                collected.insert_value("id", row.id());
-                collected.insert_value("score", format!("{}", row.score()));
-                collected.insert_value("index", row.index());
-                collected.into_value()
+            let stream = r.rows().map(|v| match v {
+                Ok(row) => {
+                    let mut collected = TaggedDictBuilder::new(Tag::default());
+                    collected.insert_value("id", row.id());
+                    collected.insert_value("score", format!("{}", row.score()));
+                    collected.insert_value("index", row.index());
+                    Ok(ReturnSuccess::Value(collected.into_value()))
+                }
+                Err(e) => Err(ShellError::untagged_runtime_error(format!("{}", e))),
             });
-            Ok(OutputStream::from_input(stream))
+            Ok(OutputStream::new(stream))
         }
         Err(e) => Err(ShellError::untagged_runtime_error(format!("{}", e))),
     }
