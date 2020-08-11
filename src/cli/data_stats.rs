@@ -28,12 +28,19 @@ impl nu_cli::WholeStreamCommand for DataStats {
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("data stats").named(
-            "clusters",
-            SyntaxShape::String,
-            "the clusters which should be contacted",
-            None,
-        )
+        Signature::build("data stats")
+            .named(
+                "clusters",
+                SyntaxShape::String,
+                "the clusters which should be contacted",
+                None,
+            )
+            .named(
+                "key",
+                SyntaxShape::String,
+                "the custom stats key that should be passed down",
+                None,
+            )
     }
 
     fn usage(&self) -> &str {
@@ -62,6 +69,8 @@ async fn run_stats(
         .flatten()
         .unwrap_or_else(|| state.active());
 
+    let key = args.get("key").map(|id| id.as_string().ok()).flatten();
+
     let cluster_identifiers = cluster_identifiers_from(&state, identifier_arg.as_str())?;
 
     let mut stats = vec![];
@@ -75,7 +84,7 @@ async fn run_stats(
         };
 
         let (sender, receiver) = oneshot::channel();
-        let request = KvStatsRequest::new(sender);
+        let request = KvStatsRequest::new(sender, key.clone());
         core.send(Request::KvStatsRequest(request));
 
         let input = match receiver.await {
