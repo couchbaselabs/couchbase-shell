@@ -24,11 +24,11 @@ regex = "1.3.7"
 num-bigint = "0.3"
 ansi_term = "0.12"
 
-nu = { branch = "prompt",  git = "https://github.com/daschl/nushell.git", features = ["default", "stable"] }
-nu-protocol = { branch = "prompt", git = "https://github.com/daschl/nushell.git"  }
-nu-errors = { branch = "prompt", git = "https://github.com/daschl/nushell.git"  }
-nu-source = { branch = "prompt", git = "https://github.com/daschl/nushell.git" }
-nu-cli = { branch = "prompt", git = "https://github.com/daschl/nushell.git"}
+nu = { branch = "main",  git = "https://github.com/daschl/nushell.git", features = ["extra"] }
+nu-protocol = { branch = "main", git = "https://github.com/daschl/nushell.git"  }
+nu-errors = { branch = "main", git = "https://github.com/daschl/nushell.git"  }
+nu-source = { branch = "main", git = "https://github.com/daschl/nushell.git" }
+nu-cli = { branch = "main", git = "https://github.com/daschl/nushell.git" }
 
 async-trait = "0.1.31"
 serde = "1.0"
