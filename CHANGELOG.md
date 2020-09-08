@@ -4,6 +4,8 @@ All user visible changes to this project will be documented in this file.
 
 ## 1.0.0 - In Progress
 
+ - Added simple `clusters health` check against a single cluster, two checks
+
 ## 0.3.0 - 2020-07-01
 
  - Renamed `kv` to `doc`
