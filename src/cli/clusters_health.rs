@@ -1,11 +1,12 @@
 use crate::cli::convert_cb_error;
+use crate::cli::util::cluster_identifiers_from;
 use crate::state::State;
 use async_trait::async_trait;
 use couchbase::{GenericManagementRequest, Request};
 use futures::channel::oneshot;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
-use nu_protocol::{Signature, TaggedDictBuilder, UntaggedValue, Value};
+use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Value};
 use nu_source::Tag;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -27,7 +28,12 @@ impl nu_cli::WholeStreamCommand for ClustersHealth {
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("buckets config")
+        Signature::build("buckets config").named(
+            "clusters",
+            SyntaxShape::String,
+            "the clusters which should be contacted",
+            None,
+        )
     }
 
     fn usage(&self) -> &str {
@@ -50,20 +56,34 @@ async fn health(
 ) -> Result<OutputStream, ShellError> {
     let args = args.evaluate_once(registry).await?;
 
+    let identifier_arg = args
+        .get("clusters")
+        .map(|id| id.as_string().ok())
+        .flatten()
+        .unwrap_or_else(|| state.active());
+
+    let cluster_identifiers = cluster_identifiers_from(&state, identifier_arg.as_str())?;
+
     let mut converted = vec![];
-    converted.push(check_autofailover(state.clone()).await?);
+    for identifier in cluster_identifiers {
+        converted.push(check_autofailover(state.clone(), &identifier).await?);
 
-    let bucket_names = grab_bucket_names(state.clone()).await?;
-
-    for bucket_name in bucket_names {
-        converted.push(check_resident_ratio(state.clone(), &bucket_name).await?);
+        let bucket_names = grab_bucket_names(state.clone(), &identifier).await?;
+        for bucket_name in bucket_names {
+            converted.push(check_resident_ratio(state.clone(), &bucket_name, &identifier).await?);
+        }
     }
 
     Ok(converted.into())
 }
 
-async fn grab_bucket_names(state: Arc<State>) -> Result<Vec<String>, ShellError> {
-    let core = state.active_cluster().cluster().core();
+async fn grab_bucket_names(state: Arc<State>, identifier: &str) -> Result<Vec<String>, ShellError> {
+    let core = match state.clusters().get(identifier) {
+        Some(c) => c.cluster().core(),
+        None => {
+            return Err(ShellError::untagged_runtime_error("Cluster not found"));
+        }
+    };
 
     let (sender, receiver) = oneshot::channel();
     let request =
@@ -104,10 +124,15 @@ struct BucketInfo {
     name: String,
 }
 
-async fn check_autofailover(state: Arc<State>) -> Result<Value, ShellError> {
+async fn check_autofailover(state: Arc<State>, identifier: &str) -> Result<Value, ShellError> {
     let mut collected = TaggedDictBuilder::new(Tag::default());
 
-    let core = state.active_cluster().cluster().core();
+    let core = match state.clusters().get(identifier) {
+        Some(c) => c.cluster().core(),
+        None => {
+            return Err(ShellError::untagged_runtime_error("Cluster not found"));
+        }
+    };
 
     let (sender, receiver) = oneshot::channel();
     let request = GenericManagementRequest::new(
@@ -139,9 +164,11 @@ async fn check_autofailover(state: Arc<State>) -> Result<Value, ShellError> {
     };
     let resp: AutoFailoverSettings = serde_json::from_slice(payload)?;
 
+    collected.insert_value("cluster", identifier.clone());
     collected.insert_value("check", "Autofailover Enabled".clone());
     collected.insert_value("bucket", "-".clone());
-    collected.insert_value("state", UntaggedValue::boolean(resp.enabled));
+    collected.insert_value("expected", UntaggedValue::boolean(true));
+    collected.insert_value("actual", UntaggedValue::boolean(resp.enabled));
 
     let remedy = if resp.enabled {
         "Not needed"
@@ -158,10 +185,19 @@ struct AutoFailoverSettings {
     enabled: bool,
 }
 
-async fn check_resident_ratio(state: Arc<State>, bucket_name: &str) -> Result<Value, ShellError> {
+async fn check_resident_ratio(
+    state: Arc<State>,
+    bucket_name: &str,
+    identifier: &str,
+) -> Result<Value, ShellError> {
     let mut collected = TaggedDictBuilder::new(Tag::default());
 
-    let core = state.active_cluster().cluster().core();
+    let core = match state.clusters().get(identifier) {
+        Some(c) => c.cluster().core(),
+        None => {
+            return Err(ShellError::untagged_runtime_error("Cluster not found"));
+        }
+    };
 
     let (sender, receiver) = oneshot::channel();
     let request = GenericManagementRequest::new(
@@ -194,11 +230,13 @@ async fn check_resident_ratio(state: Arc<State>, bucket_name: &str) -> Result<Va
     let resp: BucketStats = serde_json::from_slice(payload)?;
     let ratio = resp.op.samples.active_resident_ratios.last().unwrap();
 
+    collected.insert_value("cluster", identifier.clone());
     collected.insert_value("check", "Resident Ratio Too Low".clone());
     collected.insert_value("bucket", bucket_name.clone());
-    collected.insert_value("state", format!("{}%", *ratio));
+    collected.insert_value("expected", ">= 10%");
+    collected.insert_value("actual", format!("{}%", *ratio));
 
-    let remedy = if *ratio > 10 {
+    let remedy = if *ratio >= 10 {
         "Not needed"
     } else {
         "Should be more than 10%"
