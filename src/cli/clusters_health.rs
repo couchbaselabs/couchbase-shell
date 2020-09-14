@@ -60,7 +60,7 @@ async fn health(
         .get("clusters")
         .map(|id| id.as_string().ok())
         .flatten()
-        .unwrap_or_else(|| String::from(""));
+        .unwrap_or_else(|| state.active());
 
     let cluster_identifiers = cluster_identifiers_from(&state, identifier_arg.as_str())?;
 
