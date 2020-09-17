@@ -1,0 +1,182 @@
+= Importing data
+
+Couchbase Shell supports loading data from a variety of formats and sources.
+
+== A Note On Data format
+
+The `doc upsert` command requires there to be only two fields/columns for an upsert.
+There can be more than two fields/columns in the data but only two can be used.
+By default, these two columns are named `id` and `content`, but these can be overridden with `--id-column` and `--content-column`.
+
+Given the following document format we need to perform some data manipulation to get it into a format which works with `doc upsert`:
+```
+> cat mydoc.json
+{"id":3719,"cas":1600344369374167040,"type":"airport","airportname":"Columbia Rgnl","city":"Columbia","country":"United States","faa":"COU","icao":"KCOU","tz":"America/Chicago"}
+
+> open mydoc.json | map { id: ("airport_" + (.id|tostring)), content: . }
+───┬──────────────┬─────────────────
+ # │      id      │     content
+───┼──────────────┼─────────────────
+ 0 │ airport_3719 │ [row 9 columns]
+───┴──────────────┴─────────────────
+```
+
+== From file
+
+=== From JSON
+
+==== Single Document
+```
+> cat mydoc.json
+{"id":3719,"cas":1600344369374167040,"type":"airport","airportname":"Columbia Rgnl","city":"Columbia","country":"United States","faa":"COU","icao":"KCOU","tz":"America/Chicago"}
+
+> open mydoc.json | map { id: ("airport_" + (.id|tostring)), content: . } | doc upsert
+───┬───────────┬─────────┬────────
+ # │ processed │ success │ failed
+───┼───────────┼─────────┼────────
+ 0 │         1 │       1 │      0
+───┴───────────┴─────────┴────────
+```
+
+Note: In windows we cannot use the `map` command so we would need to do something like:
+```
+> open mydoc.json | wrap content | insert id {echo $it.content.airportname} | doc upsert
+───┬───────────┬─────────┬────────
+ # │ processed │ success │ failed
+───┼───────────┼─────────┼────────
+ 0 │         1 │       1 │      0
+───┴───────────┴─────────┴────────
+```
+
+==== Multiple Documents
+```
+> ls airports
+───┬────────────────────────────┬──────┬───────┬────────────
+ # │            name            │ type │ size  │  modified
+───┼────────────────────────────┼──────┼───────┼────────────
+ 0 │ airports/airport_3719.json │ File │ 151 B │ 2 days ago
+ 1 │ airports/airport_3720.json │ File │ 155 B │ 2 days ago
+ 2 │ airports/airport_3721.json │ File │ 172 B │ 2 days ago
+ 3 │ airports/airport_3722.json │ File │ 161 B │ 2 days ago
+ 4 │ airports/airport_3723.json │ File │ 163 B │ 2 days ago
+ 5 │ airports/airport_3724.json │ File │ 156 B │ 2 days ago
+ 6 │ airports/airport_3725.json │ File │ 148 B │ 2 days ago
+ 7 │ airports/airport_3726.json │ File │ 164 B │ 2 days ago
+ 8 │ airports/airport_3727.json │ File │ 169 B │ 2 days ago
+ 9 │ airports/airport_3728.json │ File │ 152 B │ 2 days ago
+───┴────────────────────────────┴──────┴───────┴────────────
+
+> open airports/airport_3719.json
+───┬──────┬─────────┬─────────────┬──────────┬─────────┬─────┬──────┬──────────────
+ # │  id  │  type   │ airportname │   city   │ country │ faa │ icao │      tz
+───┼──────┼─────────┼─────────────┼──────────┼─────────┼─────┼──────┼──────────────
+ 0 │ 3719 │ airport │ Columbia    │ Columbia │ United  │ COU │ KCOU │ America/Chic
+   │      │         │ Rgnl        │          │ States  │     │      │ ago
+───┴──────┴─────────┴─────────────┴──────────┴─────────┴─────┴──────┴──────────────
+
+> ls airports/ | open $it.name | map { id: ("airport_" + (.id|tostring)), content: . } | doc upsert
+───┬───────────┬─────────┬────────
+ # │ processed │ success │ failed
+───┼───────────┼─────────┼────────
+ 0 │        10 │      10 │      0
+───┴───────────┴─────────┴────────
+```
+
+Note: In windows we cannot use the `map` command so we would need to do something like:
+```
+> ls airports/ | open  $it.name | each { wrap content | insert id {echo $it.content.airportname} } | doc upsert
+───┬───────────┬─────────┬────────
+ # │ processed │ success │ failed
+───┼───────────┼─────────┼────────
+ 0 │        10 │      10 │      0
+───┴───────────┴─────────┴────────
+```
+
+
+=== From CSV
+
+==== Single Document
+```
+> cat mydoc.csv
+id,cas,type,airportname,city,country,faa,icao,tz
+3719,1600344369374167040,airport,Columbia Rgnl,Columbia,United States,COU,KCOU,America/Chicago
+
+> open mydoc.csv | each { map { id: ("airport_" + (.id|tostring)), content: . } } | doc upsert
+───┬───────────┬─────────┬────────
+ # │ processed │ success │ failed
+───┼───────────┼─────────┼────────
+ 0 │         1 │       1 │      0
+───┴───────────┴─────────┴────────
+```
+
+Note: In windows we cannot use the `map` command so we would need to do something like:
+```
+> open mydoc.csv | each { wrap content | insert id {echo $it.content.airportname} } | doc upsert
+───┬───────────┬─────────┬────────
+ # │ processed │ success │ failed
+───┼───────────┼─────────┼────────
+ 0 │         1 │       1 │      0
+───┴───────────┴─────────┴────────
+```
+
+==== Multiple Documents
+```
+> cat airports.csv
+airportname,city,country,faa,geo,icao,id,type,tz
+Calais Dunkerque,Calais,France,CQF,[Row],LFAC,1254,airport,Europe/Paris
+Peronne St Quentin,Peronne,France,,[Row],LFAG,1255,airport,Europe/Paris
+Les Loges,Nangis,France,,[Row],LFAI,1256,airport,Europe/Paris
+Couterne,Bagnole-de-l'orne,France,,[Row],LFAO,1257,airport,Europe/Paris
+Bray,Albert,France,,[Row],LFAQ,1258,airport,Europe/Paris
+
+> open airports.csv | each { map { id: ("airport_" + (.id|tostring)), content: . }  } | doc upsert
+───┬───────────┬─────────┬────────
+ # │ processed │ success │ failed
+───┼───────────┼─────────┼────────
+ 0 │        10 │      10 │      0
+───┴───────────┴─────────┴────────
+```
+
+Note: In windows we cannot use the `map` command so we would need to do something like:
+```
+> open airports.csv | each { wrap content | insert id {echo $it.content.airportname}  } | doc upsert
+───┬───────────┬─────────┬────────
+ # │ processed │ success │ failed
+───┼───────────┼─────────┼────────
+ 0 │         5 │       5 │      0
+───┴───────────┴─────────┴────────
+```
+
+== Faking data
+```
+> cat user.tera
+{
+    "id": "{{ uuid() }}",
+    "content": {
+        "name": "{{ name() }}",
+        "username": "{{ userName() }}",
+        "email": "{{ safeEmail() }}",
+        "last_access": {
+            "from": "{{ ipV4() }}"
+        }
+    }
+}
+
+> fake --template user.tera --num-rows 5
+───┬──────────────────────────────────────┬───────────────────────────────────────
+ # │                  id                  │                content
+───┼──────────────────────────────────────┼───────────────────────────────────────
+ 0 │ 0cabc14a-b9bc-4de9-9caa-6efe23ff350f │ [row email last_access name username]
+ 1 │ 27f44eef-e4f5-4216-b65a-897ef357753d │ [row email last_access name username]
+ 2 │ cc24c8cd-9dc6-4767-a627-e2b55c814c62 │ [row email last_access name username]
+ 3 │ 12ad3953-11cc-43f7-991f-d680d9268357 │ [row email last_access name username]
+ 4 │ 206194fa-7311-4a2f-a5eb-85d182199d8f │ [row email last_access name username]
+───┴──────────────────────────────────────┴───────────────────────────────────────
+
+> fake --template user.tera --num-rows 5 | doc upsert
+───┬───────────┬─────────┬────────
+ # │ processed │ success │ failed
+───┼───────────┼─────────┼────────
+ 0 │         5 │       5 │      0
+───┴───────────┴─────────┴────────
+```
