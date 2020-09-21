@@ -1,0 +1,131 @@
+= Exporting data
+
+Couchbase Shell supports exporting data to a variety of formats and sources.
+
+== A Note On Data format
+
+The `doc get` command exposes data as three fields; `id`, `cas`, and `content`.
+The body of the document is stored within the `content` column.
+If you want to only store the document body then you can use `doc get <id> | get content`.
+
+== To file
+
+=== To JSON
+
+==== From KeyValue
+
+```
+> doc get airport_3719
+───┬──────────────┬─────────────────────┬─────────────────
+ # │      id      │         cas         │     content
+───┼──────────────┼─────────────────────┼─────────────────
+ 0 │ airport_3719 │ 1600335833271238656 │ [row 9 columns]
+───┴──────────────┴─────────────────────┴─────────────────
+
+> doc get airport_3719 | get content | save mydoc.json
+> cat mydoc.json
+{"airportname":"Columbia Rgnl","city":"Columbia","country":"United States","faa":"COU","geo":{"alt":889.0,"lat":38.818094,"lon":-92.219631},"icao":"KCOU","id":3719,"type":"airport","tz":"America/Chicago"}
+```
+
+==== From Query/Analytics
+
+```
+> query "SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5"
+───┬────────────────────┬───────────────────┬─────────┬─────┬───────────────────┬──────┬──────┬─────────┬──────────────
+ # │    airportname     │       city        │ country │ faa │        geo        │ icao │  id  │  type   │      tz
+───┼────────────────────┼───────────────────┼─────────┼─────┼───────────────────┼──────┼──────┼─────────┼──────────────
+ 0 │ Calais Dunkerque   │ Calais            │ France  │ CQF │ [row alt lat lon] │ LFAC │ 1254 │ airport │ Europe/Paris
+ 1 │ Peronne St Quentin │ Peronne           │ France  │     │ [row alt lat lon] │ LFAG │ 1255 │ airport │ Europe/Paris
+ 2 │ Les Loges          │ Nangis            │ France  │     │ [row alt lat lon] │ LFAI │ 1256 │ airport │ Europe/Paris
+ 3 │ Couterne           │ Bagnole-de-l'orne │ France  │     │ [row alt lat lon] │ LFAO │ 1257 │ airport │ Europe/Paris
+ 4 │ Bray               │ Albert            │ France  │     │ [row alt lat lon] │ LFAQ │ 1258 │ airport │ Europe/Paris
+───┴────────────────────┴───────────────────┴─────────┴─────┴───────────────────┴──────┴──────┴─────────┴──────────────
+
+> query "SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5" | save airports.json
+> cat airports.json
+[{"airportname":"Calais Dunkerque","city":"Calais","country":"France","faa":"CQF","geo":{"alt":12,"lat":50.962097,"lon":1.9547640000000002},"icao":"LFAC","id":1254,"type":"airport","tz":"Europe/Paris"},{"airportname":"Peronne St Quentin","city":"Peronne","country":"France","faa":null,"geo":{"alt":295,"lat":49.868547,"lon":3.0295780000000003},"icao":"LFAG","id":1255,"type":"airport","tz":"Europe/Paris"},{"airportname":"Les Loges","city":"Nangis","country":"France","faa":null,"geo":{"alt":428,"lat":48.596219,"lon":3.0067860000000004},"icao":"LFAI","id":1256,"type":"airport","tz":"Europe/Paris"},{"airportname":"Couterne","city":"Bagnole-de-l'orne","country":"France","faa":null,"geo":{"alt":718,"lat":48.545836,"lon":-0.387444},"icao":"LFAO","id":1257,"type":"airport","tz":"Europe/Paris"},{"airportname":"Bray","city":"Albert","country":"France","faa":null,"geo":{"alt":364,"lat":49.971531,"lon":2.697661},"icao":"LFAQ","id":1258,"type":"airport","tz":"Europe/Paris"}]
+```
+
+=== To CSV
+
+==== From KeyValue
+
+```
+> doc get airport_3719
+───┬──────────────┬─────────────────────┬─────────────────
+ # │      id      │         cas         │     content
+───┼──────────────┼─────────────────────┼─────────────────
+ 0 │ airport_3719 │ 1600335833271238656 │ [row 9 columns]
+───┴──────────────┴─────────────────────┴─────────────────
+> doc get airport_3719 | get content
+───┬───────────────┬──────────┬───────────────┬─────┬───────────────────┬──────┬──────┬─────────┬─────────────────
+ # │  airportname  │   city   │    country    │ faa │        geo        │ icao │  id  │  type   │       tz
+───┼───────────────┼──────────┼───────────────┼─────┼───────────────────┼──────┼──────┼─────────┼─────────────────
+ 0 │ Columbia Rgnl │ Columbia │ United States │ COU │ [row alt lat lon] │ KCOU │ 3719 │ airport │ America/Chicago
+───┴───────────────┴──────────┴───────────────┴─────┴───────────────────┴──────┴──────┴─────────┴─────────────────
+```
+
+The `geo` column in the above data contains `row` data.
+This means that we have to flatten out the `geo` column due to limitations of the csv format.
+
+```
+> doc get airport_3719 | get content | insert alt {get geo.alt} | insert lat {get geo.lat} | insert lon {get geo.lon} | reject geo
+───┬───────────────┬──────────┬───────────────┬─────┬──────┬──────┬─────────┬─────────────────┬──────────┬─────────┬──────────
+ # │  airportname  │   city   │    country    │ faa │ icao │  id  │  type   │       tz        │   alt    │   lat   │   lon
+───┼───────────────┼──────────┼───────────────┼─────┼──────┼──────┼─────────┼─────────────────┼──────────┼─────────┼──────────
+ 0 │ Columbia Rgnl │ Columbia │ United States │ COU │ KCOU │ 3719 │ airport │ America/Chicago │ 889.0000 │ 38.8180 │ -92.2196
+───┴───────────────┴──────────┴───────────────┴─────┴──────┴──────┴─────────┴─────────────────┴──────────┴─────────┴──────────
+> doc get airport_3719 | get content | insert alt {get geo.alt} | insert lat {get geo.lat} | insert lon {get geo.lon} | reject geo | save mydoc.csv
+> cat mydoc.csv
+airportname,city,country,faa,icao,id,type,tz,alt,lat,lon
+Columbia Rgnl,Columbia,United States,COU,KCOU,3719,airport,America/Chicago,889.0000000000000,38.81809400000000,-92.21963100000001
+```
+
+==== From Query/Analytics
+
+```
+> query "SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5"
+───┬────────────────────┬───────────────────┬─────────┬─────┬───────────────────┬──────┬──────┬─────────┬──────────────
+ # │    airportname     │       city        │ country │ faa │        geo        │ icao │  id  │  type   │      tz
+───┼────────────────────┼───────────────────┼─────────┼─────┼───────────────────┼──────┼──────┼─────────┼──────────────
+ 0 │ Calais Dunkerque   │ Calais            │ France  │ CQF │ [row alt lat lon] │ LFAC │ 1254 │ airport │ Europe/Paris
+ 1 │ Peronne St Quentin │ Peronne           │ France  │     │ [row alt lat lon] │ LFAG │ 1255 │ airport │ Europe/Paris
+ 2 │ Les Loges          │ Nangis            │ France  │     │ [row alt lat lon] │ LFAI │ 1256 │ airport │ Europe/Paris
+ 3 │ Couterne           │ Bagnole-de-l'orne │ France  │     │ [row alt lat lon] │ LFAO │ 1257 │ airport │ Europe/Paris
+ 4 │ Bray               │ Albert            │ France  │     │ [row alt lat lon] │ LFAQ │ 1258 │ airport │ Europe/Paris
+───┴────────────────────┴───────────────────┴─────────┴─────┴───────────────────┴──────┴──────┴─────────┴──────────────
+```
+
+The `geo` column in the above data contains `row` data.
+This means that we have to flatten out the `geo` column due to limitations of the csv format.
+There are two ways that we can do this.
+
+We can manipulate the data in the shell after performing the query:
+```
+> query "SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5" | insert alt {get geo.alt} | insert lat {get geo.lat} | insert lon {get geo.lon} | reject geo
+───┬────────────────────┬───────────────────┬─────────┬─────┬──────┬──────┬─────────┬──────────────┬─────┬─────────┬─────────
+ # │    airportname     │       city        │ country │ faa │ icao │  id  │  type   │      tz      │ alt │   lat   │   lon
+───┼────────────────────┼───────────────────┼─────────┼─────┼──────┼──────┼─────────┼──────────────┼─────┼─────────┼─────────
+ 0 │ Calais Dunkerque   │ Calais            │ France  │ CQF │ LFAC │ 1254 │ airport │ Europe/Paris │  12 │ 50.9620 │  1.9547
+ 1 │ Peronne St Quentin │ Peronne           │ France  │     │ LFAG │ 1255 │ airport │ Europe/Paris │ 295 │ 49.8685 │  3.0295
+ 2 │ Les Loges          │ Nangis            │ France  │     │ LFAI │ 1256 │ airport │ Europe/Paris │ 428 │ 48.5962 │  3.0067
+ 3 │ Couterne           │ Bagnole-de-l'orne │ France  │     │ LFAO │ 1257 │ airport │ Europe/Paris │ 718 │ 48.5458 │ -0.3874
+ 4 │ Bray               │ Albert            │ France  │     │ LFAQ │ 1258 │ airport │ Europe/Paris │ 364 │ 49.9715 │  2.6976
+───┴────────────────────┴───────────────────┴─────────┴─────┴──────┴──────┴─────────┴──────────────┴─────┴─────────┴─────────
+> query "SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5" | insert alt {get geo.alt} | insert lat {get geo.lat} | insert lon {get geo.lon} | reject geo | save airports.csv
+```
+
+We can also change our query to get the data into the format that we require:
+```
+> query "SELECT airportname, city, country, faa, icao, id, type, tz, geo.alt, geo.lat, geo.lon FROM `travel-sample` WHERE `type` = 'airport' LIMIT 5"
+───┬────────────────────┬─────┬───────────────────┬─────────┬─────┬──────┬──────┬─────────┬─────────┬─────────┬──────────────
+ # │    airportname     │ alt │       city        │ country │ faa │ icao │  id  │   lat   │   lon   │  type   │      tz
+───┼────────────────────┼─────┼───────────────────┼─────────┼─────┼──────┼──────┼─────────┼─────────┼─────────┼──────────────
+ 0 │ Calais Dunkerque   │  12 │ Calais            │ France  │ CQF │ LFAC │ 1254 │ 50.9620 │  1.9547 │ airport │ Europe/Paris
+ 1 │ Peronne St Quentin │ 295 │ Peronne           │ France  │     │ LFAG │ 1255 │ 49.8685 │  3.0295 │ airport │ Europe/Paris
+ 2 │ Les Loges          │ 428 │ Nangis            │ France  │     │ LFAI │ 1256 │ 48.5962 │  3.0067 │ airport │ Europe/Paris
+ 3 │ Couterne           │ 718 │ Bagnole-de-l'orne │ France  │     │ LFAO │ 1257 │ 48.5458 │ -0.3874 │ airport │ Europe/Paris
+ 4 │ Bray               │ 364 │ Albert            │ France  │     │ LFAQ │ 1258 │ 49.9715 │  2.6976 │ airport │ Europe/Paris
+───┴────────────────────┴─────┴───────────────────┴─────────┴─────┴──────┴──────┴─────────┴─────────┴─────────┴──────────────
+> query "SELECT airportname, city, country, faa, icao, id, type, tz, geo.alt, geo.lat, geo.lon FROM `travel-sample` WHERE `type` = 'airport' LIMIT 5" | save airports.csv
+```
