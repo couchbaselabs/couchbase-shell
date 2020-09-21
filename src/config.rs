@@ -155,11 +155,14 @@ impl ClusterCredentials {}
 
 #[derive(Debug, Deserialize, Default)]
 pub struct ClusterTimeouts {
-    #[serde(rename(deserialize = "data-timeout"))]
+    #[serde(default)]
+    #[serde(rename(deserialize = "data-timeout"), with = "humantime_serde")]
     data_timeout: Option<Duration>,
-    #[serde(rename(deserialize = "connect-timeout"))]
+    #[serde(default)]
+    #[serde(rename(deserialize = "connect-timeout"), with = "humantime_serde")]
     connect_timeout: Option<Duration>,
-    #[serde(rename(deserialize = "query-timeout"))]
+    #[serde(default)]
+    #[serde(rename(deserialize = "query-timeout"), with = "humantime_serde")]
     query_timeout: Option<Duration>,
 }
 
