@@ -29,6 +29,7 @@ If you want to only store the document body then you can use `doc get <id> | get
 
 ==== From Query/Analytics
 
+===== To Single Document
 ```
 > query "SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5"
 ───┬────────────────────┬───────────────────┬─────────┬─────┬───────────────────┬──────┬──────┬─────────┬──────────────
@@ -44,6 +45,33 @@ If you want to only store the document body then you can use `doc get <id> | get
 > query "SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5" | save airports.json
 > cat airports.json
 [{"airportname":"Calais Dunkerque","city":"Calais","country":"France","faa":"CQF","geo":{"alt":12,"lat":50.962097,"lon":1.9547640000000002},"icao":"LFAC","id":1254,"type":"airport","tz":"Europe/Paris"},{"airportname":"Peronne St Quentin","city":"Peronne","country":"France","faa":null,"geo":{"alt":295,"lat":49.868547,"lon":3.0295780000000003},"icao":"LFAG","id":1255,"type":"airport","tz":"Europe/Paris"},{"airportname":"Les Loges","city":"Nangis","country":"France","faa":null,"geo":{"alt":428,"lat":48.596219,"lon":3.0067860000000004},"icao":"LFAI","id":1256,"type":"airport","tz":"Europe/Paris"},{"airportname":"Couterne","city":"Bagnole-de-l'orne","country":"France","faa":null,"geo":{"alt":718,"lat":48.545836,"lon":-0.387444},"icao":"LFAO","id":1257,"type":"airport","tz":"Europe/Paris"},{"airportname":"Bray","city":"Albert","country":"France","faa":null,"geo":{"alt":364,"lat":49.971531,"lon":2.697661},"icao":"LFAQ","id":1258,"type":"airport","tz":"Europe/Paris"}]
+```
+
+===== To Multiple Documents
+```
+> query "SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5"
+───┬────────────────────┬───────────────────┬─────────┬─────┬───────────────────┬──────┬──────┬─────────┬──────────────
+ # │    airportname     │       city        │ country │ faa │        geo        │ icao │  id  │  type   │      tz
+───┼────────────────────┼───────────────────┼─────────┼─────┼───────────────────┼──────┼──────┼─────────┼──────────────
+ 0 │ Calais Dunkerque   │ Calais            │ France  │ CQF │ [row alt lat lon] │ LFAC │ 1254 │ airport │ Europe/Paris
+ 1 │ Peronne St Quentin │ Peronne           │ France  │     │ [row alt lat lon] │ LFAG │ 1255 │ airport │ Europe/Paris
+ 2 │ Les Loges          │ Nangis            │ France  │     │ [row alt lat lon] │ LFAI │ 1256 │ airport │ Europe/Paris
+ 3 │ Couterne           │ Bagnole-de-l'orne │ France  │     │ [row alt lat lon] │ LFAO │ 1257 │ airport │ Europe/Paris
+ 4 │ Bray               │ Albert            │ France  │     │ [row alt lat lon] │ LFAQ │ 1258 │ airport │ Europe/Paris
+───┴────────────────────┴───────────────────┴─────────┴─────┴───────────────────┴──────┴──────┴─────────┴──────────────
+
+> query "SELECT `travel-sample`.* FROM `travel-sample` WHERE `type`='airport' LIMIT 5" | each { save $(echo "airport_" $(echo  $it.id | str from) ".json" | str collect) }
+> ls airport*.json
+> ls airport*.json
+───┬───────────────────┬──────┬───────┬─────────────
+ # │       name        │ type │ size  │  modified
+───┼───────────────────┼──────┼───────┼─────────────
+ 0 │ airport_1254.json │ File │ 200 B │ 56 secs ago
+ 1 │ airport_1255.json │ File │ 203 B │ 56 secs ago
+ 2 │ airport_1256.json │ File │ 193 B │ 56 secs ago
+ 3 │ airport_1257.json │ File │ 194 B │ 56 secs ago
+ 4 │ airport_1258.json │ File │ 178 B │ 56 secs ago
+───┴───────────────────┴──────┴───────┴─────────────
 ```
 
 === To CSV
