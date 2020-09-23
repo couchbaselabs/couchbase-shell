@@ -11,9 +11,10 @@ use log::debug;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{
-    MaybeOwned, Primitive, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue,
+    MaybeOwned, Primitive, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Value,
 };
 use nu_source::Tag;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 pub struct DocGet {
@@ -143,10 +144,9 @@ async fn run_get(
                     .map_err(|e| couchbase_error_to_shell_error(e))?;
                 let content_converted = convert_json_value_to_nu_value(&content, Tag::default())?;
                 if flatten {
-                    if let UntaggedValue::Row(d) = content_converted.value {
-                        for (k, v) in d.entries {
-                            collected.insert_value(k, v);
-                        }
+                    let flattened = do_flatten(content_converted.value);
+                    for (k, v) in flattened {
+                        collected.insert_value(k, v);
                     }
                 } else {
                     collected.insert_value("content", content_converted);
@@ -157,4 +157,28 @@ async fn run_get(
         }
     }
     Ok(OutputStream::from(results))
+}
+
+fn do_flatten(val: UntaggedValue) -> HashMap<String, Value> {
+    let mut collected = HashMap::new();
+    match val {
+        UntaggedValue::Row(d) => {
+            for (k, v) in d.entries {
+                match v.value {
+                    UntaggedValue::Row(r) => {
+                        let inner_collected = do_flatten(UntaggedValue::Row(r));
+                        for (k, v) in inner_collected {
+                            collected.insert(k, v);
+                        }
+                    }
+                    _ => {
+                        collected.insert(k, v);
+                    }
+                }
+            }
+        }
+        _ => {}
+    }
+
+    collected
 }
