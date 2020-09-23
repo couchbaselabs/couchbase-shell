@@ -20,6 +20,7 @@ pub fn convert_json_value_to_nu_value(
     tag: impl Into<Tag>,
 ) -> Result<Value, ShellError> {
     let tag = tag.into();
+    let span = tag.span;
 
     let result = match v {
         serde_json::Value::Null => UntaggedValue::Primitive(Primitive::Nothing).into_value(&tag),
@@ -36,7 +37,7 @@ pub fn convert_json_value_to_nu_value(
                 }
             } else {
                 if let Some(nas) = n.as_f64() {
-                    UntaggedValue::decimal(nas).into_value(&tag)
+                    UntaggedValue::decimal_from_float(nas, span).into_value(&tag)
                 } else {
                     return Err(ShellError::untagged_runtime_error(format!(
                         "Could not get value as number {}",

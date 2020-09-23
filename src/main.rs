@@ -98,7 +98,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let mut syncer = nu_cli::EnvironmentSyncer::new();
-    let mut context = nu_cli::create_default_context(&mut syncer, true)?;
+    let mut context = nu_cli::create_default_context(true)?;
     context.add_commands(vec![
         // Performs analytics queries
         nu_cli::whole_stream_command(Analytics::new(state.clone())),
