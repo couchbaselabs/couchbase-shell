@@ -12,3 +12,5 @@ include::intro.adoc[]
 include::commands.adoc[]
 
 include::reference.adoc[]
+
+include::recipes.adoc[]

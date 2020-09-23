@@ -1,18 +1,18 @@
-= Exporting data
+== Exporting data
 
 Couchbase Shell supports exporting data to a variety of formats and sources.
 
-== A Note On Data format
+=== A Note On Data format
 
 The `doc get` command exposes data as three fields; `id`, `cas`, and `content`.
 The body of the document is stored within the `content` column.
 If you want to only store the document body then you can use `doc get <id> | get content`.
 
-== To file
+=== To file
 
-=== To JSON
+==== To JSON
 
-==== From KeyValue
+===== From KeyValue
 
 ```
 > doc get airport_3719
@@ -27,9 +27,9 @@ If you want to only store the document body then you can use `doc get <id> | get
 {"airportname":"Columbia Rgnl","city":"Columbia","country":"United States","faa":"COU","geo":{"alt":889.0,"lat":38.818094,"lon":-92.219631},"icao":"KCOU","id":3719,"type":"airport","tz":"America/Chicago"}
 ```
 
-==== From Query/Analytics
+===== From Query/Analytics
 
-===== To Single Document
+====== To Single Document
 ```
 > query "SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5"
 ───┬────────────────────┬───────────────────┬─────────┬─────┬───────────────────┬──────┬──────┬─────────┬──────────────
@@ -47,7 +47,7 @@ If you want to only store the document body then you can use `doc get <id> | get
 [{"airportname":"Calais Dunkerque","city":"Calais","country":"France","faa":"CQF","geo":{"alt":12,"lat":50.962097,"lon":1.9547640000000002},"icao":"LFAC","id":1254,"type":"airport","tz":"Europe/Paris"},{"airportname":"Peronne St Quentin","city":"Peronne","country":"France","faa":null,"geo":{"alt":295,"lat":49.868547,"lon":3.0295780000000003},"icao":"LFAG","id":1255,"type":"airport","tz":"Europe/Paris"},{"airportname":"Les Loges","city":"Nangis","country":"France","faa":null,"geo":{"alt":428,"lat":48.596219,"lon":3.0067860000000004},"icao":"LFAI","id":1256,"type":"airport","tz":"Europe/Paris"},{"airportname":"Couterne","city":"Bagnole-de-l'orne","country":"France","faa":null,"geo":{"alt":718,"lat":48.545836,"lon":-0.387444},"icao":"LFAO","id":1257,"type":"airport","tz":"Europe/Paris"},{"airportname":"Bray","city":"Albert","country":"France","faa":null,"geo":{"alt":364,"lat":49.971531,"lon":2.697661},"icao":"LFAQ","id":1258,"type":"airport","tz":"Europe/Paris"}]
 ```
 
-===== To Multiple Documents
+====== To Multiple Documents
 ```
 > query "SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5"
 ───┬────────────────────┬───────────────────┬─────────┬─────┬───────────────────┬──────┬──────┬─────────┬──────────────
@@ -74,9 +74,9 @@ If you want to only store the document body then you can use `doc get <id> | get
 ───┴───────────────────┴──────┴───────┴─────────────
 ```
 
-=== To CSV
+==== To CSV
 
-==== From KeyValue
+===== From KeyValue
 
 ```
 > doc get airport_3719
@@ -109,7 +109,7 @@ airportname,city,country,faa,icao,id,type,tz,alt,lat,lon
 Columbia Rgnl,Columbia,United States,COU,KCOU,3719,airport,America/Chicago,889.0000000000000,38.81809400000000,-92.21963100000001
 ```
 
-==== From Query/Analytics
+===== From Query/Analytics
 
 ```
 > query "SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5"
@@ -145,7 +145,7 @@ We can manipulate the data in the shell after performing the query:
 
 We can also change our query to get the data into the format that we require:
 ```
-> query "SELECT airportname, city, country, faa, icao, id, type, tz, geo.alt, geo.lat, geo.lon FROM `travel-sample` WHERE `type` = 'airport' LIMIT 5"
+> query "SELECT airportname, city, country, faa, icao, id, type, tz, geo.alt, geo.lat, geo.lon FROM `travel-sample` WHERE `type` == 'airport' LIMIT 5"
 ───┬────────────────────┬─────┬───────────────────┬─────────┬─────┬──────┬──────┬─────────┬─────────┬─────────┬──────────────
  # │    airportname     │ alt │       city        │ country │ faa │ icao │  id  │   lat   │   lon   │  type   │      tz
 ───┼────────────────────┼─────┼───────────────────┼─────────┼─────┼──────┼──────┼─────────┼─────────┼─────────┼──────────────
@@ -155,5 +155,5 @@ We can also change our query to get the data into the format that we require:
  3 │ Couterne           │ 718 │ Bagnole-de-l'orne │ France  │     │ LFAO │ 1257 │ 48.5458 │ -0.3874 │ airport │ Europe/Paris
  4 │ Bray               │ 364 │ Albert            │ France  │     │ LFAQ │ 1258 │ 49.9715 │  2.6976 │ airport │ Europe/Paris
 ───┴────────────────────┴─────┴───────────────────┴─────────┴─────┴──────┴──────┴─────────┴─────────┴─────────┴──────────────
-> query "SELECT airportname, city, country, faa, icao, id, type, tz, geo.alt, geo.lat, geo.lon FROM `travel-sample` WHERE `type` = 'airport' LIMIT 5" | save airports.csv
+> query "SELECT airportname, city, country, faa, icao, id, type, tz, geo.alt, geo.lat, geo.lon FROM `travel-sample` WHERE `type` == 'airport' LIMIT 5" | save airports.csv
 ```

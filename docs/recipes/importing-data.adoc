@@ -1,8 +1,8 @@
-= Importing data
+== Importing data
 
 Couchbase Shell supports loading data from a variety of formats and sources.
 
-== A Note On Data format
+=== A Note On Data format
 
 The `doc upsert` command requires there to be only two fields/columns for an upsert.
 There can be more than two fields/columns in the data but only two can be used.
@@ -21,11 +21,11 @@ Given the following document format we need to perform some data manipulation to
 ───┴──────────────┴─────────────────
 ```
 
-== From file
+=== From file
 
-=== From JSON
+==== From JSON
 
-==== Single Document
+===== Single Document
 ```
 > cat mydoc.json
 {"id":3719,"cas":1600344369374167040,"type":"airport","airportname":"Columbia Rgnl","city":"Columbia","country":"United States","faa":"COU","icao":"KCOU","tz":"America/Chicago"}
@@ -48,7 +48,7 @@ Note: In windows we cannot use the `map` command so we would need to do somethin
 ───┴───────────┴─────────┴────────
 ```
 
-==== Multiple Documents
+===== Multiple Documents
 ```
 > ls airports
 ───┬────────────────────────────┬──────┬───────┬────────────
@@ -93,9 +93,9 @@ Note: In windows we cannot use the `map` command so we would need to do somethin
 ```
 
 
-=== From CSV
+==== From CSV
 
-==== Single Document
+===== Single Document
 ```
 > cat mydoc.csv
 id,cas,type,airportname,city,country,faa,icao,tz
@@ -119,7 +119,7 @@ Note: In windows we cannot use the `map` command so we would need to do somethin
 ───┴───────────┴─────────┴────────
 ```
 
-==== Multiple Documents
+===== Multiple Documents
 ```
 > cat airports.csv
 airportname,city,country,faa,geo,icao,id,type,tz
@@ -147,7 +147,7 @@ Note: In windows we cannot use the `map` command so we would need to do somethin
 ───┴───────────┴─────────┴────────
 ```
 
-== Faking data
+=== Faking data
 ```
 > cat user.tera
 {

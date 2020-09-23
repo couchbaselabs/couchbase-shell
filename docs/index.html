@@ -469,15 +469,30 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_working_with_clusters">3.3. Working with <code>clusters</code></a></li>
 <li><a href="#_working_with_buckets">3.4. Working with <code>buckets</code></a></li>
 <li><a href="#_listing_nodes">3.5. Listing <code>nodes</code></a></li>
-<li><a href="#_interacting_with_the_data_service">3.6. Interacting with the <code>data</code> service</a></li>
-<li><a href="#_whoami">3.7. <code>whoami</code>?</a></li>
-<li><a href="#_version">3.8. <code>version</code></a></li>
+<li><a href="#_reading_and_writing_documents">3.6. Reading and Writing `doc`uments</a></li>
+<li><a href="#_interacting_with_the_data_service">3.7. Interacting with the <code>data</code> service</a></li>
+<li><a href="#_whoami">3.8. <code>whoami</code>?</a></li>
+<li><a href="#_version">3.9. <code>version</code></a></li>
 </ul>
 </li>
 <li><a href="#_reference">4. Reference</a>
 <ul class="sectlevel2">
 <li><a href="#_config_file_format">4.1. Config File Format</a></li>
 <li><a href="#_credentials_file_format">4.2. Credentials File Format</a></li>
+</ul>
+</li>
+<li><a href="#_recipes">5. Recipes</a></li>
+<li><a href="#_importing_data">6. Importing data</a>
+<ul class="sectlevel2">
+<li><a href="#_a_note_on_data_format">6.1. A Note On Data format</a></li>
+<li><a href="#_from_file">6.2. From file</a></li>
+<li><a href="#_faking_data">6.3. Faking data</a></li>
+</ul>
+</li>
+<li><a href="#_exporting_data">7. Exporting data</a>
+<ul class="sectlevel2">
+<li><a href="#_a_note_on_data_format_2">7.1. A Note On Data format</a></li>
+<li><a href="#_to_file">7.2. To file</a></li>
 </ul>
 </li>
 </ul>
@@ -1056,7 +1071,119 @@ Cazaux,Cazaux,France</code></pre>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_interacting_with_the_data_service">3.6. Interacting with the <code>data</code> service</h3>
+<h3 id="_reading_and_writing_documents">3.6. Reading and Writing `doc`uments</h3>
+<div class="paragraph">
+<p>The fastest way to interact with documents is through the key value service (as long as you know the document ID). All those commands are located as subcommands under the <code>doc</code> namespace.</p>
+</div>
+<div class="sect3">
+<h4 id="_reading">3.6.1. Reading</h4>
+<div class="paragraph">
+<p>You can retrieve a document with <code>doc get</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; doc get airline_10
+─────────┬─────────────────────
+ id      │ airline_10
+ cas     │ 1585811206390153216
+ content │ [row 7 columns]
+─────────┴─────────────────────</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>To distinguish the actual content from the metadata, the content is nested in the <code>content</code> field. If you want to have everything at the toplevel, you can use the <code>--flatten</code> flag:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; doc get airline_10 --flatten
+──────────┬─────────────────────
+ id       │ 10
+ cas      │ 1585811206390153216
+ country  │ United States
+ iata     │ Q5
+ callsign │ MILE-AIR
+ name     │ 40-Mile Air
+ icao     │ MLA
+ type     │ airline
+──────────┴─────────────────────</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>If the document is not found, an empty result is returned.</p>
+</div>
+<div class="paragraph">
+<p>To perform a bulk get operation, the incoming stream can be utilized.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; echo [airline_10 airline_10748 airline_137] | wrap id | doc get
+───┬───────────────┬─────────────────────┬─────────────────
+ # │ id            │ cas                 │ content
+───┼───────────────┼─────────────────────┼─────────────────
+ 0 │ airline_10    │ 1594902508775604224 │ [row 7 columns]
+ 1 │ airline_10748 │ 1594902508776521728 │ [row 7 columns]
+ 2 │ airline_137   │ 1594902508777439232 │ [row 7 columns]
+───┴───────────────┴─────────────────────┴─────────────────</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>If <code>doc get</code> operates on an incoming stream it will extract the document id from the <code>id</code> column. This behavior can be customized through the <code>--id-column</code> flag.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_mutating">3.6.2. Mutating</h4>
+<div class="paragraph">
+<p>Documents can be mutated with <code>doc insert</code>, <code>doc upsert</code> and <code>doc replace</code>.</p>
+</div>
+<div class="paragraph">
+<p>All those three commands take similar arguments. If you only want to mutate a single document, passing in the ID and the content as arguments is the simplest way:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; doc upsert my-doc {&quot;hello&quot;: &quot;world&quot;}
+───────────┬───
+ processed │ 1
+ success   │ 1
+ failed    │ 0
+───────────┴───</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Multiple documents can be mutated through an input stream as well, defaulting to the <code>id</code> and <code>content</code> columns:</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_removing">3.6.3. Removing</h4>
+<div class="paragraph">
+<p>Documents can be removed with <code>doc remove</code>.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; doc remove airline_10
+───────────┬───
+ processed │ 1
+ success   │ 1
+ failed    │ 0
+───────────┴───</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Similar to <code>doc get</code>, if you want to delete more than one document at the same time, provide a stream of ids with an <code>id</code> column:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; echo [airline_10 airline_10748 airline_137] | wrap id | doc remove
+───────────┬───
+ processed │ 3
+ success   │ 2
+ failed    │ 1
+───────────┴───</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_interacting_with_the_data_service">3.7. Interacting with the <code>data</code> service</h3>
 <div class="paragraph">
 <p>Note that the <code>data</code> commands are intended to work directly against the data (Key/Value) service. If you are looking for manipulating doucments, please use the <code>doc</code> commands instead.</p>
 </div>
@@ -1089,7 +1216,7 @@ Cazaux,Cazaux,France</code></pre>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_whoami">3.7. <code>whoami</code>?</h3>
+<h3 id="_whoami">3.8. <code>whoami</code>?</h3>
 <div class="paragraph">
 <p>Sometimes simple commands are helpful when debugging. The <code>whoami</code> command will ask the same question to the active cluster and return various information about the user.</p>
 </div>
@@ -1117,7 +1244,7 @@ Cazaux,Cazaux,France</code></pre>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_version">3.8. <code>version</code></h3>
+<h3 id="_version">3.9. <code>version</code></h3>
 <div class="paragraph">
 <p>The <code>version</code> command lists the version of the couchbase shell.</p>
 </div>
@@ -1174,10 +1301,428 @@ cert-path = &quot;/absolute/path/to/server.cert&quot;</code></pre>
 </div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="_recipes">5. Recipes</h2>
+<div class="sectionbody">
+
+</div>
+</div>
+<div class="sect1">
+<h2 id="_importing_data">6. Importing data</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Couchbase Shell supports loading data from a variety of formats and sources.</p>
+</div>
+<div class="sect2">
+<h3 id="_a_note_on_data_format">6.1. A Note On Data format</h3>
+<div class="paragraph">
+<p>The <code>doc upsert</code> command requires there to be only two fields/columns for an upsert.
+There can be more than two fields/columns in the data but only two can be used.
+By default, these two columns are named <code>id</code> and <code>content</code>, but these can be overridden with <code>--id-column</code> and <code>--content-column</code>.</p>
+</div>
+<div class="paragraph">
+<p>Given the following document format we need to perform some data manipulation to get it into a format which works with <code>doc upsert</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; cat mydoc.json
+{&quot;id&quot;:3719,&quot;cas&quot;:1600344369374167040,&quot;type&quot;:&quot;airport&quot;,&quot;airportname&quot;:&quot;Columbia Rgnl&quot;,&quot;city&quot;:&quot;Columbia&quot;,&quot;country&quot;:&quot;United States&quot;,&quot;faa&quot;:&quot;COU&quot;,&quot;icao&quot;:&quot;KCOU&quot;,&quot;tz&quot;:&quot;America/Chicago&quot;}
+
+&gt; open mydoc.json | map { id: (&quot;airport_&quot; + (.id|tostring)), content: . }
+───┬──────────────┬─────────────────
+ # │      id      │     content
+───┼──────────────┼─────────────────
+ 0 │ airport_3719 │ [row 9 columns]
+───┴──────────────┴─────────────────</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_from_file">6.2. From file</h3>
+<div class="sect3">
+<h4 id="_from_json">6.2.1. From JSON</h4>
+<div class="sect4">
+<h5 id="_single_document">Single Document</h5>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; cat mydoc.json
+{&quot;id&quot;:3719,&quot;cas&quot;:1600344369374167040,&quot;type&quot;:&quot;airport&quot;,&quot;airportname&quot;:&quot;Columbia Rgnl&quot;,&quot;city&quot;:&quot;Columbia&quot;,&quot;country&quot;:&quot;United States&quot;,&quot;faa&quot;:&quot;COU&quot;,&quot;icao&quot;:&quot;KCOU&quot;,&quot;tz&quot;:&quot;America/Chicago&quot;}
+
+&gt; open mydoc.json | map { id: (&quot;airport_&quot; + (.id|tostring)), content: . } | doc upsert
+───┬───────────┬─────────┬────────
+ # │ processed │ success │ failed
+───┼───────────┼─────────┼────────
+ 0 │         1 │       1 │      0
+───┴───────────┴─────────┴────────</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Note: In windows we cannot use the <code>map</code> command so we would need to do something like:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; open mydoc.json | wrap content | insert id {echo $it.content.airportname} | doc upsert
+───┬───────────┬─────────┬────────
+ # │ processed │ success │ failed
+───┼───────────┼─────────┼────────
+ 0 │         1 │       1 │      0
+───┴───────────┴─────────┴────────</code></pre>
+</div>
+</div>
+</div>
+<div class="sect4">
+<h5 id="_multiple_documents">Multiple Documents</h5>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; ls airports
+───┬────────────────────────────┬──────┬───────┬────────────
+ # │            name            │ type │ size  │  modified
+───┼────────────────────────────┼──────┼───────┼────────────
+ 0 │ airports/airport_3719.json │ File │ 151 B │ 2 days ago
+ 1 │ airports/airport_3720.json │ File │ 155 B │ 2 days ago
+ 2 │ airports/airport_3721.json │ File │ 172 B │ 2 days ago
+ 3 │ airports/airport_3722.json │ File │ 161 B │ 2 days ago
+ 4 │ airports/airport_3723.json │ File │ 163 B │ 2 days ago
+ 5 │ airports/airport_3724.json │ File │ 156 B │ 2 days ago
+ 6 │ airports/airport_3725.json │ File │ 148 B │ 2 days ago
+ 7 │ airports/airport_3726.json │ File │ 164 B │ 2 days ago
+ 8 │ airports/airport_3727.json │ File │ 169 B │ 2 days ago
+ 9 │ airports/airport_3728.json │ File │ 152 B │ 2 days ago
+───┴────────────────────────────┴──────┴───────┴────────────
+
+&gt; open airports/airport_3719.json
+───┬──────┬─────────┬─────────────┬──────────┬─────────┬─────┬──────┬──────────────
+ # │  id  │  type   │ airportname │   city   │ country │ faa │ icao │      tz
+───┼──────┼─────────┼─────────────┼──────────┼─────────┼─────┼──────┼──────────────
+ 0 │ 3719 │ airport │ Columbia    │ Columbia │ United  │ COU │ KCOU │ America/Chic
+   │      │         │ Rgnl        │          │ States  │     │      │ ago
+───┴──────┴─────────┴─────────────┴──────────┴─────────┴─────┴──────┴──────────────
+
+&gt; ls airports/ | open $it.name | map { id: (&quot;airport_&quot; + (.id|tostring)), content: . } | doc upsert
+───┬───────────┬─────────┬────────
+ # │ processed │ success │ failed
+───┼───────────┼─────────┼────────
+ 0 │        10 │      10 │      0
+───┴───────────┴─────────┴────────</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Note: In windows we cannot use the <code>map</code> command so we would need to do something like:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; ls airports/ | open  $it.name | each { wrap content | insert id {echo $it.content.airportname} } | doc upsert
+───┬───────────┬─────────┬────────
+ # │ processed │ success │ failed
+───┼───────────┼─────────┼────────
+ 0 │        10 │      10 │      0
+───┴───────────┴─────────┴────────</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_from_csv">6.2.2. From CSV</h4>
+<div class="sect4">
+<h5 id="_single_document_2">Single Document</h5>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; cat mydoc.csv
+id,cas,type,airportname,city,country,faa,icao,tz
+3719,1600344369374167040,airport,Columbia Rgnl,Columbia,United States,COU,KCOU,America/Chicago
+
+&gt; open mydoc.csv | each { map { id: (&quot;airport_&quot; + (.id|tostring)), content: . } } | doc upsert
+───┬───────────┬─────────┬────────
+ # │ processed │ success │ failed
+───┼───────────┼─────────┼────────
+ 0 │         1 │       1 │      0
+───┴───────────┴─────────┴────────</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Note: In windows we cannot use the <code>map</code> command so we would need to do something like:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; open mydoc.csv | each { wrap content | insert id {echo $it.content.airportname} } | doc upsert
+───┬───────────┬─────────┬────────
+ # │ processed │ success │ failed
+───┼───────────┼─────────┼────────
+ 0 │         1 │       1 │      0
+───┴───────────┴─────────┴────────</code></pre>
+</div>
+</div>
+</div>
+<div class="sect4">
+<h5 id="_multiple_documents_2">Multiple Documents</h5>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; cat airports.csv
+airportname,city,country,faa,geo,icao,id,type,tz
+Calais Dunkerque,Calais,France,CQF,[Row],LFAC,1254,airport,Europe/Paris
+Peronne St Quentin,Peronne,France,,[Row],LFAG,1255,airport,Europe/Paris
+Les Loges,Nangis,France,,[Row],LFAI,1256,airport,Europe/Paris
+Couterne,Bagnole-de-l'orne,France,,[Row],LFAO,1257,airport,Europe/Paris
+Bray,Albert,France,,[Row],LFAQ,1258,airport,Europe/Paris
+
+&gt; open airports.csv | each { map { id: (&quot;airport_&quot; + (.id|tostring)), content: . }  } | doc upsert
+───┬───────────┬─────────┬────────
+ # │ processed │ success │ failed
+───┼───────────┼─────────┼────────
+ 0 │        10 │      10 │      0
+───┴───────────┴─────────┴────────</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Note: In windows we cannot use the <code>map</code> command so we would need to do something like:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; open airports.csv | each { wrap content | insert id {echo $it.content.airportname}  } | doc upsert
+───┬───────────┬─────────┬────────
+ # │ processed │ success │ failed
+───┼───────────┼─────────┼────────
+ 0 │         5 │       5 │      0
+───┴───────────┴─────────┴────────</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_faking_data">6.3. Faking data</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; cat user.tera
+{
+    &quot;id&quot;: &quot;{{ uuid() }}&quot;,
+    &quot;content&quot;: {
+        &quot;name&quot;: &quot;{{ name() }}&quot;,
+        &quot;username&quot;: &quot;{{ userName() }}&quot;,
+        &quot;email&quot;: &quot;{{ safeEmail() }}&quot;,
+        &quot;last_access&quot;: {
+            &quot;from&quot;: &quot;{{ ipV4() }}&quot;
+        }
+    }
+}
+
+&gt; fake --template user.tera --num-rows 5
+───┬──────────────────────────────────────┬───────────────────────────────────────
+ # │                  id                  │                content
+───┼──────────────────────────────────────┼───────────────────────────────────────
+ 0 │ 0cabc14a-b9bc-4de9-9caa-6efe23ff350f │ [row email last_access name username]
+ 1 │ 27f44eef-e4f5-4216-b65a-897ef357753d │ [row email last_access name username]
+ 2 │ cc24c8cd-9dc6-4767-a627-e2b55c814c62 │ [row email last_access name username]
+ 3 │ 12ad3953-11cc-43f7-991f-d680d9268357 │ [row email last_access name username]
+ 4 │ 206194fa-7311-4a2f-a5eb-85d182199d8f │ [row email last_access name username]
+───┴──────────────────────────────────────┴───────────────────────────────────────
+
+&gt; fake --template user.tera --num-rows 5 | doc upsert
+───┬───────────┬─────────┬────────
+ # │ processed │ success │ failed
+───┼───────────┼─────────┼────────
+ 0 │         5 │       5 │      0
+───┴───────────┴─────────┴────────</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_exporting_data">7. Exporting data</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Couchbase Shell supports exporting data to a variety of formats and sources.</p>
+</div>
+<div class="sect2">
+<h3 id="_a_note_on_data_format_2">7.1. A Note On Data format</h3>
+<div class="paragraph">
+<p>The <code>doc get</code> command exposes data as three fields; <code>id</code>, <code>cas</code>, and <code>content</code>.
+The body of the document is stored within the <code>content</code> column.
+If you want to only store the document body then you can use <code>doc get &lt;id&gt; | get content</code>.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_to_file">7.2. To file</h3>
+<div class="sect3">
+<h4 id="_to_json">7.2.1. To JSON</h4>
+<div class="sect4">
+<h5 id="_from_keyvalue">From KeyValue</h5>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; doc get airport_3719
+───┬──────────────┬─────────────────────┬─────────────────
+ # │      id      │         cas         │     content
+───┼──────────────┼─────────────────────┼─────────────────
+ 0 │ airport_3719 │ 1600335833271238656 │ [row 9 columns]
+───┴──────────────┴─────────────────────┴─────────────────
+
+&gt; doc get airport_3719 | get content | save mydoc.json
+&gt; cat mydoc.json
+{&quot;airportname&quot;:&quot;Columbia Rgnl&quot;,&quot;city&quot;:&quot;Columbia&quot;,&quot;country&quot;:&quot;United States&quot;,&quot;faa&quot;:&quot;COU&quot;,&quot;geo&quot;:{&quot;alt&quot;:889.0,&quot;lat&quot;:38.818094,&quot;lon&quot;:-92.219631},&quot;icao&quot;:&quot;KCOU&quot;,&quot;id&quot;:3719,&quot;type&quot;:&quot;airport&quot;,&quot;tz&quot;:&quot;America/Chicago&quot;}</code></pre>
+</div>
+</div>
+</div>
+<div class="sect4">
+<h5 id="_from_queryanalytics">From Query/Analytics</h5>
+<div class="sect5">
+<h6 id="_to_single_document">To Single Document</h6>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; query &quot;SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5&quot;
+───┬────────────────────┬───────────────────┬─────────┬─────┬───────────────────┬──────┬──────┬─────────┬──────────────
+ # │    airportname     │       city        │ country │ faa │        geo        │ icao │  id  │  type   │      tz
+───┼────────────────────┼───────────────────┼─────────┼─────┼───────────────────┼──────┼──────┼─────────┼──────────────
+ 0 │ Calais Dunkerque   │ Calais            │ France  │ CQF │ [row alt lat lon] │ LFAC │ 1254 │ airport │ Europe/Paris
+ 1 │ Peronne St Quentin │ Peronne           │ France  │     │ [row alt lat lon] │ LFAG │ 1255 │ airport │ Europe/Paris
+ 2 │ Les Loges          │ Nangis            │ France  │     │ [row alt lat lon] │ LFAI │ 1256 │ airport │ Europe/Paris
+ 3 │ Couterne           │ Bagnole-de-l'orne │ France  │     │ [row alt lat lon] │ LFAO │ 1257 │ airport │ Europe/Paris
+ 4 │ Bray               │ Albert            │ France  │     │ [row alt lat lon] │ LFAQ │ 1258 │ airport │ Europe/Paris
+───┴────────────────────┴───────────────────┴─────────┴─────┴───────────────────┴──────┴──────┴─────────┴──────────────
+
+&gt; query &quot;SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5&quot; | save airports.json
+&gt; cat airports.json
+[{&quot;airportname&quot;:&quot;Calais Dunkerque&quot;,&quot;city&quot;:&quot;Calais&quot;,&quot;country&quot;:&quot;France&quot;,&quot;faa&quot;:&quot;CQF&quot;,&quot;geo&quot;:{&quot;alt&quot;:12,&quot;lat&quot;:50.962097,&quot;lon&quot;:1.9547640000000002},&quot;icao&quot;:&quot;LFAC&quot;,&quot;id&quot;:1254,&quot;type&quot;:&quot;airport&quot;,&quot;tz&quot;:&quot;Europe/Paris&quot;},{&quot;airportname&quot;:&quot;Peronne St Quentin&quot;,&quot;city&quot;:&quot;Peronne&quot;,&quot;country&quot;:&quot;France&quot;,&quot;faa&quot;:null,&quot;geo&quot;:{&quot;alt&quot;:295,&quot;lat&quot;:49.868547,&quot;lon&quot;:3.0295780000000003},&quot;icao&quot;:&quot;LFAG&quot;,&quot;id&quot;:1255,&quot;type&quot;:&quot;airport&quot;,&quot;tz&quot;:&quot;Europe/Paris&quot;},{&quot;airportname&quot;:&quot;Les Loges&quot;,&quot;city&quot;:&quot;Nangis&quot;,&quot;country&quot;:&quot;France&quot;,&quot;faa&quot;:null,&quot;geo&quot;:{&quot;alt&quot;:428,&quot;lat&quot;:48.596219,&quot;lon&quot;:3.0067860000000004},&quot;icao&quot;:&quot;LFAI&quot;,&quot;id&quot;:1256,&quot;type&quot;:&quot;airport&quot;,&quot;tz&quot;:&quot;Europe/Paris&quot;},{&quot;airportname&quot;:&quot;Couterne&quot;,&quot;city&quot;:&quot;Bagnole-de-l'orne&quot;,&quot;country&quot;:&quot;France&quot;,&quot;faa&quot;:null,&quot;geo&quot;:{&quot;alt&quot;:718,&quot;lat&quot;:48.545836,&quot;lon&quot;:-0.387444},&quot;icao&quot;:&quot;LFAO&quot;,&quot;id&quot;:1257,&quot;type&quot;:&quot;airport&quot;,&quot;tz&quot;:&quot;Europe/Paris&quot;},{&quot;airportname&quot;:&quot;Bray&quot;,&quot;city&quot;:&quot;Albert&quot;,&quot;country&quot;:&quot;France&quot;,&quot;faa&quot;:null,&quot;geo&quot;:{&quot;alt&quot;:364,&quot;lat&quot;:49.971531,&quot;lon&quot;:2.697661},&quot;icao&quot;:&quot;LFAQ&quot;,&quot;id&quot;:1258,&quot;type&quot;:&quot;airport&quot;,&quot;tz&quot;:&quot;Europe/Paris&quot;}]</code></pre>
+</div>
+</div>
+</div>
+<div class="sect5">
+<h6 id="_to_multiple_documents">To Multiple Documents</h6>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; query &quot;SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5&quot;
+───┬────────────────────┬───────────────────┬─────────┬─────┬───────────────────┬──────┬──────┬─────────┬──────────────
+ # │    airportname     │       city        │ country │ faa │        geo        │ icao │  id  │  type   │      tz
+───┼────────────────────┼───────────────────┼─────────┼─────┼───────────────────┼──────┼──────┼─────────┼──────────────
+ 0 │ Calais Dunkerque   │ Calais            │ France  │ CQF │ [row alt lat lon] │ LFAC │ 1254 │ airport │ Europe/Paris
+ 1 │ Peronne St Quentin │ Peronne           │ France  │     │ [row alt lat lon] │ LFAG │ 1255 │ airport │ Europe/Paris
+ 2 │ Les Loges          │ Nangis            │ France  │     │ [row alt lat lon] │ LFAI │ 1256 │ airport │ Europe/Paris
+ 3 │ Couterne           │ Bagnole-de-l'orne │ France  │     │ [row alt lat lon] │ LFAO │ 1257 │ airport │ Europe/Paris
+ 4 │ Bray               │ Albert            │ France  │     │ [row alt lat lon] │ LFAQ │ 1258 │ airport │ Europe/Paris
+───┴────────────────────┴───────────────────┴─────────┴─────┴───────────────────┴──────┴──────┴─────────┴──────────────
+
+&gt; query &quot;SELECT `travel-sample`.* FROM `travel-sample` WHERE `type`='airport' LIMIT 5&quot; | each { save $(echo &quot;airport_&quot; $(echo  $it.id | str from) &quot;.json&quot; | str collect) }
+&gt; ls airport*.json
+&gt; ls airport*.json
+───┬───────────────────┬──────┬───────┬─────────────
+ # │       name        │ type │ size  │  modified
+───┼───────────────────┼──────┼───────┼─────────────
+ 0 │ airport_1254.json │ File │ 200 B │ 56 secs ago
+ 1 │ airport_1255.json │ File │ 203 B │ 56 secs ago
+ 2 │ airport_1256.json │ File │ 193 B │ 56 secs ago
+ 3 │ airport_1257.json │ File │ 194 B │ 56 secs ago
+ 4 │ airport_1258.json │ File │ 178 B │ 56 secs ago
+───┴───────────────────┴──────┴───────┴─────────────</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_to_csv">7.2.2. To CSV</h4>
+<div class="sect4">
+<h5 id="_from_keyvalue_2">From KeyValue</h5>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; doc get airport_3719
+───┬──────────────┬─────────────────────┬─────────────────
+ # │      id      │         cas         │     content
+───┼──────────────┼─────────────────────┼─────────────────
+ 0 │ airport_3719 │ 1600335833271238656 │ [row 9 columns]
+───┴──────────────┴─────────────────────┴─────────────────
+&gt; doc get airport_3719 | get content
+───┬───────────────┬──────────┬───────────────┬─────┬───────────────────┬──────┬──────┬─────────┬─────────────────
+ # │  airportname  │   city   │    country    │ faa │        geo        │ icao │  id  │  type   │       tz
+───┼───────────────┼──────────┼───────────────┼─────┼───────────────────┼──────┼──────┼─────────┼─────────────────
+ 0 │ Columbia Rgnl │ Columbia │ United States │ COU │ [row alt lat lon] │ KCOU │ 3719 │ airport │ America/Chicago
+───┴───────────────┴──────────┴───────────────┴─────┴───────────────────┴──────┴──────┴─────────┴─────────────────</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>geo</code> column in the above data contains <code>row</code> data.
+This means that we have to flatten out the <code>geo</code> column due to limitations of the csv format.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; doc get airport_3719 | get content | insert alt {get geo.alt} | insert lat {get geo.lat} | insert lon {get geo.lon} | reject geo
+───┬───────────────┬──────────┬───────────────┬─────┬──────┬──────┬─────────┬─────────────────┬──────────┬─────────┬──────────
+ # │  airportname  │   city   │    country    │ faa │ icao │  id  │  type   │       tz        │   alt    │   lat   │   lon
+───┼───────────────┼──────────┼───────────────┼─────┼──────┼──────┼─────────┼─────────────────┼──────────┼─────────┼──────────
+ 0 │ Columbia Rgnl │ Columbia │ United States │ COU │ KCOU │ 3719 │ airport │ America/Chicago │ 889.0000 │ 38.8180 │ -92.2196
+───┴───────────────┴──────────┴───────────────┴─────┴──────┴──────┴─────────┴─────────────────┴──────────┴─────────┴──────────
+&gt; doc get airport_3719 | get content | insert alt {get geo.alt} | insert lat {get geo.lat} | insert lon {get geo.lon} | reject geo | save mydoc.csv
+&gt; cat mydoc.csv
+airportname,city,country,faa,icao,id,type,tz,alt,lat,lon
+Columbia Rgnl,Columbia,United States,COU,KCOU,3719,airport,America/Chicago,889.0000000000000,38.81809400000000,-92.21963100000001</code></pre>
+</div>
+</div>
+</div>
+<div class="sect4">
+<h5 id="_from_queryanalytics_2">From Query/Analytics</h5>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; query &quot;SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5&quot;
+───┬────────────────────┬───────────────────┬─────────┬─────┬───────────────────┬──────┬──────┬─────────┬──────────────
+ # │    airportname     │       city        │ country │ faa │        geo        │ icao │  id  │  type   │      tz
+───┼────────────────────┼───────────────────┼─────────┼─────┼───────────────────┼──────┼──────┼─────────┼──────────────
+ 0 │ Calais Dunkerque   │ Calais            │ France  │ CQF │ [row alt lat lon] │ LFAC │ 1254 │ airport │ Europe/Paris
+ 1 │ Peronne St Quentin │ Peronne           │ France  │     │ [row alt lat lon] │ LFAG │ 1255 │ airport │ Europe/Paris
+ 2 │ Les Loges          │ Nangis            │ France  │     │ [row alt lat lon] │ LFAI │ 1256 │ airport │ Europe/Paris
+ 3 │ Couterne           │ Bagnole-de-l'orne │ France  │     │ [row alt lat lon] │ LFAO │ 1257 │ airport │ Europe/Paris
+ 4 │ Bray               │ Albert            │ France  │     │ [row alt lat lon] │ LFAQ │ 1258 │ airport │ Europe/Paris
+───┴────────────────────┴───────────────────┴─────────┴─────┴───────────────────┴──────┴──────┴─────────┴──────────────</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>geo</code> column in the above data contains <code>row</code> data.
+This means that we have to flatten out the <code>geo</code> column due to limitations of the csv format.
+There are two ways that we can do this.</p>
+</div>
+<div class="paragraph">
+<p>We can manipulate the data in the shell after performing the query:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; query &quot;SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5&quot; | insert alt {get geo.alt} | insert lat {get geo.lat} | insert lon {get geo.lon} | reject geo
+───┬────────────────────┬───────────────────┬─────────┬─────┬──────┬──────┬─────────┬──────────────┬─────┬─────────┬─────────
+ # │    airportname     │       city        │ country │ faa │ icao │  id  │  type   │      tz      │ alt │   lat   │   lon
+───┼────────────────────┼───────────────────┼─────────┼─────┼──────┼──────┼─────────┼──────────────┼─────┼─────────┼─────────
+ 0 │ Calais Dunkerque   │ Calais            │ France  │ CQF │ LFAC │ 1254 │ airport │ Europe/Paris │  12 │ 50.9620 │  1.9547
+ 1 │ Peronne St Quentin │ Peronne           │ France  │     │ LFAG │ 1255 │ airport │ Europe/Paris │ 295 │ 49.8685 │  3.0295
+ 2 │ Les Loges          │ Nangis            │ France  │     │ LFAI │ 1256 │ airport │ Europe/Paris │ 428 │ 48.5962 │  3.0067
+ 3 │ Couterne           │ Bagnole-de-l'orne │ France  │     │ LFAO │ 1257 │ airport │ Europe/Paris │ 718 │ 48.5458 │ -0.3874
+ 4 │ Bray               │ Albert            │ France  │     │ LFAQ │ 1258 │ airport │ Europe/Paris │ 364 │ 49.9715 │  2.6976
+───┴────────────────────┴───────────────────┴─────────┴─────┴──────┴──────┴─────────┴──────────────┴─────┴─────────┴─────────
+&gt; query &quot;SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5&quot; | insert alt {get geo.alt} | insert lat {get geo.lat} | insert lon {get geo.lon} | reject geo | save airports.csv</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>We can also change our query to get the data into the format that we require:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; query &quot;SELECT airportname, city, country, faa, icao, id, type, tz, geo.alt, geo.lat, geo.lon FROM `travel-sample` WHERE `type` == 'airport' LIMIT 5&quot;
+───┬────────────────────┬─────┬───────────────────┬─────────┬─────┬──────┬──────┬─────────┬─────────┬─────────┬──────────────
+ # │    airportname     │ alt │       city        │ country │ faa │ icao │  id  │   lat   │   lon   │  type   │      tz
+───┼────────────────────┼─────┼───────────────────┼─────────┼─────┼──────┼──────┼─────────┼─────────┼─────────┼──────────────
+ 0 │ Calais Dunkerque   │  12 │ Calais            │ France  │ CQF │ LFAC │ 1254 │ 50.9620 │  1.9547 │ airport │ Europe/Paris
+ 1 │ Peronne St Quentin │ 295 │ Peronne           │ France  │     │ LFAG │ 1255 │ 49.8685 │  3.0295 │ airport │ Europe/Paris
+ 2 │ Les Loges          │ 428 │ Nangis            │ France  │     │ LFAI │ 1256 │ 48.5962 │  3.0067 │ airport │ Europe/Paris
+ 3 │ Couterne           │ 718 │ Bagnole-de-l'orne │ France  │     │ LFAO │ 1257 │ 48.5458 │ -0.3874 │ airport │ Europe/Paris
+ 4 │ Bray               │ 364 │ Albert            │ France  │     │ LFAQ │ 1258 │ 49.9715 │  2.6976 │ airport │ Europe/Paris
+───┴────────────────────┴─────┴───────────────────┴─────────┴─────┴──────┴──────┴─────────┴─────────┴─────────┴──────────────
+&gt; query &quot;SELECT airportname, city, country, faa, icao, id, type, tz, geo.alt, geo.lat, geo.lon FROM `travel-sample` WHERE `type` == 'airport' LIMIT 5&quot; | save airports.csv</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2020-07-15 13:18:04 +0200
+Last updated 2020-09-23 09:51:10 +0100
 </div>
 </div>
 <style>
