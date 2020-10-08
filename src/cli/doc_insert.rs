@@ -2,6 +2,7 @@
 
 use super::util::convert_nu_value_to_json_value;
 
+use crate::cli::util::run_interruptable;
 use crate::state::State;
 use async_trait::async_trait;
 use couchbase::InsertOptions;
@@ -78,6 +79,7 @@ async fn run_insert(
     registry: &CommandRegistry,
 ) -> Result<OutputStream, ShellError> {
     let args = args.evaluate_once(registry).await?;
+    let ctrl_c = args.ctrl_c.clone();
 
     let id_column = args
         .get("id-column")
@@ -151,12 +153,14 @@ async fn run_insert(
         .chain(futures::stream::iter(input_args))
         .map(move |(id, content)| {
             let collection = collection.clone();
+            let ctrl_c_clone = ctrl_c.clone();
             async move {
                 let mut options = InsertOptions::default();
                 if let Some(e) = expiry {
                     options = options.expiry(e);
                 }
-                collection.insert(id, content, options).await
+                let insert = collection.insert(id, content, options);
+                run_interruptable(insert, ctrl_c_clone.clone()).await
             }
         })
         .buffer_unordered(1000)

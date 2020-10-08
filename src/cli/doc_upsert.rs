@@ -5,6 +5,7 @@ use super::util::convert_nu_value_to_json_value;
 use crate::state::State;
 use couchbase::UpsertOptions;
 
+use crate::cli::util::run_interruptable;
 use async_trait::async_trait;
 use futures::{FutureExt, StreamExt};
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
@@ -79,6 +80,7 @@ async fn run_upsert(
     registry: &CommandRegistry,
 ) -> Result<OutputStream, ShellError> {
     let args = args.evaluate_once(registry).await?;
+    let ctrl_c = args.ctrl_c.clone();
 
     let id_column = args
         .get("id-column")
@@ -152,12 +154,15 @@ async fn run_upsert(
         .chain(futures::stream::iter(input_args))
         .map(move |(id, content)| {
             let collection = collection.clone();
+            let ctrl_c_clone = ctrl_c.clone();
             async move {
                 let mut options = UpsertOptions::default();
                 if let Some(e) = expiry {
                     options = options.expiry(e);
                 }
-                collection.upsert(id, content, options).await
+
+                let upsert = collection.upsert(id, content, options);
+                run_interruptable(upsert, ctrl_c_clone.clone()).await
             }
         })
         .buffer_unordered(1000)

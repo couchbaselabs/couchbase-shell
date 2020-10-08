@@ -1,6 +1,7 @@
+use super::ctrlc_future::CtrlcFuture;
 use crate::state::State;
-use couchbase::CouchbaseError;
-use futures::{Stream, StreamExt};
+use couchbase::{CouchbaseError, CouchbaseResult};
+use futures::{future::FutureExt, pin_mut, select, Stream, StreamExt};
 use nu_cli::{InterruptibleStream, OutputStream, ToPrimitive};
 use nu_errors::ShellError;
 use nu_protocol::{
@@ -8,6 +9,7 @@ use nu_protocol::{
 };
 use nu_source::Tag;
 use regex::Regex;
+use std::future::Future;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
@@ -216,4 +218,32 @@ pub fn convert_couchbase_rows_json_to_nu_stream(
         Err(e) => Err(ShellError::untagged_runtime_error(format!("{}", e))),
     });
     Ok(OutputStream::new(InterruptibleStream::new(stream, ctrl_c)))
+}
+
+pub async fn run_interruptable<T>(
+    f: impl Future<Output = CouchbaseResult<T>>,
+    interrupt: Arc<AtomicBool>,
+) -> Result<T, ShellError> {
+    let f_fused = f.fuse();
+    let ctrl_c_fut = CtrlcFuture::new(interrupt.clone()).fuse();
+
+    pin_mut!(f_fused, ctrl_c_fut);
+
+    let res = select! {
+        g = f_fused => {
+            drop(ctrl_c_fut);
+            match g {
+                Ok(r) => Ok(r),
+                Err(e) => Err(couchbase_error_to_shell_error(e))
+            }
+        },
+        c = ctrl_c_fut => {
+            drop(f_fused);
+            return Err(ShellError::untagged_runtime_error(format!(
+                "Cancelled"
+            )));
+        }
+    };
+
+    res
 }

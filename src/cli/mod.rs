@@ -6,6 +6,7 @@ mod buckets;
 mod buckets_config;
 mod clusters;
 mod clusters_health;
+mod ctrlc_future;
 mod data;
 mod data_stats;
 mod doc;

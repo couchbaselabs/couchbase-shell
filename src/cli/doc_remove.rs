@@ -3,6 +3,7 @@
 use crate::state::State;
 use couchbase::RemoveOptions;
 
+use crate::cli::util::run_interruptable;
 use async_trait::async_trait;
 use futures::stream::StreamExt;
 use futures::FutureExt;
@@ -64,6 +65,7 @@ async fn run_get(
     registry: &CommandRegistry,
 ) -> Result<OutputStream, ShellError> {
     let args = args.evaluate_once(registry).await?;
+    let ctrl_c = args.ctrl_c.clone();
 
     let id_column = args
         .get("id-column")
@@ -110,7 +112,11 @@ async fn run_get(
         .chain(futures::stream::iter(input_args))
         .map(move |id| {
             let collection = collection.clone();
-            async move { collection.remove(id, RemoveOptions::default()).await }
+            let ctrl_c_clone = ctrl_c.clone();
+            async move {
+                let remove = collection.remove(id, RemoveOptions::default());
+                run_interruptable(remove, ctrl_c_clone.clone()).await
+            }
         })
         .buffer_unordered(1000)
         .fold((0, 0), |(mut success, mut failed), res| async move {

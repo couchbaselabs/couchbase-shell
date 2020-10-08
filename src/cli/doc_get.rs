@@ -4,6 +4,7 @@ use super::util::{convert_json_value_to_nu_value, couchbase_error_to_shell_error
 use crate::state::State;
 use couchbase::GetOptions;
 
+use crate::cli::util::run_interruptable;
 use async_trait::async_trait;
 use futures::stream::StreamExt;
 use log::debug;
@@ -72,6 +73,7 @@ async fn run_get(
     registry: &CommandRegistry,
 ) -> Result<OutputStream, ShellError> {
     let mut args = args.evaluate_once(registry).await?;
+    let ctrl_c = args.ctrl_c.clone();
 
     let id_column = args
         .get("id-column")
@@ -128,11 +130,13 @@ async fn run_get(
 
     let mut results = vec![];
     for id in ids {
-        match collection.get(&id, GetOptions::default()).await {
+        let get = collection.get(&id, GetOptions::default());
+
+        match run_interruptable(get, ctrl_c.clone()).await {
             Ok(res) => {
                 let tag = Tag::default();
                 let mut collected = TaggedDictBuilder::new(&tag);
-                collected.insert_value(&id_column, id);
+                collected.insert_value(&id_column, id.clone());
                 collected.insert_value("cas", UntaggedValue::int(res.cas()).into_untagged_value());
                 let content = res
                     .content::<serde_json::Value>()
@@ -150,7 +154,7 @@ async fn run_get(
                 results.push(collected.into_value());
             }
             Err(_e) => {}
-        };
+        }
     }
     Ok(OutputStream::from(results))
 }
