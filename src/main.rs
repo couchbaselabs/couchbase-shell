@@ -97,7 +97,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         fetch_and_print_motd().await;
     }
 
-    let mut syncer = nu_cli::EnvironmentSyncer::new();
+    let syncer = nu_cli::EnvironmentSyncer::new();
     let mut context = nu_cli::create_default_context(true)?;
     context.add_commands(vec![
         // Performs analytics queries
