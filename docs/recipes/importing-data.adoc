@@ -122,12 +122,12 @@ Note: In windows we cannot use the `map` command so we would need to do somethin
 ===== Multiple Documents
 ```
 > cat airports.csv
-airportname,city,country,faa,geo,icao,id,type,tz
-Calais Dunkerque,Calais,France,CQF,[Row],LFAC,1254,airport,Europe/Paris
-Peronne St Quentin,Peronne,France,,[Row],LFAG,1255,airport,Europe/Paris
-Les Loges,Nangis,France,,[Row],LFAI,1256,airport,Europe/Paris
-Couterne,Bagnole-de-l'orne,France,,[Row],LFAO,1257,airport,Europe/Paris
-Bray,Albert,France,,[Row],LFAQ,1258,airport,Europe/Paris
+airportname,city,country,faa,icao,id,type,tz
+Calais Dunkerque,Calais,France,CQF,LFAC,1254,airport,Europe/Paris
+Peronne St Quentin,Peronne,France,,LFAG,1255,airport,Europe/Paris
+Les Loges,Nangis,France,,LFAI,1256,airport,Europe/Paris
+Couterne,Bagnole-de-l'orne,France,,LFAO,1257,airport,Europe/Paris
+Bray,Albert,France,,LFAQ,1258,airport,Europe/Paris
 
 > open airports.csv | each { map { id: ("airport_" + (.id|tostring)), content: . }  } | doc upsert
 ───┬───────────┬─────────┬────────
@@ -179,4 +179,52 @@ Note: In windows we cannot use the `map` command so we would need to do somethin
 ───┼───────────┼─────────┼────────
  0 │         5 │       5 │      0
 ───┴───────────┴─────────┴────────
+```
+
+=== Modifying data
+
+In some circumstances you may want to modify the data before you import it.
+Let's take the example of importing from a csv file but this time the airports.csv file is missing the `type` column but we want to add it to our data:
+```
+> cat airports.csv
+airportname,city,country,faa,icao,id,tz
+Calais Dunkerque,Calais,France,CQF,LFAC,1254,Europe/Paris
+Peronne St Quentin,Peronne,France,,LFAG,1255,Europe/Paris
+Les Loges,Nangis,France,,LFAI,1256,Europe/Paris
+Couterne,Bagnole-de-l'orne,France,,LFAO,1257,Europe/Paris
+Bray,Albert,France,,LFAQ,1258,Europe/Paris
+
+> open ~/demo/airports.csv | insert type airport
+───┬─────────────┬──────────────┬─────────┬─────┬──────┬──────┬──────────────┬─────────
+ # │ airportname │     city     │ country │ faa │ icao │  id  │      tz      │  type
+───┼─────────────┼──────────────┼─────────┼─────┼──────┼──────┼──────────────┼─────────
+ 0 │ Calais      │ Calais       │ France  │ CQF │ LFAC │ 1254 │ Europe/Paris │ airport
+   │ Dunkerque   │              │         │     │      │      │              │
+ 1 │ Peronne St  │ Peronne      │ France  │     │ LFAG │ 1255 │ Europe/Paris │ airport
+   │ Quentin     │              │         │     │      │      │              │
+ 2 │ Les Loges   │ Nangis       │ France  │     │ LFAI │ 1256 │ Europe/Paris │ airport
+ 3 │ Couterne    │ Bagnole-de-l │ France  │     │ LFAO │ 1257 │ Europe/Paris │ airport
+   │             │ 'orne        │         │     │      │      │              │
+ 4 │ Bray        │ Albert       │ France  │     │ LFAQ │ 1258 │ Europe/Paris │ airport
+───┴─────────────┴──────────────┴─────────┴─────┴──────┴──────┴──────────────┴─────────
+```
+
+We can also add a column based on data from other columns, for instance adding a `type` column which is set to the relevant country:
+```
+open ~/demo/airports.csv | each { insert type $it.city }
+───┬────────────┬────────────┬─────────┬─────┬──────┬──────┬────────────┬────────────
+ # │ airportnam │    city    │ country │ faa │ icao │  id  │     tz     │    type
+   │     e      │            │         │     │      │      │            │
+───┼────────────┼────────────┼─────────┼─────┼──────┼──────┼────────────┼────────────
+ 0 │ Calais     │ Calais     │ France  │ CQF │ LFAC │ 1254 │ Europe/Par │ Calais
+   │ Dunkerque  │            │         │     │      │      │ is         │
+ 1 │ Peronne St │ Peronne    │ France  │     │ LFAG │ 1255 │ Europe/Par │ Peronne
+   │ Quentin    │            │         │     │      │      │ is         │
+ 2 │ Les Loges  │ Nangis     │ France  │     │ LFAI │ 1256 │ Europe/Par │ Nangis
+   │            │            │         │     │      │      │ is         │
+ 3 │ Couterne   │ Bagnole-de │ France  │     │ LFAO │ 1257 │ Europe/Par │ Bagnole-de
+   │            │ -l'orne    │         │     │      │      │ is         │ -l'orne
+ 4 │ Bray       │ Albert     │ France  │     │ LFAQ │ 1258 │ Europe/Par │ Albert
+   │            │            │         │     │      │      │ is         │
+───┴────────────┴────────────┴─────────┴─────┴──────┴──────┴────────────┴────────────
 ```
