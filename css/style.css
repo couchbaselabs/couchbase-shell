@@ -1,0 +1,72 @@
+/* Custom Stylesheet */
+/**
+ * Use this file to override Materialize files so you can update
+ * the core Materialize files in the future
+ *
+ * Made By MaterializeCSS.com
+ */
+
+.icon-block {
+  padding: 0 15px;
+}
+.icon-block .material-icons {
+	font-size: inherit;
+}
+
+body {
+  background-color: #27282C;
+}
+
+span.uscore {
+  animation: blinker 2s linear infinite;
+}
+
+@keyframes blinker {
+  50% {
+    opacity: 0;
+  }
+}
+
+#logo-container img {
+  height: 35px;
+  margin-top: 15px;
+}
+
+h1, h2, h5 {
+  font-family: 'Inconsolata', Monaco, Consolas, 'Andale Mono', monospace;
+}
+
+
+
+h2 {
+  font-size: 2rem;
+  margin-bottom: 30px;
+}
+
+h5 {
+  font-size: 1.4rem;
+}
+
+.intro-gif {
+  background-color: #fff;
+  padding: 5px; 
+  width: 100%;
+}
+
+nav {
+  background-color: #fff;
+  box-shadow: none;
+  -webkit-box-shadow: none;
+  -moz-box-shadow: none;
+}
+
+ul.features li {
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+}
+
+ul.features span {
+  margin-left: 5px;
+  vertical-align: top;
+  color: #37474f;
+}
