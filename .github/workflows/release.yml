@@ -33,9 +33,9 @@ jobs:
           - build: macos
             os: macos-latest
             rust: stable
-          #- build: windows
-          #  os: windows-latest
-          #  rust: stable
+          - build: windows
+            os: windows-2016
+            rust: stable
 
     steps:
     - uses: actions/checkout@v1
@@ -56,12 +56,36 @@ jobs:
       run: sudo apt-get install libevent-dev libxcb-composite0-dev libx11-dev
     - name: Install dependencies (macos)
       if: matrix.os == 'macos-latest'
-      run: brew install automake
+      run: |
+        brew install automake
+        rm -rf /usr/local/Cellar/openssl
+        ln -sf /usr/local/Cellar/openssl@1.1/1.1.1g /usr/local/opt/openssl
+        ln -sf /usr/local/Cellar/openssl@1.1/1.1.1g/bin/openssl /usr/local/bin/openssl
+
+    - name: Install dependencies - LLVM via choco (windows)
+      shell: powershell
+      run: choco install llvm
+      if: matrix.os == 'windows-2016'
+    - name: Install dependencies - OpenSSL via choco (windows)
+      run: |
+        choco install openssl
+        echo "::set-env name=OPENSSL_DIR::C:\Program Files\OpenSSL-Win64"
+      if: matrix.os == 'windows-2016'
 
     - name: Build
       run: cargo build --verbose --release
       env:
+        VCPKGRS_DYNAMIC: 1
+      if: matrix.os != 'macos-latest'
+
+    - name: Build (macos)
+      run: cargo build --verbose --release
+      env:
         MACOSX_DEPLOYMENT_TARGET: 10.9
+        OPENSSL_ROOT_DIR: /usr/local/opt/openssl
+        OPENSSL_LIB_DIR: /usr/local/opt/openssl/lib
+        OPENSSL_INCLUDE_DIR: /usr/local/opt/openssl/include
+      if: matrix.os == 'macos-latest'
 
     - name: Create artifact directory
       run: mkdir artifacts
@@ -69,10 +93,6 @@ jobs:
     - name: Create archive for Linux
       run: 7z a -ttar -so -an ./target/release/${{ env.RELEASE_BIN }} ${{ env.RELEASE_ADDS }} | 7z a -si ./artifacts/${{ env.RELEASE_BIN }}-linux-x86_64.tar.gz
       if: matrix.os == 'ubuntu-latest'
-
-    - name: Create archive for Windows
-      run: 7z a -tzip ./artifacts/${{ env.RELEASE_BIN }}-windows-x86_64.zip ./target/release/${{ env.RELEASE_BIN }}.exe ${{ env.RELEASE_ADDS }}
-      if: matrix.os == 'windows-latest'
 
     - name: Install p7zip
       # 7Zip not available on MacOS, install p7zip via homebrew.
@@ -82,6 +102,12 @@ jobs:
     - name: Create archive for MacOS
       run: 7z a -tzip ./artifacts/${{ env.RELEASE_BIN }}-mac-x86_64.zip ./target/release/${{ env.RELEASE_BIN }} ${{ env.RELEASE_ADDS }}
       if: matrix.os == 'macos-latest'
+
+    - name: Create archive for Windows
+      run: |
+        choco install 7zip
+        7z a -tzip ./artifacts/${{ env.ARTIFACT_BIN }}-${{ env.SHA8 }}-windows-x86_64.zip ./target/release/${{ env.ARTIFACT_BIN_WINDOWS }} ${{ env.ARTIFACT_ADDS }}
+      if: matrix.os == 'windows-2016'
 
     # This will double-zip
     # See - https://github.com/actions/upload-artifact/issues/39

@@ -118,7 +118,6 @@ jobs:
       run: 7z a -tzip ./artifacts/${{ env.ARTIFACT_BIN }}-${{ env.SHA8 }}-mac-x86_64.zip ./target/debug/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }}
       if: matrix.os == 'macos-latest'
 
-
     - name: Create archive for Windows
       run: |
         choco install 7zip
