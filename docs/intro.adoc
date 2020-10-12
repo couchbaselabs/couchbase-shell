@@ -29,25 +29,26 @@ Commands take inputs and produce output in a structured manner, most often repre
 
 ```
 ❯ buckets
-───┬─────────┬──────────────────────────────────────┬─────────
- # │ cluster │ name                                 │ type
-───┼─────────┼──────────────────────────────────────┼─────────
- 0 │ local   │ beer-sample                          │ membase
- 1 │ local   │ default                              │ membase
- 2 │ local   │ travel-sample                        │ membase
-───┴─────────┴──────────────────────────────────────┴─────────
+───┬─────────┬───────────────┬───────────┬──────────┬────────────────┬─────────────
+ # │ cluster │     name      │   type    │ replicas │ quota_per_node │ quota_total
+───┼─────────┼───────────────┼───────────┼──────────┼────────────────┼─────────────
+ 0 │ default │ beer-sample   │ couchbase │        1 │       104.9 MB │    104.9 MB
+ 1 │ default │ default       │ couchbase │        1 │       104.9 MB │    104.9 MB
+ 2 │ default │ memd          │ memcached │        0 │       104.9 MB │    104.9 MB
+ 3 │ default │ travel-sample │ couchbase │        1 │       104.9 MB │    104.9 MB
+───┴─────────┴───────────────┴───────────┴──────────┴────────────────┴─────────────
 ```
 
 You can pipe the output into other commands, for example if you only want to see buckets that have `sample` in their name you can utilize the `where` command:
 
 ```
 ❯ buckets | where name =~ "sample"
-───┬─────────┬───────────────┬─────────
- # │ cluster │ name          │ type
-───┼─────────┼───────────────┼─────────
- 0 │ local   │ beer-sample   │ membase
- 1 │ local   │ travel-sample │ membase
-───┴─────────┴───────────────┴─────────
+───┬─────────┬───────────────┬───────────┬──────────┬────────────────┬─────────────
+ # │ cluster │     name      │   type    │ replicas │ quota_per_node │ quota_total
+───┼─────────┼───────────────┼───────────┼──────────┼────────────────┼─────────────
+ 0 │ default │ beer-sample   │ couchbase │        1 │       104.9 MB │    104.9 MB
+ 1 │ default │ travel-sample │ couchbase │        1 │       104.9 MB │    104.9 MB
+───┴─────────┴───────────────┴───────────┴──────────┴────────────────┴─────────────
 ```
 
 In a similar fashion you can turn this structured table into other output formats, for example JSON:
@@ -56,14 +57,20 @@ In a similar fashion you can turn this structured table into other output format
 ❯ buckets | where name =~ "sample" | to json --pretty 2
 [
   {
-    "cluster": "local",
+    "cluster": "default",
     "name": "beer-sample",
-    "type": "membase"
+    "type": "couchbase",
+    "replicas": 1,
+    "quota_per_node": 104857600,
+    "quota_total": 104857600
   },
   {
-    "cluster": "local",
+    "cluster": "default",
     "name": "travel-sample",
-    "type": "membase"
+    "type": "couchbase",
+    "replicas": 1,
+    "quota_per_node": 104857600,
+    "quota_total": 104857600
   }
 ]
 ```

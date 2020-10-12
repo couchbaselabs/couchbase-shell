@@ -37,20 +37,21 @@
 <li><a href="#_couchbase_commands">3. Couchbase Commands</a>
 <ul class="sectlevel2">
 <li><a href="#_preface_the_clusters_flag">3.1. Preface: the <code>--clusters</code> flag</a></li>
-<li><a href="#_use_and_the_environment">3.2. <code>use</code> and the Environment</a></li>
-<li><a href="#_working_with_clusters">3.3. Working with <code>clusters</code></a></li>
-<li><a href="#_working_with_buckets">3.4. Working with <code>buckets</code></a></li>
-<li><a href="#_listing_nodes">3.5. Listing <code>nodes</code></a></li>
-<li><a href="#_reading_and_writing_documents">3.6. Reading and Writing `doc`uments</a>
+<li><a href="#_preface_pivot_mode">3.2. Preface: pivot mode</a></li>
+<li><a href="#_use_and_the_environment">3.3. <code>use</code> and the Environment</a></li>
+<li><a href="#_working_with_clusters">3.4. Working with <code>clusters</code></a></li>
+<li><a href="#_working_with_buckets">3.5. Working with <code>buckets</code></a></li>
+<li><a href="#_listing_nodes">3.6. Listing <code>nodes</code></a></li>
+<li><a href="#_reading_and_writing_documents">3.7. Reading and Writing `doc`uments</a>
 <ul class="sectlevel3">
-<li><a href="#_reading">3.6.1. Reading</a></li>
-<li><a href="#_mutating">3.6.2. Mutating</a></li>
-<li><a href="#_removing">3.6.3. Removing</a></li>
+<li><a href="#_reading">3.7.1. Reading</a></li>
+<li><a href="#_mutating">3.7.2. Mutating</a></li>
+<li><a href="#_removing">3.7.3. Removing</a></li>
 </ul>
 </li>
-<li><a href="#_interacting_with_the_data_service">3.7. Interacting with the <code>data</code> service</a></li>
-<li><a href="#_whoami">3.8. <code>whoami</code>?</a></li>
-<li><a href="#_version">3.9. <code>version</code></a></li>
+<li><a href="#_interacting_with_the_data_service">3.8. Interacting with the <code>data</code> service</a></li>
+<li><a href="#_whoami">3.9. <code>whoami</code>?</a></li>
+<li><a href="#_version">3.10. <code>version</code></a></li>
 </ul>
 </li>
 <li><a href="#_reference">4. Reference</a>
@@ -176,7 +177,7 @@ If you are running a recent macOS release (i.e. 10.15.x), you&#8217;ll likely se
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>$ ./cbsh --username Administrator --connstring 127.0.0.1 -p
+<pre class="CodeRay highlight"><code>$ ./cbsh --username Administrator --hostnames 127.0.0.1 -p
 Password:
 Thanks for trying CBSH!
 ~/cbsh-mac-x86_64
@@ -294,13 +295,14 @@ password = &quot;password&quot;
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>❯ buckets
-───┬─────────┬──────────────────────────────────────┬─────────
- # │ cluster │ name                                 │ type
-───┼─────────┼──────────────────────────────────────┼─────────
- 0 │ local   │ beer-sample                          │ membase
- 1 │ local   │ default                              │ membase
- 2 │ local   │ travel-sample                        │ membase
-───┴─────────┴──────────────────────────────────────┴─────────</code></pre>
+───┬─────────┬───────────────┬───────────┬──────────┬────────────────┬─────────────
+ # │ cluster │     name      │   type    │ replicas │ quota_per_node │ quota_total
+───┼─────────┼───────────────┼───────────┼──────────┼────────────────┼─────────────
+ 0 │ default │ beer-sample   │ couchbase │        1 │       104.9 MB │    104.9 MB
+ 1 │ default │ default       │ couchbase │        1 │       104.9 MB │    104.9 MB
+ 2 │ default │ memd          │ memcached │        0 │       104.9 MB │    104.9 MB
+ 3 │ default │ travel-sample │ couchbase │        1 │       104.9 MB │    104.9 MB
+───┴─────────┴───────────────┴───────────┴──────────┴────────────────┴─────────────</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -309,12 +311,12 @@ password = &quot;password&quot;
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>❯ buckets | where name =~ &quot;sample&quot;
-───┬─────────┬───────────────┬─────────
- # │ cluster │ name          │ type
-───┼─────────┼───────────────┼─────────
- 0 │ local   │ beer-sample   │ membase
- 1 │ local   │ travel-sample │ membase
-───┴─────────┴───────────────┴─────────</code></pre>
+───┬─────────┬───────────────┬───────────┬──────────┬────────────────┬─────────────
+ # │ cluster │     name      │   type    │ replicas │ quota_per_node │ quota_total
+───┼─────────┼───────────────┼───────────┼──────────┼────────────────┼─────────────
+ 0 │ default │ beer-sample   │ couchbase │        1 │       104.9 MB │    104.9 MB
+ 1 │ default │ travel-sample │ couchbase │        1 │       104.9 MB │    104.9 MB
+───┴─────────┴───────────────┴───────────┴──────────┴────────────────┴─────────────</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -325,14 +327,20 @@ password = &quot;password&quot;
 <pre class="CodeRay highlight"><code>❯ buckets | where name =~ &quot;sample&quot; | to json --pretty 2
 [
   {
-    &quot;cluster&quot;: &quot;local&quot;,
+    &quot;cluster&quot;: &quot;default&quot;,
     &quot;name&quot;: &quot;beer-sample&quot;,
-    &quot;type&quot;: &quot;membase&quot;
+    &quot;type&quot;: &quot;couchbase&quot;,
+    &quot;replicas&quot;: 1,
+    &quot;quota_per_node&quot;: 104857600,
+    &quot;quota_total&quot;: 104857600
   },
   {
-    &quot;cluster&quot;: &quot;local&quot;,
+    &quot;cluster&quot;: &quot;default&quot;,
     &quot;name&quot;: &quot;travel-sample&quot;,
-    &quot;type&quot;: &quot;membase&quot;
+    &quot;type&quot;: &quot;couchbase&quot;,
+    &quot;replicas&quot;: 1,
+    &quot;quota_per_node&quot;: 104857600,
+    &quot;quota_total&quot;: 104857600
   }
 ]</code></pre>
 </div>
@@ -536,7 +544,65 @@ Cazaux,Cazaux,France</code></pre>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_use_and_the_environment">3.2. <code>use</code> and the Environment</h3>
+<h3 id="_preface_pivot_mode">3.2. Preface: pivot mode</h3>
+<div class="paragraph">
+<p>Sometimes data is easier to see if the table is pivoted so that the columns become rows and rows become columns.
+For example the <code>nodes</code> command detailed below, by default the output will look like:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; nodes
+───┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────
+ # │ cluster │ hostnam │ status  │ service │ version │   os    │ memory_ │ memory_
+   │         │    e    │         │    s    │         │         │  total  │  free
+───┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────
+ 0 │ local   │ 127.0.0 │ healthy │ analyti │ 6.5.1-6 │ x86_64- │ 34.4 GB │  8.4 GB
+   │         │ .1:8091 │         │ cs,even │ 299-ent │ apple-d │         │
+   │         │         │         │ ting,se │ erprise │ arwin17 │         │
+   │         │         │         │ arch,in │         │ .7.0    │         │
+   │         │         │         │ dexing, │         │         │         │
+   │         │         │         │ kv,quer │         │         │         │
+   │         │         │         │ y       │         │         │         │
+───┴─────────┴─────────┴─────────┴─────────┴─────────┴─────────┴─────────┴─────────</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This is easier to see if the table is pivoted to:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; nodes
+──────────────┬─────────────────────────────────────────────
+ cluster      │ local
+ hostname     │ 127.0.0.1:8091
+ status       │ healthy
+ services     │ analytics,eventing,search,indexing,kv,query
+ version      │ 6.5.1-6299-enterprise
+ os           │ x86_64-apple-darwin17.7.0
+ memory_total │ 34.4 GB
+ memory_free  │ 8.4 GB
+──────────────┴─────────────────────────────────────────────</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Nushell offers a couple of ways to set pivoting mode:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>config set pivot_mode off</code> this is the default setting where pivoting is turned off.</p>
+</li>
+<li>
+<p><code>config set pivot_mode auto</code> (<strong>recommended</strong>) will allow Nushell to determine when to apply pivoting (typically when there is only one row in the results).</p>
+</li>
+<li>
+<p><code>config set pivot_mode always</code> will cause tables to always be pivoted.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_use_and_the_environment">3.3. <code>use</code> and the Environment</h3>
 <div class="paragraph">
 <p>While mulitple clusters can be connected at the same time, there is only ever one cluster (at most) active. The same is true for a bucket inside that cluster.</p>
 </div>
@@ -577,7 +643,7 @@ Cazaux,Cazaux,France</code></pre>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_working_with_clusters">3.3. Working with <code>clusters</code></h3>
+<h3 id="_working_with_clusters">3.4. Working with <code>clusters</code></h3>
 <div class="paragraph">
 <p>The <code>clusters</code> command lists all the clusters you specified in your configuration and the shell might be connected to.</p>
 </div>
@@ -594,20 +660,21 @@ Cazaux,Cazaux,France</code></pre>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_working_with_buckets">3.4. Working with <code>buckets</code></h3>
+<h3 id="_working_with_buckets">3.5. Working with <code>buckets</code></h3>
 <div class="paragraph">
 <p>The <code>buckets</code> command lists all the buckets from your active cluster:</p>
 </div>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; buckets
-───┬─────────┬─────────────────────┬─────────
- # │ cluster │ name                │ type
-───┼─────────┼─────────────────────┼─────────
- 0 │ local   │ beer-sample         │ membase
- 1 │ local   │ default             │ membase
- 3 │ local   │ travel-sample       │ membase
-───┴─────────┴─────────────────────┴─────────</code></pre>
+───┬─────────┬───────────────┬───────────┬──────────┬────────────────┬─────────────
+ # │ cluster │     name      │   type    │ replicas │ quota_per_node │ quota_total
+───┼─────────┼───────────────┼───────────┼──────────┼────────────────┼─────────────
+ 0 │ default │ beer-sample   │ couchbase │        1 │       104.9 MB │    104.9 MB
+ 1 │ default │ default       │ couchbase │        1 │       104.9 MB │    104.9 MB
+ 2 │ default │ memd          │ memcached │        0 │       104.9 MB │    104.9 MB
+ 3 │ default │ travel-sample │ couchbase │        1 │       104.9 MB │    104.9 MB
+───┴─────────┴───────────────┴───────────┴──────────┴────────────────┴─────────────</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -647,11 +714,12 @@ Cazaux,Cazaux,France</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>If you are unsure what you would use this for, you probably don&#8217;t need it.</p>
+<p>If you are unsure what you would use this for, you probably don&#8217;t need it.
+If you have pivot mode (detailed above) turned off then this command can produce results that are difficult to read.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_listing_nodes">3.5. Listing <code>nodes</code></h3>
+<h3 id="_listing_nodes">3.6. Listing <code>nodes</code></h3>
 <div class="paragraph">
 <p>The <code>nodes</code> command allows you to list all the nodes of the cluster you are currently connected to.</p>
 </div>
@@ -668,12 +736,12 @@ Cazaux,Cazaux,France</code></pre>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_reading_and_writing_documents">3.6. Reading and Writing `doc`uments</h3>
+<h3 id="_reading_and_writing_documents">3.7. Reading and Writing `doc`uments</h3>
 <div class="paragraph">
 <p>The fastest way to interact with documents is through the key value service (as long as you know the document ID). All those commands are located as subcommands under the <code>doc</code> namespace.</p>
 </div>
 <div class="sect3">
-<h4 id="_reading">3.6.1. Reading</h4>
+<h4 id="_reading">3.7.1. Reading</h4>
 <div class="paragraph">
 <p>You can retrieve a document with <code>doc get</code>:</p>
 </div>
@@ -728,7 +796,7 @@ Cazaux,Cazaux,France</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_mutating">3.6.2. Mutating</h4>
+<h4 id="_mutating">3.7.2. Mutating</h4>
 <div class="paragraph">
 <p>Documents can be mutated with <code>doc insert</code>, <code>doc upsert</code> and <code>doc replace</code>.</p>
 </div>
@@ -750,7 +818,7 @@ Cazaux,Cazaux,France</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_removing">3.6.3. Removing</h4>
+<h4 id="_removing">3.7.3. Removing</h4>
 <div class="paragraph">
 <p>Documents can be removed with <code>doc remove</code>.</p>
 </div>
@@ -780,7 +848,7 @@ Cazaux,Cazaux,France</code></pre>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_interacting_with_the_data_service">3.7. Interacting with the <code>data</code> service</h3>
+<h3 id="_interacting_with_the_data_service">3.8. Interacting with the <code>data</code> service</h3>
 <div class="paragraph">
 <p>Note that the <code>data</code> commands are intended to work directly against the data (Key/Value) service. If you are looking for manipulating doucments, please use the <code>doc</code> commands instead.</p>
 </div>
@@ -813,7 +881,7 @@ Cazaux,Cazaux,France</code></pre>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_whoami">3.8. <code>whoami</code>?</h3>
+<h3 id="_whoami">3.9. <code>whoami</code>?</h3>
 <div class="paragraph">
 <p>Sometimes simple commands are helpful when debugging. The <code>whoami</code> command will ask the same question to the active cluster and return various information about the user.</p>
 </div>
@@ -841,7 +909,7 @@ Cazaux,Cazaux,France</code></pre>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_version">3.9. <code>version</code></h3>
+<h3 id="_version">3.10. <code>version</code></h3>
 <div class="paragraph">
 <p>The <code>version</code> command lists the version of the couchbase shell.</p>
 </div>
@@ -1369,7 +1437,7 @@ There are two ways that we can do this.</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2020-10-12 15:13:29 +0200
+Last updated 2020-10-12 14:22:08 +0100
 </div>
 </div>
 <link rel="stylesheet" href="./coderay-asciidoctor.css">

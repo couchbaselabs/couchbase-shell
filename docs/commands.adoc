@@ -19,6 +19,50 @@ On many commands, you will notice a flag called `--clusters`. This flag allows y
 If you wanted to run a command against all clusters in `prod-us`, you could use `--clusters prod-us.*`. In the background this gets passed to a regex engine, so you can go a little crazy with it if needed.
 
 
+=== Preface: pivot mode
+
+Sometimes data is easier to see if the table is pivoted so that the columns become rows and rows become columns.
+For example the `nodes` command detailed below, by default the output will look like:
+
+```
+> nodes
+───┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────
+ # │ cluster │ hostnam │ status  │ service │ version │   os    │ memory_ │ memory_
+   │         │    e    │         │    s    │         │         │  total  │  free
+───┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────
+ 0 │ local   │ 127.0.0 │ healthy │ analyti │ 6.5.1-6 │ x86_64- │ 34.4 GB │  8.4 GB
+   │         │ .1:8091 │         │ cs,even │ 299-ent │ apple-d │         │
+   │         │         │         │ ting,se │ erprise │ arwin17 │         │
+   │         │         │         │ arch,in │         │ .7.0    │         │
+   │         │         │         │ dexing, │         │         │         │
+   │         │         │         │ kv,quer │         │         │         │
+   │         │         │         │ y       │         │         │         │
+───┴─────────┴─────────┴─────────┴─────────┴─────────┴─────────┴─────────┴─────────
+```
+
+This is easier to see if the table is pivoted to:
+
+```
+> nodes
+──────────────┬─────────────────────────────────────────────
+ cluster      │ local
+ hostname     │ 127.0.0.1:8091
+ status       │ healthy
+ services     │ analytics,eventing,search,indexing,kv,query
+ version      │ 6.5.1-6299-enterprise
+ os           │ x86_64-apple-darwin17.7.0
+ memory_total │ 34.4 GB
+ memory_free  │ 8.4 GB
+──────────────┴─────────────────────────────────────────────
+```
+
+Nushell offers a couple of ways to set pivoting mode:
+
+ * `config set pivot_mode off` this is the default setting where pivoting is turned off.
+ * `config set pivot_mode auto` (*recommended*) will allow Nushell to determine when to apply pivoting (typically when there is only one row in the results).
+ * `config set pivot_mode always` will cause tables to always be pivoted.
+
+
 === `use` and the Environment
 
 While mulitple clusters can be connected at the same time, there is only ever one cluster (at most) active. The same is true for a bucket inside that cluster.
@@ -72,13 +116,14 @@ The `buckets` command lists all the buckets from your active cluster:
 
 ```
 > buckets
-───┬─────────┬─────────────────────┬─────────
- # │ cluster │ name                │ type    
-───┼─────────┼─────────────────────┼─────────
- 0 │ local   │ beer-sample         │ membase 
- 1 │ local   │ default             │ membase 
- 3 │ local   │ travel-sample       │ membase 
-───┴─────────┴─────────────────────┴─────────
+───┬─────────┬───────────────┬───────────┬──────────┬────────────────┬─────────────
+ # │ cluster │     name      │   type    │ replicas │ quota_per_node │ quota_total
+───┼─────────┼───────────────┼───────────┼──────────┼────────────────┼─────────────
+ 0 │ default │ beer-sample   │ couchbase │        1 │       104.9 MB │    104.9 MB
+ 1 │ default │ default       │ couchbase │        1 │       104.9 MB │    104.9 MB
+ 2 │ default │ memd          │ memcached │        0 │       104.9 MB │    104.9 MB
+ 3 │ default │ travel-sample │ couchbase │        1 │       104.9 MB │    104.9 MB
+───┴─────────┴───────────────┴───────────┴──────────┴────────────────┴─────────────
 ```
 
 As an advanced command, it is also possible to get the configuration for a bucket:
@@ -116,6 +161,7 @@ As an advanced command, it is also possible to get the configuration for a bucke
 ```
 
 If you are unsure what you would use this for, you probably don't need it.
+If you have pivot mode (detailed above) turned off then this command can produce results that are difficult to read.
 
 === Listing `nodes`
 

@@ -39,7 +39,7 @@ image::mac-binary-unsigned.png[macOS Warning,600]
 If all you do is launch the shell through `./cbsh` it will try to connect to `localhost` using the `Administrator` username and the `password` password. You can modify this through CLI arguments (see `./cbsh -h` for more information). If `-p` is passed in, you will be prompted to enter a password upon start:
 
 ```
-$ ./cbsh --username Administrator --connstring 127.0.0.1 -p
+$ ./cbsh --username Administrator --hostnames 127.0.0.1 -p
 Password:
 Thanks for trying CBSH!
 ~/cbsh-mac-x86_64
