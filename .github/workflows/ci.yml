@@ -70,7 +70,11 @@ jobs:
       run: sudo apt-get install libevent-dev libxcb-composite0-dev libx11-dev
     - name: Install dependencies (macos)
       if: matrix.os == 'macos-latest'
-      run: brew install automake
+      run: |
+        brew install automake
+        rm -rf /usr/local/Cellar/openssl
+        ln -sf /usr/local/Cellar/openssl@1.1/1.1.1g /usr/local/opt/openssl
+        ln -sf /usr/local/Cellar/openssl@1.1/1.1.1g/bin/openssl /usr/local/bin/openssl
 
     - name: Install dependencies - LLVM via choco (windows)
       shell: powershell
@@ -87,8 +91,16 @@ jobs:
       env:
         MACOSX_DEPLOYMENT_TARGET: 10.9
         VCPKGRS_DYNAMIC: 1
-    - name: Run tests
-      run: cargo test --verbose
+      if: matrix.os != 'macos-latest'
+
+    - name: Build
+      run: cargo build --verbose
+      env:
+        MACOSX_DEPLOYMENT_TARGET: 10.9
+        OPENSSL_ROOT_DIR: /usr/local/opt/openssl
+        OPENSSL_LIB_DIR: /usr/local/opt/openssl/lib
+        OPENSSL_INCLUDE_DIR: /usr/local/opt/openssl/include
+      if: matrix.os == 'macos-latest'
 
     - name: Create artifact directory
       run: mkdir artifacts
