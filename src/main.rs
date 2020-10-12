@@ -183,13 +183,13 @@ impl nu_cli::Prompt for CouchbasePrompt {
 
         if let Some(b) = ac.active_bucket() {
             let bucket_emoji = match b.to_lowercase().as_ref() {
-                "travel-sample" => "🛫",
-                "beer-sample" => "🍺",
-                _ => "🗄",
+                "travel-sample" => "🛫 ",
+                "beer-sample" => "🍺 ",
+                _ => "🗄 ",
             };
 
             format!(
-                "👤{} at 🏠{} in {} {}\n> ",
+                "👤 {} at 🏠 {} in {} {}\n> ",
                 Color::Blue.bold().paint(ac.username()),
                 Color::Yellow.bold().paint(self.state.active()),
                 bucket_emoji,
@@ -197,7 +197,7 @@ impl nu_cli::Prompt for CouchbasePrompt {
             )
         } else {
             format!(
-                "👤{} at 🏠{}\n> ",
+                "👤 {} at 🏠 {}\n> ",
                 Color::Blue.bold().paint(ac.username()),
                 Color::Yellow.bold().paint(self.state.active())
             )
