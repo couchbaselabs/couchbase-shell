@@ -25,7 +25,7 @@ Next, clone the repository and then run `cargo run`. The first time it will take
 
 ```
 $ ./cbsh --help
-The Couchbase Shell 0.2.0
+The Couchbase Shell 0.4.0
 Alternative Shell and UI for Couchbase Server and Cloud
 
 USAGE:
@@ -33,19 +33,20 @@ USAGE:
 
 FLAGS:
     -h, --help        Prints help information
-        --no-motd     
-    -p, --password    
-        --stdin       
-        --ui          
+        --no-motd
+    -p, --password
+        --stdin
+        --ui
     -V, --version     Prints version information
 
 OPTIONS:
-        --bucket <bucket>                   
-        --cluster <cluster>                 
-    -c, --command <command>                 
-        --connstring <connection-string>     [default: couchbase://localhost]
-        --script <script>                   
-    -u, --username <username>                [default: Administrator]
+        --bucket <bucket>
+        --cert-path <cert-path>
+        --cluster <cluster>
+    -c, --command <command>
+        --hostnames <hostnames>     [default: localhost]
+        --script <script>
+    -u, --username <username>       [default: Administrator]
 
 ```
 
@@ -85,7 +86,8 @@ The format of the rc file is `toml`, and the default looks pretty much like this
 
 ```toml
 [clusters.default]
-connstr = "couchbase://127.0.0.1"
+hostnames = ["couchbase://127.0.0.1"]
+default-bucket = "default"
 username = "Administrator"
 password = "password"
 ```
@@ -94,12 +96,14 @@ You can modify it so that it contains all the clusters you need:
 
 ```toml
 [clusters.cluster1]
-connstr = "couchbase://10.143.193.101"
+hostnames = ["couchbase://10.143.193.101"]
+default-bucket = "default"
 username = "user1"
 password = "pw1"
 
 [clusters.cluster2]
-connstr = "couchbase://10.143.193.102"
+hostnames = ["couchbase://10.143.193.102"]
+default-bucket = "default"
 username = "user2"
 password = "pw2"
 ```
