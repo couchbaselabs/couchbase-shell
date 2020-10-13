@@ -40,7 +40,7 @@ fake = { version = "2.2", features = ["chrono"] }
 uuid = { version = "0.8", features = ["v4"] }
 chrono = { version = "0.4.11", features = ["serde"] }
 
-couchbase = { rev = "889821d987307bed0e58d2b53be32383a3853ef1", git = "https://github.com/couchbaselabs/couchbase-rs", features = ["libcouchbase-static", "volatile"] }
+couchbase = { rev = "3a0f8d9d1dcc0521ea6b3a35a3a2bc123e18126b", git = "https://github.com/couchbaselabs/couchbase-rs", features = ["libcouchbase-static", "volatile"] }
 
 [target.'cfg(not(windows))'.dependencies]
 jq-rs = { version = "0.4", features = ["bundled"] }

@@ -14,6 +14,7 @@ All user visible changes to this project will be documented in this file.
  - Added `users roles` subcommand
  - Added `clusters health` subcommand
  - Bumped nushell to 0.20
+ - Added support for memcached buckets
 
 ## 0.3.0 - 2020-07-01
 
