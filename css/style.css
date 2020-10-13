@@ -60,6 +60,11 @@ nav {
   -moz-box-shadow: none;
 }
 
+nav ul a {
+  color: #039be5;
+  font-weight: bold;
+}
+
 ul.features li {
   margin-bottom: 10px;
   font-size: 1.1rem;
