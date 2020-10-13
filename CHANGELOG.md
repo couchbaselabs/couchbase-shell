@@ -2,9 +2,18 @@
 
 All user visible changes to this project will be documented in this file.
 
-## 1.0.0 - In Progress
+## 0.4.0 - 2020-10-13
 
+ - Added Windows support
+ - Added a custom prompt
+ - Some commands can now be interrupted with a `CTRL+C` command
  - Added simple `clusters health` check against a single cluster, two checks
+ - Overall fixes and enhancements
+ - Various Docs enhancements
+ - `doc get --flatten` now works on nested rows as well
+ - Added `users roles` subcommand
+ - Added `clusters health` subcommand
+ - Bumped nushell to 0.20
 
 ## 0.3.0 - 2020-07-01
 
