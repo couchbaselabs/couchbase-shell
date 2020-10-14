@@ -2,7 +2,9 @@
 
 # cbsh - a new couchbase shell!
 
-This project is a work in progress, but we'd love your early feedback!
+cbsh is a modern and fun shell for Couchbase Server and Cloud.
+
+*Note that while the project is maintained by Couchbase, it is not covered under the EE support contract. We are providing community support through this bug tracker.*
 
 # Usage
 
