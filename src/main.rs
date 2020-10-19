@@ -23,6 +23,10 @@ use structopt::StructOpt;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    const DEFAULT_PASSWORD: &str = "password";
+    const DEFAULT_HOSTNAME: &str = "localhost";
+    const DEFAULT_USERNAME: &str = "Administrator";
+
     pretty_env_logger::init();
 
     let opt = CliOptions::from_args();
@@ -34,55 +38,100 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut clusters = HashMap::new();
 
     let password = match opt.password {
-        true => rpassword::read_password_from_tty(Some("Password: ")).unwrap(),
-        false => String::from("password"),
+        true => Some(rpassword::read_password_from_tty(Some("Password: ")).unwrap()),
+        false => None,
     };
 
     let active = if config.clusters().is_empty() {
         let timeouts = ClusterTimeouts::default().export_lcb_args();
+        let hostnames = if let Some(hosts) = opt.hostnames {
+            hosts
+        } else {
+            DEFAULT_HOSTNAME.into()
+        };
         let connstr = if let Some(certpath) = opt.cert_path {
             format!(
                 "couchbases://{}?certpath={}&{}",
-                opt.hostnames, certpath, timeouts,
+                hostnames, certpath, timeouts,
             )
         } else {
-            format!("couchbase://{}?{}", opt.hostnames, timeouts)
+            format!("couchbase://{}?{}", hostnames, timeouts)
         };
-        let cluster = RemoteCluster::new(connstr, opt.username, password, opt.bucket);
+
+        let username = if let Some(user) = opt.username {
+            user
+        } else {
+            DEFAULT_USERNAME.into()
+        };
+
+        let rpassword = if let Some(pass) = password {
+            pass
+        } else {
+            DEFAULT_PASSWORD.into()
+        };
+
+        let cluster = RemoteCluster::new(connstr, username, rpassword, opt.bucket);
         clusters.insert("default".into(), cluster);
         String::from("default")
     } else {
         let mut active = None;
         for (k, v) in config.clusters() {
             let name = k.clone();
+
+            let mut hostnames = v.hostnames().join(",");
+            let mut username = v.username();
+            let mut cpassword = v.password();
+            let mut default_bucket = v.default_bucket();
+
+            if opt.cluster.as_ref().is_some() {
+                if &name == opt.cluster.as_ref().unwrap() {
+                    active = Some(name.clone());
+                    if let Some(hosts) = opt.hostnames.clone() {
+                        hostnames = hosts;
+                    }
+                    if let Some(user) = opt.username.clone() {
+                        username = user;
+                    }
+                    if let Some(pass) = password.clone() {
+                        cpassword = pass;
+                    }
+                    if let Some(bucket) = opt.bucket.clone() {
+                        default_bucket = Some(bucket);
+                    }
+                }
+            } else if active.is_none() {
+                active = Some(k.clone());
+                if let Some(hosts) = opt.hostnames.clone() {
+                    hostnames = hosts;
+                }
+                if let Some(user) = opt.username.clone() {
+                    username = user;
+                }
+                if let Some(pass) = password.clone() {
+                    cpassword = pass;
+                }
+                if let Some(bucket) = opt.bucket.clone() {
+                    default_bucket = Some(bucket);
+                }
+            }
+
             let connstr = if let Some(certpath) = v.cert_path() {
                 format!(
                     "couchbases://{}?certpath={}&{}",
-                    v.hostnames().join(","),
+                    hostnames,
                     certpath,
                     v.timeouts().export_lcb_args()
                 )
             } else {
                 format!(
                     "couchbase://{}?{}",
-                    v.hostnames().join(","),
+                    hostnames,
                     v.timeouts().export_lcb_args()
                 )
             };
-            let cluster = RemoteCluster::new(
-                connstr,
-                v.username().into(),
-                v.password().into(),
-                v.default_bucket(),
-            );
+
+            let cluster = RemoteCluster::new(connstr, username, cpassword, default_bucket);
             clusters.insert(name.clone(), cluster);
-            if opt.cluster.as_ref().is_some() {
-                if &name == opt.cluster.as_ref().unwrap() {
-                    active = Some(name.clone())
-                }
-            } else if active.is_none() {
-                active = Some(k.clone());
-            }
         }
         active.unwrap()
     };
@@ -263,12 +312,12 @@ struct Motd {
     about = "Alternative Shell and UI for Couchbase Server and Cloud"
 )]
 struct CliOptions {
-    #[structopt(long = "hostnames", default_value = "localhost")]
-    hostnames: String,
+    #[structopt(long = "hostnames")]
+    hostnames: Option<String>,
     #[structopt(long = "ui")]
     ui: bool,
-    #[structopt(short = "u", long = "username", default_value = "Administrator")]
-    username: String,
+    #[structopt(short = "u", long = "username")]
+    username: Option<String>,
     #[structopt(short = "p", long = "password")]
     password: bool,
     #[structopt(long = "cluster")]
