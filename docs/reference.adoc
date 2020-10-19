@@ -16,6 +16,9 @@ default-bucket = "travel-sample"
 username = "Administrator"
 password = "password"
 cert-path = "/absolute/path/to/server.cert"
+data-timeout = "2500ms"
+connect-timeout = "7500ms"
+query-timeout = "75s"
 ----
 
 === Credentials File Format
