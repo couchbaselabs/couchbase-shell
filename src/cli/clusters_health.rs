@@ -228,15 +228,21 @@ async fn check_resident_ratio(
         }
     };
     let resp: BucketStats = serde_json::from_slice(payload)?;
-    let ratio = resp.op.samples.active_resident_ratios.last().unwrap();
+    let ratio = match resp.op.samples.active_resident_ratios.last() {
+        Some(r) => *r,
+        None => {
+            println!("Failed to get resident ratios");
+            0
+        }
+    };
 
     collected.insert_value("cluster", identifier.clone());
     collected.insert_value("check", "Resident Ratio Too Low".clone());
     collected.insert_value("bucket", bucket_name.clone());
     collected.insert_value("expected", ">= 10%");
-    collected.insert_value("actual", format!("{}%", *ratio));
+    collected.insert_value("actual", format!("{}%", &ratio));
 
-    let remedy = if *ratio >= 10 {
+    let remedy = if ratio >= 10 {
         "Not needed"
     } else {
         "Should be more than 10%"
