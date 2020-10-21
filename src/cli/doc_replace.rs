@@ -11,6 +11,7 @@ use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{MaybeOwned, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -164,19 +165,35 @@ async fn run_replace(
             }
         })
         .buffer_unordered(1000)
-        .fold((0, 0), |(mut success, mut failed), res| async move {
-            match res {
-                Ok(_) => success += 1,
-                Err(_) => failed += 1,
-            };
-            (success, failed)
-        })
-        .map(|(success, failed)| {
+        .fold(
+            (0, 0, HashSet::new()),
+            |(mut success, mut failed, mut fail_reasons), res| async move {
+                match res {
+                    Ok(_) => success += 1,
+                    Err(e) => {
+                        fail_reasons.insert(e.to_string());
+                        failed += 1;
+                    }
+                };
+                (success, failed, fail_reasons)
+            },
+        )
+        .map(|(success, failed, fail_reasons)| {
             let tag = Tag::default();
             let mut collected = TaggedDictBuilder::new(&tag);
             collected.insert_untagged("processed", UntaggedValue::int(success + failed));
             collected.insert_untagged("success", UntaggedValue::int(success));
             collected.insert_untagged("failed", UntaggedValue::int(failed));
+
+            let reasons = fail_reasons
+                .iter()
+                .map(|v| {
+                    let mut collected_fails = TaggedDictBuilder::new(&tag);
+                    collected_fails.insert_untagged("fail reason", UntaggedValue::string(v));
+                    collected_fails.into()
+                })
+                .collect();
+            collected.insert_untagged("failures", UntaggedValue::Table(reasons));
 
             collected.into_value()
         })
