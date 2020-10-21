@@ -73,8 +73,8 @@ jobs:
       run: |
         brew install automake
         rm -rf /usr/local/Cellar/openssl
-        ln -sf /usr/local/Cellar/openssl@1.1/1.1.1g /usr/local/opt/openssl
-        ln -sf /usr/local/Cellar/openssl@1.1/1.1.1g/bin/openssl /usr/local/bin/openssl
+        ln -sf /usr/local/Cellar/openssl@1.1/1.1.1* /usr/local/opt/openssl
+        ln -sf /usr/local/Cellar/openssl@1.1/1.1.1*/bin/openssl /usr/local/bin/openssl
 
     - name: Install dependencies - LLVM via choco (windows)
       shell: powershell
