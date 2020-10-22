@@ -52,13 +52,7 @@ async fn clusters(
 ) -> Result<OutputStream, ShellError> {
     let args = args.evaluate_once(registry).await?;
 
-    let identifier_arg = args
-        .get("clusters")
-        .map(|id| id.as_string().ok())
-        .flatten()
-        .unwrap_or_else(|| String::from(""));
-
-    let identifiers = cluster_identifiers_from(&state, identifier_arg.as_str())?;
+    let identifiers = cluster_identifiers_from(&state, &args, false)?;
 
     let active = state.active();
     let clusters = state

@@ -57,13 +57,7 @@ async fn whoami(
 ) -> Result<OutputStream, ShellError> {
     let args = args.evaluate_once(registry).await?;
 
-    let identifier_arg = args
-        .get("clusters")
-        .map(|id| id.as_string().ok())
-        .flatten()
-        .unwrap_or_else(|| state.active());
-
-    let cluster_identifiers = cluster_identifiers_from(&state, identifier_arg.as_str())?;
+    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
 
     let mut entries = vec![];
     for identifier in cluster_identifiers {
