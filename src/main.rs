@@ -42,6 +42,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         false => None,
     };
 
+    let mut default_scope: Option<String> = None;
+    let mut default_collection: Option<String> = None;
     let active = if config.clusters().is_empty() {
         let timeouts = ClusterTimeouts::default().export_lcb_args();
         let hostnames = if let Some(hosts) = opt.hostnames {
@@ -70,7 +72,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
             DEFAULT_PASSWORD.into()
         };
 
-        let cluster = RemoteCluster::new(connstr, username, rpassword, opt.bucket);
+        default_scope = opt.scope.clone();
+        default_collection = opt.collection.clone();
+
+        let cluster = RemoteCluster::new(
+            connstr,
+            username,
+            rpassword,
+            opt.bucket,
+            opt.scope,
+            opt.collection,
+        );
         clusters.insert("default".into(), cluster);
         String::from("default")
     } else {
@@ -82,6 +94,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let mut username = v.username();
             let mut cpassword = v.password();
             let mut default_bucket = v.default_bucket();
+            let mut scope = v.default_scope();
+            let mut collection = v.default_collection();
 
             if opt.cluster.as_ref().is_some() {
                 if &name == opt.cluster.as_ref().unwrap() {
@@ -98,6 +112,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     if let Some(bucket) = opt.bucket.clone() {
                         default_bucket = Some(bucket);
                     }
+                    if let Some(s) = opt.scope.clone() {
+                        scope = Some(s);
+                    }
+                    if let Some(c) = opt.collection.clone() {
+                        collection = Some(c);
+                    }
                 }
             } else if active.is_none() {
                 active = Some(k.clone());
@@ -112,6 +132,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 }
                 if let Some(bucket) = opt.bucket.clone() {
                     default_bucket = Some(bucket);
+                }
+                if let Some(s) = opt.scope.clone() {
+                    scope = Some(s);
+                }
+                if let Some(c) = opt.collection.clone() {
+                    collection = Some(c);
                 }
             }
 
@@ -130,13 +156,32 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 )
             };
 
-            let cluster = RemoteCluster::new(connstr, username, cpassword, default_bucket);
+            if default_scope.is_none() && scope.is_some() {
+                default_scope = scope.clone();
+            }
+            if default_collection.is_none() && collection.is_some() {
+                default_collection = collection.clone();
+            }
+
+            let cluster = RemoteCluster::new(
+                connstr,
+                username,
+                cpassword,
+                default_bucket,
+                scope,
+                collection,
+            );
             clusters.insert(name.clone(), cluster);
         }
         active.unwrap()
     };
 
-    let state = Arc::new(State::new(clusters, active));
+    let state = Arc::new(State::new(
+        clusters,
+        active,
+        default_scope,
+        default_collection,
+    ));
 
     if opt.ui {
         tokio::task::spawn(spawn_and_serve(state.clone()));
@@ -181,8 +226,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         nu_cli::whole_stream_command(AnalyticsDataverses::new(state.clone())),
         // Allows to switch clusters, buckets and collections on the fly
         nu_cli::whole_stream_command(UseCmd::new(state.clone())),
-        nu_cli::whole_stream_command(UseCluster::new(state.clone())),
         nu_cli::whole_stream_command(UseBucket::new(state.clone())),
+        nu_cli::whole_stream_command(UseCluster::new(state.clone())),
+        nu_cli::whole_stream_command(UseCollection::new(state.clone())),
+        nu_cli::whole_stream_command(UseScope::new(state.clone())),
         nu_cli::whole_stream_command(Whoami::new(state.clone())),
         nu_cli::whole_stream_command(Version::new()),
         #[cfg(not(target_os = "windows"))]
@@ -324,6 +371,10 @@ struct CliOptions {
     cluster: Option<String>,
     #[structopt(long = "bucket")]
     bucket: Option<String>,
+    #[structopt(long = "scope")]
+    scope: Option<String>,
+    #[structopt(long = "collection")]
+    collection: Option<String>,
     #[structopt(long = "command", short = "c")]
     command: Option<String>,
     #[structopt(long = "script")]

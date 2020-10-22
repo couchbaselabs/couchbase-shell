@@ -6,13 +6,22 @@ use std::sync::Mutex;
 pub struct State {
     active: Mutex<String>,
     clusters: HashMap<String, RemoteCluster>,
+    default_scope: Option<String>,
+    default_collection: Option<String>,
 }
 
 impl State {
-    pub fn new(clusters: HashMap<String, RemoteCluster>, active: String) -> Self {
+    pub fn new(
+        clusters: HashMap<String, RemoteCluster>,
+        active: String,
+        default_scope: Option<String>,
+        default_collection: Option<String>,
+    ) -> Self {
         let state = Self {
             active: Mutex::new(active.clone()),
             clusters,
+            default_scope,
+            default_collection,
         };
         state.set_active(active).unwrap();
         state
@@ -42,6 +51,12 @@ impl State {
         if remote.active_bucket().is_some() {
             let _ = remote.bucket(remote.active_bucket().unwrap().as_str());
         }
+        if let Some(s) = self.default_scope.clone() {
+            let _ = remote.set_active_scope(s);
+        }
+        if let Some(c) = self.default_collection.clone() {
+            let _ = remote.set_active_collection(c);
+        }
 
         for (k, v) in &self.clusters {
             if k != &active {
@@ -68,6 +83,8 @@ pub struct RemoteCluster {
     cluster: Mutex<Option<Arc<Cluster>>>,
     buckets: Mutex<HashMap<String, Arc<Bucket>>>,
     active_bucket: Mutex<Option<String>>,
+    active_scope: Mutex<Option<String>>,
+    active_collection: Mutex<Option<String>>,
 }
 
 impl RemoteCluster {
@@ -76,6 +93,8 @@ impl RemoteCluster {
         username: String,
         password: String,
         active_bucket: Option<String>,
+        active_scope: Option<String>,
+        active_collection: Option<String>,
     ) -> Self {
         Self {
             cluster: Mutex::new(None),
@@ -84,6 +103,8 @@ impl RemoteCluster {
             username,
             password,
             active_bucket: Mutex::new(active_bucket),
+            active_scope: Mutex::new(active_scope),
+            active_collection: Mutex::new(active_collection),
         }
     }
 
@@ -118,6 +139,32 @@ impl RemoteCluster {
 
     pub fn set_active_bucket(&self, name: String) {
         let mut active = self.active_bucket.lock().unwrap();
+        *active = Some(name);
+    }
+
+    pub fn active_scope(&self) -> Option<String> {
+        self.active_scope
+            .lock()
+            .unwrap()
+            .as_ref()
+            .map(|s| s.clone())
+    }
+
+    pub fn set_active_scope(&self, name: String) {
+        let mut active = self.active_scope.lock().unwrap();
+        *active = Some(name);
+    }
+
+    pub fn active_collection(&self) -> Option<String> {
+        self.active_collection
+            .lock()
+            .unwrap()
+            .as_ref()
+            .map(|s| s.clone())
+    }
+
+    pub fn set_active_collection(&self, name: String) {
+        let mut active = self.active_collection.lock().unwrap();
         *active = Some(name);
     }
 

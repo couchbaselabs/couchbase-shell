@@ -4,7 +4,7 @@ use super::util::{convert_json_value_to_nu_value, couchbase_error_to_shell_error
 use crate::state::State;
 use couchbase::GetOptions;
 
-use crate::cli::util::run_interruptable;
+use crate::cli::util::{collection_from_args, run_interruptable};
 use async_trait::async_trait;
 use futures::stream::StreamExt;
 use log::debug;
@@ -53,6 +53,13 @@ impl nu_cli::WholeStreamCommand for DocGet {
                 "If set, flattens the content into the toplevel",
                 None,
             )
+            .named("scope", SyntaxShape::String, "the name of the scope", None)
+            .named(
+                "collection",
+                SyntaxShape::String,
+                "the name of the collection",
+                None,
+            )
     }
 
     fn usage(&self) -> &str {
@@ -82,20 +89,6 @@ async fn run_get(
         .flatten()
         .unwrap_or_else(|| String::from("id"));
 
-    let bucket_name = match args
-        .get("bucket")
-        .map(|bucket| bucket.as_string().ok())
-        .flatten()
-        .or_else(|| state.active_cluster().active_bucket())
-    {
-        Some(v) => v,
-        None => {
-            return Err(ShellError::untagged_runtime_error(format!(
-                "Could not auto-select a bucket - please use --bucket instead"
-            )))
-        }
-    };
-
     let mut ids = vec![];
     while let Some(item) = args.input.next().await {
         let untagged = item.into();
@@ -124,8 +117,12 @@ async fn run_get(
 
     let flatten = args.get("flatten").is_some();
 
-    let bucket = state.active_cluster().bucket(&bucket_name);
-    let collection = bucket.default_collection();
+    let collection = match collection_from_args(&args, &state) {
+        Ok(c) => c,
+        Err(e) => {
+            return Err(e);
+        }
+    };
 
     debug!("Running kv get for docs {:?}", &ids);
 

@@ -112,6 +112,10 @@ pub struct ClusterConfig {
     hostnames: Vec<String>,
     #[serde(rename(deserialize = "default-bucket"))]
     default_bucket: Option<String>,
+    #[serde(rename(deserialize = "default-scope"))]
+    default_scope: Option<String>,
+    #[serde(rename(deserialize = "default-collection"))]
+    default_collection: Option<String>,
 
     #[serde(flatten)]
     credentials: ClusterCredentials,
@@ -134,6 +138,12 @@ impl ClusterConfig {
     }
     pub fn default_bucket(&self) -> Option<String> {
         self.default_bucket.as_ref().map(|s| s.clone())
+    }
+    pub fn default_scope(&self) -> Option<String> {
+        self.default_scope.as_ref().map(|s| s.clone())
+    }
+    pub fn default_collection(&self) -> Option<String> {
+        self.default_collection.as_ref().map(|s| s.clone())
     }
     pub fn credentials_mut(&mut self) -> &mut ClusterCredentials {
         &mut self.credentials

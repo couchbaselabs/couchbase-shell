@@ -1,6 +1,6 @@
 use super::ctrlc_future::CtrlcFuture;
 use crate::state::State;
-use couchbase::{CouchbaseError, CouchbaseResult};
+use couchbase::{Collection, CouchbaseError, CouchbaseResult};
 use futures::{future::FutureExt, pin_mut, select, Stream, StreamExt};
 use nu_cli::{EvaluatedWholeStreamCommandArgs, InterruptibleStream, OutputStream, ToPrimitive};
 use nu_errors::ShellError;
@@ -257,4 +257,44 @@ pub async fn run_interruptable<T>(
     };
 
     res
+}
+
+pub fn collection_from_args(
+    args: &EvaluatedWholeStreamCommandArgs,
+    state: &Arc<State>,
+) -> Result<Arc<Collection>, ShellError> {
+    let active = state.active_cluster();
+    let bucket_name = match args
+        .get("bucket")
+        .map(|bucket| bucket.as_string().ok())
+        .flatten()
+        .or_else(|| active.active_bucket())
+    {
+        Some(v) => v,
+        None => {
+            return Err(ShellError::untagged_runtime_error(format!(
+                "Could not auto-select a bucket - please use --bucket instead"
+            )))
+        }
+    };
+
+    let bucket = active.bucket(&bucket_name);
+
+    let scope = match args.get("scope").map(|c| c.as_string().ok()).flatten() {
+        Some(s) => bucket.scope(s),
+        None => match active.active_scope() {
+            Some(s) => bucket.scope(s),
+            None => bucket.scope("_default"),
+        },
+    };
+
+    let collection = match args.get("collection").map(|c| c.as_string().ok()).flatten() {
+        Some(c) => scope.collection(c),
+        None => match active.active_collection() {
+            Some(c) => scope.collection(c),
+            None => scope.collection("_default"),
+        },
+    };
+
+    Ok(Arc::new(collection))
 }
