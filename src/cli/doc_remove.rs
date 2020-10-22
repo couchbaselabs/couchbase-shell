@@ -3,7 +3,7 @@
 use crate::state::State;
 use couchbase::RemoveOptions;
 
-use crate::cli::util::run_interruptable;
+use crate::cli::util::{collection_from_args, run_interruptable};
 use async_trait::async_trait;
 use futures::stream::StreamExt;
 use futures::FutureExt;
@@ -45,6 +45,13 @@ impl nu_cli::WholeStreamCommand for DocRemove {
                 "the name of the bucket",
                 None,
             )
+            .named("scope", SyntaxShape::String, "the name of the scope", None)
+            .named(
+                "collection",
+                SyntaxShape::String,
+                "the name of the collection",
+                None,
+            )
     }
 
     fn usage(&self) -> &str {
@@ -74,22 +81,12 @@ async fn run_get(
         .flatten()
         .unwrap_or_else(|| String::from("id"));
 
-    let bucket_name = match args
-        .get("bucket")
-        .map(|bucket| bucket.as_string().ok())
-        .flatten()
-        .or_else(|| state.active_cluster().active_bucket())
-    {
-        Some(v) => v,
-        None => {
-            return Err(ShellError::untagged_runtime_error(format!(
-                "Could not auto-select a bucket - please use --bucket instead"
-            )))
+    let collection = match collection_from_args(&args, &state) {
+        Ok(c) => c,
+        Err(e) => {
+            return Err(e);
         }
     };
-
-    let bucket = state.active_cluster().bucket(&bucket_name);
-    let collection = Arc::new(bucket.default_collection());
 
     let input_args = if let Some(id) = args.nth(0) {
         vec![id.as_string()?]

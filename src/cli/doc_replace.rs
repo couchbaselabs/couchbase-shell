@@ -4,7 +4,7 @@ use super::util::convert_nu_value_to_json_value;
 use crate::state::State;
 use couchbase::ReplaceOptions;
 
-use crate::cli::util::run_interruptable;
+use crate::cli::util::{collection_from_args, run_interruptable};
 use async_trait::async_trait;
 use futures::{FutureExt, StreamExt};
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
@@ -59,6 +59,13 @@ impl nu_cli::WholeStreamCommand for DocReplace {
                 "the expiry for the documents in seconds, or absolute",
                 None,
             )
+            .named("scope", SyntaxShape::String, "the name of the scope", None)
+            .named(
+                "collection",
+                SyntaxShape::String,
+                "the name of the collection",
+                None,
+            )
     }
 
     fn usage(&self) -> &str {
@@ -94,26 +101,16 @@ async fn run_replace(
         .flatten()
         .unwrap_or_else(|| String::from("content"));
 
-    let bucket_name = match args
-        .get("bucket")
-        .map(|bucket| bucket.as_string().ok())
-        .flatten()
-        .or_else(|| state.active_cluster().active_bucket())
-    {
-        Some(v) => v,
-        None => {
-            return Err(ShellError::untagged_runtime_error(format!(
-                "Could not auto-select a bucket - please use --bucket instead"
-            )))
-        }
-    };
-
     let expiry = args
         .get("expiry")
         .map(|e| Duration::from_secs(e.as_u64().unwrap_or_else(|_| 0)));
 
-    let bucket = state.active_cluster().bucket(&bucket_name);
-    let collection = Arc::new(bucket.default_collection());
+    let collection = match collection_from_args(&args, &state) {
+        Ok(c) => c,
+        Err(e) => {
+            return Err(e);
+        }
+    };
 
     let input_args = if let Some(id) = args.nth(0) {
         if let Some(content) = args.nth(1) {
