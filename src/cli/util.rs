@@ -2,7 +2,7 @@ use super::ctrlc_future::CtrlcFuture;
 use crate::state::State;
 use couchbase::{CouchbaseError, CouchbaseResult};
 use futures::{future::FutureExt, pin_mut, select, Stream, StreamExt};
-use nu_cli::{InterruptibleStream, OutputStream, ToPrimitive};
+use nu_cli::{EvaluatedWholeStreamCommandArgs, InterruptibleStream, OutputStream, ToPrimitive};
 use nu_errors::ShellError;
 use nu_protocol::{
     Primitive, ReturnSuccess, TaggedDictBuilder, UnspannedPathMember, UntaggedValue, Value,
@@ -187,9 +187,20 @@ fn json_list(input: &[Value]) -> Result<Vec<serde_json::Value>, ShellError> {
 
 pub fn cluster_identifiers_from(
     state: &Arc<State>,
-    input: &str,
+    args: &EvaluatedWholeStreamCommandArgs,
+    default_active: bool,
 ) -> Result<Vec<String>, ShellError> {
-    let re = match Regex::new(input) {
+    let identifier_arg = match args.get("clusters").map(|id| id.as_string().ok()).flatten() {
+        Some(arg) => arg,
+        None => {
+            if default_active {
+                return Ok(vec![state.active()]);
+            }
+            "".into()
+        }
+    };
+
+    let re = match Regex::new(identifier_arg.as_str()) {
         Ok(v) => v,
         Err(e) => {
             return Err(ShellError::untagged_runtime_error(format!(
