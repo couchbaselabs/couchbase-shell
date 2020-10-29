@@ -75,6 +75,7 @@ jobs:
         rm -rf /usr/local/Cellar/openssl
         ln -sf /usr/local/Cellar/openssl@1.1/1.1.1* /usr/local/opt/openssl
         ln -sf /usr/local/Cellar/openssl@1.1/1.1.1*/bin/openssl /usr/local/bin/openssl
+        sudo xcode-select -s "/Applications/Xcode_11.7.app"
 
     - name: Install dependencies - LLVM via choco (windows)
       shell: powershell
