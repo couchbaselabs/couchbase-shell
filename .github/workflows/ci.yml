@@ -63,7 +63,7 @@ jobs:
     - name: Install Rust (macos)
       run: |
         curl https://sh.rustup.rs | sh -s -- -y
-        echo "##[add-path]$HOME/.cargo/bin"
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
       if: matrix.os == 'macos-latest'
     - name: Install dependencies (linux)
       if: matrix.os == 'ubuntu-latest'
@@ -81,18 +81,31 @@ jobs:
       shell: powershell
       run: choco install llvm
       if: matrix.os == 'windows-2016'
-    - name: Install dependencies - OpenSSL via choco (windows)
+    - name: Install dependencies - Set vcpkg root (windows)
+      if: matrix.os == 'windows-2016'
+      run: echo "VCPKG_ROOT=$Env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+    - name: Install dependencies - OpenSSL via vcpkg (windows)
       run: |
-        choco install openssl
-        echo "::set-env name=OPENSSL_DIR::C:\Program Files\OpenSSL-Win64"
+        vcpkg install openssl:x64-windows-static
+        echo "OPENSSL_DIR=$Env:VCPKG_ROOT\packages\openssl_x64-windows-static\" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "OPENSSL_ROOT_DIR=$Env:VCPKG_ROOT\packages\openssl_x64-windows-static\" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "OPENSSL_LIB_DIR=$Env:VCPKG_ROOT\packages\openssl_x64-windows-static\lib\" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "OPENSSL_INCLUDE_DIR=$Env:VCPKG_ROOT\packages\openssl_x64-windows-static\include\" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        ls $Env:VCPKG_ROOT
+        ls $Env:VCPKG_ROOT\packages
       if: matrix.os == 'windows-2016'
 
     - name: Build
       run: cargo build --verbose
+      if: matrix.os == 'ubuntu-latest'
+
+    - name: Build
+      run: cargo build --verbose
       env:
-        MACOSX_DEPLOYMENT_TARGET: 10.9
         VCPKGRS_DYNAMIC: 1
-      if: matrix.os != 'macos-latest'
+        OPENSSL_STATIC: 1
+        RUSTFLAGS: -Ctarget-feature=+crt-static
+      if: matrix.os == 'windows-2016'
 
     - name: Build
       run: cargo build --verbose
