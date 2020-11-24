@@ -355,8 +355,12 @@ fn register_functions(tera: &mut Tera) {
 
     // Group "filesystem"
     tera.register_function("filePath", |_: &HashMap<String, Value>| {
-        let p = FilePath(EN).fake::<String>();
-        Ok(Value::from(p))
+        // We need to escape this string because it contains a path, in Windows paths
+        // are backslashes, which unescaped cause serde_json to error when parsing
+        // the generated string in --list-functions.
+        Ok(Value::from(
+            FilePath(EN).fake::<String>().escape_default().to_string(),
+        ))
     });
     tera.register_function("fileName", |_: &HashMap<String, Value>| {
         Ok(Value::from(FileName(EN).fake::<String>()))
@@ -365,7 +369,12 @@ fn register_functions(tera: &mut Tera) {
         Ok(Value::from(FileExtension(EN).fake::<String>()))
     });
     tera.register_function("dirPath", |_: &HashMap<String, Value>| {
-        Ok(Value::from(DirPath(EN).fake::<String>()))
+        // We need to escape this string because it contains a path, in Windows paths
+        // are backslashes, which unescaped cause serde_json to error when parsing
+        // the generated string in --list-functions.
+        Ok(Value::from(
+            DirPath(EN).fake::<String>().escape_default().to_string(),
+        ))
     });
 
     // Group "currency"
