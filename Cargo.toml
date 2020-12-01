@@ -45,6 +45,11 @@ couchbase = { rev = "78808ce117e74a739e03b88a5b6f9c8a10deb03c", git = "https://g
 [target.'cfg(not(windows))'.dependencies]
 jq-rs = { version = "0.4", features = ["bundled"] }
 
+[dev-dependencies]
+nu-test-support = "0.18.1"
+dunce = "1.0.1"
+lazy_static = "1.4.0"
+
 [[bin]]
 name = "cbsh"
 path = "src/main.rs"
