@@ -398,6 +398,18 @@ dependencies = [
 
 [[package]]
 name = "bigdecimal"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1374191e2dd25f9ae02e3aa95041ed5d747fc77b3c102b49fe2dd9a8117a6244"
+dependencies = [
+ "num-bigint 0.2.6",
+ "num-integer",
+ "num-traits 0.2.12",
+ "serde 1.0.117",
+]
+
+[[package]]
+name = "bigdecimal"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cc403c26e6b03005522e6e8053384c4e881dfe5b2bf041c0c2c49be33d64a539"
@@ -605,6 +617,12 @@ name = "byte-tools"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3b5ca7a04898ad4bcd41c90c5285445ff5b791899bb1b0abdd2a2aa791211d7"
+
+[[package]]
+name = "byte-unit"
+version = "3.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "415301c9de11005d4b92193c0eb7ac7adc37e5a49e0ac9bed0a42343512744b8"
 
 [[package]]
 name = "byte-unit"
@@ -939,18 +957,21 @@ dependencies = [
  "chrono",
  "couchbase",
  "dirs 2.0.2",
+ "dunce",
  "fake",
  "futures 0.3.6",
  "http 0.2.1",
  "humantime-serde",
  "jq-rs",
+ "lazy_static 1.4.0",
  "log 0.4.11",
  "mime_guess",
  "nu",
  "nu-cli",
- "nu-errors",
- "nu-protocol",
- "nu-source",
+ "nu-errors 0.23.0",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
+ "nu-test-support 0.18.1",
  "num-bigint 0.3.0",
  "pretty_env_logger 0.3.1",
  "regex 1.4.1",
@@ -1168,6 +1189,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b2466559f260f48ad25fe6317b3c8dac77b5bdb5763ac7d9d6103530663bc90"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "ctor"
+version = "0.1.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7fbaabec2c953050352311293be5c6aba8e141ba19d6811862b232d6fd020484"
+dependencies = [
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -1535,6 +1566,15 @@ dependencies = [
  "log 0.4.11",
  "regex 1.4.1",
  "termcolor",
+]
+
+[[package]]
+name = "erased-serde"
+version = "0.3.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ca8b296792113e1500fd935ae487be6e00ce318952a6880555554824d6ebf38"
+dependencies = [
+ "serde 1.0.117",
 ]
 
 [[package]]
@@ -2010,6 +2050,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "24b328c01a4d71d2d8173daa93562a73ab0fe85616876f02500f53d82948c504"
 dependencies = [
  "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "ghost"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a5bcf1bbeab73aa4cf2fde60a846858dc036163c7c33bec309f8d17de785479"
+dependencies = [
  "proc-macro2",
  "quote",
  "syn",
@@ -2618,6 +2669,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "63312a18f7ea8760cdd0a7c5aac1a619752a246b833545e3e36d1f81f7cd9e66"
 dependencies = [
  "cfg-if 0.1.10",
+]
+
+[[package]]
+name = "inventory"
+version = "0.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fedd49de24d8c263613701406611410687148ae8c37cd6452650b250f753a0dd"
+dependencies = [
+ "ctor",
+ "ghost",
+ "inventory-impl",
+]
+
+[[package]]
+name = "inventory-impl"
+version = "0.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ddead8880bc50f57fcd3b5869a7f6ff92570bb4e8f6870c22e2483272f2256da"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -3237,6 +3310,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "natural"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "65e6b44f8ddc659cde3555e0140d3441ad26cb03a1410774af1f9a19097c1867"
+dependencies = [
+ "rust-stemmers",
+]
+
+[[package]]
 name = "nb-connect"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3358,11 +3440,11 @@ dependencies = [
  "log 0.4.11",
  "nu-cli",
  "nu-data",
- "nu-errors",
- "nu-parser",
+ "nu-errors 0.23.0",
+ "nu-parser 0.23.0",
  "nu-plugin",
- "nu-protocol",
- "nu-source",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
  "nu-value-ext",
  "nu_plugin_binaryview",
  "nu_plugin_chart",
@@ -3395,8 +3477,8 @@ dependencies = [
  "async-recursion",
  "async-trait",
  "base64 0.12.3",
- "bigdecimal",
- "byte-unit",
+ "bigdecimal 0.2.0",
+ "byte-unit 4.0.9",
  "bytes 0.5.6",
  "calamine",
  "chrono",
@@ -3430,14 +3512,14 @@ dependencies = [
  "log 0.4.11",
  "meval",
  "nu-data",
- "nu-errors",
+ "nu-errors 0.23.0",
  "nu-json",
- "nu-parser",
+ "nu-parser 0.23.0",
  "nu-plugin",
- "nu-protocol",
- "nu-source",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
  "nu-table",
- "nu-test-support",
+ "nu-test-support 0.23.0",
  "nu-value-ext",
  "num-bigint 0.3.0",
  "num-format",
@@ -3487,8 +3569,8 @@ version = "0.23.0"
 source = "git+https://github.com/daschl/nushell.git?branch=main#1cbfb2ab2c6b65e79f4fd675549245d31a154a13"
 dependencies = [
  "ansi_term 0.12.1",
- "bigdecimal",
- "byte-unit",
+ "bigdecimal 0.2.0",
+ "byte-unit 4.0.9",
  "chrono",
  "derive-new",
  "directories 3.0.1",
@@ -3496,11 +3578,11 @@ dependencies = [
  "getset",
  "indexmap",
  "log 0.4.11",
- "nu-errors",
- "nu-protocol",
- "nu-source",
+ "nu-errors 0.23.0",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
  "nu-table",
- "nu-test-support",
+ "nu-test-support 0.23.0",
  "nu-value-ext",
  "num-bigint 0.3.0",
  "num-format",
@@ -3514,16 +3596,37 @@ dependencies = [
 
 [[package]]
 name = "nu-errors"
-version = "0.23.0"
-source = "git+https://github.com/daschl/nushell.git?branch=main#1cbfb2ab2c6b65e79f4fd675549245d31a154a13"
+version = "0.18.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ae55c28c213a07225f8988d37861f5660ece841e31d554b34aa2f4bc75c6a71"
 dependencies = [
  "ansi_term 0.12.1",
- "bigdecimal",
+ "bigdecimal 0.1.2",
  "codespan-reporting",
  "derive-new",
  "getset",
  "glob",
- "nu-source",
+ "nu-source 0.18.1",
+ "num-bigint 0.2.6",
+ "num-traits 0.2.12",
+ "serde 1.0.117",
+ "serde_json",
+ "serde_yaml",
+ "toml",
+]
+
+[[package]]
+name = "nu-errors"
+version = "0.23.0"
+source = "git+https://github.com/daschl/nushell.git?branch=main#1cbfb2ab2c6b65e79f4fd675549245d31a154a13"
+dependencies = [
+ "ansi_term 0.12.1",
+ "bigdecimal 0.2.0",
+ "codespan-reporting",
+ "derive-new",
+ "getset",
+ "glob",
+ "nu-source 0.23.0",
  "num-bigint 0.3.0",
  "num-traits 0.2.12",
  "serde 1.0.117",
@@ -3545,17 +3648,38 @@ dependencies = [
 
 [[package]]
 name = "nu-parser"
-version = "0.23.0"
-source = "git+https://github.com/daschl/nushell.git?branch=main#1cbfb2ab2c6b65e79f4fd675549245d31a154a13"
+version = "0.18.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11b9f9da5d2552b0f46469f7ca5943e25e63934a438199c21ae98e586e059956"
 dependencies = [
- "bigdecimal",
+ "bigdecimal 0.1.2",
  "codespan-reporting",
  "derive-new",
  "indexmap",
  "log 0.4.11",
- "nu-errors",
- "nu-protocol",
- "nu-source",
+ "nu-errors 0.18.1",
+ "nu-protocol 0.18.1",
+ "nu-source 0.18.1",
+ "num-bigint 0.2.6",
+ "num-traits 0.2.12",
+ "parking_lot 0.11.0",
+ "serde 1.0.117",
+ "shellexpand",
+]
+
+[[package]]
+name = "nu-parser"
+version = "0.23.0"
+source = "git+https://github.com/daschl/nushell.git?branch=main#1cbfb2ab2c6b65e79f4fd675549245d31a154a13"
+dependencies = [
+ "bigdecimal 0.2.0",
+ "codespan-reporting",
+ "derive-new",
+ "indexmap",
+ "log 0.4.11",
+ "nu-errors 0.23.0",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
  "num-bigint 0.3.0",
  "num-traits 0.2.12",
  "serde 1.0.117",
@@ -3567,12 +3691,12 @@ name = "nu-plugin"
 version = "0.23.0"
 source = "git+https://github.com/daschl/nushell.git?branch=main#1cbfb2ab2c6b65e79f4fd675549245d31a154a13"
 dependencies = [
- "bigdecimal",
+ "bigdecimal 0.2.0",
  "indexmap",
- "nu-errors",
- "nu-protocol",
- "nu-source",
- "nu-test-support",
+ "nu-errors 0.23.0",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
+ "nu-test-support 0.23.0",
  "nu-value-ext",
  "num-bigint 0.3.0",
  "serde 1.0.117",
@@ -3581,18 +3705,49 @@ dependencies = [
 
 [[package]]
 name = "nu-protocol"
+version = "0.18.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6dc0fff142a5c3ae3226153623795db413c58f8b50fe1d7a84902dd9151ba2b3"
+dependencies = [
+ "ansi_term 0.12.1",
+ "bigdecimal 0.1.2",
+ "byte-unit 3.1.4",
+ "chrono",
+ "codespan-reporting",
+ "derive-new",
+ "getset",
+ "indexmap",
+ "itertools",
+ "log 0.4.11",
+ "natural",
+ "nu-errors 0.18.1",
+ "nu-source 0.18.1",
+ "num-bigint 0.2.6",
+ "num-integer",
+ "num-traits 0.2.12",
+ "query_interface",
+ "serde 1.0.117",
+ "serde_bytes",
+ "serde_json",
+ "serde_yaml",
+ "toml",
+ "typetag",
+]
+
+[[package]]
+name = "nu-protocol"
 version = "0.23.0"
 source = "git+https://github.com/daschl/nushell.git?branch=main#1cbfb2ab2c6b65e79f4fd675549245d31a154a13"
 dependencies = [
- "bigdecimal",
- "byte-unit",
+ "bigdecimal 0.2.0",
+ "byte-unit 4.0.9",
  "chrono",
  "derive-new",
  "getset",
  "indexmap",
  "log 0.4.11",
- "nu-errors",
- "nu-source",
+ "nu-errors 0.23.0",
+ "nu-source 0.23.0",
  "num-bigint 0.3.0",
  "num-integer",
  "num-traits 0.2.12",
@@ -3601,6 +3756,20 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "toml",
+]
+
+[[package]]
+name = "nu-source"
+version = "0.18.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e6b6a3e05d6bab17988b77ba2330712dd205ad3e67a219a358458c3814da6318"
+dependencies = [
+ "codespan-reporting",
+ "derive-new",
+ "getset",
+ "pretty",
+ "serde 1.0.117",
+ "termcolor",
 ]
 
 [[package]]
@@ -3626,18 +3795,35 @@ dependencies = [
 
 [[package]]
 name = "nu-test-support"
+version = "0.18.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7e943a52ccd082778c8b9bc6da91bcd181f4a2272c0d47702d6fd150c939b23a"
+dependencies = [
+ "directories 2.0.2",
+ "dunce",
+ "getset",
+ "glob",
+ "indexmap",
+ "nu-parser 0.18.1",
+ "nu-protocol 0.18.1",
+ "nu-source 0.18.1",
+ "tempfile",
+]
+
+[[package]]
+name = "nu-test-support"
 version = "0.23.0"
 source = "git+https://github.com/daschl/nushell.git?branch=main#1cbfb2ab2c6b65e79f4fd675549245d31a154a13"
 dependencies = [
- "bigdecimal",
+ "bigdecimal 0.2.0",
  "chrono",
  "dunce",
  "getset",
  "glob",
  "indexmap",
- "nu-errors",
- "nu-protocol",
- "nu-source",
+ "nu-errors 0.23.0",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
  "nu-value-ext",
  "num-bigint 0.3.0",
  "tempfile",
@@ -3650,9 +3836,9 @@ source = "git+https://github.com/daschl/nushell.git?branch=main#1cbfb2ab2c6b65e7
 dependencies = [
  "indexmap",
  "itertools",
- "nu-errors",
- "nu-protocol",
- "nu-source",
+ "nu-errors 0.23.0",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
  "num-traits 0.2.12",
 ]
 
@@ -3665,10 +3851,10 @@ dependencies = [
  "crossterm 0.18.0",
  "image",
  "neso",
- "nu-errors",
+ "nu-errors 0.23.0",
  "nu-plugin",
- "nu-protocol",
- "nu-source",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
  "pretty-hex",
  "rawkey",
 ]
@@ -3681,10 +3867,10 @@ dependencies = [
  "crossterm 0.18.0",
  "nu-cli",
  "nu-data",
- "nu-errors",
+ "nu-errors 0.23.0",
  "nu-plugin",
- "nu-protocol",
- "nu-source",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
  "nu-value-ext",
  "tui",
 ]
@@ -3696,10 +3882,10 @@ source = "git+https://github.com/daschl/nushell.git?branch=main#1cbfb2ab2c6b65e7
 dependencies = [
  "base64 0.12.3",
  "futures 0.3.6",
- "nu-errors",
+ "nu-errors 0.23.0",
  "nu-plugin",
- "nu-protocol",
- "nu-source",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
  "surf",
  "url",
 ]
@@ -3709,12 +3895,12 @@ name = "nu_plugin_from_bson"
 version = "0.23.0"
 source = "git+https://github.com/daschl/nushell.git?branch=main#1cbfb2ab2c6b65e79f4fd675549245d31a154a13"
 dependencies = [
- "bigdecimal",
+ "bigdecimal 0.2.0",
  "bson",
- "nu-errors",
+ "nu-errors 0.23.0",
  "nu-plugin",
- "nu-protocol",
- "nu-source",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
  "nu-value-ext",
  "num-traits 0.2.12",
 ]
@@ -3724,11 +3910,11 @@ name = "nu_plugin_from_sqlite"
 version = "0.23.0"
 source = "git+https://github.com/daschl/nushell.git?branch=main#1cbfb2ab2c6b65e79f4fd675549245d31a154a13"
 dependencies = [
- "bigdecimal",
- "nu-errors",
+ "bigdecimal 0.2.0",
+ "nu-errors 0.23.0",
  "nu-plugin",
- "nu-protocol",
- "nu-source",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
  "nu-value-ext",
  "num-traits 0.2.12",
  "rusqlite",
@@ -3740,11 +3926,11 @@ name = "nu_plugin_inc"
 version = "0.23.0"
 source = "git+https://github.com/daschl/nushell.git?branch=main#1cbfb2ab2c6b65e79f4fd675549245d31a154a13"
 dependencies = [
- "nu-errors",
+ "nu-errors 0.23.0",
  "nu-plugin",
- "nu-protocol",
- "nu-source",
- "nu-test-support",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
+ "nu-test-support 0.23.0",
  "nu-value-ext",
  "semver 0.10.0",
 ]
@@ -3754,10 +3940,10 @@ name = "nu_plugin_match"
 version = "0.23.0"
 source = "git+https://github.com/daschl/nushell.git?branch=main#1cbfb2ab2c6b65e79f4fd675549245d31a154a13"
 dependencies = [
- "nu-errors",
+ "nu-errors 0.23.0",
  "nu-plugin",
- "nu-protocol",
- "nu-source",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
  "regex 1.4.1",
 ]
 
@@ -3768,10 +3954,10 @@ source = "git+https://github.com/daschl/nushell.git?branch=main#1cbfb2ab2c6b65e7
 dependencies = [
  "base64 0.12.3",
  "futures 0.3.6",
- "nu-errors",
+ "nu-errors 0.23.0",
  "nu-plugin",
- "nu-protocol",
- "nu-source",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
  "num-traits 0.2.12",
  "serde_json",
  "surf",
@@ -3786,10 +3972,10 @@ dependencies = [
  "futures 0.3.6",
  "futures-timer",
  "heim",
- "nu-errors",
+ "nu-errors 0.23.0",
  "nu-plugin",
- "nu-protocol",
- "nu-source",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
  "num-bigint 0.3.0",
 ]
 
@@ -3799,10 +3985,10 @@ version = "0.23.0"
 source = "git+https://github.com/daschl/nushell.git?branch=main#1cbfb2ab2c6b65e79f4fd675549245d31a154a13"
 dependencies = [
  "futures 0.3.6",
- "nu-errors",
+ "nu-errors 0.23.0",
  "nu-plugin",
- "nu-protocol",
- "nu-source",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
  "s3handler",
 ]
 
@@ -3812,10 +3998,10 @@ version = "0.23.0"
 source = "git+https://github.com/daschl/nushell.git?branch=main#1cbfb2ab2c6b65e79f4fd675549245d31a154a13"
 dependencies = [
  "nipper",
- "nu-errors",
+ "nu-errors 0.23.0",
  "nu-plugin",
- "nu-protocol",
- "nu-source",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
 ]
 
 [[package]]
@@ -3824,10 +4010,10 @@ version = "0.23.0"
 source = "git+https://github.com/daschl/nushell.git?branch=main#1cbfb2ab2c6b65e79f4fd675549245d31a154a13"
 dependencies = [
  "glob",
- "nu-errors",
+ "nu-errors 0.23.0",
  "nu-plugin",
- "nu-protocol",
- "nu-source",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
  "open",
  "url",
 ]
@@ -3841,10 +4027,10 @@ dependencies = [
  "futures 0.3.6",
  "futures-util",
  "heim",
- "nu-errors",
+ "nu-errors 0.23.0",
  "nu-plugin",
- "nu-protocol",
- "nu-source",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
  "num-bigint 0.3.0",
 ]
 
@@ -3856,10 +4042,10 @@ dependencies = [
  "ansi_term 0.12.1",
  "bat",
  "nu-data",
- "nu-errors",
+ "nu-errors 0.23.0",
  "nu-plugin",
- "nu-protocol",
- "nu-source",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
  "term_size",
  "url",
 ]
@@ -3870,10 +4056,10 @@ version = "0.23.0"
 source = "git+https://github.com/daschl/nushell.git?branch=main#1cbfb2ab2c6b65e79f4fd675549245d31a154a13"
 dependencies = [
  "bson",
- "nu-errors",
+ "nu-errors 0.23.0",
  "nu-plugin",
- "nu-protocol",
- "nu-source",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
  "nu-value-ext",
  "num-traits 0.2.12",
 ]
@@ -3884,10 +4070,10 @@ version = "0.23.0"
 source = "git+https://github.com/daschl/nushell.git?branch=main#1cbfb2ab2c6b65e79f4fd675549245d31a154a13"
 dependencies = [
  "hex 0.4.2",
- "nu-errors",
+ "nu-errors 0.23.0",
  "nu-plugin",
- "nu-protocol",
- "nu-source",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
  "nu-value-ext",
  "num-traits 0.2.12",
  "rusqlite",
@@ -3900,10 +4086,10 @@ version = "0.23.0"
 source = "git+https://github.com/daschl/nushell.git?branch=main#1cbfb2ab2c6b65e79f4fd675549245d31a154a13"
 dependencies = [
  "derive-new",
- "nu-errors",
+ "nu-errors 0.23.0",
  "nu-plugin",
- "nu-protocol",
- "nu-source",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
  "ptree",
 ]
 
@@ -3912,12 +4098,12 @@ name = "nu_plugin_xpath"
 version = "0.23.0"
 source = "git+https://github.com/daschl/nushell.git?branch=main#1cbfb2ab2c6b65e79f4fd675549245d31a154a13"
 dependencies = [
- "bigdecimal",
+ "bigdecimal 0.2.0",
  "indexmap",
- "nu-errors",
+ "nu-errors 0.23.0",
  "nu-plugin",
- "nu-protocol",
- "nu-source",
+ "nu-protocol 0.23.0",
+ "nu-source 0.23.0",
  "sxd-document",
  "sxd-xpath",
 ]
@@ -3945,6 +4131,7 @@ dependencies = [
  "autocfg 1.0.1",
  "num-integer",
  "num-traits 0.2.12",
+ "serde 1.0.117",
 ]
 
 [[package]]
@@ -5148,6 +5335,16 @@ name = "rust-ini"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3e52c148ef37f8c375d49d5a73aa70713125b7f19095948a923f80afdeb22ec2"
+
+[[package]]
+name = "rust-stemmers"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e46a2036019fdb888131db7a4c847a1063a7493f971ed94ea82c67eada63ca54"
+dependencies = [
+ "serde 1.0.117",
+ "serde_derive",
+]
 
 [[package]]
 name = "rust_decimal"
@@ -6484,6 +6681,30 @@ name = "typenum"
 version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "373c8a200f9e67a0c95e62a4f52fbf80c23b4381c05a17845531982fa99e6b33"
+
+[[package]]
+name = "typetag"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "83b97b107d25d29de6879ac4f676ac5bfea92bdd01f206e995794493f1fc2e32"
+dependencies = [
+ "erased-serde",
+ "inventory",
+ "lazy_static 1.4.0",
+ "serde 1.0.117",
+ "typetag-impl",
+]
+
+[[package]]
+name = "typetag-impl"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f2466fc87b07b800a5060f89ba579d6882f7a03ac21363e4737764aaf9f99f9"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "ucd-trie"
