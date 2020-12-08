@@ -82,11 +82,16 @@ This is heavily in flux right now, but you can try these commands (always try wi
 
 # Config & Multiple Clusters
 
-While quickly connecting with command line arguments is convenient, if you manage multiple clusters it can get tedious. For this reason, the shell supports managing multiple clusters at the same time. This works by adding a `.cbsh` to either the path where you run the binary from, or more practical, from your home directory (`~/.cbsh`).
+While quickly connecting with command line arguments is convenient, if you manage multiple clusters it can get tedious. 
+For this reason, the shell supports managing multiple clusters at the same time. 
+This works by adding a `.cbsh/config` file to either the path where you run the binary from, or more practical, from your home directory (`~/.cbsh/config`).
 
 The format of the rc file is `toml`, and the default looks pretty much like this:
 
 ```toml
+# Allows us to evolve in the future without breaking old config files
+version = 1
+
 [clusters.default]
 hostnames = ["couchbase://127.0.0.1"]
 default-bucket = "default"
@@ -97,6 +102,9 @@ password = "password"
 You can modify it so that it contains all the clusters you need:
 
 ```toml
+# Allows us to evolve in the future without breaking old config files
+version = 1
+
 [clusters.cluster1]
 hostnames = ["couchbase://10.143.193.101"]
 default-bucket = "default"
