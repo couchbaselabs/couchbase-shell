@@ -10,8 +10,8 @@ lazy_static! {
     static ref STATE: State = State {
         connstr: env::var("CBSH_CONNSTRING").unwrap_or("localhost".to_string()),
         bucket: env::var("CBSH_BUCKET").unwrap_or("default".to_string()),
-        scope: env::var("CBSH_SCOPE").unwrap_or("_default".to_string()),
-        collection: env::var("CBSH_COLLECTION").unwrap_or("_default".to_string()),
+        scope: env::var("CBSH_SCOPE").unwrap_or("".to_string()),
+        collection: env::var("CBSH_COLLECTION").unwrap_or("".to_string()),
         username: env::var("CBSH_USERNAME").unwrap_or("Administrator".to_string()),
         password: env::var("CBSH_PASSWORD").unwrap_or("password".to_string()),
     };

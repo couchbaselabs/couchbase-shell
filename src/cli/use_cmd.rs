@@ -61,14 +61,14 @@ async fn use_cmd(
         active
             .active_scope()
             .map(|s| s.clone())
-            .unwrap_or(String::from("_default")),
+            .unwrap_or(String::from("")),
     );
     using_now.insert_value(
         "collection",
         active
             .active_collection()
             .map(|s| s.clone())
-            .unwrap_or(String::from("_default")),
+            .unwrap_or(String::from("")),
     );
     let clusters = vec![using_now.into_value()];
 

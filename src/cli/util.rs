@@ -284,7 +284,7 @@ pub fn collection_from_args(
         Some(s) => bucket.scope(s),
         None => match active.active_scope() {
             Some(s) => bucket.scope(s),
-            None => bucket.scope("_default"),
+            None => bucket.scope(""),
         },
     };
 
@@ -292,7 +292,7 @@ pub fn collection_from_args(
         Some(c) => scope.collection(c),
         None => match active.active_collection() {
             Some(c) => scope.collection(c),
-            None => scope.collection("_default"),
+            None => scope.collection(""),
         },
     };
 
