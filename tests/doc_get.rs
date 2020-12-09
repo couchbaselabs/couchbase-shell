@@ -29,3 +29,16 @@ pub fn get_a_document() {
         assert_eq!("Rust!", json["Hello"]);
     });
 }
+
+#[test]
+pub fn get_a_document_not_found() {
+    playground::CBPlayground::setup("get_a_document_not_found", |dirs, _sandbox| {
+        let out = common::execute_command(
+            &dirs.test,
+            r#"doc get "get_a_document_not_found" | get error"#,
+        );
+
+        assert_eq!("", out.err);
+        assert!(out.out.contains("Document with the given ID not found"));
+    });
+}

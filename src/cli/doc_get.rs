@@ -11,9 +11,10 @@ use log::debug;
 use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{
-    MaybeOwned, Primitive, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Value,
+    MaybeOwned, Primitive, ReturnSuccess, ReturnValue, Signature, SyntaxShape, TaggedDictBuilder,
+    UntaggedValue, Value,
 };
-use nu_source::Tag;
+use nu_source::{PrettyDebug, Tag};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -126,7 +127,7 @@ async fn run_get(
 
     debug!("Running kv get for docs {:?}", &ids);
 
-    let mut results = vec![];
+    let mut results: Vec<ReturnValue> = vec![];
     for id in ids {
         let get = collection.get(&id, GetOptions::default());
 
@@ -148,9 +149,18 @@ async fn run_get(
                 } else {
                     collected.insert_value("content", content_converted);
                 }
-                results.push(collected.into_value());
+                collected.insert_value("error", "".to_string());
+                results.push(Ok(ReturnSuccess::Value(collected.into_value())));
             }
-            Err(_e) => {}
+            Err(e) => {
+                let tag = Tag::default();
+                let mut collected = TaggedDictBuilder::new(&tag);
+                collected.insert_value(&id_column, id.clone());
+                collected.insert_value("cas", "".to_string());
+                collected.insert_value("content", "".to_string());
+                collected.insert_value("error", e.display());
+                results.push(Ok(ReturnSuccess::Value(collected.into_value())));
+            }
         }
     }
     Ok(OutputStream::from(results))
