@@ -87,8 +87,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         String::from("default")
     } else {
         let mut active = None;
-        for (k, v) in config.clusters() {
-            let name = k.clone();
+        for v in config.clusters() {
+            let name = v.identifier().to_owned();
 
             let mut hostnames = v.hostnames().join(",");
             let mut username = v.username();
@@ -120,7 +120,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     }
                 }
             } else if active.is_none() {
-                active = Some(k.clone());
+                active = Some(v.identifier().to_owned());
                 if let Some(hosts) = opt.hostnames.clone() {
                     hostnames = hosts;
                 }

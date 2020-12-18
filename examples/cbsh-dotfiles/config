@@ -1,7 +1,8 @@
 # Allows us to evolve in the future without breaking old config files
 version = 1
 
-[clusters.default]
+[[clusters]]
+identifier = "default"
 hostnames = ["127.0.0.1"]
 default-bucket = "travel-sample"
 # The following can be part of the config or credentials

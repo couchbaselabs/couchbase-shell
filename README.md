@@ -92,7 +92,8 @@ The format of the rc file is `toml`, and the default looks pretty much like this
 # Allows us to evolve in the future without breaking old config files
 version = 1
 
-[clusters.default]
+[[clusters]]
+identifier = "default"
 hostnames = ["couchbase://127.0.0.1"]
 default-bucket = "default"
 username = "Administrator"
@@ -105,13 +106,15 @@ You can modify it so that it contains all the clusters you need:
 # Allows us to evolve in the future without breaking old config files
 version = 1
 
-[clusters.cluster1]
+[[clusters]]
+identifier = "cluster1"
 hostnames = ["couchbase://10.143.193.101"]
 default-bucket = "default"
 username = "user1"
 password = "pw1"
 
-[clusters.cluster2]
+[[clusters]]
+identifier = "cluster2"
 hostnames = ["couchbase://10.143.193.102"]
 default-bucket = "default"
 username = "user2"

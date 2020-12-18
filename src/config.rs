@@ -1,7 +1,6 @@
 use log::debug;
 use log::error;
 use serde::Deserialize;
-use std::collections::BTreeMap;
 use std::fs;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -10,7 +9,7 @@ use std::time::Duration;
 #[derive(Debug, Deserialize)]
 pub struct ShellConfig {
     version: usize,
-    clusters: BTreeMap<String, ClusterConfig>,
+    clusters: Vec<ClusterConfig>,
 }
 
 impl ShellConfig {
@@ -27,18 +26,21 @@ impl ShellConfig {
             .or_else(|| try_credentials_from_path(dirs::home_dir().unwrap()));
 
         if let Some(standalone) = standalone_credentials {
-            for (key, value) in config.clusters_mut() {
+            for value in config.clusters_mut() {
+                let identifier = value.identifier().to_owned();
                 let mut config_credentials = value.credentials_mut();
 
-                if let Some(cred) = standalone.clusters.get(key) {
-                    if config_credentials.username.is_none() && cred.username.is_some() {
-                        config_credentials.username = cred.username.clone()
-                    }
-                    if config_credentials.password.is_none() && cred.password.is_some() {
-                        config_credentials.password = cred.password.clone()
-                    }
-                    if config_credentials.cert_path.is_none() && cred.cert_path.is_some() {
-                        config_credentials.cert_path = cred.cert_path.clone()
+                for cred in &standalone.clusters {
+                    if cred.identifier() == identifier {
+                        if config_credentials.username.is_none() && cred.username.is_some() {
+                            config_credentials.username = cred.username.clone()
+                        }
+                        if config_credentials.password.is_none() && cred.password.is_some() {
+                            config_credentials.password = cred.password.clone()
+                        }
+                        if config_credentials.cert_path.is_none() && cred.cert_path.is_some() {
+                            config_credentials.cert_path = cred.cert_path.clone()
+                        }
                     }
                 }
             }
@@ -61,11 +63,11 @@ impl ShellConfig {
     }
 
     /// Returns the individual configurations for all the clusters configured.
-    pub fn clusters(&self) -> &BTreeMap<String, ClusterConfig> {
+    pub fn clusters(&self) -> &Vec<ClusterConfig> {
         &self.clusters
     }
 
-    pub fn clusters_mut(&mut self) -> &mut BTreeMap<String, ClusterConfig> {
+    pub fn clusters_mut(&mut self) -> &mut Vec<ClusterConfig> {
         &mut self.clusters
     }
 }
@@ -73,7 +75,7 @@ impl ShellConfig {
 impl Default for ShellConfig {
     fn default() -> Self {
         Self {
-            clusters: BTreeMap::new(),
+            clusters: vec![],
             version: 1,
         }
     }
@@ -109,6 +111,7 @@ fn try_credentials_from_path(mut path: PathBuf) -> Option<StandaloneCredentialsC
 
 #[derive(Debug, Deserialize)]
 pub struct ClusterConfig {
+    identifier: String,
     hostnames: Vec<String>,
     #[serde(rename(deserialize = "default-bucket"))]
     default_bucket: Option<String>,
@@ -124,6 +127,10 @@ pub struct ClusterConfig {
 }
 
 impl ClusterConfig {
+    pub fn identifier(&self) -> &str {
+        self.identifier.as_ref()
+    }
+
     pub fn hostnames(&self) -> &Vec<String> {
         &self.hostnames
     }
@@ -199,7 +206,7 @@ impl ClusterTimeouts {
 #[derive(Debug, Deserialize)]
 pub struct StandaloneCredentialsConfig {
     version: usize,
-    clusters: BTreeMap<String, ClusterCredentials>,
+    clusters: Vec<StandaloneClusterCredentials>,
 }
 
 impl StandaloneCredentialsConfig {
@@ -212,8 +219,23 @@ impl StandaloneCredentialsConfig {
 impl Default for StandaloneCredentialsConfig {
     fn default() -> Self {
         Self {
-            clusters: BTreeMap::new(),
+            clusters: vec![],
             version: 1,
         }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct StandaloneClusterCredentials {
+    identifier: String,
+    username: Option<String>,
+    password: Option<String>,
+    #[serde(rename(deserialize = "cert-path"))]
+    cert_path: Option<String>,
+}
+
+impl StandaloneClusterCredentials {
+    fn identifier(&self) -> &str {
+        self.identifier.as_ref()
     }
 }
