@@ -53,3 +53,7 @@ lazy_static = "1.4.0"
 [[bin]]
 name = "cbsh"
 path = "src/main.rs"
+
+[profile.release]
+lto = true
+codegen-units = 1
