@@ -67,8 +67,6 @@ pub fn execute_command(cwd: &PathBuf, command: &str) -> Outcome {
     let out = read_std(&output.stdout);
     let err = String::from_utf8_lossy(&output.stderr);
 
-    println!("=== stderr\n{}", err);
-
     Outcome::new(out, err.into_owned())
 }
 
