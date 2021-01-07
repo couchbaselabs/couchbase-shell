@@ -49,8 +49,13 @@ impl CBPlayground {
     pub fn setup(topic: &str, block: impl FnOnce(Dirs, &mut CBPlayground)) {
         let mut c = CLUSTER.lock().unwrap();
         if c.is_none() {
+            let mut connstr = STATE.connstr.clone();
+            if !connstr.contains("couchbase") {
+                connstr = format!("couchbase://{}", connstr);
+            }
+            println!("Setting up new sdk instance against {}", connstr);
             *c = Some(Arc::new(Cluster::connect(
-                STATE.connstr.clone(),
+                connstr,
                 STATE.username.clone(),
                 STATE.password.clone(),
             )));
@@ -70,7 +75,8 @@ impl CBPlayground {
 
             let contents = format!(
                 "version = 1
-[clusters.local]
+[[clusters]]
+identifier = \"local\"
 hostnames = [\"{}\"]
 default-bucket = \"{}\"
 default-collection = \"{}\"

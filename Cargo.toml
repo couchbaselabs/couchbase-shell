@@ -3,6 +3,7 @@ name = "couchbase-shell"
 version = "0.4.0"
 authors = ["Michael Nitschinger <michael@nitschinger.at>"]
 edition = "2018"
+default-run = "cbsh"
 
 [dependencies]
 log = "0.4"
@@ -57,3 +58,8 @@ path = "src/main.rs"
 [profile.release]
 lto = true
 codegen-units = 1
+
+[[bin]]
+doc=false
+name="runtests"
+path="tests/bin/mod.rs"

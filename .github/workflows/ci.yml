@@ -94,11 +94,15 @@ jobs:
       if: matrix.os == 'windows-2016'
 
     - name: Build
-      run: cargo build --verbose
+      run: |
+        cargo build --verbose
+        cargo run --bin runtests
       if: matrix.os == 'ubuntu-latest'
 
     - name: Build
-      run: cargo build --verbose
+      run: |
+          cargo build --verbose
+          cargo run --bin runtests
       env:
         VCPKGRS_DYNAMIC: 1
         OPENSSL_STATIC: 1
@@ -106,7 +110,9 @@ jobs:
       if: matrix.os == 'windows-2016'
 
     - name: Build
-      run: cargo build --verbose
+      run: |
+          cargo build --verbose
+          cargo run --bin runtests
       env:
         MACOSX_DEPLOYMENT_TARGET: 10.9
         OPENSSL_ROOT_DIR: /usr/local/opt/openssl
