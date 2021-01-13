@@ -2,7 +2,7 @@ use crate::state::State;
 use async_trait::async_trait;
 use couchbase::{Role, UpsertUserOptions, UserBuilder};
 use log::debug;
-use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
+use nu_cli::{CommandArgs, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use std::sync::Arc;
@@ -61,21 +61,13 @@ impl nu_cli::WholeStreamCommand for UsersUpsert {
         "Upserts a user"
     }
 
-    async fn run(
-        &self,
-        args: CommandArgs,
-        registry: &CommandRegistry,
-    ) -> Result<OutputStream, ShellError> {
-        users_upsert(self.state.clone(), args, registry).await
+    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        users_upsert(self.state.clone(), args).await
     }
 }
 
-async fn users_upsert(
-    state: Arc<State>,
-    args: CommandArgs,
-    registry: &CommandRegistry,
-) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once(registry).await?;
+async fn users_upsert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once().await?;
     let username = match args.get("username") {
         Some(v) => match v.as_string() {
             Ok(uname) => uname,

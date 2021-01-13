@@ -2,7 +2,7 @@ use crate::state::State;
 use async_trait::async_trait;
 use couchbase::GetUserOptions;
 use log::debug;
-use nu_cli::{CommandArgs, CommandRegistry, OutputStream, TaggedDictBuilder};
+use nu_cli::{CommandArgs, OutputStream, TaggedDictBuilder};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
@@ -36,21 +36,13 @@ impl nu_cli::WholeStreamCommand for UsersGet {
         "Fetches a user"
     }
 
-    async fn run(
-        &self,
-        args: CommandArgs,
-        registry: &CommandRegistry,
-    ) -> Result<OutputStream, ShellError> {
-        users_get(self.state.clone(), args, registry).await
+    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        users_get(self.state.clone(), args).await
     }
 }
 
-async fn users_get(
-    state: Arc<State>,
-    args: CommandArgs,
-    registry: &CommandRegistry,
-) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once(registry).await?;
+async fn users_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once().await?;
     let username = args.nth(0).expect("need username").as_string()?;
 
     debug!("Running users get {}", username);

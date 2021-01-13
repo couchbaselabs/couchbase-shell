@@ -4,7 +4,7 @@ use crate::state::State;
 use async_trait::async_trait;
 use couchbase::{GenericManagementRequest, Request};
 use futures::channel::oneshot;
-use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
+use nu_cli::{CommandArgs, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
@@ -38,21 +38,13 @@ impl nu_cli::WholeStreamCommand for BucketsConfig {
         "Shows the bucket config (low level)"
     }
 
-    async fn run(
-        &self,
-        args: CommandArgs,
-        registry: &CommandRegistry,
-    ) -> Result<OutputStream, ShellError> {
-        buckets(args, registry, self.state.clone()).await
+    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        buckets(args, self.state.clone()).await
     }
 }
 
-async fn buckets(
-    args: CommandArgs,
-    registry: &CommandRegistry,
-    state: Arc<State>,
-) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once(registry).await?;
+async fn buckets(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once().await?;
 
     let bucket_name = match args.nth(0) {
         Some(n) => n.as_string()?,

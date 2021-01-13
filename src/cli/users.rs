@@ -2,7 +2,7 @@ use crate::state::State;
 use async_trait::async_trait;
 use couchbase::GetAllUsersOptions;
 use log::debug;
-use nu_cli::{CommandArgs, CommandRegistry, OutputStream, TaggedDictBuilder};
+use nu_cli::{CommandArgs, OutputStream, TaggedDictBuilder};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, Value};
 use nu_source::Tag;
@@ -32,11 +32,7 @@ impl nu_cli::WholeStreamCommand for Users {
         "Lists all users"
     }
 
-    async fn run(
-        &self,
-        _args: CommandArgs,
-        _registry: &CommandRegistry,
-    ) -> Result<OutputStream, ShellError> {
+    async fn run(&self, _args: CommandArgs) -> Result<OutputStream, ShellError> {
         users_get_all(self.state.clone()).await
     }
 }

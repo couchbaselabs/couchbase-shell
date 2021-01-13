@@ -6,7 +6,7 @@ use async_stream::stream;
 use async_trait::async_trait;
 use futures::stream::StreamExt;
 use jq_rs;
-use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
+use nu_cli::{CommandArgs, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{ReturnSuccess, Signature, SyntaxShape};
 use nu_source::Tag;
@@ -41,21 +41,13 @@ impl nu_cli::WholeStreamCommand for Map {
         "Map from one table structure to another. Much flexible, so wow."
     }
 
-    async fn run(
-        &self,
-        args: CommandArgs,
-        registry: &CommandRegistry,
-    ) -> Result<OutputStream, ShellError> {
-        map(self.state.clone(), args, registry).await
+    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        map(self.state.clone(), args).await
     }
 }
 
-async fn map(
-    _state: Arc<State>,
-    args: CommandArgs,
-    registry: &CommandRegistry,
-) -> Result<OutputStream, ShellError> {
-    let mut args = args.evaluate_once(registry).await?;
+async fn map(_state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let mut args = args.evaluate_once().await?;
 
     let pattern = args.nth(0).unwrap().as_string()?;
 

@@ -8,7 +8,7 @@ use couchbase::UpsertOptions;
 use crate::cli::util::{collection_from_args, run_interruptable};
 use async_trait::async_trait;
 use futures::{FutureExt, StreamExt};
-use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
+use nu_cli::{CommandArgs, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{MaybeOwned, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
@@ -73,21 +73,13 @@ impl nu_cli::WholeStreamCommand for DocUpsert {
         "Upsert (insert or override) a document through the data service"
     }
 
-    async fn run(
-        &self,
-        args: CommandArgs,
-        registry: &CommandRegistry,
-    ) -> Result<OutputStream, ShellError> {
-        run_upsert(self.state.clone(), args, registry).await
+    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        run_upsert(self.state.clone(), args).await
     }
 }
 
-async fn run_upsert(
-    state: Arc<State>,
-    args: CommandArgs,
-    registry: &CommandRegistry,
-) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once(registry).await?;
+async fn run_upsert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once().await?;
     let ctrl_c = args.ctrl_c.clone();
 
     let id_column = args

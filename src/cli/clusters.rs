@@ -1,7 +1,7 @@
 use crate::cli::util::cluster_identifiers_from;
 use crate::state::State;
 use async_trait::async_trait;
-use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
+use nu_cli::{CommandArgs, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
@@ -36,21 +36,13 @@ impl nu_cli::WholeStreamCommand for Clusters {
         "Lists all managed clusters"
     }
 
-    async fn run(
-        &self,
-        args: CommandArgs,
-        registry: &CommandRegistry,
-    ) -> Result<OutputStream, ShellError> {
-        clusters(args, registry, self.state.clone()).await
+    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        clusters(args, self.state.clone()).await
     }
 }
 
-async fn clusters(
-    args: CommandArgs,
-    registry: &CommandRegistry,
-    state: Arc<State>,
-) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once(registry).await?;
+async fn clusters(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once().await?;
 
     let identifiers = cluster_identifiers_from(&state, &args, false)?;
 
