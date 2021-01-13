@@ -25,11 +25,11 @@ num-bigint = "0.3"
 ansi_term = "0.12"
 humantime-serde = "1.0"
 
-nu = { branch = "main",  git = "https://github.com/daschl/nushell.git", features = ["extra"] }
-nu-protocol = { branch = "main", git = "https://github.com/daschl/nushell.git"  }
-nu-errors = { branch = "main", git = "https://github.com/daschl/nushell.git"  }
-nu-source = { branch = "main", git = "https://github.com/daschl/nushell.git" }
-nu-cli = { branch = "main", git = "https://github.com/daschl/nushell.git" }
+nu = { branch = "main",  git = "https://github.com/couchbaselabs/nushell.git", features = ["extra"] }
+nu-protocol = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git"  }
+nu-errors = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git"  }
+nu-source = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
+nu-cli = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
 
 async-trait = "0.1.31"
 serde = "1.0"

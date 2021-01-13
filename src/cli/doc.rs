@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
+use nu_cli::{CommandArgs, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{ReturnSuccess, Signature, UntaggedValue};
 use nu_source::Tag;
@@ -20,14 +20,9 @@ impl nu_cli::WholeStreamCommand for Doc {
         "Perform document operations against a bucket or collection"
     }
 
-    async fn run(
-        &self,
-        _args: CommandArgs,
-        registry: &CommandRegistry,
-    ) -> Result<OutputStream, ShellError> {
-        let registry = registry.clone();
+    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
         Ok(OutputStream::one(ReturnSuccess::value(
-            UntaggedValue::string(nu_cli::get_help(&Doc, &registry)).into_value(Tag::unknown()),
+            UntaggedValue::string(nu_cli::get_help(&Doc, &args.scope)).into_value(Tag::unknown()),
         )))
     }
 }

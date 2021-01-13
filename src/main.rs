@@ -192,7 +192,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let syncer = nu_cli::EnvironmentSyncer::new();
-    let mut context = nu_cli::create_default_context(true)?;
+    let context = nu_cli::create_default_context(true)?;
     context.add_commands(vec![
         // Performs analytics queries
         nu_cli::whole_stream_command(Analytics::new(state.clone())),
@@ -245,7 +245,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     ]);
 
     if let Some(c) = opt.command {
-        nu_cli::run_pipeline_standalone(c, opt.stdin, &mut context, true).await?;
+        nu_cli::run_script_file(c, true).await?;
         return Ok(());
     }
 
@@ -256,7 +256,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         for line in reader.lines() {
             let line = line?;
             if !line.starts_with('#') {
-                nu_cli::run_pipeline_standalone(line, opt.stdin, &mut context, true).await?;
+                nu_cli::run_script_file(line, true).await?;
             }
         }
         return Ok(());

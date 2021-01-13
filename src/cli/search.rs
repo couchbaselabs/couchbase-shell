@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use couchbase::{QueryStringQuery, SearchOptions};
 use futures::stream::StreamExt;
 use log::debug;
-use nu_cli::{CommandArgs, CommandRegistry, OutputStream, TaggedDictBuilder};
+use nu_cli::{CommandArgs, OutputStream, TaggedDictBuilder};
 use nu_errors::ShellError;
 use nu_protocol::{ReturnSuccess, Signature, SyntaxShape};
 use nu_source::Tag;
@@ -39,21 +39,13 @@ impl nu_cli::WholeStreamCommand for Search {
         "Performs a search query"
     }
 
-    async fn run(
-        &self,
-        args: CommandArgs,
-        registry: &CommandRegistry,
-    ) -> Result<OutputStream, ShellError> {
-        run(self.state.clone(), args, registry).await
+    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        run(self.state.clone(), args).await
     }
 }
 
-async fn run(
-    state: Arc<State>,
-    args: CommandArgs,
-    registry: &CommandRegistry,
-) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once(registry).await?;
+async fn run(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once().await?;
     let index = args.nth(0).expect("need index name").as_string()?;
     let query = args.nth(1).expect("need query text").as_string()?;
 

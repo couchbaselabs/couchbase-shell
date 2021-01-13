@@ -6,10 +6,11 @@ use couchbase::PingOptions;
 
 use async_trait::async_trait;
 use log::debug;
-use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
+use nu_cli::{CommandArgs, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
+use num_bigint::BigInt;
 use std::sync::Arc;
 
 pub struct Ping {
@@ -48,21 +49,13 @@ impl nu_cli::WholeStreamCommand for Ping {
         "Ping available services in the cluster"
     }
 
-    async fn run(
-        &self,
-        args: CommandArgs,
-        registry: &CommandRegistry,
-    ) -> Result<OutputStream, ShellError> {
-        run_ping(self.state.clone(), args, registry).await
+    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        run_ping(self.state.clone(), args).await
     }
 }
 
-async fn run_ping(
-    state: Arc<State>,
-    args: CommandArgs,
-    registry: &CommandRegistry,
-) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once(registry).await?;
+async fn run_ping(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once().await?;
 
     let bucket_name = match args
         .get("bucket")
@@ -105,7 +98,7 @@ async fn run_ping(
                         collected.insert_value("remote", endpoint.remote().unwrap_or_default());
                         collected.insert_value(
                             "latency",
-                            UntaggedValue::duration(endpoint.latency().as_secs().into())
+                            UntaggedValue::duration(BigInt::from(endpoint.latency().as_secs()))
                                 .into_untagged_value(),
                         );
                         collected.insert_value("state", endpoint.state().to_string());

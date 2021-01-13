@@ -15,7 +15,7 @@ use fake::faker::number::raw::*;
 use fake::faker::phone_number::raw::*;
 use fake::locales::*;
 use fake::Fake;
-use nu_cli::{CommandArgs, CommandRegistry, OutputStream};
+use nu_cli::{CommandArgs, OutputStream};
 use nu_errors::ShellError;
 use nu_protocol::{ReturnSuccess, Signature, SyntaxShape};
 use nu_source::Tag;
@@ -62,21 +62,13 @@ impl nu_cli::WholeStreamCommand for FakeData {
         "Creates fake data from a template"
     }
 
-    async fn run(
-        &self,
-        args: CommandArgs,
-        registry: &CommandRegistry,
-    ) -> Result<OutputStream, ShellError> {
-        run_fake(self.state.clone(), args, registry).await
+    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        run_fake(self.state.clone(), args).await
     }
 }
 
-async fn run_fake(
-    _state: Arc<State>,
-    args: CommandArgs,
-    registry: &CommandRegistry,
-) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once(registry).await?;
+async fn run_fake(_state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once().await?;
 
     let list_functions = args.get("list-functions").is_some();
 
