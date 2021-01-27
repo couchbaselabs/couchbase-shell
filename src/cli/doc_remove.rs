@@ -73,7 +73,7 @@ async fn run_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, S
         .flatten()
         .unwrap_or_else(|| String::from("id"));
 
-    let collection = match collection_from_args(&args, &state) {
+    let collection = match collection_from_args(&args, state.active_cluster()) {
         Ok(c) => c,
         Err(e) => {
             return Err(e);

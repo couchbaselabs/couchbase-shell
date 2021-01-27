@@ -6,6 +6,9 @@ mod buckets;
 mod buckets_config;
 mod clusters;
 mod clusters_health;
+mod collections;
+mod collections_create;
+mod collections_get;
 mod ctrlc_future;
 mod data;
 mod data_stats;
@@ -23,6 +26,9 @@ mod ping;
 mod query;
 mod query_advise;
 mod query_indexes;
+mod scopes;
+mod scopes_create;
+mod scopes_get;
 mod search;
 mod use_bucket;
 mod use_cluster;
@@ -45,6 +51,10 @@ pub use buckets::Buckets;
 pub use buckets_config::BucketsConfig;
 pub use clusters::Clusters;
 pub use clusters_health::ClustersHealth;
+pub use collections::Collections;
+pub use collections_create::CollectionsCreate;
+pub use collections_get::CollectionsGet;
+use couchbase::CouchbaseError;
 pub use data::Data;
 pub use data_stats::DataStats;
 pub use doc::Doc;
@@ -57,10 +67,14 @@ pub use fake_data::FakeData;
 #[cfg(not(target_os = "windows"))]
 pub use map::Map;
 pub use nodes::Nodes;
+use nu_errors::ShellError;
 pub use ping::Ping;
 pub use query::Query;
 pub use query_advise::QueryAdvise;
 pub use query_indexes::QueryIndexes;
+pub use scopes::Scopes;
+pub use scopes_create::ScopesCreate;
+pub use scopes_get::ScopesGet;
 pub use search::Search;
 pub use use_bucket::UseBucket;
 pub use use_cluster::UseCluster;
@@ -73,9 +87,6 @@ pub use users_roles::UsersRoles;
 pub use users_upsert::UsersUpsert;
 pub use version::Version;
 pub use whoami::Whoami;
-
-use couchbase::CouchbaseError;
-use nu_errors::ShellError;
 
 fn convert_cb_error<T>(input: Result<T, CouchbaseError>) -> Result<T, ShellError> {
     input.map_err(|e| ShellError::untagged_runtime_error(format!("Couchbase SDK Error: {}", e)))

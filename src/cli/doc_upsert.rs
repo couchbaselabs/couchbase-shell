@@ -98,7 +98,7 @@ async fn run_upsert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream
         .get("expiry")
         .map(|e| Duration::from_secs(e.as_u64().unwrap_or_else(|_| 0)));
 
-    let collection = match collection_from_args(&args, &state) {
+    let collection = match collection_from_args(&args, state.active_cluster()) {
         Ok(c) => c,
         Err(e) => {
             return Err(e);
