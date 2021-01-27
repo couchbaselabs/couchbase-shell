@@ -3,12 +3,10 @@
 mod cli;
 mod config;
 mod state;
-mod ui;
 
 use crate::cli::*;
 use crate::config::{ClusterTimeouts, ShellConfig};
 use crate::state::RemoteCluster;
-use crate::ui::*;
 use ansi_term::Color;
 use log::{debug, warn};
 use serde::Deserialize;
@@ -182,10 +180,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         default_scope,
         default_collection,
     ));
-
-    if opt.ui {
-        tokio::task::spawn(spawn_and_serve(state.clone()));
-    }
 
     if !opt.no_motd && opt.script.is_none() && opt.command.is_none() {
         fetch_and_print_motd().await;
@@ -367,8 +361,6 @@ struct Motd {
 struct CliOptions {
     #[structopt(long = "hostnames")]
     hostnames: Option<String>,
-    #[structopt(long = "ui")]
-    ui: bool,
     #[structopt(short = "u", long = "username")]
     username: Option<String>,
     #[structopt(short = "p", long = "password")]

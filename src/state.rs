@@ -179,10 +179,6 @@ impl RemoteCluster {
         self.username.as_str()
     }
 
-    pub fn password(&self) -> &str {
-        self.password.as_str()
-    }
-
     pub fn connstr(&self) -> &str {
         self.connstr.as_str()
     }
