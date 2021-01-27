@@ -242,6 +242,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         nu_cli::whole_stream_command(UsersRoles::new(state.clone())),
         nu_cli::whole_stream_command(Search::new(state.clone())),
         nu_cli::whole_stream_command(Ping::new(state.clone())),
+        nu_cli::whole_stream_command(Collections {}),
+        nu_cli::whole_stream_command(CollectionsGet::new(state.clone())),
+        nu_cli::whole_stream_command(CollectionsCreate::new(state.clone())),
+        nu_cli::whole_stream_command(Scopes {}),
+        nu_cli::whole_stream_command(ScopesGet::new(state.clone())),
+        nu_cli::whole_stream_command(ScopesCreate::new(state.clone())),
     ]);
 
     if let Some(c) = opt.command {

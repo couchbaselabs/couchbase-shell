@@ -1,5 +1,5 @@
 use super::ctrlc_future::CtrlcFuture;
-use crate::state::State;
+use crate::state::{RemoteCluster, State};
 use couchbase::{Collection, CouchbaseError, CouchbaseResult};
 use futures::{future::FutureExt, pin_mut, select, Stream, StreamExt};
 use nu_cli::{EvaluatedWholeStreamCommandArgs, InterruptibleStream, OutputStream, ToPrimitive};
@@ -259,24 +259,28 @@ pub async fn run_interruptable<T>(
     res
 }
 
-pub fn collection_from_args(
+pub fn bucket_name_from_args(
     args: &EvaluatedWholeStreamCommandArgs,
-    state: &Arc<State>,
-) -> Result<Arc<Collection>, ShellError> {
-    let active = state.active_cluster();
-    let bucket_name = match args
+    active: &RemoteCluster,
+) -> Result<String, ShellError> {
+    return match args
         .get("bucket")
         .map(|bucket| bucket.as_string().ok())
         .flatten()
         .or_else(|| active.active_bucket())
     {
-        Some(v) => v,
-        None => {
-            return Err(ShellError::untagged_runtime_error(format!(
-                "Could not auto-select a bucket - please use --bucket instead"
-            )))
-        }
+        Some(v) => Ok(v),
+        None => Err(ShellError::untagged_runtime_error(format!(
+            "Could not auto-select a bucket - please use --bucket instead"
+        ))),
     };
+}
+
+pub fn collection_from_args(
+    args: &EvaluatedWholeStreamCommandArgs,
+    active: &RemoteCluster,
+) -> Result<Arc<Collection>, ShellError> {
+    let bucket_name = bucket_name_from_args(args, active)?;
 
     let bucket = active.bucket(&bucket_name);
 
