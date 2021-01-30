@@ -10,8 +10,14 @@ Asciidoctor::Extensions.register do
         j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
         })(window,document,'script','dataLayer','GTM-MVPNN2');</script>
-      <script src="https://cdn.cookielaw.org/scripttemplates/otSDKStub.js"
-        type="text/javascript" charset="UTF-8" data-domain-script="748511ff-10bf-44bf-88b8-36382e5b5fd9"></script>
+      <script>
+        if (window.self === window.top) {
+          var s = document.createElement("script");
+          s.src = "https://cdn.cookielaw.org/scripttemplates/otSDKStub.js";
+          s.setAttribute("data-domain-script", "748511ff-10bf-44bf-88b8-36382e5b5fd9");
+          document.body.appendChild(s);
+        }
+      </script>
       <script type="text/javascript">
         function OptanonWrapper() { }
       </script>)
