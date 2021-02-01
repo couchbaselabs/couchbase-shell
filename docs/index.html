@@ -4,16 +4,17 @@
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Asciidoctor 2.0.10">
-<meta name="author" content="(c) Copyright 2020, All Rights Reserved">
+<meta name="generator" content="Asciidoctor 2.0.12">
+<meta name="author" content="(c) Copyright 2021, All Rights Reserved">
 <title>Couchbase Shell Documentation</title>
 <link rel="stylesheet" href="./couchbase.css">
+<link rel="stylesheet" href="./coderay-asciidoctor.css">
 </head>
 <body class="article toc2 toc-left">
 <div id="header">
 <h1>Couchbase Shell Documentation</h1>
 <div class="details">
-<span id="author" class="author">(c) Copyright 2020, All Rights Reserved</span><br>
+<span id="author" class="author">(c) Copyright 2021, All Rights Reserved</span><br>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -239,13 +240,15 @@ Thanks for trying CBSH!
 <div class="content">
 <pre class="CodeRay highlight"><code>version = 1
 
-[clusters.local]
+[[clusters]]
+identifier = &quot;local&quot;
 hostnames = [&quot;127.0.0.1&quot;]
 default-bucket = &quot;travel-sample&quot;
 username = &quot;Administrator&quot;
 password = &quot;password&quot;
 
-# [clusters.remote]
+# [[clusters]]
+# identifier = &quot;remote&quot;
 # hostnames = [&quot;10.143.200.101&quot;]
 # default-bucket = &quot;myapp&quot;
 # username = &quot;user&quot;
@@ -940,13 +943,19 @@ If you have pivot mode (detailed above) turned off then this command can produce
 <pre class="CodeRay highlight"><code data-lang="toml"># Allows us to evolve in the future without breaking old config files
 version = 1
 
-[clusters.default]
+[[clusters]]
+identifier = &quot;default&quot;
 hostnames = [&quot;127.0.0.1&quot;]
 default-bucket = &quot;travel-sample&quot;
+default-scope = &quot;my-scope&quot;
+default-collection = &quot;my-collection&quot;
 # The following can be part of the config or credentials
 username = &quot;Administrator&quot;
 password = &quot;password&quot;
-cert-path = &quot;/absolute/path/to/server.cert&quot;</code></pre>
+cert-path = &quot;/absolute/path/to/server.cert&quot;
+data-timeout = &quot;2500ms&quot;
+connect-timeout = &quot;7500ms&quot;
+query-timeout = &quot;75s&quot;</code></pre>
 </div>
 </div>
 </div>
@@ -960,7 +969,8 @@ cert-path = &quot;/absolute/path/to/server.cert&quot;</code></pre>
 <pre class="CodeRay highlight"><code data-lang="toml"># Allows us to evolve in the future without breaking old config files
 version = 1
 
-[clusters.default]
+[[clusters]]
+identifier = &quot;default&quot;
 username = &quot;Administrator&quot;
 password = &quot;password&quot;
 cert-path = &quot;/absolute/path/to/server.cert&quot;</code></pre>
@@ -1419,7 +1429,7 @@ There are two ways that we can do this.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; query &quot;SELECT airportname, city, country, faa, icao, id, type, tz, geo.alt, geo.lat, geo.lon FROM `travel-sample` WHERE `type` === 'airport' LIMIT 5&quot;
+<pre class="CodeRay highlight"><code>&gt; query &quot;SELECT airportname, city, country, faa, icao, id, type, tz, geo.alt, geo.lat, geo.lon FROM `travel-sample` WHERE `type` = 'airport' LIMIT 5&quot;
 ───┬────────────────────┬─────┬───────────────────┬─────────┬─────┬──────┬──────┬─────────┬─────────┬─────────┬──────────────
  # │    airportname     │ alt │       city        │ country │ faa │ icao │  id  │   lat   │   lon   │  type   │      tz
 ───┼────────────────────┼─────┼───────────────────┼─────────┼─────┼──────┼──────┼─────────┼─────────┼─────────┼──────────────
@@ -1429,7 +1439,7 @@ There are two ways that we can do this.</p>
  3 │ Couterne           │ 718 │ Bagnole-de-l'orne │ France  │     │ LFAO │ 1257 │ 48.5458 │ -0.3874 │ airport │ Europe/Paris
  4 │ Bray               │ 364 │ Albert            │ France  │     │ LFAQ │ 1258 │ 49.9715 │  2.6976 │ airport │ Europe/Paris
 ───┴────────────────────┴─────┴───────────────────┴─────────┴─────┴──────┴──────┴─────────┴─────────┴─────────┴──────────────
-&gt; query &quot;SELECT airportname, city, country, faa, icao, id, type, tz, geo.alt, geo.lat, geo.lon FROM `travel-sample` WHERE `type` === 'airport' LIMIT 5&quot; | save airports.csv</code></pre>
+&gt; query &quot;SELECT airportname, city, country, faa, icao, id, type, tz, geo.alt, geo.lat, geo.lon FROM `travel-sample` WHERE `type` = 'airport' LIMIT 5&quot; | save airports.csv</code></pre>
 </div>
 </div>
 </div>
@@ -1440,16 +1450,22 @@ There are two ways that we can do this.</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2020-10-14 08:57:15 +0200
+Last updated 2021-02-01 07:45:19 +0100
 </div>
 </div>
-<link rel="stylesheet" href="./coderay-asciidoctor.css">
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
         new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
         j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
         })(window,document,'script','dataLayer','GTM-MVPNN2');</script>
-      <script src="https://cdn.cookielaw.org/scripttemplates/otSDKStub.js"  type="text/javascript" charset="UTF-8" data-domain-script="a3f24ada-7dfd-4533-8672-6014ad300642" ></script>
+      <script>
+        if (window.self === window.top) {
+          var s = document.createElement("script");
+          s.src = "https://cdn.cookielaw.org/scripttemplates/otSDKStub.js";
+          s.setAttribute("data-domain-script", "748511ff-10bf-44bf-88b8-36382e5b5fd9");
+          document.body.appendChild(s);
+        }
+      </script>
       <script type="text/javascript">
         function OptanonWrapper() { }
       </script>
