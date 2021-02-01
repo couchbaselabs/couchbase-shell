@@ -203,7 +203,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         // Displays cluster manager node infos
         nu_cli::whole_stream_command(Nodes::new(state.clone())),
         // Displays cluster manager bucket infos
-        nu_cli::whole_stream_command(Buckets::new(state.clone())),
+        nu_cli::whole_stream_command(Buckets {}),
+        nu_cli::whole_stream_command(BucketsGet::new(state.clone())),
+        nu_cli::whole_stream_command(BucketsCreate::new(state.clone())),
+        nu_cli::whole_stream_command(BucketsUpdate::new(state.clone())),
+        nu_cli::whole_stream_command(BucketsDrop::new(state.clone())),
+        nu_cli::whole_stream_command(BucketsFlush::new(state.clone())),
         nu_cli::whole_stream_command(BucketsConfig::new(state.clone())),
         // Performs n1ql queries
         nu_cli::whole_stream_command(Query::new(state.clone())),
