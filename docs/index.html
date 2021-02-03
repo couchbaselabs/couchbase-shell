@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="generator" content="Asciidoctor 2.0.10">
-<meta name="author" content="(c) Copyright 2020, All Rights Reserved">
+<meta name="author" content="(c) Copyright 2021, All Rights Reserved">
 <title>Couchbase Shell Documentation</title>
 <link rel="stylesheet" href="./couchbase.css">
 </head>
@@ -13,7 +13,7 @@
 <div id="header">
 <h1>Couchbase Shell Documentation</h1>
 <div class="details">
-<span id="author" class="author">(c) Copyright 2020, All Rights Reserved</span><br>
+<span id="author" class="author">(c) Copyright 2021, All Rights Reserved</span><br>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -60,25 +60,26 @@
 <li><a href="#_credentials_file_format">4.2. Credentials File Format</a></li>
 </ul>
 </li>
-<li><a href="#_recipes">5. Recipes</a>
+<li><a href="#_troubleshooting">5. Troubleshooting</a></li>
+<li><a href="#_recipes">6. Recipes</a>
 <ul class="sectlevel2">
-<li><a href="#_importing_data">5.1. Importing data</a>
+<li><a href="#_importing_data">6.1. Importing data</a>
 <ul class="sectlevel3">
-<li><a href="#_a_note_on_data_format">5.1.1. A Note On Data format</a></li>
-<li><a href="#_from_file">5.1.2. From file</a>
+<li><a href="#_a_note_on_data_format">6.1.1. A Note On Data format</a></li>
+<li><a href="#_from_file">6.1.2. From file</a>
 <ul class="sectlevel4">
 <li><a href="#_from_json">From JSON</a></li>
 <li><a href="#_from_csv">From CSV</a></li>
 </ul>
 </li>
-<li><a href="#_faking_data">5.1.3. Faking data</a></li>
-<li><a href="#_modifying_data">5.1.4. Modifying data</a></li>
+<li><a href="#_faking_data">6.1.3. Faking data</a></li>
+<li><a href="#_modifying_data">6.1.4. Modifying data</a></li>
 </ul>
 </li>
-<li><a href="#_exporting_data">5.2. Exporting data</a>
+<li><a href="#_exporting_data">6.2. Exporting data</a>
 <ul class="sectlevel3">
-<li><a href="#_a_note_on_data_format_2">5.2.1. A Note On Data format</a></li>
-<li><a href="#_to_file">5.2.2. To file</a>
+<li><a href="#_a_note_on_data_format_2">6.2.1. A Note On Data format</a></li>
+<li><a href="#_to_file">6.2.2. To file</a>
 <ul class="sectlevel4">
 <li><a href="#_to_json">To JSON</a></li>
 <li><a href="#_to_csv">To CSV</a></li>
@@ -239,13 +240,15 @@ Thanks for trying CBSH!
 <div class="content">
 <pre class="CodeRay highlight"><code>version = 1
 
-[clusters.local]
+[[clusters]]
+identifier = &quot;local&quot;
 hostnames = [&quot;127.0.0.1&quot;]
 default-bucket = &quot;travel-sample&quot;
 username = &quot;Administrator&quot;
 password = &quot;password&quot;
 
-# [clusters.remote]
+# [[clusters]]
+# identifier = &quot;remote&quot;
 # hostnames = [&quot;10.143.200.101&quot;]
 # default-bucket = &quot;myapp&quot;
 # username = &quot;user&quot;
@@ -940,9 +943,12 @@ If you have pivot mode (detailed above) turned off then this command can produce
 <pre class="CodeRay highlight"><code data-lang="toml"># Allows us to evolve in the future without breaking old config files
 version = 1
 
-[clusters.default]
+[[clusters]]
+identifier = &quot;default&quot;
 hostnames = [&quot;127.0.0.1&quot;]
 default-bucket = &quot;travel-sample&quot;
+default-scope = &quot;my-scope&quot;
+default-collection = &quot;my-collection&quot;
 # The following can be part of the config or credentials
 username = &quot;Administrator&quot;
 password = &quot;password&quot;
@@ -963,7 +969,8 @@ query-timeout = &quot;75s&quot;</code></pre>
 <pre class="CodeRay highlight"><code data-lang="toml"># Allows us to evolve in the future without breaking old config files
 version = 1
 
-[clusters.default]
+[[clusters]]
+identifier = &quot;default&quot;
 username = &quot;Administrator&quot;
 password = &quot;password&quot;
 cert-path = &quot;/absolute/path/to/server.cert&quot;</code></pre>
@@ -973,15 +980,102 @@ cert-path = &quot;/absolute/path/to/server.cert&quot;</code></pre>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_recipes">5. Recipes</h2>
+<h2 id="_troubleshooting">5. Troubleshooting</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>When using Couchbase Shell sometimes commands will return errors from the underlying SDK, these often look something like:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; doc get t
+─────────┬───────────────────────────────────────────────────
+ id      │ t
+ cas     │
+ content │
+ error   │ Unknown Error(A generic / unknown error happened:
+         │ {&quot;msg&quot;:&quot;LCB_ERR_NO_MATCHING_SERVER (1010)&quot;})
+─────────┴───────────────────────────────────────────────────</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>It can be difficult to work out why commands are failing in ways such as this.
+Couchbase Shell provides a log file containing output from the SDK logs, this log file lives at <code>&lt;binary_dir&gt;/.cbshlog/sdk.log</code> where <code>&lt;binary_dir&gt;</code> is the directory where the executable located.
+You can view this log using your favourite tools such as <code>tail</code> or <code>cat</code>.
+You can also use the <code>sdklog</code> command, running this command will output the last x lines from the log file (by default x is 10):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Administrator at 🏠 default in 🗄  defaul
+&gt; sdklog
+───┬─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ # │                                                                          logs
+───┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ 0 │ 2021-02-04T10:21:31.039401+00:00 - HTTP node list finished. Trying to obtain connection from first node in list
+ 1 │ 2021-02-04T10:21:31.039365+00:00 - Ignoring failure. Current=0x7fd1ab413c50 (CCCP)
+ 2 │ 2021-02-04T10:21:31.039325+00:00 - Provider 'HTTP' failed: LCB_ERR_BUCKET_NOT_FOUND (210)
+ 3 │ 2021-02-04T10:21:31.039256+00:00 - &lt;10.112.210.102:8091&gt; (CTX=0x7fd1ab704dd0,bc_http) Destroying context. Pending Writes=0, Entered=true, Socket
+   │ Refcount=1
+ 4 │ 2021-02-04T10:21:31.039216+00:00 - &lt;10.112.210.102:8091&gt; (CTX=0x7fd1ab704dd0,bc_http) Got non-success HTTP status code 404
+ 5 │ 2021-02-04T10:21:31.039176+00:00 - &lt;10.112.210.102:8091&gt; (CTX=0x7fd1ab704dd0,bc_http) Got 404 on config stream. Assuming bucket does not exist as we've
+   │ tried both URL types
+ 6 │ 2021-02-04T10:21:31.039075+00:00 - &lt;10.112.210.102:8091&gt; (CTX=0x7fd1ab704dd0,bc_http) Received 411 bytes on HTTP stream
+ 7 │ 2021-02-04T10:21:30.930327+00:00 - &lt;10.112.210.102:8091&gt; (CTX=0x7fd1ab704dd0,bc_http) Got 404 on config stream. Assuming terse URI not supported on
+   │ cluster
+ 8 │ 2021-02-04T10:21:30.930268+00:00 - &lt;10.112.210.102:8091&gt; (CTX=0x7fd1ab704dd0,bc_http) Received 411 bytes on HTTP stream
+ 9 │ 2021-02-04T10:21:30.930202+00:00 - &lt;10.112.210.102:11210&gt; (CTX=0x7fd1ab705440,sasl,SASLREQ=0x7fd1ab705270) Using SCRAM-SHA512 SASL mechanism
+───┴─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>From looking at this log file we can see the error <code>LCB_ERR_BUCKET_NOT_FOUND</code> which could suggest that we&#8217;ve used an incorrect bucket name.
+Which, in this case, is correct - you can see on the prompt that we&#8217;ve mistyped the name of our "default" bucket as "defaul".
+To get more lines than the default 10 lines we can use the <code>--last x</code> flag:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Administrator at 🏠 default in 🗄  defaul
+&gt; sdklog --last 20
+────┬─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ #  │                                                                          logs
+────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  0 │ 2021-02-04T10:23:10.070782+00:00 - &lt;10.112.210.102:8091&gt; (CTX=0x7fd1ab606010,unknown) Pairing with SOCK=1c9d04677063bb3e
+  1 │ 2021-02-04T10:23:10.070732+00:00 - Successfuly connected to REST API 10.112.210.102:8091
+  2 │ 2021-02-04T10:23:10.070693+00:00 - &lt;10.112.210.102:8091&gt; (SOCK=1c9d04677063bb3e) Successfully set TCP_KEEPALIVE
+  3 │ 2021-02-04T10:23:10.070642+00:00 - &lt;10.112.210.102:8091&gt; (SOCK=1c9d04677063bb3e) Successfully set TCP_NODELAY
+  4 │ 2021-02-04T10:23:10.070540+00:00 - &lt;10.112.210.102:8091&gt; (SOCK=1c9d04677063bb3e) Connected established
+  5 │ 2021-02-04T10:23:09.965411+00:00 - &lt;10.112.210.102:8091&gt; (SOCK=1c9d04677063bb3e) Scheduling I/O watcher for asynchronous connection completion.
+  6 │ 2021-02-04T10:23:09.965260+00:00 - &lt;10.112.210.102:8091&gt; (SOCK=1c9d04677063bb3e) Created new socket with FD=14
+  7 │ 2021-02-04T10:23:09.965142+00:00 - &lt;10.112.210.102:8091&gt; (SOCK=1c9d04677063bb3e) Starting. Timeout=7000000us
+  8 │ 2021-02-04T10:23:09.965059+00:00 - &lt;10.112.210.101:8091&gt; (CTX=0x7fd1ab605e20,bc_http) Destroying context. Pending Writes=0, Entered=true, Socket
+    │ Refcount=1
+  9 │ 2021-02-04T10:23:09.965015+00:00 - &lt;10.112.210.101:8091&gt; (CTX=0x7fd1ab605e20,bc_http) Got non-success HTTP status code 404
+ 10 │ 2021-02-04T10:23:09.964964+00:00 - &lt;10.112.210.101:8091&gt; (CTX=0x7fd1ab605e20,bc_http) Got 404 on config stream. Assuming bucket does not exist as we've
+    │ tried both URL types
+ 11 │ 2021-02-04T10:23:09.964849+00:00 - &lt;10.112.210.101:8091&gt; (CTX=0x7fd1ab605e20,bc_http) Received 411 bytes on HTTP stream
+ 12 │ 2021-02-04T10:23:09.860333+00:00 - &lt;10.112.210.101:8091&gt; (CTX=0x7fd1ab605e20,bc_http) Got 404 on config stream. Assuming terse URI not supported on
+    │ cluster
+ 13 │ 2021-02-04T10:23:09.860187+00:00 - &lt;10.112.210.101:8091&gt; (CTX=0x7fd1ab605e20,bc_http) Received 411 bytes on HTTP stream
+ 14 │ 2021-02-04T10:23:09.757046+00:00 - &lt;10.112.210.101:8091&gt; (CTX=0x7fd1ab605e20,unknown) Pairing with SOCK=1c650149ecd8076d
+ 15 │ 2021-02-04T10:23:09.756993+00:00 - Successfuly connected to REST API 10.112.210.101:8091
+ 16 │ 2021-02-04T10:23:09.756955+00:00 - &lt;10.112.210.101:8091&gt; (SOCK=1c650149ecd8076d) Successfully set TCP_KEEPALIVE
+ 17 │ 2021-02-04T10:23:09.756911+00:00 - &lt;10.112.210.101:8091&gt; (SOCK=1c650149ecd8076d) Successfully set TCP_NODELAY
+ 18 │ 2021-02-04T10:23:09.756817+00:00 - &lt;10.112.210.101:8091&gt; (SOCK=1c650149ecd8076d) Connected established
+ 19 │ 2021-02-04T10:23:09.653877+00:00 - &lt;10.112.210.101:8091&gt; (SOCK=1c650149ecd8076d) Scheduling I/O watcher for asynchronous connection completion.
+────┴─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_recipes">6. Recipes</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_importing_data">5.1. Importing data</h3>
+<h3 id="_importing_data">6.1. Importing data</h3>
 <div class="paragraph">
 <p>Couchbase Shell supports loading data from a variety of formats and sources.</p>
 </div>
 <div class="sect3">
-<h4 id="_a_note_on_data_format">5.1.1. A Note On Data format</h4>
+<h4 id="_a_note_on_data_format">6.1.1. A Note On Data format</h4>
 <div class="paragraph">
 <p>The <code>doc upsert</code> command requires there to be only two fields/columns for an upsert.
 There can be more than two fields/columns in the data but only two can be used.
@@ -1005,7 +1099,7 @@ By default, these two columns are named <code>id</code> and <code>content</code>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_from_file">5.1.2. From file</h4>
+<h4 id="_from_file">6.1.2. From file</h4>
 <div class="sect4">
 <h5 id="_from_json">From JSON</h5>
 <div class="paragraph">
@@ -1157,7 +1251,7 @@ Bray,Albert,France,,LFAQ,1258,airport,Europe/Paris
 </div>
 </div>
 <div class="sect3">
-<h4 id="_faking_data">5.1.3. Faking data</h4>
+<h4 id="_faking_data">6.1.3. Faking data</h4>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; cat user.tera
@@ -1194,7 +1288,7 @@ Bray,Albert,France,,LFAQ,1258,airport,Europe/Paris
 </div>
 </div>
 <div class="sect3">
-<h4 id="_modifying_data">5.1.4. Modifying data</h4>
+<h4 id="_modifying_data">6.1.4. Modifying data</h4>
 <div class="paragraph">
 <p>In some circumstances you may want to modify the data before you import it.
 Let&#8217;s take the example of importing from a csv file but this time the airports.csv file is missing the <code>type</code> column but we want to add it to our data:</p>
@@ -1250,12 +1344,12 @@ Bray,Albert,France,,LFAQ,1258,Europe/Paris
 </div>
 </div>
 <div class="sect2">
-<h3 id="_exporting_data">5.2. Exporting data</h3>
+<h3 id="_exporting_data">6.2. Exporting data</h3>
 <div class="paragraph">
 <p>Couchbase Shell supports exporting data to a variety of formats and sources.</p>
 </div>
 <div class="sect3">
-<h4 id="_a_note_on_data_format_2">5.2.1. A Note On Data format</h4>
+<h4 id="_a_note_on_data_format_2">6.2.1. A Note On Data format</h4>
 <div class="paragraph">
 <p>The <code>doc get</code> command exposes data as three fields; <code>id</code>, <code>cas</code>, and <code>content</code>.
 The body of the document is stored within the <code>content</code> column.
@@ -1263,7 +1357,7 @@ If you want to only store the document body then you can use <code>doc get &lt;i
 </div>
 </div>
 <div class="sect3">
-<h4 id="_to_file">5.2.2. To file</h4>
+<h4 id="_to_file">6.2.2. To file</h4>
 <div class="sect4">
 <h5 id="_to_json">To JSON</h5>
 <div class="paragraph">
@@ -1422,7 +1516,7 @@ There are two ways that we can do this.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; query &quot;SELECT airportname, city, country, faa, icao, id, type, tz, geo.alt, geo.lat, geo.lon FROM `travel-sample` WHERE `type` === 'airport' LIMIT 5&quot;
+<pre class="CodeRay highlight"><code>&gt; query &quot;SELECT airportname, city, country, faa, icao, id, type, tz, geo.alt, geo.lat, geo.lon FROM `travel-sample` WHERE `type` = 'airport' LIMIT 5&quot;
 ───┬────────────────────┬─────┬───────────────────┬─────────┬─────┬──────┬──────┬─────────┬─────────┬─────────┬──────────────
  # │    airportname     │ alt │       city        │ country │ faa │ icao │  id  │   lat   │   lon   │  type   │      tz
 ───┼────────────────────┼─────┼───────────────────┼─────────┼─────┼──────┼──────┼─────────┼─────────┼─────────┼──────────────
@@ -1432,7 +1526,7 @@ There are two ways that we can do this.</p>
  3 │ Couterne           │ 718 │ Bagnole-de-l'orne │ France  │     │ LFAO │ 1257 │ 48.5458 │ -0.3874 │ airport │ Europe/Paris
  4 │ Bray               │ 364 │ Albert            │ France  │     │ LFAQ │ 1258 │ 49.9715 │  2.6976 │ airport │ Europe/Paris
 ───┴────────────────────┴─────┴───────────────────┴─────────┴─────┴──────┴──────┴─────────┴─────────┴─────────┴──────────────
-&gt; query &quot;SELECT airportname, city, country, faa, icao, id, type, tz, geo.alt, geo.lat, geo.lon FROM `travel-sample` WHERE `type` === 'airport' LIMIT 5&quot; | save airports.csv</code></pre>
+&gt; query &quot;SELECT airportname, city, country, faa, icao, id, type, tz, geo.alt, geo.lat, geo.lon FROM `travel-sample` WHERE `type` = 'airport' LIMIT 5&quot; | save airports.csv</code></pre>
 </div>
 </div>
 </div>
@@ -1443,7 +1537,7 @@ There are two ways that we can do this.</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2020-10-19 18:15:07 +0100
+Last updated 2021-02-04 10:12:29 UTC
 </div>
 </div>
 <link rel="stylesheet" href="./coderay-asciidoctor.css">
@@ -1452,8 +1546,14 @@ Last updated 2020-10-19 18:15:07 +0100
         j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
         })(window,document,'script','dataLayer','GTM-MVPNN2');</script>
-      <script src="https://cdn.cookielaw.org/scripttemplates/otSDKStub.js"
-        type="text/javascript" charset="UTF-8" data-domain-script="748511ff-10bf-44bf-88b8-36382e5b5fd9"></script>
+      <script>
+        if (window.self === window.top) {
+          var s = document.createElement("script");
+          s.src = "https://cdn.cookielaw.org/scripttemplates/otSDKStub.js";
+          s.setAttribute("data-domain-script", "748511ff-10bf-44bf-88b8-36382e5b5fd9");
+          document.body.appendChild(s);
+        }
+      </script>
       <script type="text/javascript">
         function OptanonWrapper() { }
       </script>
