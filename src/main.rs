@@ -8,7 +8,12 @@ use crate::cli::*;
 use crate::config::{ClusterTimeouts, ShellConfig};
 use crate::state::RemoteCluster;
 use ansi_term::Color;
-use log::{debug, warn};
+use log::{debug, warn, LevelFilter};
+use log4rs::append::console::ConsoleAppender;
+use log4rs::append::file::FileAppender;
+use log4rs::config::{Appender, Logger, Root};
+use log4rs::encode::pattern::PatternEncoder;
+use log4rs::Config;
 use serde::Deserialize;
 use state::State;
 use std::collections::HashMap;
@@ -25,7 +30,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     const DEFAULT_HOSTNAME: &str = "localhost";
     const DEFAULT_USERNAME: &str = "Administrator";
 
-    pretty_env_logger::init();
+    configure_logging();
 
     let opt = CliOptions::from_args();
     debug!("Effective {:?}", opt);
@@ -247,6 +252,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         nu_cli::whole_stream_command(Scopes {}),
         nu_cli::whole_stream_command(ScopesGet::new(state.clone())),
         nu_cli::whole_stream_command(ScopesCreate::new(state.clone())),
+        nu_cli::whole_stream_command(SDKLog {}),
     ]);
 
     if let Some(c) = opt.command {
@@ -388,4 +394,31 @@ struct CliOptions {
     no_motd: bool,
     #[structopt(long = "cert-path")]
     cert_path: Option<String>,
+}
+
+fn configure_logging() {
+    let mut current_exe = std::env::current_exe().unwrap();
+    current_exe.pop();
+    let exe_dir = current_exe.as_path().display().to_string();
+
+    let stdout = ConsoleAppender::builder().build();
+
+    let requests = FileAppender::builder()
+        .encoder(Box::new(PatternEncoder::new("{d} - {m}{n}")))
+        .build(format!("{}/.cbshlog/sdk.log", exe_dir))
+        .unwrap();
+
+    let config = Config::builder()
+        .appender(Appender::builder().build("stdout", Box::new(stdout)))
+        .appender(Appender::builder().build("requests", Box::new(requests)))
+        .logger(
+            Logger::builder()
+                .appender("requests")
+                .additive(false)
+                .build("couchbase", LevelFilter::Trace),
+        )
+        .build(Root::builder().appender("stdout").build(LevelFilter::Error))
+        .unwrap();
+
+    log4rs::init_config(config).unwrap();
 }
