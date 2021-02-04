@@ -236,8 +236,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         nu_cli::whole_stream_command(UseScope::new(state.clone())),
         nu_cli::whole_stream_command(Whoami::new(state.clone())),
         nu_cli::whole_stream_command(Version::new()),
-        #[cfg(not(target_os = "windows"))]
-        nu_cli::whole_stream_command(Map::new(state.clone())),
         nu_cli::whole_stream_command(Doc {}),
         nu_cli::whole_stream_command(Data {}),
         nu_cli::whole_stream_command(Users::new(state.clone())),

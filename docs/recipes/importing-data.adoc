@@ -13,7 +13,7 @@ Given the following document format we need to perform some data manipulation to
 > cat mydoc.json
 {"id":3719,"cas":1600344369374167040,"type":"airport","airportname":"Columbia Rgnl","city":"Columbia","country":"United States","faa":"COU","icao":"KCOU","tz":"America/Chicago"}
 
-> open mydoc.json | map { id: ("airport_" + (.id|tostring)), content: . }
+> open mydoc.json | wrap content | insert id {echo $it.content.airportname}
 ───┬──────────────┬─────────────────
  # │      id      │     content
 ───┼──────────────┼─────────────────
@@ -30,16 +30,6 @@ Single Document
 > cat mydoc.json
 {"id":3719,"cas":1600344369374167040,"type":"airport","airportname":"Columbia Rgnl","city":"Columbia","country":"United States","faa":"COU","icao":"KCOU","tz":"America/Chicago"}
 
-> open mydoc.json | map { id: ("airport_" + (.id|tostring)), content: . } | doc upsert
-───┬───────────┬─────────┬────────
- # │ processed │ success │ failed
-───┼───────────┼─────────┼────────
- 0 │         1 │       1 │      0
-───┴───────────┴─────────┴────────
-```
-
-Note: In windows we cannot use the `map` command so we would need to do something like:
-```
 > open mydoc.json | wrap content | insert id {echo $it.content.airportname} | doc upsert
 ───┬───────────┬─────────┬────────
  # │ processed │ success │ failed
@@ -74,16 +64,6 @@ Multiple Documents
    │      │         │ Rgnl        │          │ States  │     │      │ ago
 ───┴──────┴─────────┴─────────────┴──────────┴─────────┴─────┴──────┴──────────────
 
-> ls airports/ | open $it.name | map { id: ("airport_" + (.id|tostring)), content: . } | doc upsert
-───┬───────────┬─────────┬────────
- # │ processed │ success │ failed
-───┼───────────┼─────────┼────────
- 0 │        10 │      10 │      0
-───┴───────────┴─────────┴────────
-```
-
-Note: In windows we cannot use the `map` command so we would need to do something like:
-```
 > ls airports/ | open  $it.name | each { wrap content | insert id {echo $it.content.airportname} } | doc upsert
 ───┬───────────┬─────────┬────────
  # │ processed │ success │ failed
@@ -91,7 +71,6 @@ Note: In windows we cannot use the `map` command so we would need to do somethin
  0 │        10 │      10 │      0
 ───┴───────────┴─────────┴────────
 ```
-
 
 ===== From CSV
 
@@ -101,16 +80,6 @@ Single Document
 id,cas,type,airportname,city,country,faa,icao,tz
 3719,1600344369374167040,airport,Columbia Rgnl,Columbia,United States,COU,KCOU,America/Chicago
 
-> open mydoc.csv | each { map { id: ("airport_" + (.id|tostring)), content: . } } | doc upsert
-───┬───────────┬─────────┬────────
- # │ processed │ success │ failed
-───┼───────────┼─────────┼────────
- 0 │         1 │       1 │      0
-───┴───────────┴─────────┴────────
-```
-
-Note: In windows we cannot use the `map` command so we would need to do something like:
-```
 > open mydoc.csv | each { wrap content | insert id {echo $it.content.airportname} } | doc upsert
 ───┬───────────┬─────────┬────────
  # │ processed │ success │ failed
@@ -129,21 +98,11 @@ Les Loges,Nangis,France,,LFAI,1256,airport,Europe/Paris
 Couterne,Bagnole-de-l'orne,France,,LFAO,1257,airport,Europe/Paris
 Bray,Albert,France,,LFAQ,1258,airport,Europe/Paris
 
-> open airports.csv | each { map { id: ("airport_" + (.id|tostring)), content: . }  } | doc upsert
-───┬───────────┬─────────┬────────
- # │ processed │ success │ failed
-───┼───────────┼─────────┼────────
- 0 │        10 │      10 │      0
-───┴───────────┴─────────┴────────
-```
-
-Note: In windows we cannot use the `map` command so we would need to do something like:
-```
 > open airports.csv | each { wrap content | insert id {echo $it.content.airportname}  } | doc upsert
 ───┬───────────┬─────────┬────────
  # │ processed │ success │ failed
 ───┼───────────┼─────────┼────────
- 0 │         5 │       5 │      0
+ 0 │        10 │      10 │      0
 ───┴───────────┴─────────┴────────
 ```
 
