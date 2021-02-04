@@ -1089,7 +1089,7 @@ By default, these two columns are named <code>id</code> and <code>content</code>
 <pre class="CodeRay highlight"><code>&gt; cat mydoc.json
 {&quot;id&quot;:3719,&quot;cas&quot;:1600344369374167040,&quot;type&quot;:&quot;airport&quot;,&quot;airportname&quot;:&quot;Columbia Rgnl&quot;,&quot;city&quot;:&quot;Columbia&quot;,&quot;country&quot;:&quot;United States&quot;,&quot;faa&quot;:&quot;COU&quot;,&quot;icao&quot;:&quot;KCOU&quot;,&quot;tz&quot;:&quot;America/Chicago&quot;}
 
-&gt; open mydoc.json | map { id: (&quot;airport_&quot; + (.id|tostring)), content: . }
+&gt; open mydoc.json | wrap content | insert id {echo $it.content.airportname}
 ───┬──────────────┬─────────────────
  # │      id      │     content
 ───┼──────────────┼─────────────────
@@ -1110,20 +1110,7 @@ By default, these two columns are named <code>id</code> and <code>content</code>
 <pre class="CodeRay highlight"><code>&gt; cat mydoc.json
 {&quot;id&quot;:3719,&quot;cas&quot;:1600344369374167040,&quot;type&quot;:&quot;airport&quot;,&quot;airportname&quot;:&quot;Columbia Rgnl&quot;,&quot;city&quot;:&quot;Columbia&quot;,&quot;country&quot;:&quot;United States&quot;,&quot;faa&quot;:&quot;COU&quot;,&quot;icao&quot;:&quot;KCOU&quot;,&quot;tz&quot;:&quot;America/Chicago&quot;}
 
-&gt; open mydoc.json | map { id: (&quot;airport_&quot; + (.id|tostring)), content: . } | doc upsert
-───┬───────────┬─────────┬────────
- # │ processed │ success │ failed
-───┼───────────┼─────────┼────────
- 0 │         1 │       1 │      0
-───┴───────────┴─────────┴────────</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Note: In windows we cannot use the <code>map</code> command so we would need to do something like:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code>&gt; open mydoc.json | wrap content | insert id {echo $it.content.airportname} | doc upsert
+&gt; open mydoc.json | wrap content | insert id {echo $it.content.airportname} | doc upsert
 ───┬───────────┬─────────┬────────
  # │ processed │ success │ failed
 ───┼───────────┼─────────┼────────
@@ -1160,20 +1147,7 @@ By default, these two columns are named <code>id</code> and <code>content</code>
    │      │         │ Rgnl        │          │ States  │     │      │ ago
 ───┴──────┴─────────┴─────────────┴──────────┴─────────┴─────┴──────┴──────────────
 
-&gt; ls airports/ | open $it.name | map { id: (&quot;airport_&quot; + (.id|tostring)), content: . } | doc upsert
-───┬───────────┬─────────┬────────
- # │ processed │ success │ failed
-───┼───────────┼─────────┼────────
- 0 │        10 │      10 │      0
-───┴───────────┴─────────┴────────</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Note: In windows we cannot use the <code>map</code> command so we would need to do something like:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code>&gt; ls airports/ | open  $it.name | each { wrap content | insert id {echo $it.content.airportname} } | doc upsert
+&gt; ls airports/ | open  $it.name | each { wrap content | insert id {echo $it.content.airportname} } | doc upsert
 ───┬───────────┬─────────┬────────
  # │ processed │ success │ failed
 ───┼───────────┼─────────┼────────
@@ -1193,20 +1167,7 @@ By default, these two columns are named <code>id</code> and <code>content</code>
 id,cas,type,airportname,city,country,faa,icao,tz
 3719,1600344369374167040,airport,Columbia Rgnl,Columbia,United States,COU,KCOU,America/Chicago
 
-&gt; open mydoc.csv | each { map { id: (&quot;airport_&quot; + (.id|tostring)), content: . } } | doc upsert
-───┬───────────┬─────────┬────────
- # │ processed │ success │ failed
-───┼───────────┼─────────┼────────
- 0 │         1 │       1 │      0
-───┴───────────┴─────────┴────────</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Note: In windows we cannot use the <code>map</code> command so we would need to do something like:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code>&gt; open mydoc.csv | each { wrap content | insert id {echo $it.content.airportname} } | doc upsert
+&gt; open mydoc.csv | each { wrap content | insert id {echo $it.content.airportname} } | doc upsert
 ───┬───────────┬─────────┬────────
  # │ processed │ success │ failed
 ───┼───────────┼─────────┼────────
@@ -1227,24 +1188,11 @@ Les Loges,Nangis,France,,LFAI,1256,airport,Europe/Paris
 Couterne,Bagnole-de-l'orne,France,,LFAO,1257,airport,Europe/Paris
 Bray,Albert,France,,LFAQ,1258,airport,Europe/Paris
 
-&gt; open airports.csv | each { map { id: (&quot;airport_&quot; + (.id|tostring)), content: . }  } | doc upsert
+&gt; open airports.csv | each { wrap content | insert id {echo $it.content.airportname}  } | doc upsert
 ───┬───────────┬─────────┬────────
  # │ processed │ success │ failed
 ───┼───────────┼─────────┼────────
  0 │        10 │      10 │      0
-───┴───────────┴─────────┴────────</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Note: In windows we cannot use the <code>map</code> command so we would need to do something like:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code>&gt; open airports.csv | each { wrap content | insert id {echo $it.content.airportname}  } | doc upsert
-───┬───────────┬─────────┬────────
- # │ processed │ success │ failed
-───┼───────────┼─────────┼────────
- 0 │         5 │       5 │      0
 ───┴───────────┴─────────┴────────</code></pre>
 </div>
 </div>
@@ -1537,7 +1485,7 @@ There are two ways that we can do this.</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2021-02-04 10:12:29 UTC
+Last updated 2021-02-04 11:38:58 UTC
 </div>
 </div>
 <link rel="stylesheet" href="./coderay-asciidoctor.css">
