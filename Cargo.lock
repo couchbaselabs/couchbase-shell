@@ -371,15 +371,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
-name = "autotools"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "774fd1b2d459a939302a0bad631a3de176b8bd5f87cbfc28ceb1f6c18d731094"
-dependencies = [
- "cc",
-]
-
-[[package]]
 name = "backtrace"
 version = "0.3.53"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1051,7 +1042,6 @@ dependencies = [
  "futures 0.3.6",
  "http 0.2.1",
  "humantime-serde",
- "jq-rs",
  "lazy_static 1.4.0",
  "log 0.4.11",
  "log4rs",
@@ -2879,34 +2869,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cc797adac5f083b8ff0ca6f6294a999393d76e197c36488e2ef732c4715f6fa3"
 dependencies = [
  "byteorder",
-]
-
-[[package]]
-name = "jq-rs"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9cfaeae42ef96b227ab787558cc7bbd5f1dfe96b4df7c63f92853017751b0e4"
-dependencies = [
- "jq-sys",
-]
-
-[[package]]
-name = "jq-src"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae23a0c161dda65b96213574a016d314bce32e7060b6587c1c7d3c612c66b4b5"
-dependencies = [
- "autotools",
-]
-
-[[package]]
-name = "jq-sys"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81b65b7e54bd2fffc8cb20cbcf19f40d3158dab5cf5b5adb1f65f9b35eba4c48"
-dependencies = [
- "jq-src",
- "pkg-config",
 ]
 
 [[package]]
