@@ -5,7 +5,8 @@ use crate::state::State;
 use async_trait::async_trait;
 use couchbase::{GenericManagementRequest, Request};
 use futures::channel::oneshot;
-use nu_cli::{CommandArgs, OutputStream};
+use nu_cli::OutputStream;
+use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
@@ -24,7 +25,7 @@ impl Nodes {
 }
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for Nodes {
+impl nu_engine::WholeStreamCommand for Nodes {
     fn name(&self) -> &str {
         "nodes"
     }

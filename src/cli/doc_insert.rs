@@ -7,7 +7,8 @@ use crate::state::State;
 use async_trait::async_trait;
 use couchbase::InsertOptions;
 use futures::{FutureExt, StreamExt};
-use nu_cli::{CommandArgs, OutputStream};
+use nu_cli::OutputStream;
+use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{MaybeOwned, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
@@ -26,7 +27,7 @@ impl DocInsert {
 }
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for DocInsert {
+impl nu_engine::WholeStreamCommand for DocInsert {
     fn name(&self) -> &str {
         "doc insert"
     }

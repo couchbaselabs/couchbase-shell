@@ -2,7 +2,8 @@ use super::ctrlc_future::CtrlcFuture;
 use crate::state::{RemoteCluster, State};
 use couchbase::{Collection, CouchbaseError, CouchbaseResult};
 use futures::{future::FutureExt, pin_mut, select, Stream, StreamExt};
-use nu_cli::{EvaluatedWholeStreamCommandArgs, InterruptibleStream, OutputStream, ToPrimitive};
+use nu_cli::{InterruptibleStream, OutputStream, ToPrimitive};
+use nu_engine::EvaluatedWholeStreamCommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{
     Primitive, ReturnSuccess, TaggedDictBuilder, UnspannedPathMember, UntaggedValue, Value,
@@ -118,9 +119,8 @@ pub fn convert_nu_value_to_json_value(v: &Value) -> Result<serde_json::Value, Sh
             }
         }
         UntaggedValue::Primitive(Primitive::Nothing) => serde_json::Value::Null,
-        UntaggedValue::Primitive(Primitive::Pattern(s)) => serde_json::Value::String(s.clone()),
+        UntaggedValue::Primitive(Primitive::GlobPattern(s)) => serde_json::Value::String(s.clone()),
         UntaggedValue::Primitive(Primitive::String(s)) => serde_json::Value::String(s.clone()),
-        UntaggedValue::Primitive(Primitive::Line(s)) => serde_json::Value::String(s.clone()),
         UntaggedValue::Primitive(Primitive::ColumnPath(path)) => serde_json::Value::Array(
             path.iter()
                 .map(|x| match &x.unspanned {
@@ -140,7 +140,7 @@ pub fn convert_nu_value_to_json_value(v: &Value) -> Result<serde_json::Value, Sh
                 })
                 .collect::<Result<Vec<serde_json::Value>, ShellError>>()?,
         ),
-        UntaggedValue::Primitive(Primitive::Path(s)) => {
+        UntaggedValue::Primitive(Primitive::FilePath(s)) => {
             serde_json::Value::String(s.display().to_string())
         }
 
@@ -248,7 +248,7 @@ pub async fn run_interruptable<T>(
                 Err(e) => Err(couchbase_error_to_shell_error(e))
             }
         },
-        c = ctrl_c_fut => {
+        _c = ctrl_c_fut => {
             drop(f_fused);
             return Err(ShellError::untagged_runtime_error(format!(
                 "Cancelled"

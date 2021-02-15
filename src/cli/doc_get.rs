@@ -8,7 +8,8 @@ use crate::cli::util::{collection_from_args, run_interruptable};
 use async_trait::async_trait;
 use futures::stream::StreamExt;
 use log::debug;
-use nu_cli::{CommandArgs, OutputStream};
+use nu_cli::OutputStream;
+use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{
     MaybeOwned, Primitive, ReturnSuccess, ReturnValue, Signature, SyntaxShape, TaggedDictBuilder,
@@ -29,7 +30,7 @@ impl DocGet {
 }
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for DocGet {
+impl nu_engine::WholeStreamCommand for DocGet {
     fn name(&self) -> &str {
         "doc get"
     }

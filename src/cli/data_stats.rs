@@ -5,7 +5,8 @@ use async_trait::async_trait;
 use couchbase::{KvStatsRequest, Request};
 use futures::channel::oneshot;
 use futures::stream::StreamExt;
-use nu_cli::{CommandArgs, OutputStream};
+use nu_cli::OutputStream;
+use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder};
 use nu_source::Tag;
@@ -22,7 +23,7 @@ impl DataStats {
 }
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for DataStats {
+impl nu_engine::WholeStreamCommand for DataStats {
     fn name(&self) -> &str {
         "data stats"
     }

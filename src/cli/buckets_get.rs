@@ -7,7 +7,8 @@ use crate::cli::convert_cb_error;
 use crate::cli::util::cluster_identifiers_from;
 use async_trait::async_trait;
 use log::debug;
-use nu_cli::{CommandArgs, OutputStream};
+use nu_cli::OutputStream;
+use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Value};
 use nu_source::Tag;
@@ -24,7 +25,7 @@ impl BucketsGet {
 }
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for BucketsGet {
+impl nu_engine::WholeStreamCommand for BucketsGet {
     fn name(&self) -> &str {
         "buckets get"
     }

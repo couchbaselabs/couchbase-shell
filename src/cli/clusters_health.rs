@@ -4,7 +4,8 @@ use crate::state::State;
 use async_trait::async_trait;
 use couchbase::{GenericManagementRequest, Request};
 use futures::channel::oneshot;
-use nu_cli::{CommandArgs, OutputStream};
+use nu_cli::OutputStream;
+use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Value};
 use nu_source::Tag;
@@ -22,7 +23,7 @@ impl ClustersHealth {
 }
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for ClustersHealth {
+impl nu_engine::WholeStreamCommand for ClustersHealth {
     fn name(&self) -> &str {
         "clusters health"
     }

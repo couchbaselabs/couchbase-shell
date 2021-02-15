@@ -4,7 +4,8 @@ use crate::state::State;
 use async_trait::async_trait;
 use couchbase::{GenericManagementRequest, Request};
 use futures::channel::oneshot;
-use nu_cli::{CommandArgs, OutputStream};
+use nu_cli::OutputStream;
+use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 
@@ -23,7 +24,7 @@ impl UsersRoles {
 }
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for UsersRoles {
+impl nu_engine::WholeStreamCommand for UsersRoles {
     fn name(&self) -> &str {
         "users roles"
     }

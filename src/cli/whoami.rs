@@ -5,7 +5,8 @@ use crate::state::State;
 use async_trait::async_trait;
 use couchbase::{GenericManagementRequest, Request};
 use futures::channel::oneshot;
-use nu_cli::{CommandArgs, OutputStream};
+use nu_cli::OutputStream;
+use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
@@ -23,7 +24,7 @@ impl Whoami {
 }
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for Whoami {
+impl nu_engine::WholeStreamCommand for Whoami {
     fn name(&self) -> &str {
         "whoami"
     }

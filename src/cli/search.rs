@@ -3,7 +3,8 @@ use async_trait::async_trait;
 use couchbase::{QueryStringQuery, SearchOptions};
 use futures::stream::StreamExt;
 use log::debug;
-use nu_cli::{CommandArgs, OutputStream, TaggedDictBuilder};
+use nu_cli::{OutputStream, TaggedDictBuilder};
+use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{ReturnSuccess, Signature, SyntaxShape};
 use nu_source::Tag;
@@ -20,7 +21,7 @@ impl Search {
 }
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for Search {
+impl nu_engine::WholeStreamCommand for Search {
     fn name(&self) -> &str {
         "search"
     }

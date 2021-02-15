@@ -8,7 +8,8 @@ use couchbase::UpsertOptions;
 use crate::cli::util::{collection_from_args, run_interruptable};
 use async_trait::async_trait;
 use futures::{FutureExt, StreamExt};
-use nu_cli::{CommandArgs, OutputStream};
+use nu_cli::OutputStream;
+use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{MaybeOwned, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
@@ -27,7 +28,7 @@ impl DocUpsert {
 }
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for DocUpsert {
+impl nu_engine::WholeStreamCommand for DocUpsert {
     fn name(&self) -> &str {
         "doc upsert"
     }

@@ -32,6 +32,7 @@ nu-protocol = { branch = "main", git = "https://github.com/couchbaselabs/nushell
 nu-errors = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git"  }
 nu-source = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
 nu-cli = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
+nu-engine = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
 
 async-trait = "0.1.31"
 serde = "1.0"

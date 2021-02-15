@@ -15,7 +15,8 @@ use fake::faker::number::raw::*;
 use fake::faker::phone_number::raw::*;
 use fake::locales::*;
 use fake::Fake;
-use nu_cli::{CommandArgs, OutputStream};
+use nu_cli::OutputStream;
+use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{ReturnSuccess, Signature, SyntaxShape};
 use nu_source::Tag;
@@ -37,14 +38,19 @@ impl FakeData {
 }
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for FakeData {
+impl nu_engine::WholeStreamCommand for FakeData {
     fn name(&self) -> &str {
         "fake"
     }
 
     fn signature(&self) -> Signature {
         Signature::build("fake")
-            .named("template", SyntaxShape::Path, "path to the template", None)
+            .named(
+                "template",
+                SyntaxShape::FilePath,
+                "path to the template",
+                None,
+            )
             .named(
                 "num-rows",
                 SyntaxShape::Int,

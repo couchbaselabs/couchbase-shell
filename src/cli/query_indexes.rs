@@ -3,7 +3,8 @@ use crate::state::State;
 use async_trait::async_trait;
 use couchbase::QueryOptions;
 use log::debug;
-use nu_cli::{CommandArgs, OutputStream};
+use nu_cli::OutputStream;
+use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::Signature;
 use std::sync::Arc;
@@ -19,7 +20,7 @@ impl QueryIndexes {
 }
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for QueryIndexes {
+impl nu_engine::WholeStreamCommand for QueryIndexes {
     fn name(&self) -> &str {
         "query indexes"
     }
