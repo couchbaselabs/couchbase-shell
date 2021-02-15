@@ -2,7 +2,8 @@ use crate::state::State;
 use async_trait::async_trait;
 use couchbase::{BucketSettingsBuilder, BucketType, CreateBucketOptions, DurabilityLevel};
 use log::debug;
-use nu_cli::{CommandArgs, OutputStream};
+use nu_cli::OutputStream;
+use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use std::convert::TryFrom;
@@ -20,7 +21,7 @@ impl BucketsCreate {
 }
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for BucketsCreate {
+impl nu_engine::WholeStreamCommand for BucketsCreate {
     fn name(&self) -> &str {
         "buckets create"
     }

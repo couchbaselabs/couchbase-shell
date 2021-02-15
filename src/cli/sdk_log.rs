@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use log::debug;
-use nu_cli::{CommandArgs, OutputStream};
+use nu_cli::OutputStream;
+use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder};
 use nu_source::Tag;
@@ -10,7 +11,7 @@ use std::io::Read;
 pub struct SDKLog;
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for SDKLog {
+impl nu_engine::WholeStreamCommand for SDKLog {
     fn name(&self) -> &str {
         "sdklog"
     }

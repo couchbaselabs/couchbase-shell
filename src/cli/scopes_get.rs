@@ -6,7 +6,8 @@ use couchbase::GetAllScopesOptions;
 use crate::cli::util::bucket_name_from_args;
 use async_trait::async_trait;
 use log::debug;
-use nu_cli::{CommandArgs, OutputStream};
+use nu_cli::OutputStream;
+use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, Value};
 use nu_source::Tag;
@@ -23,7 +24,7 @@ impl ScopesGet {
 }
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for ScopesGet {
+impl nu_engine::WholeStreamCommand for ScopesGet {
     fn name(&self) -> &str {
         "scopes get"
     }

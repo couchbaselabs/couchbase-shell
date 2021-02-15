@@ -3,7 +3,8 @@ use crate::state::State;
 use async_trait::async_trait;
 use couchbase::QueryOptions;
 use log::debug;
-use nu_cli::{CommandArgs, OutputStream};
+use nu_cli::OutputStream;
+use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use std::sync::Arc;
@@ -19,7 +20,7 @@ impl Query {
 }
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for Query {
+impl nu_engine::WholeStreamCommand for Query {
     fn name(&self) -> &str {
         "query"
     }

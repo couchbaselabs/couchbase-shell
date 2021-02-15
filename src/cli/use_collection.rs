@@ -1,6 +1,7 @@
 use crate::state::State;
 use async_trait::async_trait;
-use nu_cli::{CommandArgs, OutputStream};
+use nu_cli::OutputStream;
+use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder};
 use nu_source::Tag;
@@ -17,7 +18,7 @@ impl UseCollection {
 }
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for UseCollection {
+impl nu_engine::WholeStreamCommand for UseCollection {
     fn name(&self) -> &str {
         "use collection"
     }

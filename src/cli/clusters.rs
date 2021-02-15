@@ -1,7 +1,8 @@
 use crate::cli::util::cluster_identifiers_from;
 use crate::state::State;
 use async_trait::async_trait;
-use nu_cli::{CommandArgs, OutputStream};
+use nu_cli::OutputStream;
+use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
@@ -18,7 +19,7 @@ impl Clusters {
 }
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for Clusters {
+impl nu_engine::WholeStreamCommand for Clusters {
     fn name(&self) -> &str {
         "clusters"
     }

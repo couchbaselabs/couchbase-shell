@@ -2,7 +2,8 @@ use crate::state::State;
 use async_trait::async_trait;
 use couchbase::GetUserOptions;
 use log::debug;
-use nu_cli::{CommandArgs, OutputStream, TaggedDictBuilder};
+use nu_cli::{OutputStream, TaggedDictBuilder};
+use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
@@ -19,7 +20,7 @@ impl UsersGet {
 }
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for UsersGet {
+impl nu_engine::WholeStreamCommand for UsersGet {
     fn name(&self) -> &str {
         "users get"
     }

@@ -7,7 +7,8 @@ use crate::cli::util::{collection_from_args, run_interruptable};
 use async_trait::async_trait;
 use futures::stream::StreamExt;
 use futures::FutureExt;
-use nu_cli::{CommandArgs, OutputStream};
+use nu_cli::OutputStream;
+use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{MaybeOwned, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
@@ -25,7 +26,7 @@ impl DocRemove {
 }
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for DocRemove {
+impl nu_engine::WholeStreamCommand for DocRemove {
     fn name(&self) -> &str {
         "doc remove"
     }

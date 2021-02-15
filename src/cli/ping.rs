@@ -6,7 +6,8 @@ use couchbase::PingOptions;
 
 use async_trait::async_trait;
 use log::debug;
-use nu_cli::{CommandArgs, OutputStream};
+use nu_cli::OutputStream;
+use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
@@ -24,7 +25,7 @@ impl Ping {
 }
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for Ping {
+impl nu_engine::WholeStreamCommand for Ping {
     fn name(&self) -> &str {
         "ping"
     }

@@ -2,7 +2,8 @@ use crate::state::State;
 use async_trait::async_trait;
 use couchbase::{Role, UpsertUserOptions, UserBuilder};
 use log::debug;
-use nu_cli::{CommandArgs, OutputStream};
+use nu_cli::OutputStream;
+use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use std::sync::Arc;
@@ -18,7 +19,7 @@ impl UsersUpsert {
 }
 
 #[async_trait]
-impl nu_cli::WholeStreamCommand for UsersUpsert {
+impl nu_engine::WholeStreamCommand for UsersUpsert {
     fn name(&self) -> &str {
         "users upsert"
     }
