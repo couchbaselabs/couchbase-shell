@@ -191,7 +191,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let syncer = nu_cli::EnvironmentSyncer::new();
-    let context = nu_cli::create_default_context(true)?;
+    let mut context = nu_cli::create_default_context(true)?;
     context.add_commands(vec![
         // Performs analytics queries
         nu_engine::whole_stream_command(Analytics::new(state.clone())),
@@ -252,6 +252,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(ScopesCreate::new(state.clone())),
         nu_engine::whole_stream_command(SDKLog {}),
     ]);
+    let _ = nu_cli::register_plugins(&mut context);
 
     if let Some(c) = opt.command {
         nu_cli::run_script_file(c, true).await?;

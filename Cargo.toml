@@ -33,6 +33,25 @@ nu-errors = { branch = "main", git = "https://github.com/couchbaselabs/nushell.g
 nu-source = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
 nu-cli = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
 nu-engine = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
+nu-plugin = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
+
+nu_plugin_fetch = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
+nu_plugin_inc = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
+nu_plugin_match = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
+nu_plugin_post = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
+nu_plugin_ps = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
+nu_plugin_sys = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
+nu_plugin_textview = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
+nu_plugin_binaryview = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
+nu_plugin_from_bson = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
+nu_plugin_to_bson = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
+nu_plugin_chart = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
+nu_plugin_selector = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
+nu_plugin_from_sqlite = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
+nu_plugin_to_sqlite = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
+nu_plugin_start = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
+nu_plugin_tree = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
+nu_plugin_xpath = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git" }
 
 async-trait = "0.1.31"
 serde = "1.0"
@@ -62,3 +81,75 @@ codegen-units = 1
 doc=false
 name="runtests"
 path="tests/bin/mod.rs"
+
+[[bin]]
+name = "nu_plugin_core_textview"
+path = "src/plugins/nu_plugin_core_textview.rs"
+
+[[bin]]
+name = "nu_plugin_core_inc"
+path = "src/plugins/nu_plugin_core_inc.rs"
+
+[[bin]]
+name = "nu_plugin_core_ps"
+path = "src/plugins/nu_plugin_core_ps.rs"
+
+[[bin]]
+name = "nu_plugin_core_sys"
+path = "src/plugins/nu_plugin_core_sys.rs"
+
+[[bin]]
+name = "nu_plugin_core_fetch"
+path = "src/plugins/nu_plugin_core_fetch.rs"
+
+[[bin]]
+name = "nu_plugin_core_match"
+path = "src/plugins/nu_plugin_core_match.rs"
+
+[[bin]]
+name = "nu_plugin_core_post"
+path = "src/plugins/nu_plugin_core_post.rs"
+
+[[bin]]
+name = "nu_plugin_extra_binaryview"
+path = "src/plugins/nu_plugin_extra_binaryview.rs"
+
+[[bin]]
+name = "nu_plugin_extra_tree"
+path = "src/plugins/nu_plugin_extra_tree.rs"
+
+[[bin]]
+name = "nu_plugin_extra_start"
+path = "src/plugins/nu_plugin_extra_start.rs"
+
+[[bin]]
+name = "nu_plugin_extra_chart_bar"
+path = "src/plugins/nu_plugin_extra_chart_bar.rs"
+
+[[bin]]
+name = "nu_plugin_extra_chart_line"
+path = "src/plugins/nu_plugin_extra_chart_line.rs"
+
+[[bin]]
+name = "nu_plugin_extra_xpath"
+path = "src/plugins/nu_plugin_extra_xpath.rs"
+
+[[bin]]
+name = "nu_plugin_extra_selector"
+path = "src/plugins/nu_plugin_extra_selector.rs"
+
+[[bin]]
+name = "nu_plugin_extra_from_bson"
+path = "src/plugins/nu_plugin_extra_from_bson.rs"
+
+[[bin]]
+name = "nu_plugin_extra_to_bson"
+path = "src/plugins/nu_plugin_extra_to_bson.rs"
+
+[[bin]]
+name = "nu_plugin_extra_from_sqlite"
+path = "src/plugins/nu_plugin_extra_from_sqlite.rs"
+
+[[bin]]
+name = "nu_plugin_extra_to_sqlite"
+path = "src/plugins/nu_plugin_extra_to_sqlite.rs"
