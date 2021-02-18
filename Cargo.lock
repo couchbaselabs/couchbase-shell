@@ -956,7 +956,7 @@ dependencies = [
 [[package]]
 name = "couchbase"
 version = "1.0.0-alpha.5"
-source = "git+https://github.com/couchbaselabs/couchbase-rs?rev=011c22a55dd5af07c79076ff83051b95aadc34e5#011c22a55dd5af07c79076ff83051b95aadc34e5"
+source = "git+https://github.com/couchbaselabs/couchbase-rs?rev=46cc56e7c19f8b33743d1b8eeebd95a4243eeaff#46cc56e7c19f8b33743d1b8eeebd95a4243eeaff"
 dependencies = [
  "cc",
  "couchbase-sys",
@@ -1018,7 +1018,7 @@ dependencies = [
 [[package]]
 name = "couchbase-sys"
 version = "1.0.0-alpha.5"
-source = "git+https://github.com/couchbaselabs/couchbase-rs?rev=011c22a55dd5af07c79076ff83051b95aadc34e5#011c22a55dd5af07c79076ff83051b95aadc34e5"
+source = "git+https://github.com/couchbaselabs/couchbase-rs?rev=46cc56e7c19f8b33743d1b8eeebd95a4243eeaff#46cc56e7c19f8b33743d1b8eeebd95a4243eeaff"
 dependencies = [
  "bindgen",
  "cc",
