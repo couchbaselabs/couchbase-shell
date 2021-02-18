@@ -43,7 +43,7 @@ fake = { version = "2.2", features = ["chrono"] }
 uuid = { version = "0.8", features = ["v4"] }
 chrono = { version = "0.4.11", features = ["serde"] }
 
-couchbase = { rev = "011c22a55dd5af07c79076ff83051b95aadc34e5", git = "https://github.com/couchbaselabs/couchbase-rs", features = ["libcouchbase-static", "volatile"] }
+couchbase = { rev = "46cc56e7c19f8b33743d1b8eeebd95a4243eeaff", git = "https://github.com/couchbaselabs/couchbase-rs", features = ["libcouchbase-static", "volatile"] }
 
 [dev-dependencies]
 nu-test-support = "0.18.1"
