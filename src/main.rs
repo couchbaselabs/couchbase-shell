@@ -251,6 +251,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(ScopesGet::new(state.clone())),
         nu_engine::whole_stream_command(ScopesCreate::new(state.clone())),
         nu_engine::whole_stream_command(SDKLog {}),
+        nu_engine::whole_stream_command(Help {}),
     ]);
 
     if let Some(c) = opt.command {
