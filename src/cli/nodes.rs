@@ -156,6 +156,8 @@ enum NodeService {
     Indexing,
     #[serde(rename = "kv")]
     KeyValue,
+    #[serde(rename = "backup")]
+    Backup,
 }
 
 impl fmt::Display for NodeService {
@@ -167,6 +169,7 @@ impl fmt::Display for NodeService {
             NodeService::Query => write!(f, "query"),
             NodeService::Indexing => write!(f, "indexing"),
             NodeService::KeyValue => write!(f, "kv"),
+            NodeService::Backup => write!(f, "backup"),
         }
     }
 }
