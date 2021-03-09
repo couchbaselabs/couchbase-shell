@@ -1,3 +1,4 @@
+use crate::cli::util::read_file_from_home;
 use async_trait::async_trait;
 use log::debug;
 use nu_cli::OutputStream;
@@ -5,7 +6,6 @@ use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder};
 use nu_source::Tag;
-use std::fs::File;
 use std::io::Read;
 
 pub struct SDKLog;
@@ -42,19 +42,7 @@ async fn sdk_log(args: CommandArgs) -> Result<OutputStream, ShellError> {
 
     debug!("Fetching last {} lines from sdk log", &last);
 
-    let mut current_exe = std::env::current_exe().unwrap();
-    current_exe.pop();
-    let exe_dir = current_exe.as_path().display().to_string();
-
-    let mut file = match File::open(format!("{}/.cbshlog/sdk.log", exe_dir)) {
-        Ok(f) => f,
-        Err(e) => {
-            return Err(ShellError::untagged_runtime_error(format!(
-                "Failed to open log file {}",
-                e
-            )))
-        }
-    };
+    let mut file = read_file_from_home("sdk.log".into())?;
 
     let mut text = String::new();
     match file.read_to_string(&mut text) {
