@@ -1,3 +1,4 @@
+use crate::tutorial::Tutorial;
 use couchbase::{Bucket, Cluster};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -8,6 +9,7 @@ pub struct State {
     clusters: HashMap<String, RemoteCluster>,
     default_scope: Option<String>,
     default_collection: Option<String>,
+    tutorial: Tutorial,
 }
 
 impl State {
@@ -22,6 +24,7 @@ impl State {
             clusters,
             default_scope,
             default_collection,
+            tutorial: Tutorial::new(),
         };
         state.set_active(active).unwrap();
         state
@@ -73,6 +76,10 @@ impl State {
             .clusters
             .get(&*active)
             .expect("No active cluster, this is a bug :(")
+    }
+
+    pub fn tutorial(&self) -> &Tutorial {
+        &self.tutorial
     }
 }
 

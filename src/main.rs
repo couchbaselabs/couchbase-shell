@@ -3,6 +3,7 @@
 mod cli;
 mod config;
 mod state;
+mod tutorial;
 
 use crate::cli::*;
 use crate::config::{ClusterTimeouts, ShellConfig};
@@ -252,6 +253,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(ScopesCreate::new(state.clone())),
         nu_engine::whole_stream_command(SDKLog {}),
         nu_engine::whole_stream_command(Help {}),
+        nu_engine::whole_stream_command(Tutorial::new(state.clone())),
+        nu_engine::whole_stream_command(TutorialPage::new(state.clone())),
+        nu_engine::whole_stream_command(TutorialPrev::new(state.clone())),
+        nu_engine::whole_stream_command(TutorialNext::new(state.clone())),
     ]);
 
     if let Some(c) = opt.command {
@@ -400,7 +405,7 @@ fn configure_logging() {
 
     let mut config_path = cbsh_home_path().unwrap();
     config_path.push("sdk.log");
-    dbg!(&config_path);
+
     let requests = FileAppender::builder()
         .encoder(Box::new(PatternEncoder::new("{d} - {m}{n}")))
         .build(config_path)
