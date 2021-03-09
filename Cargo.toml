@@ -26,6 +26,7 @@ num-bigint = "0.3"
 ansi_term = "0.12"
 humantime-serde = "1.0"
 log4rs = "1.0.0"
+lazy_static = "1.4.0"
 
 nu = { branch = "main",  git = "https://github.com/couchbaselabs/nushell.git", features = ["extra"] }
 nu-protocol = { branch = "main", git = "https://github.com/couchbaselabs/nushell.git"  }
