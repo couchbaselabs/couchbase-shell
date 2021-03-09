@@ -396,15 +396,14 @@ struct CliOptions {
 }
 
 fn configure_logging() {
-    let mut current_exe = std::env::current_exe().unwrap();
-    current_exe.pop();
-    let exe_dir = current_exe.as_path().display().to_string();
-
     let stdout = ConsoleAppender::builder().build();
 
+    let mut config_path = cbsh_home_path().unwrap();
+    config_path.push("sdk.log");
+    dbg!(&config_path);
     let requests = FileAppender::builder()
         .encoder(Box::new(PatternEncoder::new("{d} - {m}{n}")))
-        .build(format!("{}/.cbshlog/sdk.log", exe_dir))
+        .build(config_path)
         .unwrap();
 
     let config = Config::builder()

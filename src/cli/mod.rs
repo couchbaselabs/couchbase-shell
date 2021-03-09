@@ -95,6 +95,7 @@ pub use users::Users;
 pub use users_get::UsersGet;
 pub use users_roles::UsersRoles;
 pub use users_upsert::UsersUpsert;
+pub use util::cbsh_home_path;
 pub use version::Version;
 pub use whoami::Whoami;
 

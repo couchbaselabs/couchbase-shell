@@ -10,7 +10,9 @@ use nu_protocol::{
 };
 use nu_source::Tag;
 use regex::Regex;
+use std::fs::File;
 use std::future::Future;
+use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
@@ -301,4 +303,33 @@ pub fn collection_from_args(
     };
 
     Ok(Arc::new(collection))
+}
+
+pub fn cbsh_home_path() -> Result<PathBuf, ShellError> {
+    let mut path = match dirs::home_dir() {
+        Some(f) => f,
+        None => {
+            return Err(ShellError::untagged_runtime_error(format!(
+                "Couldn't find home_dir",
+            )))
+        }
+    };
+
+    path.push(".cbsh");
+
+    Ok(path)
+}
+
+pub fn read_file_from_home(filename: String) -> Result<File, ShellError> {
+    let mut path = cbsh_home_path()?;
+    path.push(filename);
+    match File::open(path) {
+        Ok(f) => return Ok(f),
+        Err(e) => {
+            return Err(ShellError::untagged_runtime_error(format!(
+                "Failed to open file {}",
+                e
+            )))
+        }
+    };
 }
