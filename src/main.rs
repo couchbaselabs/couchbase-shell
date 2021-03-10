@@ -216,6 +216,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(BucketsDrop::new(state.clone())),
         nu_engine::whole_stream_command(BucketsFlush::new(state.clone())),
         nu_engine::whole_stream_command(BucketsConfig::new(state.clone())),
+        nu_engine::whole_stream_command(BucketsSample::new(state.clone())),
         // Performs n1ql queries
         nu_engine::whole_stream_command(Query::new(state.clone())),
         // Manages local cluster references

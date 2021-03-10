@@ -18,10 +18,23 @@ impl Tutorial {
         tutorial
     }
 
-    pub fn current_step(&self) -> String {
+    fn additional_info(&self, travel_sample_exists: bool) -> String {
+        if travel_sample_exists {
+            return "".into();
+        }
+
+        SAMPLE_INFO.to_string()
+    }
+
+    pub fn current_step(&self, travel_sample_exists: bool) -> String {
         let step = *self.current_step.lock().unwrap();
         let key = STEPS_ORDER[step as usize];
-        format!("Page {}: {}", key, STEPS[key])
+        format!(
+            "Page {}: {} {}",
+            key,
+            STEPS[key],
+            self.additional_info(travel_sample_exists)
+        )
     }
 
     pub fn next_tutorial_step(&self) -> String {
@@ -53,16 +66,19 @@ impl Tutorial {
         *current_step = index as i8;
 
         let key = STEPS_ORDER[index];
-        Ok(format!("Page {}: {}", key, STEPS[key]))
+        Ok(format!("{}: {}", key, STEPS[key]))
     }
 
-    pub fn step_names(&self) -> Vec<String> {
+    pub fn step_names(&self) -> (String, Vec<String>) {
+        let step = *self.current_step.lock().unwrap();
+        let key = STEPS_ORDER[step as usize];
+
         let mut s = vec![];
         for step in STEPS_ORDER.iter() {
             s.push(step.to_owned().into()) // We control the names and we aren't putting non-unicode chars in them.
         }
 
-        s
+        (key.into(), s)
     }
 }
 
@@ -75,6 +91,14 @@ lazy_static! {
         "query",
         "conclusion"
     ];
+    static ref SAMPLE_INFO: &'static str = "
+Note: This tutorial uses the travel-sample bucket in examples and it looks like you don't have it enabled.
+You can enable it at any point by running:
+
+buckets load-sample travel-sample
+
+Be aware that it takes a minute or two to fully load all of the sample data and indexes etc... 
+        ";
     static ref STEPS: HashMap<&'static str, &'static str> = {
         let mut m = HashMap::new();
         m.insert("start", "
@@ -88,7 +112,7 @@ ls
 
 ...to get a directory listing, and notice that the output is a table.
 
-To navigate the tutorial you can use 'tutorial next' to proceed, 'tutorial previous' to go back, or 'tutorial page <name>' to go to a specific page.
+To navigate the tutorial you can use 'tutorial next' to proceed, 'tutorial prev' to go back, or 'tutorial page <name>' to go to a specific page.
 You can try out different commands and your current step will be remembered.
 
 Try running 'tutorial next' now to move to the next step of the tutorial.
@@ -107,7 +131,6 @@ And, use 'tutorial next' to move to the next step in the tutorial.
         );
         m.insert("doc", "
 You can retrieve documents by using the 'doc get KEY' command.
-We're going to use document names from the \"travel-sample\" bucket which you can load within the Couchbase Server settings.
 
 Try...
 
@@ -128,7 +151,6 @@ Use 'tutorial next' to move to the next step in the tutorial.
             "pipeline",
             "
 Commands in cbsh can be pipelined into a chain of commands.
-We're using the \"travel-sample\" bucket which you can load within the Couchbase Server settings.
 
 Try...
 
@@ -145,7 +167,6 @@ Use 'tutorial next' to move to the next step in the tutorial.
         );
         m.insert("query", "
 You can use the query command to run N1QL queries (or SQL for JSON queries) against the Couchbase Server database.
-We're using the \"travel-sample\" bucket which you can load within the Couchbase Server settings.
 
 Try...
 
