@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use nu_cli::{OutputStream, TaggedDictBuilder};
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, Value};
+use nu_protocol::{ReturnSuccess, Signature, SyntaxShape, UntaggedValue, Value};
 use nu_source::Tag;
 use std::sync::Arc;
 
@@ -53,13 +53,19 @@ async fn run_tutorial_page(
 
     let tutorial = state.tutorial();
     if let Some(n) = name {
-        println!("{}", tutorial.goto_step(n)?);
-        Ok(OutputStream::empty())
+        Ok(OutputStream::one(ReturnSuccess::value(
+            UntaggedValue::string(tutorial.goto_step(n)?).into_value(Tag::unknown()),
+        )))
     } else {
         let mut results: Vec<Value> = vec![];
-        for s in tutorial.step_names() {
+        let (current_step, steps) = tutorial.step_names();
+        for s in steps {
             let mut collected = TaggedDictBuilder::new(Tag::default());
-            collected.insert_value("page_name", s);
+            let mut step_name = s.clone();
+            if s == current_step {
+                step_name = step_name + " (active)";
+            }
+            collected.insert_value("page_name", step_name);
             results.push(collected.into_value());
         }
         Ok(OutputStream::from(results))

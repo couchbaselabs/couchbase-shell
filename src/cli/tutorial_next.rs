@@ -3,7 +3,8 @@ use async_trait::async_trait;
 use nu_cli::OutputStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
-use nu_protocol::Signature;
+use nu_protocol::{ReturnSuccess, Signature, UntaggedValue};
+use nu_source::Tag;
 use std::sync::Arc;
 
 pub struct TutorialNext {
@@ -37,7 +38,7 @@ impl nu_engine::WholeStreamCommand for TutorialNext {
 
 async fn run_tutorial_next(state: Arc<State>) -> Result<OutputStream, ShellError> {
     let tutorial = state.tutorial();
-    println!("{}", tutorial.next_tutorial_step());
-
-    Ok(OutputStream::empty())
+    Ok(OutputStream::one(ReturnSuccess::value(
+        UntaggedValue::string(tutorial.next_tutorial_step()).into_value(Tag::unknown()),
+    )))
 }
