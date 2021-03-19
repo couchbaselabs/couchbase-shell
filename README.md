@@ -20,14 +20,14 @@ Prerequisites:
  - Depending on your platform you'll need some libraries installed through homebrew or apt etc.
  - This should work for ubuntu (`sudo apt-get install git libssl-dev pkg-config cmake libevent-dev libxcb-composite0-dev libx11-dev llvm-dev libclang-dev clang`)
  - On macOS make sure you brew install automake and brew install libtool
- - By default cbshell connects to the locahost instance of couchbase server, ensure that a local instance of couchbase       server is installed and running.
+ - By default cbshell connects to the locahost instance of couchbase server, ensure that a local instance of couchbase server is installed and running.
 
 
 Next, clone the repository and then run `cargo run`. The first time it will take some time since it builds all the dependencies, but you should end up in a shell. You can use `cargo run -- -h` to see all the available flags:
 
 ```
 $ ./cbsh --help
-The Couchbase Shell 0.4.0
+The Couchbase Shell 0.5.0
 Alternative Shell and UI for Couchbase Server and Cloud
 
 USAGE:
@@ -35,21 +35,21 @@ USAGE:
 
 FLAGS:
     -h, --help        Prints help information
-        --no-motd
-    -p, --password
-        --stdin
-        --ui
+        --no-motd     
+    -p, --password    
+        --stdin       
     -V, --version     Prints version information
 
 OPTIONS:
-        --bucket <bucket>
-        --cert-path <cert-path>
-        --cluster <cluster>
-    -c, --command <command>
-        --hostnames <hostnames>     [default: localhost]
-        --script <script>
-    -u, --username <username>       [default: Administrator]
-
+        --bucket <bucket>            
+        --cert-path <cert-path>      
+        --cluster <cluster>          
+        --collection <collection>    
+    -c, --command <command>          
+        --hostnames <hostnames>      
+        --scope <scope>              
+        --script <script>            
+    -u, --username <username>    
 ```
 
 Note that if you want to spawn the highly experimental ui, use the `--ui` flag.
