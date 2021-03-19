@@ -79,11 +79,11 @@ jobs:
       if: matrix.os == 'windows-2016'
 
     - name: Build
-      run: cargo build --verbose
+      run: cargo build --verbose --release
       if: matrix.os == 'ubuntu-latest'
 
     - name: Build
-      run: cargo build --verbose
+      run: cargo build --verbose --release
       env:
         VCPKGRS_DYNAMIC: 1
         OPENSSL_STATIC: 1
