@@ -6,9 +6,9 @@ The current latest version is *0.5.0*.
 
 There are a couple ways you can get access to `cbsh`, the easiest one is to download our pre-built binaries for your platform of choice:
 
- - Linux: https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.5.0/cbsh-0.4.0-linux.zip[cbsh-0.5.0-linux.zip]
- - macOS: https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.5.0/cbsh-0.4.0-osx.zip[cbsh-0.5.0-osx.zip]
- - Windows: https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.5.0/cbsh-0.4.0-windows.zip[cbsh-0.5.0-windows.zip]
+ - Linux: https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.5.0/cbsh-0.5.0-linux.zip[cbsh-0.5.0-linux.zip]
+ - macOS: https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.5.0/cbsh-0.5.0-osx.zip[cbsh-0.5.0-osx.zip]
+ - Windows: https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.5.0/cbsh-0.5.0-windows.zip[cbsh-0.5.0-windows.zip]
 
 Once you've downloaded the `zip` file, extract it and switch into the just created directory. The following example shows it for mac, but it works very similar if you are on linux (just align the commands with the file you just downloaded):
 

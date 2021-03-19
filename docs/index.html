@@ -4,10 +4,11 @@
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Asciidoctor 2.0.10">
+<meta name="generator" content="Asciidoctor 2.0.12">
 <meta name="author" content="(c) Copyright 2021, All Rights Reserved">
 <title>Couchbase Shell Documentation</title>
 <link rel="stylesheet" href="./couchbase.css">
+<link rel="stylesheet" href="./coderay-asciidoctor.css">
 </head>
 <body class="article toc2 toc-left">
 <div id="header">
@@ -114,7 +115,7 @@
 <div class="sect2">
 <h3 id="_installation">1.1. Installation</h3>
 <div class="paragraph">
-<p>The current latest version is <strong>0.4.0</strong>.</p>
+<p>The current latest version is <strong>0.5.0</strong>.</p>
 </div>
 <div class="paragraph">
 <p>There are a couple ways you can get access to <code>cbsh</code>, the easiest one is to download our pre-built binaries for your platform of choice:</p>
@@ -122,13 +123,13 @@
 <div class="ulist">
 <ul>
 <li>
-<p>Linux: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.4.0/cbsh-0.4.0-linux.zip">cbsh-0.4.0-linux.zip</a></p>
+<p>Linux: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.5.0/cbsh-0.5.0-linux.zip">cbsh-0.5.0-linux.zip</a></p>
 </li>
 <li>
-<p>macOS: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.4.0/cbsh-0.4.0-osx.zip">cbsh-0.4.0-osx.zip</a></p>
+<p>macOS: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.5.0/cbsh-0.5.0-osx.zip">cbsh-0.5.0-osx.zip</a></p>
 </li>
 <li>
-<p>Windows: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.4.0/cbsh-0.4.0-windows.zip">cbsh-0.4.0-windows.zip</a></p>
+<p>Windows: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.5.0/cbsh-0.5.0-windows.zip">cbsh-0.5.0-windows.zip</a></p>
 </li>
 </ul>
 </div>
@@ -137,7 +138,7 @@
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>$ unzip cbsh-0.4.0-osx.zip
+<pre class="CodeRay highlight"><code>$ unzip cbsh-0.5.0-osx.zip
 $ cd cbsh-mac-x86_64
 $ ls
 cbsh  examples  LICENSE  README.md</code></pre>
@@ -152,7 +153,7 @@ cbsh  examples  LICENSE  README.md</code></pre>
 ~/cbsh-mac-x86_64
 ❯ version
 ─────────┬───────
- version │ 0.4.0
+ version │ 0.5.0
 ─────────┴───────</code></pre>
 </div>
 </div>
@@ -196,17 +197,13 @@ Thanks for trying CBSH!
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>❯ nodes
-──────────────┬─────────────────────────────────────────────
- cluster      │ local
- hostname     │ 127.0.0.1:8091
- status       │ healthy
- services     │ analytics,eventing,search,indexing,kv,query
- version      │ 6.5.1-6299-enterprise
- os           │ x86_64-apple-darwin17.7.0
- memory_total │ 34.4 GB
- memory_free  │ 13.7 GB
-──────────────┴─────────────────────────────────────────────</code></pre>
+<pre class="CodeRay highlight"><code>&gt; nodes
+───┬─────────┬────────────────┬─────────┬───────────────────────────────────────┬───────────────────────┬───────────────────────────┬──────────────┬─────────────
+ # │ cluster │    hostname    │ status  │               services                │        version        │            os             │ memory_total │ memory_free
+───┼─────────┼────────────────┼─────────┼───────────────────────────────────────┼───────────────────────┼───────────────────────────┼──────────────┼─────────────
+ 0 │ local   │ 127.0.0.1:8091 │ healthy │ analytics,eventing,search,indexing,kv │ 6.6.1-9213-enterprise │ x86_64-apple-darwin18.7.0 │      34.4 GB │      9.7 GB
+   │         │                │         │ ,query                                │                       │                           │              │
+───┴─────────┴────────────────┴─────────┴───────────────────────────────────────┴───────────────────────┴───────────────────────────┴──────────────┴─────────────</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -214,17 +211,12 @@ Thanks for trying CBSH!
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>❯ doc get airline_10 --bucket travel-sample --flatten
-──────────┬─────────────────────
- id       │ airline_10
- cas      │ 1585811206390153216
- country  │ United States
- iata     │ Q5
- callsign │ MILE-AIR
- name     │ 40-Mile Air
- icao     │ MLA
- type     │ airline
-──────────┴─────────────────────</code></pre>
+<pre class="CodeRay highlight"><code>&gt;  doc get airline_10 --bucket travel-sample --flatten
+───┬────┬─────────────────────┬──────┬─────────────┬──────────┬──────┬───────────────┬─────────┬───────
+ # │ id │         cas         │ icao │    name     │ callsign │ iata │    country    │  type   │ error
+───┼────┼─────────────────────┼──────┼─────────────┼──────────┼──────┼───────────────┼─────────┼───────
+ 0 │ 10 │ 1597310924052692992 │ MLA  │ 40-Mile Air │ MILE-AIR │ Q5   │ United States │ airline │
+───┴────┴─────────────────────┴──────┴─────────────┴──────────┴──────┴───────────────┴─────────┴───────</code></pre>
 </div>
 </div>
 </div>
@@ -276,7 +268,7 @@ password = &quot;password&quot;
 <div class="sect2">
 <h3 id="_navigating_the_shell">2.1. Navigating the Shell</h3>
 <div class="paragraph">
-<p>Commands take inputs and produce output in a structured manner, most often represented as tables. Note how both the generic <code>ls</code> command and the couchbase-specific <code>buckets</code> command both produce a table as their output:</p>
+<p>Commands take inputs and produce output in a structured manner, most often represented as tables. Note how both the generic <code>ls</code> command and the couchbase-specific <code>buckets get</code> command both produce a table as their output:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -300,15 +292,19 @@ password = &quot;password&quot;
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>❯ buckets
-───┬─────────┬───────────────┬───────────┬──────────┬────────────────┬─────────────
- # │ cluster │     name      │   type    │ replicas │ quota_per_node │ quota_total
-───┼─────────┼───────────────┼───────────┼──────────┼────────────────┼─────────────
- 0 │ default │ beer-sample   │ couchbase │        1 │       104.9 MB │    104.9 MB
- 1 │ default │ default       │ couchbase │        1 │       104.9 MB │    104.9 MB
- 2 │ default │ memd          │ memcached │        0 │       104.9 MB │    104.9 MB
- 3 │ default │ travel-sample │ couchbase │        1 │       104.9 MB │    104.9 MB
-───┴─────────┴───────────────┴───────────┴──────────┴────────────────┴─────────────</code></pre>
+<pre class="CodeRay highlight"><code>&gt; buckets get
+───┬─────────┬──────────────────────────────────────┬───────────┬──────────┬───────────┬───────────────┬──────────────────────
+ # │ cluster │                 name                 │   type    │ replicas │ ram_quota │ flush_enabled │ min_durability_level
+───┼─────────┼──────────────────────────────────────┼───────────┼──────────┼───────────┼───────────────┼──────────────────────
+ 0 │ local   │ 529dafb7-78d0-4baa-aa33-ba01fbc50af6 │ couchbase │        1 │  100.0 MB │ No            │ none
+ 1 │ local   │ 4b78e6f0-f69d-460b-a698-a46dfe7173c2 │ couchbase │        1 │  100.0 MB │ No            │ none
+ 2 │ local   │ d3a01765-2a66-41e4-b201-a2cea57a23ab │ couchbase │        1 │  100.0 MB │ No            │ none
+ 3 │ local   │ 97568ca9-665d-4949-b343-e2649a741f5a │ couchbase │        1 │  100.0 MB │ No            │ none
+ 4 │ local   │ 181ce90d-19d1-4745-8100-a9d49c59dd02 │ couchbase │        1 │  100.0 MB │ No            │ none
+ 5 │ local   │ 97b23720-a6fc-425e-896c-75cfd07319a1 │ couchbase │        1 │  100.0 MB │ No            │ none
+ 6 │ local   │ beer-sample                          │ couchbase │        1 │  100.0 MB │ No            │ none
+ 7 │ local   │ travel-sample                        │ couchbase │        3 │  100.0 MB │ No            │ none
+───┴─────────┴──────────────────────────────────────┴───────────┴──────────┴───────────┴───────────────┴──────────────────────</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -316,13 +312,13 @@ password = &quot;password&quot;
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>❯ buckets | where name =~ &quot;sample&quot;
-───┬─────────┬───────────────┬───────────┬──────────┬────────────────┬─────────────
- # │ cluster │     name      │   type    │ replicas │ quota_per_node │ quota_total
-───┼─────────┼───────────────┼───────────┼──────────┼────────────────┼─────────────
- 0 │ default │ beer-sample   │ couchbase │        1 │       104.9 MB │    104.9 MB
- 1 │ default │ travel-sample │ couchbase │        1 │       104.9 MB │    104.9 MB
-───┴─────────┴───────────────┴───────────┴──────────┴────────────────┴─────────────</code></pre>
+<pre class="CodeRay highlight"><code>&gt; buckets get | where name =~ &quot;sample&quot;
+───┬─────────┬───────────────┬───────────┬──────────┬───────────┬───────────────┬──────────────────────
+ # │ cluster │     name      │   type    │ replicas │ ram_quota │ flush_enabled │ min_durability_level
+───┼─────────┼───────────────┼───────────┼──────────┼───────────┼───────────────┼──────────────────────
+ 0 │ local   │ beer-sample   │ couchbase │        1 │  100.0 MB │ No            │ none
+ 1 │ local   │ travel-sample │ couchbase │        3 │  100.0 MB │ No            │ none
+───┴─────────┴───────────────┴───────────┴──────────┴───────────┴───────────────┴──────────────────────</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -330,23 +326,25 @@ password = &quot;password&quot;
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>❯ buckets | where name =~ &quot;sample&quot; | to json --pretty 2
+<pre class="CodeRay highlight"><code>&gt; buckets get | where name =~ &quot;sample&quot; | to json --pretty 2
 [
   {
-    &quot;cluster&quot;: &quot;default&quot;,
+    &quot;cluster&quot;: &quot;local&quot;,
     &quot;name&quot;: &quot;beer-sample&quot;,
     &quot;type&quot;: &quot;couchbase&quot;,
     &quot;replicas&quot;: 1,
-    &quot;quota_per_node&quot;: 104857600,
-    &quot;quota_total&quot;: 104857600
+    &quot;ram_quota&quot;: 100000000,
+    &quot;flush_enabled&quot;: false,
+    &quot;min_durability_level&quot;: &quot;none&quot;
   },
   {
-    &quot;cluster&quot;: &quot;default&quot;,
+    &quot;cluster&quot;: &quot;local&quot;,
     &quot;name&quot;: &quot;travel-sample&quot;,
     &quot;type&quot;: &quot;couchbase&quot;,
-    &quot;replicas&quot;: 1,
-    &quot;quota_per_node&quot;: 104857600,
-    &quot;quota_total&quot;: 104857600
+    &quot;replicas&quot;: 3,
+    &quot;ram_quota&quot;: 100000000,
+    &quot;flush_enabled&quot;: false,
+    &quot;min_durability_level&quot;: &quot;none&quot;
   }
 ]</code></pre>
 </div>
@@ -363,21 +361,26 @@ password = &quot;password&quot;
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; buckets -h
-Lists all buckets of the connected cluster
+Perform bucket management operations
 
 Usage:
   &gt; buckets &lt;subcommand&gt; {flags}
 
 Subcommands:
   buckets config - Shows the bucket config (low level)
+  buckets create - Creates a bucket
+  buckets drop - Drops buckets through the HTTP API
+  buckets flush - Flushes buckets through the HTTP API
+  buckets get - Fetches buckets through the HTTP API
+  buckets load-sample - Load a sample bucket
+  buckets update - Updates a bucket
 
 Flags:
-  -h, --help: Display this help message
-  --clusters &lt;string&gt;: the clusters which should be contacted</code></pre>
+  -h, --help: Display this help message</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Some commands only act as groupings for subcommands, like <code>from</code>, <code>to</code> or <code>doc</code>. Since they do not serve a purpose on their own, they will render their help output automatically:</p>
+<p>Some commands (like the one above) only act as groupings for subcommands, like <code>from</code>, <code>to</code> or <code>doc</code>. Since they do not serve a purpose on their own, they will render their help output automatically:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -389,12 +392,13 @@ Usage:
 
 Subcommands:
   doc get - Fetches a document through the data service
-  doc upsert - Upsert (insert or override) a document through the data service
   doc insert - Insert a document through the data service
-  doc replace - Replace a document through the data service
   doc remove - Removes a document through the data service
+  doc replace - Replace a document through the data service
+  doc upsert - Upsert (insert or override) a document through the data service
 
-Flags:</code></pre>
+Flags:
+  -h, --help: Display this help message</code></pre>
 </div>
 </div>
 </div>
@@ -405,7 +409,7 @@ Flags:</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>👤Administrator at 🏠local in 🛫 travel-sample
+<pre class="CodeRay highlight"><code>👤 Administrator at 🏠 local in 🛫  travel-sample
 &gt;</code></pre>
 </div>
 </div>
@@ -1485,10 +1489,9 @@ There are two ways that we can do this.</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2021-02-04 11:38:58 UTC
+Last updated 2021-02-04 12:44:21 +0100
 </div>
 </div>
-<link rel="stylesheet" href="./coderay-asciidoctor.css">
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
         new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
         j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
