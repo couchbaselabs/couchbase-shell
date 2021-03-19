@@ -2,6 +2,23 @@
 
 All user visible changes to this project will be documented in this file.
 
+## 0.5.0 - 2021-03-19
+
+ - Updated documentation and examples
+ - Bump nushell to 0.26
+ - Allow to fetch query index definitions via (`query indexes --definitions`)
+ - Add a `tutorial` command
+ - Support for scope level query and analytics queries
+ - (breaking) changed the cluster config format from list to map (#81)
+ - Removed unused experimental UI for now
+ - Added a custom `help` command
+ - The `map` command has been removed since it does not work properly under windows
+ - Added support for bucket management
+ - Added support for scope and collection management
+ - Log SDK output to a file and add a `sdklog` command (stored in `.cbsh`)
+ - Added a `error` column to `doc get`
+ - Added collection support to `doc` commands
+
 ## 0.4.0 - 2020-10-13
 
  - Added Windows support
