@@ -29,6 +29,12 @@ impl nu_engine::WholeStreamCommand for Query {
         Signature::build("query")
             .required("statement", SyntaxShape::String, "the query statement")
             .named(
+                "cluster",
+                SyntaxShape::String,
+                "the cluster to query against",
+                None,
+            )
+            .named(
                 "bucket",
                 SyntaxShape::String,
                 "the bucket to query against",
@@ -55,7 +61,28 @@ async fn run(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shell
     let args = args.evaluate_once().await?;
     let ctrl_c = args.ctrl_c.clone();
     let statement = args.nth(0).expect("need statement").as_string()?;
-    let active_cluster = state.active_cluster();
+    let active_cluster = match args.get("cluster") {
+        Some(c) => {
+            let identifier = match c.as_string() {
+                Ok(s) => s,
+                Err(e) => {
+                    return Err(ShellError::untagged_runtime_error(format!(
+                        "Could not convert cluster name to string: {}",
+                        e
+                    )));
+                }
+            };
+            match state.clusters().get(identifier.as_str()) {
+                Some(c) => c,
+                None => {
+                    return Err(ShellError::untagged_runtime_error(format!(
+                        "Could not get cluster from available clusters",
+                    )));
+                }
+            }
+        }
+        None => state.active_cluster(),
+    };
     let bucket = match args
         .get("bucket")
         .map(|bucket| bucket.as_string().ok())
