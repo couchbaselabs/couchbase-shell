@@ -124,7 +124,7 @@ cbsh is connected to one or more Couchbase Server clusters.
 
 Try 'nodes' to list the nodes in the active cluster.
 
-Try 'buckets' to list the buckets in the active cluster.
+Try 'buckets get' to list the buckets in the active cluster.
 
 And, use 'tutorial next' to move to the next step in the tutorial.
     ",
@@ -154,13 +154,13 @@ Commands in cbsh can be pipelined into a chain of commands.
 
 Try...
 
-  buckets | where name =~ \"travel\"
+  buckets get | where name =~ \"travel\"
 
 That pipes the tabular output of the buckets command to the where command.
 
 Try...
 
-  buckets | where name =~ \"sample\" | to json --pretty 2
+  buckets get | where name =~ \"sample\" | to json --pretty 2
 
 Use 'tutorial next' to move to the next step in the tutorial.
     ",
