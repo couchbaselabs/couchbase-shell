@@ -1,6 +1,4 @@
-use super::ctrlc_future::CtrlcFuture;
 use crate::state::{RemoteCluster, State};
-use couchbase::{Collection, CouchbaseError, CouchbaseResult};
 use futures::{future::FutureExt, pin_mut, select, Stream, StreamExt};
 use nu_cli::{InterruptibleStream, OutputStream, ToPrimitive};
 use nu_engine::EvaluatedWholeStreamCommandArgs;
@@ -15,10 +13,6 @@ use std::future::Future;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
-
-pub fn couchbase_error_to_shell_error(error: CouchbaseError) -> ShellError {
-    ShellError::untagged_runtime_error(format!("{}", error))
-}
 
 pub fn convert_json_value_to_nu_value(
     v: &serde_json::Value,
@@ -217,92 +211,6 @@ pub fn cluster_identifiers_from(
         .filter(|k| re.is_match(k))
         .map(|v| v.clone())
         .collect())
-}
-
-pub fn convert_couchbase_rows_json_to_nu_stream(
-    ctrl_c: Arc<AtomicBool>,
-    rows: impl Stream<Item = Result<serde_json::Value, CouchbaseError>> + Send + 'static,
-) -> Result<OutputStream, ShellError> {
-    let stream = rows.map(|v| match v {
-        Ok(res) => match convert_json_value_to_nu_value(&res, Tag::default()) {
-            Ok(cv) => Ok(ReturnSuccess::Value(cv)),
-            Err(e) => Err(e),
-        },
-        Err(e) => Err(ShellError::untagged_runtime_error(format!("{}", e))),
-    });
-    Ok(OutputStream::new(InterruptibleStream::new(stream, ctrl_c)))
-}
-
-pub async fn run_interruptable<T>(
-    f: impl Future<Output = CouchbaseResult<T>>,
-    interrupt: Arc<AtomicBool>,
-) -> Result<T, ShellError> {
-    let f_fused = f.fuse();
-    let ctrl_c_fut = CtrlcFuture::new(interrupt.clone()).fuse();
-
-    pin_mut!(f_fused, ctrl_c_fut);
-
-    let res = select! {
-        g = f_fused => {
-            drop(ctrl_c_fut);
-            match g {
-                Ok(r) => Ok(r),
-                Err(e) => Err(couchbase_error_to_shell_error(e))
-            }
-        },
-        _c = ctrl_c_fut => {
-            drop(f_fused);
-            return Err(ShellError::untagged_runtime_error(format!(
-                "Cancelled"
-            )));
-        }
-    };
-
-    res
-}
-
-pub fn bucket_name_from_args(
-    args: &EvaluatedWholeStreamCommandArgs,
-    active: &RemoteCluster,
-) -> Result<String, ShellError> {
-    return match args
-        .get("bucket")
-        .map(|bucket| bucket.as_string().ok())
-        .flatten()
-        .or_else(|| active.active_bucket())
-    {
-        Some(v) => Ok(v),
-        None => Err(ShellError::untagged_runtime_error(format!(
-            "Could not auto-select a bucket - please use --bucket instead"
-        ))),
-    };
-}
-
-pub fn collection_from_args(
-    args: &EvaluatedWholeStreamCommandArgs,
-    active: &RemoteCluster,
-) -> Result<Arc<Collection>, ShellError> {
-    let bucket_name = bucket_name_from_args(args, active)?;
-
-    let bucket = active.bucket(&bucket_name);
-
-    let scope = match args.get("scope").map(|c| c.as_string().ok()).flatten() {
-        Some(s) => bucket.scope(s),
-        None => match active.active_scope() {
-            Some(s) => bucket.scope(s),
-            None => bucket.scope(""),
-        },
-    };
-
-    let collection = match args.get("collection").map(|c| c.as_string().ok()).flatten() {
-        Some(c) => scope.collection(c),
-        None => match active.active_collection() {
-            Some(c) => scope.collection(c),
-            None => scope.collection(""),
-        },
-    };
-
-    Ok(Arc::new(collection))
 }
 
 pub fn cbsh_home_path() -> Result<PathBuf, ShellError> {

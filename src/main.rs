@@ -15,14 +15,15 @@ use log4rs::append::file::FileAppender;
 use log4rs::config::{Appender, Logger, Root};
 use log4rs::encode::pattern::PatternEncoder;
 use log4rs::Config;
+use nu_errors::ShellError;
 use serde::Deserialize;
 use state::State;
-use std::collections::HashMap;
 use std::error::Error;
 use std::fs::File;
 use std::io::{prelude::*, BufReader};
 use std::sync::Arc;
 use std::time::Duration;
+use std::{collections::HashMap, path::PathBuf};
 use structopt::StructOpt;
 
 #[tokio::main]
@@ -80,7 +81,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         default_collection = opt.collection.clone();
 
         let cluster = RemoteCluster::new(
-            connstr,
+            hostnames.split(",").map(|v| v.to_owned()).collect(),
             username,
             rpassword,
             opt.bucket,
@@ -168,7 +169,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
 
             let cluster = RemoteCluster::new(
-                connstr,
+                v.hostnames().clone(),
                 username,
                 cpassword,
                 default_bucket,
@@ -194,6 +195,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let syncer = nu_cli::EnvironmentSyncer::new();
     let context = nu_cli::create_default_context(true)?;
     context.add_commands(vec![
+        nu_engine::whole_stream_command(BucketsGet::new(state.clone())),
+        /*
         // Performs analytics queries
         nu_engine::whole_stream_command(Analytics::new(state.clone())),
         // Performs kv get operations
@@ -210,7 +213,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(Nodes::new(state.clone())),
         // Displays cluster manager bucket infos
         nu_engine::whole_stream_command(Buckets {}),
-        nu_engine::whole_stream_command(BucketsGet::new(state.clone())),
         nu_engine::whole_stream_command(BucketsCreate::new(state.clone())),
         nu_engine::whole_stream_command(BucketsUpdate::new(state.clone())),
         nu_engine::whole_stream_command(BucketsDrop::new(state.clone())),
@@ -258,6 +260,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(TutorialPage::new(state.clone())),
         nu_engine::whole_stream_command(TutorialPrev::new(state.clone())),
         nu_engine::whole_stream_command(TutorialNext::new(state.clone())),
+        */
     ]);
 
     if let Some(c) = opt.command {

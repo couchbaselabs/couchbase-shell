@@ -1,5 +1,6 @@
+use couchbase_oneshot_sdk::OneshotClient;
+
 use crate::tutorial::Tutorial;
-use couchbase::{Bucket, Cluster};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -51,9 +52,9 @@ impl State {
         let remote = self.active_cluster();
         let _ = remote.cluster();
 
-        if remote.active_bucket().is_some() {
-            let _ = remote.bucket(remote.active_bucket().unwrap().as_str());
-        }
+        //if remote.active_bucket().is_some() {
+        //    let _ = remote.bucket(remote.active_bucket().unwrap().as_str());
+        //}
         if let Some(s) = self.default_scope.clone() {
             let _ = remote.set_active_scope(s);
         }
@@ -84,11 +85,10 @@ impl State {
 }
 
 pub struct RemoteCluster {
-    connstr: String,
+    hostnames: Vec<String>,
     username: String,
     password: String,
-    cluster: Mutex<Option<Arc<Cluster>>>,
-    buckets: Mutex<HashMap<String, Arc<Bucket>>>,
+    cluster: Mutex<Option<Arc<OneshotClient>>>,
     active_bucket: Mutex<Option<String>>,
     active_scope: Mutex<Option<String>>,
     active_collection: Mutex<Option<String>>,
@@ -96,7 +96,7 @@ pub struct RemoteCluster {
 
 impl RemoteCluster {
     pub fn new(
-        connstr: String,
+        hostnames: Vec<String>,
         username: String,
         password: String,
         active_bucket: Option<String>,
@@ -105,8 +105,7 @@ impl RemoteCluster {
     ) -> Self {
         Self {
             cluster: Mutex::new(None),
-            buckets: Mutex::new(HashMap::new()),
-            connstr,
+            hostnames,
             username,
             password,
             active_bucket: Mutex::new(active_bucket),
@@ -115,25 +114,16 @@ impl RemoteCluster {
         }
     }
 
-    pub fn cluster(&self) -> Arc<Cluster> {
+    pub fn cluster(&self) -> Arc<OneshotClient> {
         let mut c = self.cluster.lock().unwrap();
         if c.is_none() {
-            *c = Some(Arc::new(Cluster::connect(
-                &self.connstr,
-                &self.username,
-                &self.password,
+            *c = Some(Arc::new(OneshotClient::new(
+                self.hostnames.clone(),
+                self.username.clone(),
+                self.password.clone(),
             )));
         }
         c.as_ref().unwrap().clone()
-    }
-
-    pub fn bucket(&self, name: &str) -> Arc<Bucket> {
-        let mut buckets = self.buckets.lock().unwrap();
-        if !buckets.contains_key(name) {
-            let bucket = self.cluster().bucket(name);
-            buckets.insert(name.into(), Arc::new(bucket));
-        }
-        buckets.get(name).unwrap().clone()
     }
 
     pub fn active_bucket(&self) -> Option<String> {
@@ -184,9 +174,5 @@ impl RemoteCluster {
 
     pub fn username(&self) -> &str {
         self.username.as_str()
-    }
-
-    pub fn connstr(&self) -> &str {
-        self.connstr.as_str()
     }
 }

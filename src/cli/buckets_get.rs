@@ -1,17 +1,17 @@
 //! The `buckets get` command fetches buckets from the server.
 
 use crate::state::State;
-use couchbase::{BucketSettings, GetAllBucketsOptions, GetBucketOptions};
 
-use crate::cli::convert_cb_error;
 use crate::cli::util::cluster_identifiers_from;
 use async_trait::async_trait;
+use couchbase_oneshot_sdk::ManagementRequest;
 use log::debug;
 use nu_cli::OutputStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Value};
 use nu_source::Tag;
+use serde::Deserialize;
 use std::sync::Arc;
 
 pub struct BucketsGet {
@@ -91,13 +91,12 @@ async fn buckets_get_one(
             }
         };
 
-        let mgr = cluster.buckets();
-        let input = mgr
-            .get_bucket(name.clone(), GetBucketOptions::default())
+        let response = cluster
+            .management_request(ManagementRequest::GetBucket { name: name.clone() })
             .await;
-        let result = convert_cb_error(input)?;
 
-        results.push(bucket_to_tagged_dict(&result, identifier.clone()));
+        let content = serde_json::from_str(response.content()).unwrap();
+        results.push(bucket_to_tagged_dict(content, identifier));
     }
 
     Ok(OutputStream::from(results))
@@ -116,11 +115,13 @@ async fn buckets_get_all(
             }
         };
 
-        let mgr = cluster.buckets();
-        let input = mgr.get_all_buckets(GetAllBucketsOptions::default()).await;
-        let result = convert_cb_error(input)?;
+        let response = cluster
+            .management_request(ManagementRequest::GetBuckets)
+            .await;
 
-        for (_name, bucket) in result.iter() {
+        let content: Vec<BucketConfig> = serde_json::from_str(response.content()).unwrap();
+
+        for bucket in content.into_iter() {
             results.push(bucket_to_tagged_dict(bucket, identifier.clone()));
         }
     }
@@ -128,13 +129,20 @@ async fn buckets_get_all(
     Ok(OutputStream::from(results))
 }
 
-fn bucket_to_tagged_dict(bucket: &BucketSettings, cluster_name: String) -> Value {
+fn bucket_to_tagged_dict(bucket: BucketConfig, cluster_name: String) -> Value {
+    let bucket_type = match bucket.bucket_type.as_str() {
+        "membase" => "couchbase",
+        "memcached" => "memcached",
+        "ephemeral" => "ephemeral",
+        _ => "unknown",
+    };
+
     let mut collected = TaggedDictBuilder::new(Tag::default());
     collected.insert_value("cluster", cluster_name);
-    collected.insert_value("name", bucket.name());
-    collected.insert_value("type", format!("{:?}", bucket.bucket_type()).to_lowercase());
-    collected.insert_value("replicas", UntaggedValue::int(bucket.num_replicas()));
-    collected.insert_value(
+    collected.insert_value("name", bucket.name);
+    collected.insert_value("type", bucket_type);
+    collected.insert_value("replicas", UntaggedValue::int(bucket.num_replicas));
+    /*collected.insert_value(
         "ram_quota",
         UntaggedValue::filesize(bucket.ram_quota_mb() * 1000 * 1000),
     );
@@ -142,6 +150,14 @@ fn bucket_to_tagged_dict(bucket: &BucketSettings, cluster_name: String) -> Value
     collected.insert_value(
         "min_durability_level",
         format!("{}", bucket.minimum_durability_level()),
-    );
+    );*/
     collected.into_value()
+}
+#[derive(Deserialize, Debug)]
+struct BucketConfig {
+    name: String,
+    #[serde(rename = "bucketType")]
+    bucket_type: String,
+    #[serde(rename = "replicaNumber")]
+    num_replicas: u32,
 }
