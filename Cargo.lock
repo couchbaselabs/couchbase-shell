@@ -1004,25 +1004,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "couchbase-oneshot-sdk"
-version = "0.1.0"
-dependencies = [
- "base64 0.13.0",
- "serde 1.0.123",
- "serde_json",
- "surf 2.2.0",
- "tokio 1.4.0",
-]
-
-[[package]]
 name = "couchbase-shell"
 version = "0.5.0"
 dependencies = [
  "ansi_term 0.12.1",
  "async-stream",
  "async-trait",
+ "base64 0.13.0",
  "chrono",
- "couchbase-oneshot-sdk",
  "dirs 2.0.2",
  "dunce",
  "fake",
@@ -1049,8 +1038,9 @@ dependencies = [
  "serde 1.0.123",
  "serde_json",
  "structopt",
+ "surf 2.2.0",
  "tera",
- "tokio 0.2.22",
+ "tokio 1.4.0",
  "toml",
  "url",
  "uuid",
@@ -3266,18 +3256,6 @@ dependencies = [
  "log 0.4.11",
  "miow 0.3.7",
  "ntapi",
- "winapi 0.3.9",
-]
-
-[[package]]
-name = "mio-named-pipes"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0840c1c50fd55e521b247f949c241c9997709f23bd7f023b9762cd561e935656"
-dependencies = [
- "log 0.4.11",
- "mio 0.6.22",
- "miow 0.3.7",
  "winapi 0.3.9",
 ]
 
@@ -6688,17 +6666,11 @@ dependencies = [
  "futures-core",
  "iovec",
  "lazy_static 1.4.0",
- "libc",
  "memchr",
  "mio 0.6.22",
- "mio-named-pipes",
- "mio-uds",
  "num_cpus",
  "pin-project-lite 0.1.10",
- "signal-hook-registry",
  "slab 0.4.2",
- "tokio-macros 0.2.5",
- "winapi 0.3.9",
 ]
 
 [[package]]
@@ -6717,7 +6689,7 @@ dependencies = [
  "parking_lot 0.11.0",
  "pin-project-lite 0.2.4",
  "signal-hook-registry",
- "tokio-macros 1.1.0",
+ "tokio-macros",
  "winapi 0.3.9",
 ]
 
@@ -6791,17 +6763,6 @@ dependencies = [
  "bytes 0.4.12",
  "futures 0.1.30",
  "log 0.4.11",
-]
-
-[[package]]
-name = "tokio-macros"
-version = "0.2.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0c3acc6aa564495a0f2e1d59fab677cd7f81a19994cfc7f3ad0e64301560389"
-dependencies = [
- "proc-macro2",
- "quote 1.0.7",
- "syn 1.0.60",
 ]
 
 [[package]]

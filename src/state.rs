@@ -1,4 +1,4 @@
-use couchbase_oneshot_sdk::OneshotClient;
+use crate::client::OneshotClient;
 
 use crate::tutorial::Tutorial;
 use std::collections::HashMap;

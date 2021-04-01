@@ -1,6 +1,7 @@
 #![recursion_limit = "256"]
 
 mod cli;
+mod client;
 mod config;
 mod state;
 mod tutorial;

@@ -3,8 +3,8 @@
 use crate::state::State;
 
 use crate::cli::util::cluster_identifiers_from;
+use crate::client::ManagementRequest;
 use async_trait::async_trait;
-use couchbase_oneshot_sdk::ManagementRequest;
 use log::debug;
 use nu_cli::OutputStream;
 use nu_engine::CommandArgs;
@@ -142,15 +142,16 @@ fn bucket_to_tagged_dict(bucket: BucketConfig, cluster_name: String) -> Value {
     collected.insert_value("name", bucket.name);
     collected.insert_value("type", bucket_type);
     collected.insert_value("replicas", UntaggedValue::int(bucket.num_replicas));
+    collected.insert_value(
+        "min_durability_level",
+        bucket.durability_level.unwrap_or("none".to_string()),
+    );
     /*collected.insert_value(
         "ram_quota",
         UntaggedValue::filesize(bucket.ram_quota_mb() * 1000 * 1000),
     );
     collected.insert_value("flush_enabled", bucket.flush_enabled());
-    collected.insert_value(
-        "min_durability_level",
-        format!("{}", bucket.minimum_durability_level()),
-    );*/
+    */
     collected.into_value()
 }
 #[derive(Deserialize, Debug)]
@@ -160,4 +161,6 @@ struct BucketConfig {
     bucket_type: String,
     #[serde(rename = "replicaNumber")]
     num_replicas: u32,
+    #[serde(rename = "durabilityMinLevel")]
+    durability_level: Option<String>,
 }
