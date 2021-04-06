@@ -1,9 +1,7 @@
-use crate::cli::convert_cb_error;
 use crate::cli::util::convert_json_value_to_nu_value;
+use crate::client::ManagementRequest;
 use crate::state::State;
 use async_trait::async_trait;
-use couchbase::{GenericManagementRequest, Request};
-use futures::channel::oneshot;
 use nu_cli::OutputStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
@@ -56,38 +54,19 @@ async fn buckets(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, S
         }
     };
 
-    let core = state.active_cluster().cluster().core();
-
-    let (sender, receiver) = oneshot::channel();
-    let request = GenericManagementRequest::new(
-        sender,
-        format!("/pools/default/buckets/{}", &bucket_name),
-        "get".into(),
-        None,
-    );
-    core.send(Request::GenericManagementRequest(request));
-
-    let input = match receiver.await {
-        Ok(i) => i,
-        Err(e) => {
-            return Err(ShellError::untagged_runtime_error(format!(
-                "Error streaming result {}",
-                e
-            )))
-        }
-    };
-    let result = convert_cb_error(input)?;
-
-    let payload = match result.payload() {
-        Some(p) => p,
+    let cluster = match state.clusters().get(&state.active()) {
+        Some(c) => c.cluster(),
         None => {
-            return Err(ShellError::untagged_runtime_error(
-                "Empty response from cluster even though got 200 ok",
-            ));
+            return Err(ShellError::untagged_runtime_error("Cluster not found"));
         }
     };
-    let resp = serde_json::from_slice(payload)?;
-    let converted = convert_json_value_to_nu_value(&resp, Tag::default())?;
+
+    let response = cluster
+        .management_request(ManagementRequest::GetBucket { name: bucket_name })
+        .await;
+
+    let content = serde_json::from_str(response.content()).unwrap();
+    let converted = convert_json_value_to_nu_value(&content, Tag::default())?;
 
     Ok(vec![converted].into())
 }

@@ -1,12 +1,13 @@
+mod buckets;
+mod buckets_config;
 mod buckets_get;
+
 mod util;
 
 /*mod analytics;
 mod analytics_datasets;
 mod analytics_dataverses;
 mod analytics_indexes;
-mod buckets;
-mod buckets_config;
 mod buckets_create;
 mod buckets_drop;
 mod buckets_flush;
@@ -58,8 +59,6 @@ pub use analytics::Analytics;
 pub use analytics_datasets::AnalyticsDatasets;
 pub use analytics_dataverses::AnalyticsDataverses;
 pub use analytics_indexes::AnalyticsIndexes;
-pub use buckets::Buckets;
-pub use buckets_config::BucketsConfig;
 pub use buckets_create::BucketsCreate;
 pub use buckets_drop::BucketsDrop;
 pub use buckets_flush::BucketsFlush;
@@ -114,5 +113,8 @@ fn convert_cb_error<T>(input: Result<T, CouchbaseError>) -> Result<T, ShellError
 }
 */
 
+pub use buckets::Buckets;
+pub use buckets_config::BucketsConfig;
 pub use buckets_get::BucketsGet;
+
 pub use util::cbsh_home_path;

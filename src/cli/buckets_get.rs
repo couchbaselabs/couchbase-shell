@@ -146,12 +146,8 @@ fn bucket_to_tagged_dict(bucket: BucketConfig, cluster_name: String) -> Value {
         "min_durability_level",
         bucket.durability_level.unwrap_or("none".to_string()),
     );
-    /*collected.insert_value(
-        "ram_quota",
-        UntaggedValue::filesize(bucket.ram_quota_mb() * 1000 * 1000),
-    );
-    collected.insert_value("flush_enabled", bucket.flush_enabled());
-    */
+    collected.insert_value("ram_quota", UntaggedValue::filesize(bucket.quota.raw_ram));
+    collected.insert_value("flush_enabled", bucket.controllers.flush.is_some());
     collected.into_value()
 }
 #[derive(Deserialize, Debug)]
@@ -163,4 +159,17 @@ struct BucketConfig {
     num_replicas: u32,
     #[serde(rename = "durabilityMinLevel")]
     durability_level: Option<String>,
+    quota: BucketQuota,
+    controllers: BucketControllers,
+}
+
+#[derive(Deserialize, Debug)]
+struct BucketQuota {
+    #[serde(rename = "rawRAM")]
+    raw_ram: u64,
+}
+
+#[derive(Deserialize, Debug)]
+struct BucketControllers {
+    flush: Option<String>,
 }

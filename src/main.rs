@@ -197,6 +197,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let context = nu_cli::create_default_context(true)?;
     context.add_commands(vec![
         nu_engine::whole_stream_command(BucketsGet::new(state.clone())),
+        nu_engine::whole_stream_command(BucketsConfig::new(state.clone())),
         /*
         // Performs analytics queries
         nu_engine::whole_stream_command(Analytics::new(state.clone())),
@@ -218,7 +219,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(BucketsUpdate::new(state.clone())),
         nu_engine::whole_stream_command(BucketsDrop::new(state.clone())),
         nu_engine::whole_stream_command(BucketsFlush::new(state.clone())),
-        nu_engine::whole_stream_command(BucketsConfig::new(state.clone())),
         nu_engine::whole_stream_command(BucketsSample::new(state.clone())),
         // Performs n1ql queries
         nu_engine::whole_stream_command(Query::new(state.clone())),
