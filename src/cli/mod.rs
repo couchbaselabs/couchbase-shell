@@ -1,6 +1,6 @@
 mod buckets;
-//mod buckets_config;
-//mod buckets_get;
+mod buckets_config;
+mod buckets_get;
 
 mod use_cmd;
 mod util;
@@ -113,9 +113,8 @@ fn convert_cb_error<T>(input: Result<T, CouchbaseError>) -> Result<T, ShellError
 */
 
 pub use buckets::Buckets;
+pub use buckets_config::BucketsConfig;
+pub use buckets_get::BucketsGet;
 pub use use_cmd::UseCmd;
-
-//pub use buckets_config::BucketsConfig;
-//pub use buckets_get::BucketsGet;
 
 pub use util::cbsh_home_path;

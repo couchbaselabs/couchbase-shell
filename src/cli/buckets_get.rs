@@ -5,6 +5,7 @@ use crate::state::State;
 use crate::cli::util::cluster_identifiers_from;
 use crate::client::ManagementRequest;
 use async_trait::async_trait;
+use futures::executor::block_on;
 use log::debug;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
@@ -50,16 +51,18 @@ impl nu_engine::WholeStreamCommand for BucketsGet {
         "Fetches buckets through the HTTP API"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        buckets_get(self.state.clone(), args).await
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        buckets_get(self.state.clone(), args)
     }
 }
 
-async fn buckets_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
+fn buckets_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once()?;
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
     let bucket = match args
+        .call_info
+        .args
         .get("bucket")
         .map(|bucket| bucket.as_string().ok())
         .flatten()
@@ -71,9 +74,9 @@ async fn buckets_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStrea
     debug!("Running buckets get for bucket {:?}", &bucket);
 
     if bucket == "" {
-        buckets_get_all(state, cluster_identifiers).await
+        block_on(buckets_get_all(state, cluster_identifiers))
     } else {
-        buckets_get_one(state, cluster_identifiers, bucket).await
+        block_on(buckets_get_one(state, cluster_identifiers, bucket))
     }
 }
 

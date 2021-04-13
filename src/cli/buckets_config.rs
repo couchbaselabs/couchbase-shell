@@ -2,6 +2,7 @@ use crate::cli::util::convert_json_value_to_nu_value;
 use crate::client::ManagementRequest;
 use crate::state::State;
 use async_trait::async_trait;
+use futures::executor::block_on;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
@@ -37,13 +38,13 @@ impl nu_engine::WholeStreamCommand for BucketsConfig {
         "Shows the bucket config (low level)"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        buckets(args, self.state.clone()).await
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        buckets(args, self.state.clone())
     }
 }
 
-async fn buckets(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
+fn buckets(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once()?;
 
     let bucket_name = match args.nth(0) {
         Some(n) => n.as_string()?,
@@ -61,9 +62,8 @@ async fn buckets(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, S
         }
     };
 
-    let response = cluster
-        .management_request(ManagementRequest::GetBucket { name: bucket_name })
-        .await;
+    let response =
+        block_on(cluster.management_request(ManagementRequest::GetBucket { name: bucket_name }));
 
     let content = serde_json::from_str(response.content()).unwrap();
     let converted = convert_json_value_to_nu_value(&content, Tag::default())?;
