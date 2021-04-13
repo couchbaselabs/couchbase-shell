@@ -1,12 +1,13 @@
 use crate::state::{RemoteCluster, State};
 use futures::{future::FutureExt, pin_mut, select, Stream, StreamExt};
-use nu_cli::{InterruptibleStream, OutputStream, ToPrimitive};
+use nu_cli::{InterruptibleStream, ToPrimitive};
 use nu_engine::EvaluatedWholeStreamCommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{
     Primitive, ReturnSuccess, TaggedDictBuilder, UnspannedPathMember, UntaggedValue, Value,
 };
 use nu_source::Tag;
+use nu_stream::OutputStream;
 use regex::Regex;
 use std::fs::File;
 use std::future::Future;
@@ -73,9 +74,9 @@ pub fn convert_json_value_to_nu_value(
 pub fn convert_nu_value_to_json_value(v: &Value) -> Result<serde_json::Value, ShellError> {
     Ok(match &v.value {
         UntaggedValue::Primitive(Primitive::Boolean(b)) => serde_json::Value::Bool(*b),
-        UntaggedValue::Primitive(Primitive::Filesize(b)) => {
-            serde_json::Value::Number(serde_json::Number::from(*b))
-        }
+        UntaggedValue::Primitive(Primitive::Filesize(b)) => serde_json::Value::Number(
+            serde_json::Number::from(b.to_u64().expect("what about really big numbers?")),
+        ),
         UntaggedValue::Primitive(Primitive::Duration(i)) => {
             serde_json::Value::String(i.to_string())
         }
@@ -186,7 +187,13 @@ pub fn cluster_identifiers_from(
     args: &EvaluatedWholeStreamCommandArgs,
     default_active: bool,
 ) -> Result<Vec<String>, ShellError> {
-    let identifier_arg = match args.get("clusters").map(|id| id.as_string().ok()).flatten() {
+    let identifier_arg = match args
+        .call_info
+        .args
+        .get("clusters")
+        .map(|id| id.as_string().ok())
+        .flatten()
+    {
         Some(arg) => arg,
         None => {
             if default_active {

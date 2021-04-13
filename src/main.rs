@@ -9,26 +9,23 @@ mod tutorial;
 use crate::cli::*;
 use crate::config::{ClusterTimeouts, ShellConfig};
 use crate::state::RemoteCluster;
-use ansi_term::Color;
 use log::{debug, warn, LevelFilter};
 use log4rs::append::console::ConsoleAppender;
 use log4rs::append::file::FileAppender;
 use log4rs::config::{Appender, Logger, Root};
 use log4rs::encode::pattern::PatternEncoder;
 use log4rs::Config;
-use nu_errors::ShellError;
+use nu_cli::{NuScript, Options};
 use serde::Deserialize;
 use state::State;
+use std::collections::HashMap;
 use std::error::Error;
-use std::fs::File;
-use std::io::{prelude::*, BufReader};
 use std::sync::Arc;
 use std::time::Duration;
-use std::{collections::HashMap, path::PathBuf};
 use structopt::StructOpt;
+use temp_dir::TempDir;
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Box<dyn Error>> {
     const DEFAULT_PASSWORD: &str = "password";
     const DEFAULT_HOSTNAME: &str = "localhost";
     const DEFAULT_USERNAME: &str = "Administrator";
@@ -189,15 +186,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
         default_collection,
     ));
 
-    if !opt.no_motd && opt.script.is_none() && opt.command.is_none() {
-        fetch_and_print_motd().await;
-    }
+    //if !opt.no_motd && opt.script.is_none() && opt.command.is_none() {
+    //    fetch_and_print_motd().await;
+    //}
 
-    let syncer = nu_cli::EnvironmentSyncer::new();
     let context = nu_cli::create_default_context(true)?;
     context.add_commands(vec![
-        nu_engine::whole_stream_command(BucketsGet::new(state.clone())),
-        nu_engine::whole_stream_command(BucketsConfig::new(state.clone())),
+        nu_engine::whole_stream_command(Buckets {}),
+        nu_engine::whole_stream_command(UseCmd::new(state.clone())),
+        // nu_engine::whole_stream_command(BucketsGet::new(state.clone())),
+        // nu_engine::whole_stream_command(BucketsConfig::new(state.clone())),
         /*
         // Performs analytics queries
         nu_engine::whole_stream_command(Analytics::new(state.clone())),
@@ -234,7 +232,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(AnalyticsDatasets::new(state.clone())),
         nu_engine::whole_stream_command(AnalyticsDataverses::new(state.clone())),
         // Allows to switch clusters, buckets and collections on the fly
-        nu_engine::whole_stream_command(UseCmd::new(state.clone())),
         nu_engine::whole_stream_command(UseBucket::new(state.clone())),
         nu_engine::whole_stream_command(UseCluster::new(state.clone())),
         nu_engine::whole_stream_command(UseCollection::new(state.clone())),
@@ -264,61 +261,34 @@ async fn main() -> Result<(), Box<dyn Error>> {
         */
     ]);
 
+    let mut options = Options::new();
+
+    let d = TempDir::new().unwrap();
+    let f = d.child("config.toml");
+
+    let config = r##"
+    skip_welcome_message = true
+    prompt = "build-string '👤 ' $(ansi ub) $(use | get username) $(ansi reset) ' 🏠 ' $(ansi yb) $(use | get cluster) $(ansi reset) ' in 🗄 ' $(ansi wb) $(use | get bucket) $(ansi reset) '\n' '> '"
+    "##;
+    std::fs::write(&f, config.as_bytes()).unwrap();
+
+    options.config = Some(std::ffi::OsString::from(f));
+
     if let Some(c) = opt.command {
-        nu_cli::run_script_file(c, true).await?;
+        options.scripts = vec![NuScript::code(std::iter::once(c.as_str()))?];
+        nu_cli::run_script_file(options)?;
         return Ok(());
     }
 
-    if let Some(s) = opt.script {
-        let file = File::open(s)?;
-        let reader = BufReader::new(file);
-
-        for line in reader.lines() {
-            let line = line?;
-            if !line.starts_with('#') {
-                nu_cli::run_script_file(line, true).await?;
-            }
-        }
+    if let Some(filepath) = opt.script {
+        let filepath = std::ffi::OsString::from(filepath);
+        options.scripts = vec![NuScript::source_file(filepath.as_os_str())?];
+        nu_cli::run_script_file(options)?;
         return Ok(());
     }
 
-    let prompt = CouchbasePrompt {
-        state: state.clone(),
-    };
-
-    nu_cli::cli(syncer, context, Some(Box::new(prompt))).await
-}
-
-struct CouchbasePrompt {
-    state: Arc<State>,
-}
-
-impl nu_cli::Prompt for CouchbasePrompt {
-    fn get(&self) -> String {
-        let ac = self.state.active_cluster();
-
-        if let Some(b) = ac.active_bucket() {
-            let bucket_emoji = match b.to_lowercase().as_ref() {
-                "travel-sample" => "🛫 ",
-                "beer-sample" => "🍺 ",
-                _ => "🗄 ",
-            };
-
-            format!(
-                "👤 {} at 🏠 {} in {} {}\n> ",
-                Color::Blue.bold().paint(ac.username()),
-                Color::Yellow.bold().paint(self.state.active()),
-                bucket_emoji,
-                Color::White.bold().paint(b)
-            )
-        } else {
-            format!(
-                "👤 {} at 🏠 {}\n> ",
-                Color::Blue.bold().paint(ac.username()),
-                Color::Yellow.bold().paint(self.state.active())
-            )
-        }
-    }
+    nu_cli::cli(context, options)?;
+    Ok(())
 }
 
 /// Fetches a helpful MOTD from couchbase.sh

@@ -2,11 +2,11 @@ use crate::cli::util::convert_json_value_to_nu_value;
 use crate::client::ManagementRequest;
 use crate::state::State;
 use async_trait::async_trait;
-use nu_cli::OutputStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
+use nu_stream::OutputStream;
 use std::sync::Arc;
 
 pub struct BucketsConfig {

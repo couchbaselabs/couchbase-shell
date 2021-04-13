@@ -1,3 +1,4 @@
+use bytes::Buf;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 #[cfg(not(target_os = "windows"))]
@@ -12,8 +13,6 @@ use tokio::io::BufReader;
 use tokio::net::tcp::ReadHalf;
 use tokio::net::TcpListener;
 use uuid::Uuid;
-use warp::Buf;
-
 #[cfg(target_os = "windows")]
 const CAVES_BINARY: &str = "gocaves-windows.exe";
 #[cfg(target_os = "macos")]
@@ -42,7 +41,7 @@ async fn fetch_caves() {
         .await
         .expect("Failed to read response into bytes");
 
-    file.write_all(content.bytes())
+    file.write_all(content.chunk())
         .await
         .expect("Failed to write response data to file");
     drop(file);

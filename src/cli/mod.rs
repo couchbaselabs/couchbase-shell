@@ -1,7 +1,8 @@
 mod buckets;
-mod buckets_config;
-mod buckets_get;
+//mod buckets_config;
+//mod buckets_get;
 
+mod use_cmd;
 mod util;
 
 /*mod analytics;
@@ -45,7 +46,6 @@ mod tutorial_page;
 mod tutorial_prev;
 mod use_bucket;
 mod use_cluster;
-mod use_cmd;
 mod use_collection;
 mod use_scope;
 mod users;
@@ -97,7 +97,6 @@ pub use tutorial_page::TutorialPage;
 pub use tutorial_prev::TutorialPrev;
 pub use use_bucket::UseBucket;
 pub use use_cluster::UseCluster;
-pub use use_cmd::UseCmd;
 pub use use_collection::UseCollection;
 pub use use_scope::UseScope;
 pub use users::Users;
@@ -114,7 +113,9 @@ fn convert_cb_error<T>(input: Result<T, CouchbaseError>) -> Result<T, ShellError
 */
 
 pub use buckets::Buckets;
-pub use buckets_config::BucketsConfig;
-pub use buckets_get::BucketsGet;
+pub use use_cmd::UseCmd;
+
+//pub use buckets_config::BucketsConfig;
+//pub use buckets_get::BucketsGet;
 
 pub use util::cbsh_home_path;

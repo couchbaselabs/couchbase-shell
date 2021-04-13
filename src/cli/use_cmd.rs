@@ -1,10 +1,10 @@
 use crate::state::State;
 use async_trait::async_trait;
-use nu_cli::OutputStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, TaggedDictBuilder};
 use nu_source::Tag;
+use nu_stream::OutputStream;
 use std::sync::Arc;
 
 pub struct UseCmd {
@@ -31,16 +31,17 @@ impl nu_engine::WholeStreamCommand for UseCmd {
         "Modify the default execution environment of commands"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        use_cmd(args, self.state.clone()).await
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        use_cmd(args, self.state.clone())
     }
 }
 
-async fn use_cmd(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellError> {
-    let _args = args.evaluate_once().await?;
+fn use_cmd(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellError> {
+    let _args = args.evaluate_once()?;
 
     let active = state.active_cluster();
     let mut using_now = TaggedDictBuilder::new(Tag::default());
+    using_now.insert_value("username", active.username());
     using_now.insert_value("cluster", state.active());
     using_now.insert_value(
         "bucket",

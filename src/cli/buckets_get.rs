@@ -6,11 +6,11 @@ use crate::cli::util::cluster_identifiers_from;
 use crate::client::ManagementRequest;
 use async_trait::async_trait;
 use log::debug;
-use nu_cli::OutputStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Value};
 use nu_source::Tag;
+use nu_stream::OutputStream;
 use serde::Deserialize;
 use std::sync::Arc;
 
