@@ -1,7 +1,11 @@
 mod buckets;
 mod buckets_config;
 mod buckets_get;
+mod use_bucket;
+mod use_cluster;
 mod use_cmd;
+mod use_collection;
+mod use_scope;
 mod util;
 mod version;
 mod whoami;
@@ -9,7 +13,12 @@ mod whoami;
 pub use buckets::Buckets;
 pub use buckets_config::BucketsConfig;
 pub use buckets_get::BucketsGet;
+pub use use_bucket::UseBucket;
+pub use use_cluster::UseCluster;
 pub use use_cmd::UseCmd;
+pub use use_collection::UseCollection;
+pub use use_scope::UseScope;
+
 pub use version::Version;
 pub use whoami::Whoami;
 
@@ -54,10 +63,6 @@ mod tutorial;
 mod tutorial_next;
 mod tutorial_page;
 mod tutorial_prev;
-mod use_bucket;
-mod use_cluster;
-mod use_collection;
-mod use_scope;
 mod users;
 mod users_get;
 mod users_roles;
@@ -103,10 +108,7 @@ pub use tutorial::Tutorial;
 pub use tutorial_next::TutorialNext;
 pub use tutorial_page::TutorialPage;
 pub use tutorial_prev::TutorialPrev;
-pub use use_bucket::UseBucket;
-pub use use_cluster::UseCluster;
-pub use use_collection::UseCollection;
-pub use use_scope::UseScope;
+
 pub use users::Users;
 pub use users_get::UsersGet;
 pub use users_roles::UsersRoles;

@@ -61,7 +61,7 @@ fn whoami(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellErr
             }
         };
 
-        let response = block_on(cluster.management_request(ManagementRequest::Whoami));
+        let response = block_on(cluster.management_request(ManagementRequest::Whoami))?;
         let mut content: Map<String, Value> = serde_json::from_str(response.content())?;
         content.insert("cluster".into(), json!(identifier.clone()));
         let converted = convert_json_value_to_nu_value(&Value::Object(content), Tag::default())?;

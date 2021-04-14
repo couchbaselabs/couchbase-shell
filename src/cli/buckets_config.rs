@@ -63,7 +63,7 @@ fn buckets(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellEr
     };
 
     let response =
-        block_on(cluster.management_request(ManagementRequest::GetBucket { name: bucket_name }));
+        block_on(cluster.management_request(ManagementRequest::GetBucket { name: bucket_name }))?;
 
     let content = serde_json::from_str(response.content())?;
     let converted = convert_json_value_to_nu_value(&content, Tag::default())?;

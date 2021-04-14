@@ -1,10 +1,10 @@
 use crate::state::State;
 use async_trait::async_trait;
-use nu_cli::OutputStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder};
 use nu_source::Tag;
+use nu_stream::OutputStream;
 use std::sync::Arc;
 
 pub struct UseScope {
@@ -35,34 +35,30 @@ impl nu_engine::WholeStreamCommand for UseScope {
         "Sets the active scope based on its name"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        use_cmd(args, self.state.clone()).await
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        let args = args.evaluate_once()?;
+
+        let active = self.state.active_cluster();
+
+        if active.active_bucket().is_none() {
+            return Err(ShellError::untagged_runtime_error(
+                "You must select a bucket before a scope",
+            ));
+        }
+
+        if let Some(id) = args.nth(0) {
+            active.set_active_scope(id.as_string()?);
+        }
+
+        let mut using_now = TaggedDictBuilder::new(Tag::default());
+        using_now.insert_value(
+            "scope",
+            active
+                .active_scope()
+                .map(|s| s.clone())
+                .unwrap_or(String::from("<not set>")),
+        );
+        let clusters = vec![using_now.into_value()];
+        Ok(clusters.into())
     }
-}
-
-async fn use_cmd(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
-
-    let active = state.active_cluster();
-
-    if active.active_bucket().is_none() {
-        return Err(ShellError::untagged_runtime_error(
-            "You must select a bucket before a scope",
-        ));
-    }
-
-    if let Some(id) = args.nth(0) {
-        active.set_active_scope(id.as_string()?);
-    }
-
-    let mut using_now = TaggedDictBuilder::new(Tag::default());
-    using_now.insert_value(
-        "scope",
-        active
-            .active_scope()
-            .map(|s| s.clone())
-            .unwrap_or(String::from("<not set>")),
-    );
-    let clusters = vec![using_now.into_value()];
-    Ok(clusters.into())
 }

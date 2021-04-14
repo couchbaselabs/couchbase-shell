@@ -1,18 +1,12 @@
-use crate::state::{RemoteCluster, State};
-use futures::{future::FutureExt, pin_mut, select, Stream, StreamExt};
-use nu_cli::{InterruptibleStream, ToPrimitive};
+use crate::state::State;
+use nu_cli::ToPrimitive;
 use nu_engine::EvaluatedWholeStreamCommandArgs;
 use nu_errors::ShellError;
-use nu_protocol::{
-    Primitive, ReturnSuccess, TaggedDictBuilder, UnspannedPathMember, UntaggedValue, Value,
-};
+use nu_protocol::{Primitive, TaggedDictBuilder, UnspannedPathMember, UntaggedValue, Value};
 use nu_source::Tag;
-use nu_stream::OutputStream;
 use regex::Regex;
 use std::fs::File;
-use std::future::Future;
 use std::path::PathBuf;
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 pub fn convert_json_value_to_nu_value(

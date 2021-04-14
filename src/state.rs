@@ -1,4 +1,4 @@
-use crate::client::OneshotClient;
+use crate::client::Client;
 
 use crate::tutorial::Tutorial;
 use std::collections::HashMap;
@@ -88,7 +88,7 @@ pub struct RemoteCluster {
     hostnames: Vec<String>,
     username: String,
     password: String,
-    cluster: Mutex<Option<Arc<OneshotClient>>>,
+    cluster: Mutex<Option<Arc<Client>>>,
     active_bucket: Mutex<Option<String>>,
     active_scope: Mutex<Option<String>>,
     active_collection: Mutex<Option<String>>,
@@ -114,10 +114,10 @@ impl RemoteCluster {
         }
     }
 
-    pub fn cluster(&self) -> Arc<OneshotClient> {
+    pub fn cluster(&self) -> Arc<Client> {
         let mut c = self.cluster.lock().unwrap();
         if c.is_none() {
-            *c = Some(Arc::new(OneshotClient::new(
+            *c = Some(Arc::new(Client::new(
                 self.hostnames.clone(),
                 self.username.clone(),
                 self.password.clone(),

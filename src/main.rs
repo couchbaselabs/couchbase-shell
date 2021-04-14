@@ -195,7 +195,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(Buckets {}),
         nu_engine::whole_stream_command(BucketsConfig::new(state.clone())),
         nu_engine::whole_stream_command(BucketsGet::new(state.clone())),
+        nu_engine::whole_stream_command(UseBucket::new(state.clone())),
+        nu_engine::whole_stream_command(UseCluster::new(state.clone())),
         nu_engine::whole_stream_command(UseCmd::new(state.clone())),
+        nu_engine::whole_stream_command(UseCollection::new(state.clone())),
+        nu_engine::whole_stream_command(UseScope::new(state.clone())),
         nu_engine::whole_stream_command(Whoami::new(state.clone())),
         nu_engine::whole_stream_command(Version::new()),
         /*
@@ -233,10 +237,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(AnalyticsDatasets::new(state.clone())),
         nu_engine::whole_stream_command(AnalyticsDataverses::new(state.clone())),
         // Allows to switch clusters, buckets and collections on the fly
-        nu_engine::whole_stream_command(UseBucket::new(state.clone())),
-        nu_engine::whole_stream_command(UseCluster::new(state.clone())),
-        nu_engine::whole_stream_command(UseCollection::new(state.clone())),
-        nu_engine::whole_stream_command(UseScope::new(state.clone())),
         nu_engine::whole_stream_command(Doc {}),
         nu_engine::whole_stream_command(Data {}),
         nu_engine::whole_stream_command(Users::new(state.clone())),

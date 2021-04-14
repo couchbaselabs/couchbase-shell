@@ -1,15 +1,29 @@
 use std::collections::HashMap;
 
 use base64::encode;
-use serde::Deserialize;
+use nu_errors::ShellError;
+use serde::{Deserialize, Serialize};
 
-pub struct OneshotClient {
+pub struct Client {
     seeds: Vec<String>,
     username: String,
     password: String,
 }
 
-impl OneshotClient {
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone, Serialize, Deserialize, Hash)]
+pub enum ClientError {
+    ConfigurationLoadFailed,
+    RequestFailed,
+}
+
+impl From<ClientError> for ShellError {
+    fn from(ce: ClientError) -> Self {
+        // todo: this can definitely be improved with more detail and reporting specifics
+        ShellError::untagged_runtime_error(serde_json::to_string(&ce).unwrap())
+    }
+}
+
+impl Client {
     pub fn new(seeds: Vec<String>, username: String, password: String) -> Self {
         Self {
             seeds,
@@ -18,19 +32,22 @@ impl OneshotClient {
         }
     }
 
-    async fn get_config(&self) -> ClusterConfig {
+    async fn get_config(&self) -> Result<ClusterConfig, ClientError> {
         let path = "/pools/default/nodeServices";
         for seed in &self.seeds {
             let uri = format!("http://{}:8091{}", seed, &path);
-            let (content, _status) = self.http_get(&uri).await;
+            let (content, status) = self.http_get(&uri).await?;
+            if status != 200 {
+                continue;
+            }
             let mut config: ClusterConfig = serde_json::from_str(&content).unwrap();
             config.set_loaded_from(seed.clone());
-            return config;
+            return Ok(config);
         }
-        panic!()
+        Err(ClientError::ConfigurationLoadFailed)
     }
 
-    async fn http_get(&self, uri: &str) -> (String, u16) {
+    async fn http_get(&self, uri: &str) -> Result<(String, u16), ClientError> {
         let login = encode(&format!("{}:{}", self.username, self.password));
 
         let mut res = surf::get(&uri)
@@ -39,23 +56,23 @@ impl OneshotClient {
             .unwrap();
         let content = res.body_string().await.unwrap();
         let status = res.status() as u16;
-        (content, status)
+        Ok((content, status))
     }
 
-    pub async fn management_request(&self, request: ManagementRequest) -> ManagementResponse {
-        let config = self.get_config().await;
+    pub async fn management_request(
+        &self,
+        request: ManagementRequest,
+    ) -> Result<ManagementResponse, ClientError> {
+        let config = self.get_config().await?;
 
         let path = request.path();
         for seed in config.management_seeds() {
             let uri = format!("http://{}:{}{}", seed.0, seed.1, &path);
-            let (content, status) = self.http_get(&uri).await;
-            return ManagementResponse { content, status };
+            let (content, status) = self.http_get(&uri).await?;
+            return Ok(ManagementResponse { content, status });
         }
 
-        ManagementResponse {
-            content: "".into(),
-            status: 0,
-        }
+        Err(ClientError::RequestFailed)
     }
 }
 

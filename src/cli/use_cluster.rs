@@ -1,10 +1,10 @@
 use crate::state::State;
 use async_trait::async_trait;
-use nu_cli::OutputStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder};
 use nu_source::Tag;
+use nu_stream::OutputStream;
 use std::sync::Arc;
 
 pub struct UseCluster {
@@ -35,27 +35,23 @@ impl nu_engine::WholeStreamCommand for UseCluster {
         "Sets the active cluster based on its identifier"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        use_cmd(args, self.state.clone()).await
-    }
-}
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        let args = args.evaluate_once()?;
 
-async fn use_cmd(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
-
-    if let Some(id) = args.nth(0) {
-        match state.set_active(id.as_string()?) {
-            Ok(v) => v,
-            Err(_) => {
-                return Err(ShellError::untagged_runtime_error(
-                    "Could not set active cluster",
-                ));
+        if let Some(id) = args.nth(0) {
+            match self.state.set_active(id.as_string()?) {
+                Ok(v) => v,
+                Err(_) => {
+                    return Err(ShellError::untagged_runtime_error(
+                        "Could not set active cluster",
+                    ));
+                }
             }
         }
-    }
 
-    let mut using_now = TaggedDictBuilder::new(Tag::default());
-    using_now.insert_value("cluster", state.active());
-    let clusters = vec![using_now.into_value()];
-    Ok(clusters.into())
+        let mut using_now = TaggedDictBuilder::new(Tag::default());
+        using_now.insert_value("cluster", self.state.active());
+        let clusters = vec![using_now.into_value()];
+        Ok(clusters.into())
+    }
 }

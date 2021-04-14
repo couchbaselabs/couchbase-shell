@@ -96,7 +96,7 @@ async fn buckets_get_one(
 
         let response = cluster
             .management_request(ManagementRequest::GetBucket { name: name.clone() })
-            .await;
+            .await?;
 
         let content = serde_json::from_str(response.content())?;
         results.push(bucket_to_tagged_dict(content, identifier));
@@ -120,7 +120,7 @@ async fn buckets_get_all(
 
         let response = cluster
             .management_request(ManagementRequest::GetBuckets)
-            .await;
+            .await?;
 
         let content: Vec<BucketConfig> = serde_json::from_str(response.content())?;
 
