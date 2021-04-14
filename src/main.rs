@@ -193,9 +193,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     let context = nu_cli::create_default_context(true)?;
     context.add_commands(vec![
         nu_engine::whole_stream_command(Buckets {}),
-        nu_engine::whole_stream_command(UseCmd::new(state.clone())),
-        nu_engine::whole_stream_command(BucketsGet::new(state.clone())),
         nu_engine::whole_stream_command(BucketsConfig::new(state.clone())),
+        nu_engine::whole_stream_command(BucketsGet::new(state.clone())),
+        nu_engine::whole_stream_command(UseCmd::new(state.clone())),
+        nu_engine::whole_stream_command(Whoami::new(state.clone())),
         /*
         // Performs analytics queries
         nu_engine::whole_stream_command(Analytics::new(state.clone())),
@@ -212,7 +213,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         // Displays cluster manager node infos
         nu_engine::whole_stream_command(Nodes::new(state.clone())),
         // Displays cluster manager bucket infos
-        nu_engine::whole_stream_command(Buckets {}),
         nu_engine::whole_stream_command(BucketsCreate::new(state.clone())),
         nu_engine::whole_stream_command(BucketsUpdate::new(state.clone())),
         nu_engine::whole_stream_command(BucketsDrop::new(state.clone())),
@@ -236,7 +236,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(UseCluster::new(state.clone())),
         nu_engine::whole_stream_command(UseCollection::new(state.clone())),
         nu_engine::whole_stream_command(UseScope::new(state.clone())),
-        nu_engine::whole_stream_command(Whoami::new(state.clone())),
         nu_engine::whole_stream_command(Version::new()),
         nu_engine::whole_stream_command(Doc {}),
         nu_engine::whole_stream_command(Data {}),

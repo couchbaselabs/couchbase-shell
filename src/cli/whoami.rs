@@ -1,15 +1,15 @@
 use super::util::convert_json_value_to_nu_value;
-use crate::cli::convert_cb_error;
 use crate::cli::util::cluster_identifiers_from;
+use crate::client::ManagementRequest;
 use crate::state::State;
 use async_trait::async_trait;
-use couchbase::{GenericManagementRequest, Request};
 use futures::channel::oneshot;
-use nu_cli::OutputStream;
+use futures::executor::block_on;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
+use nu_stream::OutputStream;
 use serde_json::{json, Map, Value};
 use std::sync::Arc;
 
@@ -42,58 +42,29 @@ impl nu_engine::WholeStreamCommand for Whoami {
         "Shows roles and domain for the connected user"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        whoami(self.state.clone(), args).await
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        whoami(self.state.clone(), args)
     }
 }
 
-async fn whoami(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
+fn whoami(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once()?;
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
 
     let mut entries = vec![];
     for identifier in cluster_identifiers {
-        let core = match state.clusters().get(&identifier) {
-            Some(c) => c.cluster().core(),
+        let cluster = match state.clusters().get(&identifier) {
+            Some(c) => c.cluster(),
             None => {
                 return Err(ShellError::untagged_runtime_error("Cluster not found"));
             }
         };
 
-        let (sender, receiver) = oneshot::channel();
-        let request = GenericManagementRequest::new(sender, "/whoami".into(), "get".into(), None);
-        core.send(Request::GenericManagementRequest(request));
-
-        let input = match receiver.await {
-            Ok(i) => i,
-            Err(e) => {
-                return Err(ShellError::untagged_runtime_error(format!(
-                    "Error streaming result {}",
-                    e
-                )))
-            }
-        };
-        let result = convert_cb_error(input)?;
-
-        if result.payload().is_none() {
-            return Err(ShellError::untagged_runtime_error(
-                "Empty response from cluster even though got 200 ok",
-            ));
-        }
-
-        let payload = match result.payload() {
-            Some(p) => p,
-            None => {
-                return Err(ShellError::untagged_runtime_error(
-                    "Empty response from cluster even though got 200 ok",
-                ));
-            }
-        };
-        let mut resp: Map<String, Value> = serde_json::from_slice(payload)?;
-        resp.insert("cluster".into(), json!(identifier.clone()));
-        let converted = convert_json_value_to_nu_value(&Value::Object(resp), Tag::default())?;
-
+        let response = block_on(cluster.management_request(ManagementRequest::Whoami));
+        let mut content: Map<String, Value> = serde_json::from_str(response.content())?;
+        content.insert("cluster".into(), json!(identifier.clone()));
+        let converted = convert_json_value_to_nu_value(&Value::Object(content), Tag::default())?;
         entries.push(converted);
     }
 

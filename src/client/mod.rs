@@ -62,6 +62,7 @@ impl OneshotClient {
 pub enum ManagementRequest {
     GetBuckets,
     GetBucket { name: String },
+    Whoami,
 }
 
 impl ManagementRequest {
@@ -69,6 +70,7 @@ impl ManagementRequest {
         match self {
             Self::GetBuckets => "/pools/default/buckets".into(),
             Self::GetBucket { name } => format!("/pools/default/buckets/{}", name),
+            Self::Whoami => "/whoami".into(),
         }
     }
 }
