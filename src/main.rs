@@ -197,6 +197,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(BucketsGet::new(state.clone())),
         nu_engine::whole_stream_command(UseCmd::new(state.clone())),
         nu_engine::whole_stream_command(Whoami::new(state.clone())),
+        nu_engine::whole_stream_command(Version::new()),
         /*
         // Performs analytics queries
         nu_engine::whole_stream_command(Analytics::new(state.clone())),
@@ -236,7 +237,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(UseCluster::new(state.clone())),
         nu_engine::whole_stream_command(UseCollection::new(state.clone())),
         nu_engine::whole_stream_command(UseScope::new(state.clone())),
-        nu_engine::whole_stream_command(Version::new()),
         nu_engine::whole_stream_command(Doc {}),
         nu_engine::whole_stream_command(Data {}),
         nu_engine::whole_stream_command(Users::new(state.clone())),

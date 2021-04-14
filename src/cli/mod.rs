@@ -1,10 +1,19 @@
 mod buckets;
 mod buckets_config;
 mod buckets_get;
-
 mod use_cmd;
 mod util;
+mod version;
 mod whoami;
+
+pub use buckets::Buckets;
+pub use buckets_config::BucketsConfig;
+pub use buckets_get::BucketsGet;
+pub use use_cmd::UseCmd;
+pub use version::Version;
+pub use whoami::Whoami;
+
+pub use util::cbsh_home_path;
 
 /*mod analytics;
 mod analytics_datasets;
@@ -53,7 +62,6 @@ mod users;
 mod users_get;
 mod users_roles;
 mod users_upsert;
-mod version;
 
 pub use analytics::Analytics;
 pub use analytics_datasets::AnalyticsDatasets;
@@ -103,19 +111,4 @@ pub use users::Users;
 pub use users_get::UsersGet;
 pub use users_roles::UsersRoles;
 pub use users_upsert::UsersUpsert;
-
-pub use version::Version;
-
-
-fn convert_cb_error<T>(input: Result<T, CouchbaseError>) -> Result<T, ShellError> {
-    input.map_err(|e| ShellError::untagged_runtime_error(format!("Couchbase SDK Error: {}", e)))
-}
 */
-
-pub use buckets::Buckets;
-pub use buckets_config::BucketsConfig;
-pub use buckets_get::BucketsGet;
-pub use use_cmd::UseCmd;
-pub use whoami::Whoami;
-
-pub use util::cbsh_home_path;
