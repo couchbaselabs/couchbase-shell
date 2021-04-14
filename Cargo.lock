@@ -983,6 +983,7 @@ dependencies = [
  "fake",
  "futures 0.3.14",
  "http 0.2.4",
+ "http-types",
  "humantime-serde",
  "lazy_static 1.4.0",
  "log 0.4.14",

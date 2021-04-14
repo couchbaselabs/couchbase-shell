@@ -1,6 +1,5 @@
 use super::util::convert_json_value_to_nu_value;
 use crate::state::State;
-use async_stream::stream;
 use async_trait::async_trait;
 use fake::faker::address::raw::*;
 use fake::faker::boolean::raw::*;
@@ -20,7 +19,6 @@ use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{ReturnSuccess, Signature, SyntaxShape};
 use nu_source::Tag;
-use nu_stream::OutputStream;
 use serde_json::{from_value, Value};
 use std::collections::HashMap;
 use std::fs;

@@ -16,6 +16,7 @@ dirs = "2.0"
 fake = { version = "2.4", features = ["chrono"] }
 futures = "0.3"
 http = "0.2"
+http-types = "2.5"
 humantime-serde = "1.0"
 lazy_static = "1.4.0"
 log = "0.4"

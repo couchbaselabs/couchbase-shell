@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use base64::encode;
 use nu_errors::ShellError;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 
 pub struct Client {
     seeds: Vec<String>,
@@ -59,27 +60,67 @@ impl Client {
         Ok((content, status))
     }
 
+    async fn http_post(
+        &self,
+        uri: &str,
+        payload: Option<http_types::Body>,
+    ) -> Result<(String, u16), ClientError> {
+        let login = encode(&format!("{}:{}", self.username, self.password));
+
+        let mut res = surf::post(&uri)
+            .body(payload.unwrap())
+            .header("Authorization", format!("Basic {}", login))
+            .await
+            .unwrap();
+        let content = res.body_string().await.unwrap();
+        let status = res.status() as u16;
+        Ok((content, status))
+    }
+
     pub async fn management_request(
         &self,
         request: ManagementRequest,
-    ) -> Result<ManagementResponse, ClientError> {
+    ) -> Result<HttpResponse, ClientError> {
         let config = self.get_config().await?;
 
         let path = request.path();
         for seed in config.management_seeds() {
             let uri = format!("http://{}:{}{}", seed.0, seed.1, &path);
             let (content, status) = self.http_get(&uri).await?;
-            return Ok(ManagementResponse { content, status });
+            return Ok(HttpResponse { content, status });
+        }
+
+        Err(ClientError::RequestFailed)
+    }
+
+    pub async fn query_request(&self, request: QueryRequest) -> Result<HttpResponse, ClientError> {
+        let config = self.get_config().await?;
+
+        let path = request.path();
+        for seed in config.query_seeds() {
+            let uri = format!("http://{}:{}{}", seed.0, seed.1, &path);
+            let (content, status) = match request.verb() {
+                HttpVerb::Get => self.http_get(&uri).await?,
+                HttpVerb::Post => self.http_post(&uri, request.payload()).await?,
+            };
+
+            return Ok(HttpResponse { content, status });
         }
 
         Err(ClientError::RequestFailed)
     }
 }
 
+pub enum HttpVerb {
+    Get,
+    Post,
+}
+
 pub enum ManagementRequest {
     GetBuckets,
     GetBucket { name: String },
     Whoami,
+    IndexStatus,
 }
 
 impl ManagementRequest {
@@ -88,17 +129,70 @@ impl ManagementRequest {
             Self::GetBuckets => "/pools/default/buckets".into(),
             Self::GetBucket { name } => format!("/pools/default/buckets/{}", name),
             Self::Whoami => "/whoami".into(),
+            Self::IndexStatus => "/indexStatus".into(),
+        }
+    }
+
+    pub fn verb(&self) -> HttpVerb {
+        match self {
+            Self::GetBuckets => HttpVerb::Get,
+            Self::GetBucket { .. } => HttpVerb::Get,
+            Self::Whoami => HttpVerb::Get,
+            Self::IndexStatus => HttpVerb::Get,
+        }
+    }
+
+    pub fn payload(&self) -> Option<http_types::Body> {
+        None
+    }
+}
+
+pub enum QueryRequest {
+    Execute {
+        statement: String,
+        scope: Option<(String, String)>,
+    },
+}
+
+impl QueryRequest {
+    pub fn path(&self) -> String {
+        match self {
+            Self::Execute { .. } => "/query".into(),
+        }
+    }
+
+    pub fn verb(&self) -> HttpVerb {
+        match self {
+            Self::Execute { .. } => HttpVerb::Post,
+        }
+    }
+
+    pub fn payload(&self) -> Option<http_types::Body> {
+        match self {
+            Self::Execute { statement, scope } => {
+                if let Some(scope) = scope {
+                    let ctx = format!("`default`:`{}`.`{}", scope.0, scope.1);
+                    Some(
+                        http_types::Body::from_json(
+                            &json!({ "statement": statement, "query_context": ctx }),
+                        )
+                        .unwrap(),
+                    )
+                } else {
+                    Some(http_types::Body::from_json(&json!({ "statement": statement })).unwrap())
+                }
+            }
         }
     }
 }
 
 #[derive(Debug)]
-pub struct ManagementResponse {
+pub struct HttpResponse {
     content: String,
     status: u16,
 }
 
-impl ManagementResponse {
+impl HttpResponse {
     pub fn content(&self) -> &str {
         &self.content
     }
@@ -124,6 +218,21 @@ impl ClusterConfig {
                     self.loaded_from.as_ref().unwrap().clone()
                 };
                 (hostname, node.services.get("mgmt").unwrap().clone())
+            })
+            .collect()
+    }
+
+    pub fn query_seeds(&self) -> Vec<(String, u32)> {
+        self.nodes_ext
+            .iter()
+            .filter(|node| node.services.contains_key("n1ql"))
+            .map(|node| {
+                let hostname = if node.hostname.is_some() {
+                    node.hostname.as_ref().unwrap().clone()
+                } else {
+                    self.loaded_from.as_ref().unwrap().clone()
+                };
+                (hostname, node.services.get("n1ql").unwrap().clone())
             })
             .collect()
     }

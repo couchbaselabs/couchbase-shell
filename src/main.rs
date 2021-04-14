@@ -196,6 +196,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(BucketsConfig::new(state.clone())),
         nu_engine::whole_stream_command(BucketsGet::new(state.clone())),
         nu_engine::whole_stream_command(FakeData::new(state.clone())),
+        nu_engine::whole_stream_command(Query::new(state.clone())),
+        nu_engine::whole_stream_command(QueryAdvise::new(state.clone())),
+        nu_engine::whole_stream_command(QueryIndexes::new(state.clone())),
         nu_engine::whole_stream_command(UseBucket::new(state.clone())),
         nu_engine::whole_stream_command(UseCluster::new(state.clone())),
         nu_engine::whole_stream_command(UseCmd::new(state.clone())),
@@ -225,14 +228,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(BucketsFlush::new(state.clone())),
         nu_engine::whole_stream_command(BucketsSample::new(state.clone())),
         // Performs n1ql queries
-        nu_engine::whole_stream_command(Query::new(state.clone())),
         // Manages local cluster references
         nu_engine::whole_stream_command(Clusters::new(state.clone())),
         nu_engine::whole_stream_command(ClustersHealth::new(state.clone())),
         // Create fake data based on templates
         // Displays indexes
-        nu_engine::whole_stream_command(QueryIndexes::new(state.clone())),
-        nu_engine::whole_stream_command(QueryAdvise::new(state.clone())),
+
         nu_engine::whole_stream_command(AnalyticsIndexes::new(state.clone())),
         nu_engine::whole_stream_command(AnalyticsDatasets::new(state.clone())),
         nu_engine::whole_stream_command(AnalyticsDataverses::new(state.clone())),

@@ -1,12 +1,14 @@
-use super::util::convert_couchbase_rows_json_to_nu_stream;
+use crate::cli::util::convert_json_value_to_nu_value;
+use crate::client::QueryRequest;
 use crate::state::State;
 use async_trait::async_trait;
-use couchbase::QueryOptions;
+use futures::executor::block_on;
 use log::debug;
-use nu_cli::OutputStream;
+use nu_cli::ActionStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
+use nu_source::Tag;
 use std::sync::Arc;
 
 pub struct Query {
@@ -52,16 +54,16 @@ impl nu_engine::WholeStreamCommand for Query {
         "Performs a n1ql query"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        run(self.state.clone(), args).await
+    fn run_with_actions(&self, args: CommandArgs) -> Result<ActionStream, ShellError> {
+        run(self.state.clone(), args)
     }
 }
 
-async fn run(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
-    let ctrl_c = args.ctrl_c.clone();
+fn run(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError> {
+    let args = args.evaluate_once()?;
+    // let ctrl_c = args.ctrl_c.clone();
     let statement = args.nth(0).expect("need statement").as_string()?;
-    let active_cluster = match args.get("cluster") {
+    let active_cluster = match args.call_info.args.get("cluster") {
         Some(c) => {
             let identifier = match c.as_string() {
                 Ok(s) => s,
@@ -84,6 +86,8 @@ async fn run(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shell
         None => state.active_cluster(),
     };
     let bucket = match args
+        .call_info
+        .args
         .get("bucket")
         .map(|bucket| bucket.as_string().ok())
         .flatten()
@@ -92,7 +96,7 @@ async fn run(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shell
         Some(v) => Some(v),
         None => None,
     };
-    let scope = match args.get("scope") {
+    let scope = match args.call_info.args.get("scope") {
         Some(v) => match v.as_string() {
             Ok(name) => Some(name),
             Err(e) => return Err(e),
@@ -100,34 +104,24 @@ async fn run(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shell
         None => None,
     };
 
-    let scope_instance = match scope {
-        Some(s) => match bucket {
-            Some(b) => Some(active_cluster.bucket(b.as_str()).scope(s)),
-            None => match active_cluster.active_bucket() {
-                Some(b) => Some(active_cluster.bucket(b.as_str()).scope(s)),
-                None => {
-                    return Err(ShellError::untagged_runtime_error(format!(
-                        "Could not auto-select a bucket - please use --bucket instead"
-                    )));
-                }
-            },
-        },
-        None => None,
+    let maybe_scope = if bucket.is_some() && scope.is_some() {
+        Some((bucket.unwrap().clone(), scope.unwrap().clone()))
+    } else {
+        None
     };
 
     debug!("Running n1ql query {}", &statement);
-    let result = match scope_instance {
-        Some(s) => s.query(statement, QueryOptions::default()).await,
-        None => {
-            active_cluster
-                .cluster()
-                .query(statement, QueryOptions::default())
-                .await
-        }
-    };
 
-    match result {
-        Ok(mut r) => convert_couchbase_rows_json_to_nu_stream(ctrl_c, r.rows()),
-        Err(e) => Err(ShellError::untagged_runtime_error(format!("{}", e))),
-    }
+    let response = block_on(
+        active_cluster
+            .cluster()
+            .query_request(QueryRequest::Execute {
+                statement: statement.clone(),
+                scope: maybe_scope,
+            }),
+    )?;
+
+    let content: serde_json::Value = serde_json::from_str(response.content())?;
+    let converted = convert_json_value_to_nu_value(&content, Tag::default())?;
+    Ok(ActionStream::one(converted))
 }

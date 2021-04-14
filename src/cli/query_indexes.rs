@@ -1,11 +1,10 @@
-use super::util::convert_couchbase_rows_json_to_nu_stream;
-use crate::cli::convert_cb_error;
+use crate::cli::util::convert_json_value_to_nu_value;
+use crate::client::{ManagementRequest, QueryRequest};
 use crate::state::{RemoteCluster, State};
 use async_trait::async_trait;
-use couchbase::{GenericManagementRequest, QueryOptions, Request};
-use futures::channel::oneshot;
+use futures::executor::block_on;
 use log::debug;
-use nu_cli::OutputStream;
+use nu_cli::ActionStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
@@ -48,15 +47,15 @@ impl nu_engine::WholeStreamCommand for QueryIndexes {
         "Lists all query indexes"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        indexes(self.state.clone(), args).await
+    fn run_with_actions(&self, args: CommandArgs) -> Result<ActionStream, ShellError> {
+        indexes(self.state.clone(), args)
     }
 }
 
-async fn indexes(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
+fn indexes(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError> {
+    let args = args.evaluate_once()?;
 
-    let active_cluster = match args.get("cluster") {
+    let active_cluster = match args.call_info.args.get("cluster") {
         Some(c) => {
             let identifier = match c.as_string() {
                 Ok(s) => s,
@@ -79,13 +78,13 @@ async fn indexes(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, S
         None => state.active_cluster(),
     };
 
-    let fetch_defs = match args.get("definitions") {
+    let fetch_defs = match args.call_info.args.get("definitions") {
         Some(n) => n.as_bool()?,
         None => false,
     };
 
     if fetch_defs {
-        return index_definitions(active_cluster).await;
+        return index_definitions(active_cluster);
     }
 
     let ctrl_c = args.ctrl_c.clone();
@@ -93,15 +92,19 @@ async fn indexes(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, S
     let statement = "select keyspace_id as `bucket`, name, state, `using` as `type`, ifmissing(condition, null) as condition, ifmissing(is_primary, false) as `primary`, index_key from system:indexes";
 
     debug!("Running n1ql query {}", &statement);
-    let result = active_cluster
-        .cluster()
-        .query(statement, QueryOptions::default())
-        .await;
 
-    match result {
-        Ok(mut r) => convert_couchbase_rows_json_to_nu_stream(ctrl_c, r.rows()),
-        Err(e) => Err(ShellError::untagged_runtime_error(format!("{}", e))),
-    }
+    let response = block_on(
+        active_cluster
+            .cluster()
+            .query_request(QueryRequest::Execute {
+                statement: statement.into(),
+                scope: None,
+            }),
+    )?;
+
+    let content: serde_json::Value = serde_json::from_str(response.content())?;
+    let converted = convert_json_value_to_nu_value(&content, Tag::default())?;
+    Ok(ActionStream::one(converted))
 }
 
 #[derive(Debug, Deserialize)]
@@ -124,34 +127,16 @@ struct IndexStatus {
     indexes: Vec<IndexDefinition>,
 }
 
-async fn index_definitions(cluster: &RemoteCluster) -> Result<OutputStream, ShellError> {
+fn index_definitions(cluster: &RemoteCluster) -> Result<ActionStream, ShellError> {
     debug!("Running fetch n1ql indexes");
-    let core = cluster.cluster().core();
 
-    let (sender, receiver) = oneshot::channel();
-    let request = GenericManagementRequest::new(sender, "indexStatus".into(), "get".into(), None);
-    core.send(Request::GenericManagementRequest(request));
+    let response = block_on(
+        cluster
+            .cluster()
+            .management_request(ManagementRequest::IndexStatus),
+    )?;
 
-    let input = match receiver.await {
-        Ok(i) => i,
-        Err(e) => {
-            return Err(ShellError::untagged_runtime_error(format!(
-                "Error streaming result {}",
-                e
-            )))
-        }
-    };
-    let result = convert_cb_error(input)?;
-    let payload = match result.payload() {
-        Some(p) => p,
-        None => {
-            return Err(ShellError::untagged_runtime_error(
-                "Empty response from cluster even though got 200 ok",
-            ));
-        }
-    };
-
-    let defs: IndexStatus = serde_json::from_slice(payload)?;
+    let defs: IndexStatus = serde_json::from_str(response.content())?;
     let n = defs
         .indexes
         .into_iter()

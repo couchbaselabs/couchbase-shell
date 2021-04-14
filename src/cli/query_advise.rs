@@ -1,12 +1,14 @@
-use super::util::convert_couchbase_rows_json_to_nu_stream;
+use crate::cli::util::convert_json_value_to_nu_value;
+use crate::client::QueryRequest;
 use crate::state::State;
 use async_trait::async_trait;
-use couchbase::QueryOptions;
+use futures::executor::block_on;
 use log::debug;
-use nu_cli::OutputStream;
+use nu_cli::ActionStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
+use nu_source::Tag;
 use serde::Deserialize;
 use std::sync::Arc;
 
@@ -38,30 +40,54 @@ impl nu_engine::WholeStreamCommand for QueryAdvise {
         "Calls the query adviser and lists recommended indexes"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        run(self.state.clone(), args).await
+    fn run_with_actions(&self, args: CommandArgs) -> Result<ActionStream, ShellError> {
+        run(self.state.clone(), args)
     }
 }
 
-async fn run(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
-    let ctrl_c = args.ctrl_c.clone();
+fn run(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError> {
+    let args = args.evaluate_once()?;
+    //let ctrl_c = args.ctrl_c.clone();
 
     let statement = args.nth(0).expect("need statement").as_string()?;
-
     let statement = format!("ADVISE {}", statement);
 
-    debug!("Running n1ql query {}", &statement);
-    let result = state
-        .active_cluster()
-        .cluster()
-        .query(statement, QueryOptions::default())
-        .await;
+    let active_cluster = match args.call_info.args.get("cluster") {
+        Some(c) => {
+            let identifier = match c.as_string() {
+                Ok(s) => s,
+                Err(e) => {
+                    return Err(ShellError::untagged_runtime_error(format!(
+                        "Could not convert cluster name to string: {}",
+                        e
+                    )));
+                }
+            };
+            match state.clusters().get(identifier.as_str()) {
+                Some(c) => c,
+                None => {
+                    return Err(ShellError::untagged_runtime_error(format!(
+                        "Could not get cluster from available clusters",
+                    )));
+                }
+            }
+        }
+        None => state.active_cluster(),
+    };
 
-    match result {
-        Ok(mut r) => convert_couchbase_rows_json_to_nu_stream(ctrl_c, r.rows()),
-        Err(e) => Err(ShellError::untagged_runtime_error(format!("{}", e))),
-    }
+    debug!("Running n1ql query {}", &statement);
+    let response = block_on(
+        active_cluster
+            .cluster()
+            .query_request(QueryRequest::Execute {
+                statement: statement.clone(),
+                scope: None,
+            }),
+    )?;
+
+    let content: serde_json::Value = serde_json::from_str(response.content())?;
+    let converted = convert_json_value_to_nu_value(&content, Tag::default())?;
+    Ok(ActionStream::one(converted))
 }
 
 #[derive(Debug, Deserialize)]
