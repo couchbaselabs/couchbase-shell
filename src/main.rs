@@ -195,6 +195,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(Buckets {}),
         nu_engine::whole_stream_command(BucketsConfig::new(state.clone())),
         nu_engine::whole_stream_command(BucketsGet::new(state.clone())),
+        nu_engine::whole_stream_command(FakeData::new(state.clone())),
         nu_engine::whole_stream_command(UseBucket::new(state.clone())),
         nu_engine::whole_stream_command(UseCluster::new(state.clone())),
         nu_engine::whole_stream_command(UseCmd::new(state.clone())),
@@ -229,7 +230,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(Clusters::new(state.clone())),
         nu_engine::whole_stream_command(ClustersHealth::new(state.clone())),
         // Create fake data based on templates
-        nu_engine::whole_stream_command(FakeData::new(state.clone())),
         // Displays indexes
         nu_engine::whole_stream_command(QueryIndexes::new(state.clone())),
         nu_engine::whole_stream_command(QueryAdvise::new(state.clone())),

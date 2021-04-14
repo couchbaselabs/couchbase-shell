@@ -15,11 +15,12 @@ use fake::faker::number::raw::*;
 use fake::faker::phone_number::raw::*;
 use fake::locales::*;
 use fake::Fake;
-use nu_cli::OutputStream;
+use nu_cli::ActionStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{ReturnSuccess, Signature, SyntaxShape};
 use nu_source::Tag;
+use nu_stream::OutputStream;
 use serde_json::{from_value, Value};
 use std::collections::HashMap;
 use std::fs;
@@ -68,15 +69,15 @@ impl nu_engine::WholeStreamCommand for FakeData {
         "Creates fake data from a template"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        run_fake(self.state.clone(), args).await
+    fn run_with_actions(&self, args: CommandArgs) -> Result<ActionStream, ShellError> {
+        run_fake(self.state.clone(), args)
     }
 }
 
-async fn run_fake(_state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
+fn run_fake(_state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError> {
+    let args = args.evaluate_once()?;
 
-    let list_functions = args.get("list-functions").is_some();
+    let list_functions = args.call_info.args.get("list-functions").is_some();
 
     let ctx = Context::new();
     let mut tera = Tera::default();
@@ -91,21 +92,18 @@ async fn run_fake(_state: Arc<State>, args: CommandArgs) -> Result<OutputStream,
             .map_err(|e| ShellError::untagged_runtime_error(format!("{}", e)))?;
         match content {
             serde_json::Value::Array(values) => {
-                let stream = stream! {
-                    for value in values {
-                        match convert_json_value_to_nu_value(&value, Tag::default()) {
-                            Ok(c) => yield Ok(ReturnSuccess::Value(c)),
-                            Err(e) => yield Err(e)
-                        }
+                let converted = values.into_iter().map(|v| {
+                    match convert_json_value_to_nu_value(&v, Tag::default()) {
+                        Ok(c) => Ok(ReturnSuccess::Value(c)),
+                        Err(e) => Err(e),
                     }
-                };
-
-                return Ok(OutputStream::new(stream));
+                });
+                return Ok(ActionStream::new(converted));
             }
             _ => unimplemented!(),
         }
     } else {
-        let path = args.get("template").ok_or_else(|| {
+        let path = args.call_info.args.get("template").ok_or_else(|| {
             ShellError::labeled_error(
                 "No file or directory specified",
                 "for command",
@@ -114,6 +112,8 @@ async fn run_fake(_state: Arc<State>, args: CommandArgs) -> Result<OutputStream,
         })?;
 
         let num_rows = args
+            .call_info
+            .args
             .get("num-rows")
             .map(|v| v.as_u64().ok())
             .flatten()
@@ -123,25 +123,20 @@ async fn run_fake(_state: Arc<State>, args: CommandArgs) -> Result<OutputStream,
         let template = fs::read_to_string(path)
             .map_err(|e| ShellError::untagged_runtime_error(format!("{}", e)))?;
 
-        let stream = stream! {
-            for _ in 0..num_rows {
-                match tera.render_str(&template, &ctx) {
-                    Ok(generated) => {
-                        match serde_json::from_str(&generated) {
-                            Ok(content) => {
-                                match convert_json_value_to_nu_value(&content, Tag::default()) {
-                                    Ok(c) => yield Ok(ReturnSuccess::Value(c)),
-                                    Err(e) => yield Err(e)
-                                }
-                            },
-                            Err(e) => yield Err(ShellError::untagged_runtime_error(format!("{}", e))),
-                        }
+        let converted = std::iter::repeat_with(move || {
+            match tera.render_str(&template, &ctx) {
+                Ok(generated) => match serde_json::from_str(&generated) {
+                    Ok(content) => match convert_json_value_to_nu_value(&content, Tag::default()) {
+                        Ok(c) => return Ok(ReturnSuccess::Value(c)),
+                        Err(e) => return Err(e),
                     },
-                    Err(e) => yield Err(ShellError::untagged_runtime_error(format!("{}", e))),
-                };
-            }
-        };
-        Ok(OutputStream::new(stream))
+                    Err(e) => return Err(ShellError::untagged_runtime_error(format!("{}", e))),
+                },
+                Err(e) => return Err(ShellError::untagged_runtime_error(format!("{}", e))),
+            };
+        })
+        .take(num_rows as usize);
+        Ok(ActionStream::new(converted))
     }
 }
 
@@ -471,12 +466,12 @@ static LIST_FUNCTIONS: &str = r#"[
     { "group": "datetime", "name": "dateTime()", "description": "DateTime", "example": "{{ dateTime() }}" },
     { "group": "datetime", "name": "duration()", "description": "Duration (ms)", "example": "{{ duration() }}" },
     { "group": "filesystem", "name": "filePath()", "description": "File path", "example": "{{ filePath() }}" },
-    { "group": "filesystem", "name": "fileName())", "description": "File name", "example": "{{ fileName() }}" },
-    { "group": "filesystem", "name": "fileExtension())", "description": "File extension", "example": "{{ fileExtension() }}" },
-    { "group": "filesystem", "name": "dirPath())", "description": "Dir path", "example": "{{ dirPath() }}" },
-    { "group": "currency", "name": "currencyCode())", "description": "Currency code", "example": "{{ currencyCode() }}" },
-    { "group": "currency", "name": "currencyName())", "description": "Currency name", "example": "{{ currencyName() }}" },
-    { "group": "currency", "name": "currencySymbol())", "description": "Currency symbol", "example": "{{ currencySymbol() }}" },
-    { "group": "lorem", "name": "words(num=1))", "description": "Words", "example": "{{ words() }}" },
-    { "group": "lorem", "name": "sentences(num=1))", "description": "Sentences", "example": "{{ sentences() }}" }
+    { "group": "filesystem", "name": "fileName()", "description": "File name", "example": "{{ fileName() }}" },
+    { "group": "filesystem", "name": "fileExtension()", "description": "File extension", "example": "{{ fileExtension() }}" },
+    { "group": "filesystem", "name": "dirPath()", "description": "Dir path", "example": "{{ dirPath() }}" },
+    { "group": "currency", "name": "currencyCode()", "description": "Currency code", "example": "{{ currencyCode() }}" },
+    { "group": "currency", "name": "currencyName()", "description": "Currency name", "example": "{{ currencyName() }}" },
+    { "group": "currency", "name": "currencySymbol()", "description": "Currency symbol", "example": "{{ currencySymbol() }}" },
+    { "group": "lorem", "name": "words(num=1)", "description": "Words", "example": "{{ words() }}" },
+    { "group": "lorem", "name": "sentences(num=1)", "description": "Sentences", "example": "{{ sentences() }}" }
 ]"#;
