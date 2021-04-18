@@ -275,14 +275,14 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     if let Some(c) = opt.command {
         options.scripts = vec![NuScript::code(std::iter::once(c.as_str()))?];
-        nu_cli::run_script_file(options)?;
+        nu_cli::run_script_file(context, options)?;
         return Ok(());
     }
 
     if let Some(filepath) = opt.script {
         let filepath = std::ffi::OsString::from(filepath);
         options.scripts = vec![NuScript::source_file(filepath.as_os_str())?];
-        nu_cli::run_script_file(options)?;
+        nu_cli::run_script_file(context, options)?;
         return Ok(());
     }
 
