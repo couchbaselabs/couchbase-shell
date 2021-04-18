@@ -9,6 +9,7 @@ mod tutorial;
 use crate::cli::*;
 use crate::config::{ClusterTimeouts, ShellConfig};
 use crate::state::RemoteCluster;
+use config::ClusterTlsConfig;
 use log::{debug, warn, LevelFilter};
 use log4rs::append::console::ConsoleAppender;
 use log4rs::append::file::FileAppender;
@@ -77,7 +78,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             opt.bucket,
             opt.scope,
             opt.collection,
-            opt.cert_path,
+            ClusterTlsConfig::default(),
         );
         clusters.insert("default".into(), cluster);
         String::from("default")
@@ -144,7 +145,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 default_bucket,
                 scope,
                 collection,
-                v.cert_path().clone(),
+                v.tls().clone(),
             );
             clusters.insert(name.clone(), cluster);
         }

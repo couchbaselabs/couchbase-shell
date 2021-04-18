@@ -1,7 +1,6 @@
 use crate::cli::util::convert_json_value_to_nu_value;
 use crate::client::{ManagementRequest, QueryRequest};
 use crate::state::{RemoteCluster, State};
-use futures::executor::block_on;
 use log::debug;
 use nu_cli::ActionStream;
 use nu_engine::CommandArgs;
@@ -91,14 +90,12 @@ fn indexes(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellEr
 
     debug!("Running n1ql query {}", &statement);
 
-    let response = block_on(
-        active_cluster
-            .cluster()
-            .query_request(QueryRequest::Execute {
-                statement: statement.into(),
-                scope: None,
-            }),
-    )?;
+    let response = active_cluster
+        .cluster()
+        .query_request(QueryRequest::Execute {
+            statement: statement.into(),
+            scope: None,
+        })?;
 
     let content: serde_json::Value = serde_json::from_str(response.content())?;
     let converted = convert_json_value_to_nu_value(&content, Tag::default())?;
@@ -128,11 +125,9 @@ struct IndexStatus {
 fn index_definitions(cluster: &RemoteCluster) -> Result<ActionStream, ShellError> {
     debug!("Running fetch n1ql indexes");
 
-    let response = block_on(
-        cluster
-            .cluster()
-            .management_request(ManagementRequest::IndexStatus),
-    )?;
+    let response = cluster
+        .cluster()
+        .management_request(ManagementRequest::IndexStatus)?;
 
     let defs: IndexStatus = serde_json::from_str(response.content())?;
     let n = defs

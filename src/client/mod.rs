@@ -1,6 +1,12 @@
 use std::collections::HashMap;
 
+use crate::config::ClusterTlsConfig;
 use base64::encode;
+use isahc::{
+    auth::{Authentication, Credentials},
+    config::CaCertificate,
+};
+use isahc::{config::SslOption, prelude::*};
 use nu_errors::ShellError;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -9,13 +15,13 @@ pub struct Client {
     seeds: Vec<String>,
     username: String,
     password: String,
-    certpath: Option<String>,
+    tls_config: ClusterTlsConfig,
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone, Serialize, Deserialize, Hash)]
 pub enum ClientError {
     ConfigurationLoadFailed,
-    RequestFailed,
+    RequestFailed { reason: Option<String> },
 }
 
 impl From<ClientError> for ShellError {
@@ -25,26 +31,62 @@ impl From<ClientError> for ShellError {
     }
 }
 
+impl From<std::io::Error> for ClientError {
+    fn from(e: std::io::Error) -> Self {
+        ClientError::RequestFailed {
+            reason: Some(format!("{}", e)),
+        }
+    }
+}
+
+impl From<isahc::Error> for ClientError {
+    fn from(e: isahc::Error) -> Self {
+        ClientError::RequestFailed {
+            reason: Some(format!("{}", e)),
+        }
+    }
+}
+
+impl From<isahc::http::Error> for ClientError {
+    fn from(e: isahc::http::Error) -> Self {
+        ClientError::RequestFailed {
+            reason: Some(format!("{}", e)),
+        }
+    }
+}
+
 impl Client {
     pub fn new(
         seeds: Vec<String>,
         username: String,
         password: String,
-        certpath: Option<String>,
+        tls_config: ClusterTlsConfig,
     ) -> Self {
         Self {
             seeds,
             username,
             password,
-            certpath,
+            tls_config: tls_config.clone(),
         }
     }
 
-    async fn get_config(&self) -> Result<ClusterConfig, ClientError> {
+    fn http_prefix(&self) -> &'static str {
+        match self.tls_config.enabled() {
+            true => "https",
+            false => "http",
+        }
+    }
+
+    fn get_config(&self) -> Result<ClusterConfig, ClientError> {
         let path = "/pools/default/nodeServices";
+        let port = if self.tls_config.enabled() {
+            18091
+        } else {
+            8091
+        };
         for seed in &self.seeds {
-            let uri = format!("http://{}:8091{}", seed, &path);
-            let (content, status) = self.http_get(&uri).await?;
+            let uri = format!("{}://{}:{}{}", self.http_prefix(), seed, port, &path);
+            let (content, status) = self.http_get(&uri)?;
             if status != 200 {
                 continue;
             }
@@ -55,66 +97,93 @@ impl Client {
         Err(ClientError::ConfigurationLoadFailed)
     }
 
-    async fn http_get(&self, uri: &str) -> Result<(String, u16), ClientError> {
-        let login = encode(&format!("{}:{}", self.username, self.password));
+    fn http_get(&self, uri: &str) -> Result<(String, u16), ClientError> {
+        let mut res_builder = isahc::Request::get(uri)
+            .authentication(Authentication::basic())
+            .credentials(Credentials::new(&self.username, &self.password));
 
-        let mut res = surf::get(&uri)
-            .header("Authorization", format!("Basic {}", login))
-            .await
-            .unwrap();
-        let content = res.body_string().await.unwrap();
-        let status = res.status() as u16;
+        if self.tls_config.enabled() {
+            if let Some(cert) = self.tls_config.cert_path() {
+                res_builder = res_builder.ssl_ca_certificate(CaCertificate::file(cert));
+            }
+            res_builder = res_builder.ssl_options(self.http_ssl_opts());
+        }
+
+        let mut res = res_builder.body(())?.send()?;
+        let content = res.text()?;
+        let status = res.status().into();
         Ok((content, status))
     }
 
-    async fn http_post(
+    fn http_ssl_opts(&self) -> SslOption {
+        let mut ssl_opts = SslOption::NONE;
+        if !self.tls_config.validate_hostnames() {
+            ssl_opts = ssl_opts | SslOption::DANGER_ACCEPT_INVALID_HOSTS;
+        }
+        if self.tls_config.accept_all_certs() {
+            ssl_opts = ssl_opts | SslOption::DANGER_ACCEPT_INVALID_CERTS;
+        }
+        ssl_opts
+    }
+
+    fn http_post(
         &self,
         uri: &str,
-        payload: Option<http_types::Body>,
+        payload: Option<Vec<u8>>,
+        json: bool,
     ) -> Result<(String, u16), ClientError> {
-        let login = encode(&format!("{}:{}", self.username, self.password));
+        let mut res_builder = isahc::Request::post(uri)
+            .authentication(Authentication::basic())
+            .credentials(Credentials::new(&self.username, &self.password));
 
-        let mut res = surf::post(&uri)
-            .body(payload.unwrap())
-            .header("Authorization", format!("Basic {}", login))
-            .await
-            .unwrap();
-        let content = res.body_string().await.unwrap();
-        let status = res.status() as u16;
+        if self.tls_config.enabled() {
+            if let Some(cert) = self.tls_config.cert_path() {
+                res_builder = res_builder.ssl_ca_certificate(CaCertificate::file(cert));
+            }
+            res_builder = res_builder.ssl_options(self.http_ssl_opts());
+        }
+
+        if json {
+            res_builder = res_builder.header("Content-Type", "application/json");
+        }
+
+        let mut res = res_builder.body(payload.unwrap())?.send()?;
+        let content = res.text()?;
+        let status = res.status().into();
         Ok((content, status))
     }
 
-    pub async fn management_request(
+    pub fn management_request(
         &self,
         request: ManagementRequest,
     ) -> Result<HttpResponse, ClientError> {
-        let config = self.get_config().await?;
+        let config = self.get_config()?;
 
         let path = request.path();
-        for seed in config.management_seeds() {
-            let uri = format!("http://{}:{}{}", seed.0, seed.1, &path);
-            let (content, status) = self.http_get(&uri).await?;
+        for seed in config.management_seeds(self.tls_config.enabled()) {
+            let uri = format!("{}://{}:{}{}", self.http_prefix(), seed.0, seed.1, &path);
+            let (content, status) = self.http_get(&uri)?;
             return Ok(HttpResponse { content, status });
         }
 
-        Err(ClientError::RequestFailed)
+        Err(ClientError::RequestFailed { reason: None })
     }
 
-    pub async fn query_request(&self, request: QueryRequest) -> Result<HttpResponse, ClientError> {
-        let config = self.get_config().await?;
+    pub fn query_request(&self, request: QueryRequest) -> Result<HttpResponse, ClientError> {
+        let config = self.get_config()?;
 
         let path = request.path();
-        for seed in config.query_seeds() {
-            let uri = format!("http://{}:{}{}", seed.0, seed.1, &path);
+        for seed in config.query_seeds(self.tls_config.enabled()) {
+            let uri = format!("{}://{}:{}{}", self.http_prefix(), seed.0, seed.1, &path);
             let (content, status) = match request.verb() {
-                HttpVerb::Get => self.http_get(&uri).await?,
-                HttpVerb::Post => self.http_post(&uri, request.payload()).await?,
+                HttpVerb::Get => self.http_get(&uri)?,
+                HttpVerb::Post => self.http_post(&uri, request.payload(), true)?,
             };
 
             return Ok(HttpResponse { content, status });
         }
 
-        Err(ClientError::RequestFailed)
+        Err(ClientError::RequestFailed { reason: None })
     }
 }
 
@@ -155,7 +224,7 @@ impl ManagementRequest {
         }
     }
 
-    pub fn payload(&self) -> Option<http_types::Body> {
+    pub fn payload(&self) -> Option<Vec<u8>> {
         None
     }
 }
@@ -180,19 +249,16 @@ impl QueryRequest {
         }
     }
 
-    pub fn payload(&self) -> Option<http_types::Body> {
+    pub fn payload(&self) -> Option<Vec<u8>> {
         match self {
             Self::Execute { statement, scope } => {
                 if let Some(scope) = scope {
                     let ctx = format!("`default`:`{}`.`{}", scope.0, scope.1);
-                    Some(
-                        http_types::Body::from_json(
-                            &json!({ "statement": statement, "query_context": ctx }),
-                        )
-                        .unwrap(),
-                    )
+                    let json = json!({ "statement": statement, "query_context": ctx });
+                    Some(serde_json::to_vec(&json).unwrap())
                 } else {
-                    Some(http_types::Body::from_json(&json!({ "statement": statement })).unwrap())
+                    let json = json!({ "statement": statement });
+                    Some(serde_json::to_vec(&json).unwrap())
                 }
             }
         }
@@ -220,32 +286,36 @@ struct ClusterConfig {
 }
 
 impl ClusterConfig {
-    pub fn management_seeds(&self) -> Vec<(String, u32)> {
+    pub fn management_seeds(&self, tls: bool) -> Vec<(String, u32)> {
+        let key = if tls { "mgmtSSL" } else { "mgmt" };
+
         self.nodes_ext
             .iter()
-            .filter(|node| node.services.contains_key("mgmt"))
+            .filter(|node| node.services.contains_key(key))
             .map(|node| {
                 let hostname = if node.hostname.is_some() {
                     node.hostname.as_ref().unwrap().clone()
                 } else {
                     self.loaded_from.as_ref().unwrap().clone()
                 };
-                (hostname, node.services.get("mgmt").unwrap().clone())
+                (hostname, node.services.get(key).unwrap().clone())
             })
             .collect()
     }
 
-    pub fn query_seeds(&self) -> Vec<(String, u32)> {
+    pub fn query_seeds(&self, tls: bool) -> Vec<(String, u32)> {
+        let key = if tls { "n1qlSSL" } else { "n1ql" };
+
         self.nodes_ext
             .iter()
-            .filter(|node| node.services.contains_key("n1ql"))
+            .filter(|node| node.services.contains_key(key))
             .map(|node| {
                 let hostname = if node.hostname.is_some() {
                     node.hostname.as_ref().unwrap().clone()
                 } else {
                     self.loaded_from.as_ref().unwrap().clone()
                 };
-                (hostname, node.services.get("n1ql").unwrap().clone())
+                (hostname, node.services.get(key).unwrap().clone())
             })
             .collect()
     }

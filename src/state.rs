@@ -1,4 +1,4 @@
-use crate::client::Client;
+use crate::{client::Client, config::ClusterTlsConfig};
 
 use crate::tutorial::Tutorial;
 use std::collections::HashMap;
@@ -92,7 +92,7 @@ pub struct RemoteCluster {
     active_bucket: Mutex<Option<String>>,
     active_scope: Mutex<Option<String>>,
     active_collection: Mutex<Option<String>>,
-    certpath: Option<String>,
+    tls_config: ClusterTlsConfig,
 }
 
 impl RemoteCluster {
@@ -103,7 +103,7 @@ impl RemoteCluster {
         active_bucket: Option<String>,
         active_scope: Option<String>,
         active_collection: Option<String>,
-        certpath: Option<String>,
+        tls_config: ClusterTlsConfig,
     ) -> Self {
         Self {
             cluster: Mutex::new(None),
@@ -113,7 +113,7 @@ impl RemoteCluster {
             active_bucket: Mutex::new(active_bucket),
             active_scope: Mutex::new(active_scope),
             active_collection: Mutex::new(active_collection),
-            certpath,
+            tls_config,
         }
     }
 
@@ -124,7 +124,7 @@ impl RemoteCluster {
                 self.hostnames.clone(),
                 self.username.clone(),
                 self.password.clone(),
-                self.certpath.clone(),
+                self.tls_config.clone(),
             )));
         }
         c.as_ref().unwrap().clone()
@@ -180,7 +180,7 @@ impl RemoteCluster {
         self.username.as_str()
     }
 
-    pub fn certpath(&self) -> &Option<String> {
-        &self.certpath
+    pub fn tls_config(&self) -> &ClusterTlsConfig {
+        &self.tls_config
     }
 }

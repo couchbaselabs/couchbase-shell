@@ -1,9 +1,6 @@
 use crate::cli::util::cluster_identifiers_from;
 use crate::client::ManagementRequest;
 use crate::state::State;
-use async_trait::async_trait;
-use futures::channel::oneshot;
-use futures::executor::block_on;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Value};
@@ -22,7 +19,6 @@ impl ClustersHealth {
     }
 }
 
-#[async_trait]
 impl nu_engine::WholeStreamCommand for ClustersHealth {
     fn name(&self) -> &str {
         "clusters health"
@@ -76,7 +72,7 @@ fn grab_bucket_names(state: Arc<State>, identifier: &str) -> Result<Vec<String>,
         }
     };
 
-    let response = block_on(cluster.management_request(ManagementRequest::GetBuckets))?;
+    let response = cluster.management_request(ManagementRequest::GetBuckets)?;
     let resp: Vec<BucketInfo> = serde_json::from_str(response.content())?;
     Ok(resp.into_iter().map(|b| b.name).collect::<Vec<_>>())
 }
@@ -96,7 +92,7 @@ fn check_autofailover(state: Arc<State>, identifier: &str) -> Result<Value, Shel
         }
     };
 
-    let response = block_on(cluster.management_request(ManagementRequest::SettingsAutoFailover))?;
+    let response = cluster.management_request(ManagementRequest::SettingsAutoFailover)?;
     let resp: AutoFailoverSettings = serde_json::from_str(response.content())?;
 
     collected.insert_value("cluster", identifier.clone());
@@ -134,9 +130,9 @@ fn check_resident_ratio(
         }
     };
 
-    let response = block_on(cluster.management_request(ManagementRequest::BucketStats {
+    let response = cluster.management_request(ManagementRequest::BucketStats {
         name: bucket_name.to_string(),
-    }))?;
+    })?;
     let resp: BucketStats = serde_json::from_str(response.content())?;
     let ratio = match resp.op.samples.active_resident_ratios.last() {
         Some(r) => *r,

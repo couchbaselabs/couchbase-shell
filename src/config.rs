@@ -38,9 +38,6 @@ impl ShellConfig {
                         if config_credentials.password.is_none() && cred.password.is_some() {
                             config_credentials.password = cred.password.clone()
                         }
-                        if config_credentials.cert_path.is_none() && cred.cert_path.is_some() {
-                            config_credentials.cert_path = cred.cert_path.clone()
-                        }
                     }
                 }
             }
@@ -124,6 +121,8 @@ pub struct ClusterConfig {
     credentials: ClusterCredentials,
     #[serde(flatten)]
     timeouts: ClusterTimeouts,
+    #[serde(flatten)]
+    tls: ClusterTlsConfig,
 }
 
 impl ClusterConfig {
@@ -140,9 +139,6 @@ impl ClusterConfig {
     pub fn password(&self) -> String {
         self.credentials.password.as_ref().unwrap().clone()
     }
-    pub fn cert_path(&self) -> &Option<String> {
-        &self.credentials.cert_path
-    }
     pub fn default_bucket(&self) -> Option<String> {
         self.default_bucket.as_ref().map(|s| s.clone())
     }
@@ -158,14 +154,15 @@ impl ClusterConfig {
     pub fn timeouts(&self) -> &ClusterTimeouts {
         &self.timeouts
     }
+    pub fn tls(&self) -> &ClusterTlsConfig {
+        &self.tls
+    }
 }
 
 #[derive(Debug, Deserialize)]
 pub struct ClusterCredentials {
     username: Option<String>,
     password: Option<String>,
-    #[serde(rename(deserialize = "cert-path"))]
-    cert_path: Option<String>,
 }
 
 impl ClusterCredentials {}
@@ -203,6 +200,46 @@ impl ClusterTimeouts {
     }
 }
 
+#[derive(Debug, Deserialize, Clone)]
+pub struct ClusterTlsConfig {
+    #[serde(rename(deserialize = "tls-cert-path"))]
+    cert_path: Option<String>,
+    #[serde(rename(deserialize = "tls-validate-hostnames"))]
+    #[serde(default = "default_as_true")]
+    validate_hostnames: bool,
+    #[serde(rename(deserialize = "tls-accept-all-certs"))]
+    #[serde(default = "default_as_false")]
+    accept_all_certs: bool,
+}
+
+impl ClusterTlsConfig {
+    pub fn enabled(&self) -> bool {
+        self.accept_all_certs || self.cert_path.is_some()
+    }
+
+    pub fn cert_path(&self) -> &Option<String> {
+        &self.cert_path
+    }
+
+    pub fn validate_hostnames(&self) -> bool {
+        self.validate_hostnames
+    }
+
+    pub fn accept_all_certs(&self) -> bool {
+        self.accept_all_certs
+    }
+}
+
+impl Default for ClusterTlsConfig {
+    fn default() -> Self {
+        Self {
+            cert_path: None,
+            validate_hostnames: true,
+            accept_all_certs: false,
+        }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct StandaloneCredentialsConfig {
     version: usize,
@@ -230,12 +267,17 @@ pub struct StandaloneClusterCredentials {
     identifier: String,
     username: Option<String>,
     password: Option<String>,
-    #[serde(rename(deserialize = "cert-path"))]
-    cert_path: Option<String>,
 }
 
 impl StandaloneClusterCredentials {
     fn identifier(&self) -> &str {
         self.identifier.as_ref()
     }
+}
+
+fn default_as_false() -> bool {
+    false
+}
+fn default_as_true() -> bool {
+    true
 }

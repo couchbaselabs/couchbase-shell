@@ -1,7 +1,6 @@
 use crate::cli::util::convert_json_value_to_nu_value;
 use crate::client::QueryRequest;
 use crate::state::State;
-use futures::executor::block_on;
 use log::debug;
 use nu_cli::ActionStream;
 use nu_engine::CommandArgs;
@@ -74,14 +73,12 @@ fn run(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError>
     };
 
     debug!("Running n1ql query {}", &statement);
-    let response = block_on(
-        active_cluster
-            .cluster()
-            .query_request(QueryRequest::Execute {
-                statement: statement.clone(),
-                scope: None,
-            }),
-    )?;
+    let response = active_cluster
+        .cluster()
+        .query_request(QueryRequest::Execute {
+            statement: statement.clone(),
+            scope: None,
+        })?;
 
     let content: serde_json::Value = serde_json::from_str(response.content())?;
     let converted = convert_json_value_to_nu_value(&content, Tag::default())?;

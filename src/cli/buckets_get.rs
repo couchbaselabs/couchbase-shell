@@ -5,7 +5,6 @@ use crate::state::State;
 use crate::cli::util::cluster_identifiers_from;
 use crate::client::ManagementRequest;
 use async_trait::async_trait;
-use futures::executor::block_on;
 use log::debug;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
@@ -74,13 +73,13 @@ fn buckets_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, She
     debug!("Running buckets get for bucket {:?}", &bucket);
 
     if bucket == "" {
-        block_on(buckets_get_all(state, cluster_identifiers))
+        buckets_get_all(state, cluster_identifiers)
     } else {
-        block_on(buckets_get_one(state, cluster_identifiers, bucket))
+        buckets_get_one(state, cluster_identifiers, bucket)
     }
 }
 
-async fn buckets_get_one(
+fn buckets_get_one(
     state: Arc<State>,
     cluster_identifiers: Vec<String>,
     name: String,
@@ -94,9 +93,8 @@ async fn buckets_get_one(
             }
         };
 
-        let response = cluster
-            .management_request(ManagementRequest::GetBucket { name: name.clone() })
-            .await?;
+        let response =
+            cluster.management_request(ManagementRequest::GetBucket { name: name.clone() })?;
 
         let content = serde_json::from_str(response.content())?;
         results.push(bucket_to_tagged_dict(content, identifier));
@@ -105,7 +103,7 @@ async fn buckets_get_one(
     Ok(OutputStream::from(results))
 }
 
-async fn buckets_get_all(
+fn buckets_get_all(
     state: Arc<State>,
     cluster_identifiers: Vec<String>,
 ) -> Result<OutputStream, ShellError> {
@@ -118,9 +116,7 @@ async fn buckets_get_all(
             }
         };
 
-        let response = cluster
-            .management_request(ManagementRequest::GetBuckets)
-            .await?;
+        let response = cluster.management_request(ManagementRequest::GetBuckets)?;
 
         let content: Vec<BucketConfig> = serde_json::from_str(response.content())?;
 

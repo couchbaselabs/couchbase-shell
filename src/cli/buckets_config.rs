@@ -2,7 +2,6 @@ use crate::cli::util::convert_json_value_to_nu_value;
 use crate::client::ManagementRequest;
 use crate::state::State;
 use async_trait::async_trait;
-use futures::executor::block_on;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
@@ -63,7 +62,7 @@ fn buckets(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellEr
     };
 
     let response =
-        block_on(cluster.management_request(ManagementRequest::GetBucket { name: bucket_name }))?;
+        cluster.management_request(ManagementRequest::GetBucket { name: bucket_name })?;
 
     let content = serde_json::from_str(response.content())?;
     let converted = convert_json_value_to_nu_value(&content, Tag::default())?;

@@ -1,6 +1,5 @@
 use crate::cli::util::cluster_identifiers_from;
 use crate::state::State;
-use async_trait::async_trait;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
@@ -18,7 +17,6 @@ impl Clusters {
     }
 }
 
-#[async_trait]
 impl nu_engine::WholeStreamCommand for Clusters {
     fn name(&self) -> &str {
         "clusters"
@@ -55,7 +53,7 @@ fn clusters(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellE
         .map(|(k, v)| {
             let mut collected = TaggedDictBuilder::new(Tag::default());
             collected.insert_untagged("active", UntaggedValue::boolean(k == &active));
-            collected.insert_value("tls", UntaggedValue::boolean(v.certpath().is_some()));
+            collected.insert_value("tls", UntaggedValue::boolean(v.tls_config().enabled()));
             collected.insert_value("identifier", k.clone());
             collected.insert_value("username", String::from(v.username()));
             collected.into_value()
