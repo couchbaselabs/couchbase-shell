@@ -54,14 +54,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         } else {
             DEFAULT_HOSTNAME.into()
         };
-        let connstr = if let Some(certpath) = opt.cert_path {
-            format!(
-                "couchbases://{}?certpath={}&{}",
-                hostnames, certpath, timeouts,
-            )
-        } else {
-            format!("couchbase://{}?{}", hostnames, timeouts)
-        };
 
         let username = if let Some(user) = opt.username {
             user
@@ -85,6 +77,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             opt.bucket,
             opt.scope,
             opt.collection,
+            opt.cert_path,
         );
         clusters.insert("default".into(), cluster);
         String::from("default")
@@ -173,6 +166,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 default_bucket,
                 scope,
                 collection,
+                v.cert_path().clone(),
             );
             clusters.insert(name.clone(), cluster);
         }
@@ -195,6 +189,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(Buckets {}),
         nu_engine::whole_stream_command(BucketsConfig::new(state.clone())),
         nu_engine::whole_stream_command(BucketsGet::new(state.clone())),
+        nu_engine::whole_stream_command(Clusters::new(state.clone())),
+        nu_engine::whole_stream_command(ClustersHealth::new(state.clone())),
         nu_engine::whole_stream_command(FakeData::new(state.clone())),
         nu_engine::whole_stream_command(Query::new(state.clone())),
         nu_engine::whole_stream_command(QueryAdvise::new(state.clone())),
@@ -232,8 +228,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(BucketsSample::new(state.clone())),
         // Performs n1ql queries
         // Manages local cluster references
-        nu_engine::whole_stream_command(Clusters::new(state.clone())),
-        nu_engine::whole_stream_command(ClustersHealth::new(state.clone())),
         // Create fake data based on templates
         // Displays indexes
         // Allows to switch clusters, buckets and collections on the fly

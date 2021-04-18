@@ -92,6 +92,7 @@ pub struct RemoteCluster {
     active_bucket: Mutex<Option<String>>,
     active_scope: Mutex<Option<String>>,
     active_collection: Mutex<Option<String>>,
+    certpath: Option<String>,
 }
 
 impl RemoteCluster {
@@ -102,6 +103,7 @@ impl RemoteCluster {
         active_bucket: Option<String>,
         active_scope: Option<String>,
         active_collection: Option<String>,
+        certpath: Option<String>,
     ) -> Self {
         Self {
             cluster: Mutex::new(None),
@@ -111,6 +113,7 @@ impl RemoteCluster {
             active_bucket: Mutex::new(active_bucket),
             active_scope: Mutex::new(active_scope),
             active_collection: Mutex::new(active_collection),
+            certpath,
         }
     }
 
@@ -121,6 +124,7 @@ impl RemoteCluster {
                 self.hostnames.clone(),
                 self.username.clone(),
                 self.password.clone(),
+                self.certpath.clone(),
             )));
         }
         c.as_ref().unwrap().clone()
@@ -174,5 +178,9 @@ impl RemoteCluster {
 
     pub fn username(&self) -> &str {
         self.username.as_str()
+    }
+
+    pub fn certpath(&self) -> &Option<String> {
+        &self.certpath
     }
 }

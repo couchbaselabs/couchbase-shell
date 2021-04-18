@@ -9,6 +9,7 @@ pub struct Client {
     seeds: Vec<String>,
     username: String,
     password: String,
+    certpath: Option<String>,
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone, Serialize, Deserialize, Hash)]
@@ -25,11 +26,17 @@ impl From<ClientError> for ShellError {
 }
 
 impl Client {
-    pub fn new(seeds: Vec<String>, username: String, password: String) -> Self {
+    pub fn new(
+        seeds: Vec<String>,
+        username: String,
+        password: String,
+        certpath: Option<String>,
+    ) -> Self {
         Self {
             seeds,
             username,
             password,
+            certpath,
         }
     }
 
@@ -117,10 +124,12 @@ pub enum HttpVerb {
 }
 
 pub enum ManagementRequest {
+    BucketStats { name: String },
     GetBuckets,
     GetBucket { name: String },
-    Whoami,
     IndexStatus,
+    SettingsAutoFailover,
+    Whoami,
 }
 
 impl ManagementRequest {
@@ -130,6 +139,8 @@ impl ManagementRequest {
             Self::GetBucket { name } => format!("/pools/default/buckets/{}", name),
             Self::Whoami => "/whoami".into(),
             Self::IndexStatus => "/indexStatus".into(),
+            Self::SettingsAutoFailover => "/settings/autoFailover".into(),
+            Self::BucketStats { name } => format!("/pools/default/buckets/{}/stats", name),
         }
     }
 
@@ -139,6 +150,8 @@ impl ManagementRequest {
             Self::GetBucket { .. } => HttpVerb::Get,
             Self::Whoami => HttpVerb::Get,
             Self::IndexStatus => HttpVerb::Get,
+            Self::SettingsAutoFailover => HttpVerb::Get,
+            Self::BucketStats { .. } => HttpVerb::Get,
         }
     }
 

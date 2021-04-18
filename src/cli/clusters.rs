@@ -1,11 +1,11 @@
 use crate::cli::util::cluster_identifiers_from;
 use crate::state::State;
 use async_trait::async_trait;
-use nu_cli::OutputStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
+use nu_stream::OutputStream;
 use std::sync::Arc;
 
 pub struct Clusters {
@@ -37,13 +37,13 @@ impl nu_engine::WholeStreamCommand for Clusters {
         "Lists all managed clusters"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        clusters(args, self.state.clone()).await
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        clusters(args, self.state.clone())
     }
 }
 
-async fn clusters(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
+fn clusters(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once()?;
 
     let identifiers = cluster_identifiers_from(&state, &args, false)?;
 
@@ -55,10 +55,7 @@ async fn clusters(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, 
         .map(|(k, v)| {
             let mut collected = TaggedDictBuilder::new(Tag::default());
             collected.insert_untagged("active", UntaggedValue::boolean(k == &active));
-            collected.insert_value(
-                "tls",
-                UntaggedValue::boolean(v.connstr().starts_with("couchbases://")),
-            );
+            collected.insert_value("tls", UntaggedValue::boolean(v.certpath().is_some()));
             collected.insert_value("identifier", k.clone());
             collected.insert_value("username", String::from(v.username()));
             collected.into_value()

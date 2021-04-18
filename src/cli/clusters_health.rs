@@ -1,14 +1,14 @@
-use crate::cli::convert_cb_error;
 use crate::cli::util::cluster_identifiers_from;
+use crate::client::ManagementRequest;
 use crate::state::State;
 use async_trait::async_trait;
-use couchbase::{GenericManagementRequest, Request};
 use futures::channel::oneshot;
-use nu_cli::OutputStream;
+use futures::executor::block_on;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Value};
 use nu_source::Tag;
+use nu_stream::OutputStream;
 use serde::Deserialize;
 use std::sync::Arc;
 
@@ -41,68 +41,43 @@ impl nu_engine::WholeStreamCommand for ClustersHealth {
         "Performs health checks on the target cluster(s)"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        health(args, self.state.clone()).await
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        health(args, self.state.clone())
     }
 }
 
-async fn health(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
+fn health(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once()?;
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
 
     let mut converted = vec![];
     for identifier in cluster_identifiers {
-        converted.push(check_autofailover(state.clone(), &identifier).await?);
+        converted.push(check_autofailover(state.clone(), &identifier)?);
 
-        let bucket_names = grab_bucket_names(state.clone(), &identifier).await?;
+        let bucket_names = grab_bucket_names(state.clone(), &identifier)?;
         for bucket_name in bucket_names {
-            converted.push(check_resident_ratio(state.clone(), &bucket_name, &identifier).await?);
+            converted.push(check_resident_ratio(
+                state.clone(),
+                &bucket_name,
+                &identifier,
+            )?);
         }
     }
 
     Ok(converted.into())
 }
 
-async fn grab_bucket_names(state: Arc<State>, identifier: &str) -> Result<Vec<String>, ShellError> {
-    let core = match state.clusters().get(identifier) {
-        Some(c) => c.cluster().core(),
+fn grab_bucket_names(state: Arc<State>, identifier: &str) -> Result<Vec<String>, ShellError> {
+    let cluster = match state.clusters().get(identifier) {
+        Some(c) => c.cluster(),
         None => {
             return Err(ShellError::untagged_runtime_error("Cluster not found"));
         }
     };
 
-    let (sender, receiver) = oneshot::channel();
-    let request =
-        GenericManagementRequest::new(sender, "/pools/default/buckets".into(), "get".into(), None);
-    core.send(Request::GenericManagementRequest(request));
-
-    let input = match receiver.await {
-        Ok(i) => i,
-        Err(e) => {
-            return Err(ShellError::untagged_runtime_error(format!(
-                "Error streaming result {}",
-                e
-            )))
-        }
-    };
-    let result = convert_cb_error(input)?;
-
-    if !result.payload().is_some() {
-        return Err(ShellError::untagged_runtime_error(
-            "Empty response from cluster even though got 200 ok",
-        ));
-    }
-
-    let payload = match result.payload() {
-        Some(p) => p,
-        None => {
-            return Err(ShellError::untagged_runtime_error(
-                "Empty response from cluster even though got 200 ok",
-            ));
-        }
-    };
-    let resp: Vec<BucketInfo> = serde_json::from_slice(payload)?;
+    let response = block_on(cluster.management_request(ManagementRequest::GetBuckets))?;
+    let resp: Vec<BucketInfo> = serde_json::from_str(response.content())?;
     Ok(resp.into_iter().map(|b| b.name).collect::<Vec<_>>())
 }
 
@@ -111,45 +86,18 @@ struct BucketInfo {
     name: String,
 }
 
-async fn check_autofailover(state: Arc<State>, identifier: &str) -> Result<Value, ShellError> {
+fn check_autofailover(state: Arc<State>, identifier: &str) -> Result<Value, ShellError> {
     let mut collected = TaggedDictBuilder::new(Tag::default());
 
-    let core = match state.clusters().get(identifier) {
-        Some(c) => c.cluster().core(),
+    let cluster = match state.clusters().get(identifier) {
+        Some(c) => c.cluster(),
         None => {
             return Err(ShellError::untagged_runtime_error("Cluster not found"));
         }
     };
 
-    let (sender, receiver) = oneshot::channel();
-    let request = GenericManagementRequest::new(
-        sender,
-        format!("/settings/autoFailover"),
-        "get".into(),
-        None,
-    );
-    core.send(Request::GenericManagementRequest(request));
-
-    let input = match receiver.await {
-        Ok(i) => i,
-        Err(e) => {
-            return Err(ShellError::untagged_runtime_error(format!(
-                "Error streaming result {}",
-                e
-            )))
-        }
-    };
-    let result = convert_cb_error(input)?;
-
-    let payload = match result.payload() {
-        Some(p) => p,
-        None => {
-            return Err(ShellError::untagged_runtime_error(
-                "Empty response from cluster even though got 200 ok",
-            ));
-        }
-    };
-    let resp: AutoFailoverSettings = serde_json::from_slice(payload)?;
+    let response = block_on(cluster.management_request(ManagementRequest::SettingsAutoFailover))?;
+    let resp: AutoFailoverSettings = serde_json::from_str(response.content())?;
 
     collected.insert_value("cluster", identifier.clone());
     collected.insert_value("check", "Autofailover Enabled".clone());
@@ -172,49 +120,24 @@ struct AutoFailoverSettings {
     enabled: bool,
 }
 
-async fn check_resident_ratio(
+fn check_resident_ratio(
     state: Arc<State>,
     bucket_name: &str,
     identifier: &str,
 ) -> Result<Value, ShellError> {
     let mut collected = TaggedDictBuilder::new(Tag::default());
 
-    let core = match state.clusters().get(identifier) {
-        Some(c) => c.cluster().core(),
+    let cluster = match state.clusters().get(identifier) {
+        Some(c) => c.cluster(),
         None => {
             return Err(ShellError::untagged_runtime_error("Cluster not found"));
         }
     };
 
-    let (sender, receiver) = oneshot::channel();
-    let request = GenericManagementRequest::new(
-        sender,
-        format!("/pools/default/buckets/{}/stats", bucket_name),
-        "get".into(),
-        None,
-    );
-    core.send(Request::GenericManagementRequest(request));
-
-    let input = match receiver.await {
-        Ok(i) => i,
-        Err(e) => {
-            return Err(ShellError::untagged_runtime_error(format!(
-                "Error streaming result {}",
-                e
-            )))
-        }
-    };
-    let result = convert_cb_error(input)?;
-
-    let payload = match result.payload() {
-        Some(p) => p,
-        None => {
-            return Err(ShellError::untagged_runtime_error(
-                "Empty response from cluster even though got 200 ok",
-            ));
-        }
-    };
-    let resp: BucketStats = serde_json::from_slice(payload)?;
+    let response = block_on(cluster.management_request(ManagementRequest::BucketStats {
+        name: bucket_name.to_string(),
+    }))?;
+    let resp: BucketStats = serde_json::from_str(response.content())?;
     let ratio = match resp.op.samples.active_resident_ratios.last() {
         Some(r) => *r,
         None => {
