@@ -86,7 +86,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         for v in config.clusters() {
             let name = v.identifier().to_owned();
 
-            let mut hostnames = v.hostnames().join(",");
             let mut username = v.username();
             let mut cpassword = v.password();
             let mut default_bucket = v.default_bucket();
@@ -96,9 +95,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             if opt.cluster.as_ref().is_some() {
                 if &name == opt.cluster.as_ref().unwrap() {
                     active = Some(name.clone());
-                    if let Some(hosts) = opt.hostnames.clone() {
-                        hostnames = hosts;
-                    }
                     if let Some(user) = opt.username.clone() {
                         username = user;
                     }
@@ -117,9 +113,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                 }
             } else if active.is_none() {
                 active = Some(v.identifier().to_owned());
-                if let Some(hosts) = opt.hostnames.clone() {
-                    hostnames = hosts;
-                }
                 if let Some(user) = opt.username.clone() {
                     username = user;
                 }
@@ -136,21 +129,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                     collection = Some(c);
                 }
             }
-
-            let connstr = if let Some(certpath) = v.cert_path() {
-                format!(
-                    "couchbases://{}?certpath={}&{}",
-                    hostnames,
-                    certpath,
-                    v.timeouts().export_lcb_args()
-                )
-            } else {
-                format!(
-                    "couchbase://{}?{}",
-                    hostnames,
-                    v.timeouts().export_lcb_args()
-                )
-            };
 
             if default_scope.is_none() && scope.is_some() {
                 default_scope = scope.clone();
