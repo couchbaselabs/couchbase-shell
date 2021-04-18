@@ -32,7 +32,8 @@ pub use whoami::Whoami;
 
 pub use util::cbsh_home_path;
 
-/*mod analytics;
+/*
+mod analytics;
 mod analytics_datasets;
 mod analytics_dataverses;
 mod analytics_indexes;

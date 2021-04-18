@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, TaggedDictBuilder};
@@ -13,7 +12,6 @@ impl Version {
     }
 }
 
-#[async_trait]
 impl nu_engine::WholeStreamCommand for Version {
     fn name(&self) -> &str {
         "version"

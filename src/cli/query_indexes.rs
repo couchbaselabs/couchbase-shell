@@ -1,7 +1,6 @@
 use crate::cli::util::convert_json_value_to_nu_value;
 use crate::client::{ManagementRequest, QueryRequest};
 use crate::state::{RemoteCluster, State};
-use async_trait::async_trait;
 use futures::executor::block_on;
 use log::debug;
 use nu_cli::ActionStream;
@@ -22,7 +21,6 @@ impl QueryIndexes {
     }
 }
 
-#[async_trait]
 impl nu_engine::WholeStreamCommand for QueryIndexes {
     fn name(&self) -> &str {
         "query indexes"

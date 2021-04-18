@@ -2,8 +2,6 @@ use super::util::convert_json_value_to_nu_value;
 use crate::cli::util::cluster_identifiers_from;
 use crate::client::ManagementRequest;
 use crate::state::State;
-use async_trait::async_trait;
-use futures::channel::oneshot;
 use futures::executor::block_on;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
@@ -23,7 +21,6 @@ impl Whoami {
     }
 }
 
-#[async_trait]
 impl nu_engine::WholeStreamCommand for Whoami {
     fn name(&self) -> &str {
         "whoami"

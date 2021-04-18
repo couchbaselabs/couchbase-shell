@@ -207,8 +207,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(Whoami::new(state.clone())),
         nu_engine::whole_stream_command(Version::new()),
         /*
+                nu_engine::whole_stream_command(Analytics::new(state.clone())),
+        nu_engine::whole_stream_command(AnalyticsIndexes::new(state.clone())),
+        nu_engine::whole_stream_command(AnalyticsDatasets::new(state.clone())),
+        nu_engine::whole_stream_command(AnalyticsDataverses::new(state.clone())),
         // Performs analytics queries
-        nu_engine::whole_stream_command(Analytics::new(state.clone())),
         // Performs kv get operations
         nu_engine::whole_stream_command(DocGet::new(state.clone())),
         // Performs kv upsert operations
@@ -233,10 +236,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(ClustersHealth::new(state.clone())),
         // Create fake data based on templates
         // Displays indexes
-
-        nu_engine::whole_stream_command(AnalyticsIndexes::new(state.clone())),
-        nu_engine::whole_stream_command(AnalyticsDatasets::new(state.clone())),
-        nu_engine::whole_stream_command(AnalyticsDataverses::new(state.clone())),
         // Allows to switch clusters, buckets and collections on the fly
         nu_engine::whole_stream_command(Doc {}),
         nu_engine::whole_stream_command(Data {}),

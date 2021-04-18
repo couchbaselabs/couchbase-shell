@@ -1,7 +1,6 @@
 use crate::cli::util::convert_json_value_to_nu_value;
 use crate::client::QueryRequest;
 use crate::state::State;
-use async_trait::async_trait;
 use futures::executor::block_on;
 use log::debug;
 use nu_cli::ActionStream;
@@ -21,7 +20,6 @@ impl Query {
     }
 }
 
-#[async_trait]
 impl nu_engine::WholeStreamCommand for Query {
     fn name(&self) -> &str {
         "query"

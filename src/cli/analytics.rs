@@ -1,9 +1,6 @@
-use super::util::convert_couchbase_rows_json_to_nu_stream;
 use crate::state::State;
-use async_trait::async_trait;
-use couchbase::AnalyticsOptions;
 use log::debug;
-use nu_cli::OutputStream;
+use nu_cli::ActionStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
@@ -19,7 +16,6 @@ impl Analytics {
     }
 }
 
-#[async_trait]
 impl nu_engine::WholeStreamCommand for Analytics {
     fn name(&self) -> &str {
         "analytics"
@@ -46,18 +42,20 @@ impl nu_engine::WholeStreamCommand for Analytics {
         "Performs an analytics query"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        run(self.state.clone(), args).await
+    fn run_with_actions(&self, args: CommandArgs) -> Result<ActionStream, ShellError> {
+        run(self.state.clone(), args)
     }
 }
 
-async fn run(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
+fn run(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError> {
+    let args = args.evaluate_once()?;
     let ctrl_c = args.ctrl_c.clone();
     let statement = args.nth(0).expect("need statement").as_string()?;
 
     let active_cluster = state.active_cluster();
     let bucket = match args
+        .call_info
+        .args
         .get("bucket")
         .map(|bucket| bucket.as_string().ok())
         .flatten()
@@ -66,7 +64,7 @@ async fn run(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shell
         Some(v) => Some(v),
         None => None,
     };
-    let scope = match args.get("scope") {
+    let scope = match args.call_info.args.get("scope") {
         Some(v) => match v.as_string() {
             Ok(name) => Some(name),
             Err(e) => return Err(e),

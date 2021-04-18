@@ -1,9 +1,6 @@
-use super::util::convert_couchbase_rows_json_to_nu_stream;
 use crate::state::State;
-use async_trait::async_trait;
-use couchbase::AnalyticsOptions;
 use log::debug;
-use nu_cli::OutputStream;
+use nu_cli::ActionStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::Signature;
@@ -19,7 +16,6 @@ impl AnalyticsDatasets {
     }
 }
 
-#[async_trait]
 impl nu_engine::WholeStreamCommand for AnalyticsDatasets {
     fn name(&self) -> &str {
         "analytics datasets"
@@ -33,13 +29,13 @@ impl nu_engine::WholeStreamCommand for AnalyticsDatasets {
         "Lists all analytics datasets"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        datasets(self.state.clone(), args).await
+    fn run_with_actions(&self, args: CommandArgs) -> Result<ActionStream, ShellError> {
+        datasets(self.state.clone(), args)
     }
 }
 
-async fn datasets(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
+fn datasets(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError> {
+    let args = args.evaluate_once()?;
     let ctrl_c = args.ctrl_c.clone();
     let statement = "SELECT d.* FROM Metadata.`Dataset` d WHERE d.DataverseName <> \"Metadata\"";
 
