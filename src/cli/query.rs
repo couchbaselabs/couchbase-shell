@@ -7,6 +7,8 @@ use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
+use nu_stream::OutputStream;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 pub struct Query {
@@ -45,6 +47,7 @@ impl nu_engine::WholeStreamCommand for Query {
                 "the scope to query against",
                 None,
             )
+            .switch("with-meta", "include toplevel metadata", None)
     }
 
     fn usage(&self) -> &str {
@@ -107,6 +110,8 @@ fn run(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError>
         None
     };
 
+    let with_meta = args.get_flag::<bool>("with-meta").unwrap().is_some();
+
     debug!("Running n1ql query {}", &statement);
 
     let response = active_cluster
@@ -116,7 +121,27 @@ fn run(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError>
             scope: maybe_scope,
         })?;
 
-    let content: serde_json::Value = serde_json::from_str(response.content())?;
-    let converted = convert_json_value_to_nu_value(&content, Tag::default())?;
-    Ok(ActionStream::one(converted))
+    if with_meta {
+        let content: serde_json::Value = serde_json::from_str(response.content())?;
+        return Ok(ActionStream::one(convert_json_value_to_nu_value(
+            &content,
+            Tag::default(),
+        )?));
+    } else {
+        let mut content: HashMap<String, serde_json::Value> =
+            serde_json::from_str(response.content())?;
+        let removed = if content.contains_key("errors") {
+            content.remove("errors").unwrap()
+        } else {
+            content.remove("results").unwrap()
+        };
+
+        let values = removed
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|a| convert_json_value_to_nu_value(a, Tag::default()).unwrap())
+            .collect::<Vec<_>>();
+        return Ok(OutputStream::from(values).into());
+    }
 }
