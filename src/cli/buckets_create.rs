@@ -1,11 +1,13 @@
+use crate::cli::buckets_builder::{BucketSettingsBuilder, BucketType, DurabilityLevel};
+use crate::client::{ManagementRequest, QueryRequest};
 use crate::state::State;
 use async_trait::async_trait;
-use couchbase::{BucketSettingsBuilder, BucketType, CreateBucketOptions, DurabilityLevel};
+use futures::executor::block_on;
 use log::debug;
-use nu_cli::OutputStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
+use nu_stream::OutputStream;
 use std::convert::TryFrom;
 use std::sync::Arc;
 use tokio::time::Duration;
@@ -72,42 +74,42 @@ impl nu_engine::WholeStreamCommand for BucketsCreate {
         "Creates a bucket"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        buckets_create(self.state.clone(), args).await
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        buckets_create(self.state.clone(), args)
     }
 }
 
-async fn buckets_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
-    let name = match args.get("name") {
+fn buckets_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once()?;
+    let name = match args.call_info.args.get("name") {
         Some(v) => match v.as_string() {
             Ok(name) => name,
             Err(e) => return Err(e),
         },
         None => return Err(ShellError::unexpected("name is required")),
     };
-    let ram = match args.get("ram") {
+    let ram = match args.call_info.args.get("ram") {
         Some(v) => match v.as_u64() {
             Ok(ram) => ram,
             Err(e) => return Err(e),
         },
         None => return Err(ShellError::unexpected("ram is required")),
     };
-    let bucket_type = match args.get("type") {
+    let bucket_type = match args.call_info.args.get("type") {
         Some(v) => match v.as_string() {
             Ok(t) => Some(t),
             Err(e) => return Err(e),
         },
         None => None,
     };
-    let replicas = match args.get("replicas") {
+    let replicas = match args.call_info.args.get("replicas") {
         Some(v) => match v.as_u64() {
             Ok(pwd) => Some(pwd),
             Err(e) => return Err(e),
         },
         None => None,
     };
-    let flush = match args.get("flush") {
+    let flush = match args.call_info.args.get("flush") {
         Some(v) => match v.as_string() {
             Ok(f) => {
                 let flush_str = match f.strip_prefix("$") {
@@ -132,31 +134,19 @@ async fn buckets_create(state: Arc<State>, args: CommandArgs) -> Result<OutputSt
         },
         None => None,
     };
-    let durability = match args.get("durability") {
+    let durability = match args.call_info.args.get("durability") {
         Some(v) => match v.as_string() {
             Ok(pwd) => Some(pwd),
             Err(e) => return Err(e),
         },
         None => None,
     };
-    let expiry = match args.get("expiry") {
+    let expiry = match args.call_info.args.get("expiry") {
         Some(v) => match v.as_u64() {
             Ok(pwd) => Some(pwd),
             Err(e) => return Err(e),
         },
         None => None,
-    };
-    let cluster = match args.get("cluster") {
-        Some(v) => match v.as_string() {
-            Ok(pwd) => match state.clusters().get(&pwd) {
-                Some(c) => c.cluster(),
-                None => {
-                    return Err(ShellError::untagged_runtime_error("Cluster not found"));
-                }
-            },
-            Err(e) => return Err(e),
-        },
-        None => state.active_cluster().cluster(),
     };
 
     debug!("Running buckets create for bucket {}", &name);
@@ -202,13 +192,25 @@ async fn buckets_create(state: Arc<State>, args: CommandArgs) -> Result<OutputSt
         builder = builder.max_expiry(Duration::from_secs(e));
     }
 
-    let mgr = cluster.buckets();
-    let result = mgr
-        .create_bucket(builder.build(), CreateBucketOptions::default())
-        .await;
+    let cluster = match state.clusters().get(&state.active()) {
+        Some(c) => c.cluster(),
+        None => {
+            return Err(ShellError::untagged_runtime_error("Cluster not found"));
+        }
+    };
 
-    match result {
-        Ok(_) => Ok(OutputStream::empty()),
-        Err(e) => Err(ShellError::untagged_runtime_error(format!("{}", e))),
+    let settings = builder.build();
+    let form = settings.as_form()?;
+    let payload = serde_urlencoded::to_string(&form).unwrap();
+
+    let response = cluster.management_request(ManagementRequest::CreateBucket { payload })?;
+
+    match response.status() {
+        200 => Ok(OutputStream::empty()),
+        202 => Ok(OutputStream::empty()),
+        _ => Err(ShellError::untagged_runtime_error(format!(
+            "{}",
+            response.content()
+        ))),
     }
 }

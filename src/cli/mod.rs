@@ -1,5 +1,7 @@
 mod buckets;
+mod buckets_builder;
 mod buckets_config;
+mod buckets_create;
 mod buckets_get;
 mod clusters;
 mod clusters_health;
@@ -18,6 +20,7 @@ mod whoami;
 
 pub use buckets::Buckets;
 pub use buckets_config::BucketsConfig;
+pub use buckets_create::BucketsCreate;
 pub use buckets_get::BucketsGet;
 pub use clusters::Clusters;
 pub use clusters_health::ClustersHealth;

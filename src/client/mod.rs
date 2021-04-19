@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use crate::config::ClusterTlsConfig;
-use base64::encode;
 use isahc::{
     auth::{Authentication, Credentials},
     config::CaCertificate,
@@ -130,7 +129,7 @@ impl Client {
         &self,
         uri: &str,
         payload: Option<Vec<u8>>,
-        json: bool,
+        headers: HashMap<&str, &str>,
     ) -> Result<(String, u16), ClientError> {
         let mut res_builder = isahc::Request::post(uri)
             .authentication(Authentication::basic())
@@ -143,8 +142,8 @@ impl Client {
             res_builder = res_builder.ssl_options(self.http_ssl_opts());
         }
 
-        if json {
-            res_builder = res_builder.header("Content-Type", "application/json");
+        for (key, value) in headers {
+            res_builder = res_builder.header(key, value);
         }
 
         let mut res = res_builder.body(payload.unwrap())?.send()?;
@@ -162,7 +161,10 @@ impl Client {
         let path = request.path();
         for seed in config.management_seeds(self.tls_config.enabled()) {
             let uri = format!("{}://{}:{}{}", self.http_prefix(), seed.0, seed.1, &path);
-            let (content, status) = self.http_get(&uri)?;
+            let (content, status) = match request.verb() {
+                HttpVerb::Get => self.http_get(&uri)?,
+                HttpVerb::Post => self.http_post(&uri, request.payload(), request.headers())?,
+            };
             return Ok(HttpResponse { content, status });
         }
 
@@ -177,7 +179,7 @@ impl Client {
             let uri = format!("{}://{}:{}{}", self.http_prefix(), seed.0, seed.1, &path);
             let (content, status) = match request.verb() {
                 HttpVerb::Get => self.http_get(&uri)?,
-                HttpVerb::Post => self.http_post(&uri, request.payload(), true)?,
+                HttpVerb::Post => self.http_post(&uri, request.payload(), HashMap::new())?,
             };
 
             return Ok(HttpResponse { content, status });
@@ -199,6 +201,7 @@ pub enum ManagementRequest {
     IndexStatus,
     SettingsAutoFailover,
     Whoami,
+    CreateBucket { payload: String },
 }
 
 impl ManagementRequest {
@@ -210,6 +213,7 @@ impl ManagementRequest {
             Self::IndexStatus => "/indexStatus".into(),
             Self::SettingsAutoFailover => "/settings/autoFailover".into(),
             Self::BucketStats { name } => format!("/pools/default/buckets/{}/stats", name),
+            Self::CreateBucket { .. } => "/pools/default/buckets".into(),
         }
     }
 
@@ -221,11 +225,26 @@ impl ManagementRequest {
             Self::IndexStatus => HttpVerb::Get,
             Self::SettingsAutoFailover => HttpVerb::Get,
             Self::BucketStats { .. } => HttpVerb::Get,
+            Self::CreateBucket { .. } => HttpVerb::Post,
         }
     }
 
     pub fn payload(&self) -> Option<Vec<u8>> {
-        None
+        match self {
+            Self::CreateBucket { payload } => Some(payload.as_bytes().into()),
+            _ => None,
+        }
+    }
+
+    pub fn headers(&self) -> HashMap<&str, &str> {
+        match self {
+            Self::CreateBucket { .. } => {
+                let mut h = HashMap::new();
+                h.insert("Content-Type", "application/x-www-form-urlencoded");
+                h
+            }
+            _ => HashMap::new(),
+        }
     }
 }
 
@@ -274,6 +293,10 @@ pub struct HttpResponse {
 impl HttpResponse {
     pub fn content(&self) -> &str {
         &self.content
+    }
+
+    pub fn status(&self) -> u16 {
+        self.status
     }
 }
 
