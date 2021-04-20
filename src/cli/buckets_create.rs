@@ -200,7 +200,7 @@ fn buckets_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, 
     };
 
     let settings = builder.build();
-    let form = settings.as_form()?;
+    let form = settings.as_form(false)?;
     let payload = serde_urlencoded::to_string(&form).unwrap();
 
     let response = cluster.management_request(ManagementRequest::CreateBucket { payload })?;

@@ -96,8 +96,13 @@ impl Client {
         Err(ClientError::ConfigurationLoadFailed)
     }
 
-    fn http_get(&self, uri: &str) -> Result<(String, u16), ClientError> {
-        let mut res_builder = isahc::Request::get(uri)
+    fn http_do(
+        &self,
+        mut res_builder: http::request::Builder,
+        payload: Option<Vec<u8>>,
+        headers: HashMap<&str, &str>,
+    ) -> Result<(String, u16), ClientError> {
+        res_builder = res_builder
             .authentication(Authentication::basic())
             .credentials(Credentials::new(&self.username, &self.password));
 
@@ -108,10 +113,30 @@ impl Client {
             res_builder = res_builder.ssl_options(self.http_ssl_opts());
         }
 
-        let mut res = res_builder.body(())?.send()?;
+        for (key, value) in headers {
+            res_builder = res_builder.header(key, value);
+        }
+
+        let mut res: http::Response<isahc::Body>;
+        if let Some(p) = payload {
+            res = res_builder.body(p)?.send()?;
+        } else {
+            res = res_builder.body(())?.send()?;
+        }
+
         let content = res.text()?;
         let status = res.status().into();
         Ok((content, status))
+    }
+
+    fn http_get(&self, uri: &str) -> Result<(String, u16), ClientError> {
+        let res_builder = isahc::Request::get(uri);
+        self.http_do(res_builder, None, HashMap::new())
+    }
+
+    fn http_delete(&self, uri: &str) -> Result<(String, u16), ClientError> {
+        let res_builder = isahc::Request::delete(uri);
+        self.http_do(res_builder, None, HashMap::new())
     }
 
     fn http_ssl_opts(&self) -> SslOption {
@@ -131,25 +156,8 @@ impl Client {
         payload: Option<Vec<u8>>,
         headers: HashMap<&str, &str>,
     ) -> Result<(String, u16), ClientError> {
-        let mut res_builder = isahc::Request::post(uri)
-            .authentication(Authentication::basic())
-            .credentials(Credentials::new(&self.username, &self.password));
-
-        if self.tls_config.enabled() {
-            if let Some(cert) = self.tls_config.cert_path() {
-                res_builder = res_builder.ssl_ca_certificate(CaCertificate::file(cert));
-            }
-            res_builder = res_builder.ssl_options(self.http_ssl_opts());
-        }
-
-        for (key, value) in headers {
-            res_builder = res_builder.header(key, value);
-        }
-
-        let mut res = res_builder.body(payload.unwrap())?.send()?;
-        let content = res.text()?;
-        let status = res.status().into();
-        Ok((content, status))
+        let res_builder = isahc::Request::post(uri);
+        self.http_do(res_builder, payload, headers)
     }
 
     pub fn management_request(
@@ -164,6 +172,7 @@ impl Client {
             let (content, status) = match request.verb() {
                 HttpVerb::Get => self.http_get(&uri)?,
                 HttpVerb::Post => self.http_post(&uri, request.payload(), request.headers())?,
+                HttpVerb::Delete => self.http_delete(&uri)?,
             };
             return Ok(HttpResponse { content, status });
         }
@@ -180,6 +189,11 @@ impl Client {
             let (content, status) = match request.verb() {
                 HttpVerb::Get => self.http_get(&uri)?,
                 HttpVerb::Post => self.http_post(&uri, request.payload(), HashMap::new())?,
+                _ => {
+                    return Err(ClientError::RequestFailed {
+                        reason: Some("Method not allowed for queries".into()),
+                    });
+                }
             };
 
             return Ok(HttpResponse { content, status });
@@ -192,16 +206,21 @@ impl Client {
 pub enum HttpVerb {
     Get,
     Post,
+    Delete,
 }
 
 pub enum ManagementRequest {
     BucketStats { name: String },
+    CreateBucket { payload: String },
+    DropBucket { name: String },
+    FlushBucket { name: String },
     GetBuckets,
     GetBucket { name: String },
+    LoadSampleBucket { name: String },
+    UpdateBucket { name: String, payload: String },
     IndexStatus,
     SettingsAutoFailover,
     Whoami,
-    CreateBucket { payload: String },
 }
 
 impl ManagementRequest {
@@ -214,6 +233,14 @@ impl ManagementRequest {
             Self::SettingsAutoFailover => "/settings/autoFailover".into(),
             Self::BucketStats { name } => format!("/pools/default/buckets/{}/stats", name),
             Self::CreateBucket { .. } => "/pools/default/buckets".into(),
+            Self::DropBucket { name } => format!("/pools/default/buckets/{}", name),
+            Self::FlushBucket { name } => {
+                format!("/pools/default/buckets/{}/controller/doFlush", name)
+            }
+            Self::LoadSampleBucket { name } => "/sampleBuckets/install".into(),
+            Self::UpdateBucket { name, .. } => {
+                format!("/pools/default/buckets/{}", name)
+            }
         }
     }
 
@@ -226,12 +253,18 @@ impl ManagementRequest {
             Self::SettingsAutoFailover => HttpVerb::Get,
             Self::BucketStats { .. } => HttpVerb::Get,
             Self::CreateBucket { .. } => HttpVerb::Post,
+            Self::DropBucket { .. } => HttpVerb::Delete,
+            Self::FlushBucket { .. } => HttpVerb::Post,
+            Self::LoadSampleBucket { .. } => HttpVerb::Post,
+            Self::UpdateBucket { .. } => HttpVerb::Post,
         }
     }
 
     pub fn payload(&self) -> Option<Vec<u8>> {
         match self {
             Self::CreateBucket { payload } => Some(payload.as_bytes().into()),
+            Self::LoadSampleBucket { name } => Some(name.as_bytes().into()),
+            Self::UpdateBucket { payload, .. } => Some(payload.as_bytes().into()),
             _ => None,
         }
     }

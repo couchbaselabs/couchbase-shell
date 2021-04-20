@@ -1,15 +1,15 @@
 //! The `buckets get` command fetches buckets from the server.
 
 use crate::state::State;
-use couchbase::DropBucketOptions;
 
 use crate::cli::util::cluster_identifiers_from;
+use crate::client::ManagementRequest;
 use async_trait::async_trait;
 use log::debug;
-use nu_cli::OutputStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
+use nu_stream::OutputStream;
 use std::sync::Arc;
 
 pub struct BucketsDrop {
@@ -43,16 +43,16 @@ impl nu_engine::WholeStreamCommand for BucketsDrop {
         "Drops buckets through the HTTP API"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        buckets_drop(self.state.clone(), args).await
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        buckets_drop(self.state.clone(), args)
     }
 }
 
-async fn buckets_drop(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
+fn buckets_drop(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once()?;
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
-    let name = match args.get("name") {
+    let name = match args.call_info.args.get("name") {
         Some(v) => match v.as_string() {
             Ok(name) => name,
             Err(e) => return Err(e),
@@ -60,6 +60,8 @@ async fn buckets_drop(state: Arc<State>, args: CommandArgs) -> Result<OutputStre
         None => return Err(ShellError::unexpected("name is required")),
     };
     let bucket = match args
+        .call_info
+        .args
         .get("bucket")
         .map(|bucket| bucket.as_string().ok())
         .flatten()
@@ -78,14 +80,17 @@ async fn buckets_drop(state: Arc<State>, args: CommandArgs) -> Result<OutputStre
             }
         };
 
-        let mgr = cluster.buckets();
-        let result = mgr
-            .drop_bucket(name.clone(), DropBucketOptions::default())
-            .await;
+        let result =
+            cluster.management_request(ManagementRequest::DropBucket { name: name.clone() })?;
 
-        match result {
-            Ok(_) => {}
-            Err(e) => return Err(ShellError::untagged_runtime_error(format!("{}", e))),
+        match result.status() {
+            200 => {}
+            _ => {
+                return Err(ShellError::untagged_runtime_error(format!(
+                    "{}",
+                    result.content()
+                )))
+            }
         }
     }
 

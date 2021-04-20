@@ -2,6 +2,7 @@
 
 use crate::state::State;
 
+use crate::cli::buckets_builder::{BucketSettings, JSONBucketSettings};
 use crate::cli::util::cluster_identifiers_from;
 use crate::client::ManagementRequest;
 use async_trait::async_trait;
@@ -12,6 +13,7 @@ use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Valu
 use nu_source::Tag;
 use nu_stream::OutputStream;
 use serde::Deserialize;
+use std::convert::TryFrom;
 use std::sync::Arc;
 
 pub struct BucketsGet {
@@ -96,8 +98,11 @@ fn buckets_get_one(
         let response =
             cluster.management_request(ManagementRequest::GetBucket { name: name.clone() })?;
 
-        let content = serde_json::from_str(response.content())?;
-        results.push(bucket_to_tagged_dict(content, identifier));
+        let content: JSONBucketSettings = serde_json::from_str(response.content())?;
+        results.push(bucket_to_tagged_dict(
+            BucketSettings::try_from(content)?,
+            identifier,
+        ));
     }
 
     Ok(OutputStream::from(results))
@@ -118,57 +123,30 @@ fn buckets_get_all(
 
         let response = cluster.management_request(ManagementRequest::GetBuckets)?;
 
-        let content: Vec<BucketConfig> = serde_json::from_str(response.content())?;
+        let content: Vec<JSONBucketSettings> = serde_json::from_str(response.content())?;
 
         for bucket in content.into_iter() {
-            results.push(bucket_to_tagged_dict(bucket, identifier.clone()));
+            results.push(bucket_to_tagged_dict(
+                BucketSettings::try_from(bucket)?,
+                identifier.clone(),
+            ));
         }
     }
 
     Ok(OutputStream::from(results))
 }
 
-fn bucket_to_tagged_dict(bucket: BucketConfig, cluster_name: String) -> Value {
-    let bucket_type = match bucket.bucket_type.as_str() {
-        "membase" => "couchbase",
-        "memcached" => "memcached",
-        "ephemeral" => "ephemeral",
-        _ => "unknown",
-    };
-
+fn bucket_to_tagged_dict(bucket: BucketSettings, cluster_name: String) -> Value {
     let mut collected = TaggedDictBuilder::new(Tag::default());
     collected.insert_value("cluster", cluster_name);
-    collected.insert_value("name", bucket.name);
-    collected.insert_value("type", bucket_type);
-    collected.insert_value("replicas", UntaggedValue::int(bucket.num_replicas));
+    collected.insert_value("name", bucket.name());
+    collected.insert_value("type", bucket.bucket_type().to_string());
+    collected.insert_value("replicas", UntaggedValue::int(bucket.num_replicas()));
     collected.insert_value(
         "min_durability_level",
-        bucket.durability_level.unwrap_or("none".to_string()),
+        bucket.minimum_durability_level().to_string(),
     );
-    collected.insert_value("ram_quota", UntaggedValue::filesize(bucket.quota.raw_ram));
-    collected.insert_value("flush_enabled", bucket.controllers.flush.is_some());
+    collected.insert_value("ram_quota", UntaggedValue::filesize(bucket.ram_quota_mb()));
+    collected.insert_value("flush_enabled", bucket.flush_enabled());
     collected.into_value()
-}
-#[derive(Deserialize, Debug)]
-struct BucketConfig {
-    name: String,
-    #[serde(rename = "bucketType")]
-    bucket_type: String,
-    #[serde(rename = "replicaNumber")]
-    num_replicas: u32,
-    #[serde(rename = "durabilityMinLevel")]
-    durability_level: Option<String>,
-    quota: BucketQuota,
-    controllers: BucketControllers,
-}
-
-#[derive(Deserialize, Debug)]
-struct BucketQuota {
-    #[serde(rename = "rawRAM")]
-    raw_ram: u64,
-}
-
-#[derive(Deserialize, Debug)]
-struct BucketControllers {
-    flush: Option<String>,
 }

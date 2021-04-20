@@ -1,14 +1,12 @@
-use crate::cli::convert_cb_error;
 use crate::cli::util::cluster_identifiers_from;
+use crate::client::ManagementRequest;
 use crate::state::State;
 use async_trait::async_trait;
-use couchbase::{GenericManagementRequest, Request};
-use futures::channel::oneshot;
-use nu_cli::OutputStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, Value};
 use nu_source::Tag;
+use nu_stream::OutputStream;
 use std::sync::Arc;
 
 pub struct BucketsSample {
@@ -46,16 +44,13 @@ impl nu_engine::WholeStreamCommand for BucketsSample {
         "Load a sample bucket"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        load_sample_bucket(self.state.clone(), args).await
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        load_sample_bucket(self.state.clone(), args)
     }
 }
 
-async fn load_sample_bucket(
-    state: Arc<State>,
-    args: CommandArgs,
-) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
+fn load_sample_bucket(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once()?;
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
     let bucket_name = match args.nth(0) {
@@ -76,38 +71,21 @@ async fn load_sample_bucket(
             }
         };
 
-        let core = cluster.core();
+        let response = cluster.management_request(ManagementRequest::LoadSampleBucket {
+            name: format!("[\"{}\"]", bucket_name),
+        })?;
 
-        let (sender, receiver) = oneshot::channel();
-        let request = GenericManagementRequest::new(
-            sender,
-            "/sampleBuckets/install".into(),
-            "post".into(),
-            Some(format!("[\"{}\"]", bucket_name)),
-        );
-        core.send(Request::GenericManagementRequest(request));
-
-        let input = match receiver.await {
-            Ok(i) => i,
-            Err(e) => {
+        match response.status() {
+            202 => {}
+            _ => {
                 return Err(ShellError::untagged_runtime_error(format!(
-                    "Error streaming result {}",
-                    e
+                    "{}",
+                    response.content()
                 )))
             }
-        };
-        let result = convert_cb_error(input)?;
+        }
 
-        let payload = match result.payload() {
-            Some(p) => p,
-            None => {
-                return Err(ShellError::untagged_runtime_error(
-                    "Empty response from cluster even though got ok",
-                ));
-            }
-        };
-
-        let resp: Vec<String> = serde_json::from_slice(payload)?;
+        let resp: Vec<String> = serde_json::from_str(response.content())?;
         for r in resp {
             let mut collected = TaggedDictBuilder::new(Tag::default());
             collected.insert_value("cluster", identifier.clone());

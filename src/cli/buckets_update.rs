@@ -1,11 +1,12 @@
+use crate::cli::buckets_builder::{BucketSettings, DurabilityLevel, JSONBucketSettings};
+use crate::client::ManagementRequest;
 use crate::state::State;
 use async_trait::async_trait;
-use couchbase::{DurabilityLevel, GetBucketOptions, UpdateBucketOptions};
 use log::debug;
-use nu_cli::OutputStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
+use nu_stream::OutputStream;
 use std::convert::TryFrom;
 use std::sync::Arc;
 use tokio::time::Duration;
@@ -71,51 +72,37 @@ impl nu_engine::WholeStreamCommand for BucketsUpdate {
         "Updates a bucket"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        buckets_update(self.state.clone(), args).await
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        buckets_update(self.state.clone(), args)
     }
 }
 
-async fn buckets_update(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
+fn buckets_update(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once()?;
 
-    let name = match args.get("name") {
+    let name = match args.call_info.args.get("name") {
         Some(v) => match v.as_string() {
             Ok(name) => name,
             Err(e) => return Err(e),
         },
         None => return Err(ShellError::unexpected("name is required")),
     };
-    let cluster = match args.get("cluster") {
-        Some(v) => match v.as_string() {
-            Ok(pwd) => match state.clusters().get(&pwd) {
-                Some(c) => c.cluster(),
-                None => {
-                    return Err(ShellError::untagged_runtime_error("Cluster not found"));
-                }
-            },
-            Err(e) => return Err(e),
-        },
-        None => state.active_cluster().cluster(),
+    let cluster = match state.clusters().get(&state.active()) {
+        Some(c) => c.cluster(),
+        None => {
+            return Err(ShellError::untagged_runtime_error("Cluster not found"));
+        }
     };
 
     debug!("Running buckets update for bucket {}", &name);
 
-    let mgr = cluster.buckets();
-    let mut settings = match mgr
-        .get_bucket(name.clone(), GetBucketOptions::default())
-        .await
-    {
-        Ok(s) => s,
-        Err(e) => {
-            return Err(ShellError::untagged_runtime_error(format!(
-                "Failed to get bucket {}",
-                e
-            )));
-        }
-    };
+    let response =
+        cluster.management_request(ManagementRequest::GetBucket { name: name.clone() })?;
 
-    match args.get("ram") {
+    let content: JSONBucketSettings = serde_json::from_str(response.content())?;
+    let mut settings = BucketSettings::try_from(content)?;
+
+    match args.call_info.args.get("ram") {
         Some(v) => match v.as_u64() {
             Ok(ram) => {
                 settings.set_ram_quota_mb(ram);
@@ -124,7 +111,7 @@ async fn buckets_update(state: Arc<State>, args: CommandArgs) -> Result<OutputSt
         },
         None => {}
     };
-    match args.get("replicas") {
+    match args.call_info.args.get("replicas") {
         Some(v) => match v.as_u64() {
             Ok(replicas) => settings.set_num_replicas(match u32::try_from(replicas) {
                 Ok(bt) => bt,
@@ -139,7 +126,7 @@ async fn buckets_update(state: Arc<State>, args: CommandArgs) -> Result<OutputSt
         },
         None => {}
     };
-    match args.get("flush") {
+    match args.call_info.args.get("flush") {
         Some(v) => match v.as_string() {
             Ok(f) => {
                 let flush_str = match f.strip_prefix("$") {
@@ -165,25 +152,17 @@ async fn buckets_update(state: Arc<State>, args: CommandArgs) -> Result<OutputSt
         None => {}
     };
     let mut has_dura_changed = false;
-    match args.get("durability") {
+    match args.call_info.args.get("durability") {
         Some(v) => match v.as_string() {
             Ok(d) => {
                 has_dura_changed = true;
-                settings.set_minimum_durability_level(match DurabilityLevel::try_from(d.as_str()) {
-                    Ok(bt) => bt,
-                    Err(e) => {
-                        return Err(ShellError::untagged_runtime_error(format!(
-                            "Failed to parse durability level {}",
-                            e
-                        )));
-                    }
-                })
+                settings.set_minimum_durability_level(DurabilityLevel::try_from(d.as_str())?)
             }
             Err(e) => return Err(e),
         },
         None => {}
     };
-    match args.get("expiry") {
+    match args.call_info.args.get("expiry") {
         Some(v) => match v.as_u64() {
             Ok(ex) => settings.set_max_expiry(Duration::from_secs(ex)),
             Err(e) => return Err(e),
@@ -191,17 +170,20 @@ async fn buckets_update(state: Arc<State>, args: CommandArgs) -> Result<OutputSt
         None => {}
     };
 
-    let result = mgr
-        .update_bucket(settings, UpdateBucketOptions::default())
-        .await;
+    let form = settings.as_form(true)?;
+    let payload = serde_urlencoded::to_string(&form).unwrap();
 
-    match result {
-        Ok(_) => {
-            if has_dura_changed {
-                println!("Bucket durability level has been changed, you must perform a cluster rebalance before this change will take effect.")
-            }
-            return Ok(OutputStream::empty());
-        }
-        Err(e) => Err(ShellError::untagged_runtime_error(format!("{}", e))),
+    let response = cluster.management_request(ManagementRequest::UpdateBucket {
+        name: name.clone(),
+        payload,
+    })?;
+
+    match response.status() {
+        200 => Ok(OutputStream::empty()),
+        202 => Ok(OutputStream::empty()),
+        _ => Err(ShellError::untagged_runtime_error(format!(
+            "{}",
+            response.content()
+        ))),
     }
 }

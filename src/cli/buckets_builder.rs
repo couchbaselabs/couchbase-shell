@@ -72,7 +72,7 @@ impl TryFrom<&str> for BucketType {
 impl Display for BucketType {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let alias = match *self {
-            BucketType::Couchbase => "membase",
+            BucketType::Couchbase => "couchbase",
             BucketType::Memcached => "memcached",
             BucketType::Ephemeral => "ephemeral",
         };
@@ -316,7 +316,7 @@ struct JSONQuota {
 }
 
 #[derive(Debug, Deserialize)]
-struct JSONBucketSettings {
+pub struct JSONBucketSettings {
     name: String,
     controllers: JSONControllers,
     quota: JSONQuota,
@@ -362,7 +362,7 @@ impl TryFrom<JSONBucketSettings> for BucketSettings {
 }
 
 impl BucketSettings {
-    pub fn as_form(&self) -> Result<Vec<(&str, String)>, ShellError> {
+    pub fn as_form(&self, is_update: bool) -> Result<Vec<(&str, String)>, ShellError> {
         if self.ram_quota_mb < 100 {
             return Err(ShellError::untagged_runtime_error(
                 "ram quota must be more than 100mb",
@@ -391,8 +391,10 @@ impl BucketSettings {
             }
         }
 
-        if let Some(conflict_type) = self.conflict_resolution_type {
-            form.push(("conflictResolutionType", conflict_type.to_string()));
+        if !is_update {
+            if let Some(conflict_type) = self.conflict_resolution_type {
+                form.push(("conflictResolutionType", conflict_type.to_string()));
+            }
         }
 
         match self.bucket_type {
