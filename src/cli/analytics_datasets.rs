@@ -1,9 +1,12 @@
+use crate::cli::util::convert_json_value_to_nu_value;
+use crate::client::AnalyticsQueryRequest;
 use crate::state::State;
 use log::debug;
 use nu_cli::ActionStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::Signature;
+use nu_source::Tag;
 use std::sync::Arc;
 
 pub struct AnalyticsDatasets {
@@ -34,20 +37,21 @@ impl nu_engine::WholeStreamCommand for AnalyticsDatasets {
     }
 }
 
-fn datasets(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError> {
-    let args = args.evaluate_once()?;
-    let ctrl_c = args.ctrl_c.clone();
+fn datasets(state: Arc<State>, _args: CommandArgs) -> Result<ActionStream, ShellError> {
     let statement = "SELECT d.* FROM Metadata.`Dataset` d WHERE d.DataverseName <> \"Metadata\"";
 
+    let active_cluster = state.active_cluster();
     debug!("Running analytics query {}", &statement);
-    let result = state
-        .active_cluster()
-        .cluster()
-        .analytics_query(statement, AnalyticsOptions::default())
-        .await;
 
-    match result {
-        Ok(mut r) => convert_couchbase_rows_json_to_nu_stream(ctrl_c, r.rows()),
-        Err(e) => Err(ShellError::untagged_runtime_error(format!("{}", e))),
-    }
+    let response =
+        active_cluster
+            .cluster()
+            .analytics_query_request(AnalyticsQueryRequest::Execute {
+                statement: statement.into(),
+                scope: None,
+            })?;
+
+    let content: serde_json::Value = serde_json::from_str(response.content())?;
+    let converted = convert_json_value_to_nu_value(&content, Tag::default())?;
+    Ok(ActionStream::one(converted))
 }

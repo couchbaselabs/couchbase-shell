@@ -188,10 +188,35 @@ impl Client {
             let uri = format!("{}://{}:{}{}", self.http_prefix(), seed.0, seed.1, &path);
             let (content, status) = match request.verb() {
                 HttpVerb::Get => self.http_get(&uri)?,
-                HttpVerb::Post => self.http_post(&uri, request.payload(), HashMap::new())?,
+                HttpVerb::Post => self.http_post(&uri, request.payload(), request.headers())?,
                 _ => {
                     return Err(ClientError::RequestFailed {
                         reason: Some("Method not allowed for queries".into()),
+                    });
+                }
+            };
+
+            return Ok(HttpResponse { content, status });
+        }
+
+        Err(ClientError::RequestFailed { reason: None })
+    }
+
+    pub fn analytics_query_request(
+        &self,
+        request: AnalyticsQueryRequest,
+    ) -> Result<HttpResponse, ClientError> {
+        let config = self.get_config()?;
+
+        let path = request.path();
+        for seed in config.analytics_seeds(self.tls_config.enabled()) {
+            let uri = format!("{}://{}:{}{}", self.http_prefix(), seed.0, seed.1, &path);
+            let (content, status) = match request.verb() {
+                HttpVerb::Get => self.http_get(&uri)?,
+                HttpVerb::Post => self.http_post(&uri, request.payload(), request.headers())?,
+                _ => {
+                    return Err(ClientError::RequestFailed {
+                        reason: Some("Method not allowed for analytics queries".into()),
                     });
                 }
             };
@@ -305,7 +330,7 @@ impl QueryRequest {
         match self {
             Self::Execute { statement, scope } => {
                 if let Some(scope) = scope {
-                    let ctx = format!("`default`:`{}`.`{}", scope.0, scope.1);
+                    let ctx = format!("`default`:`{}`.`{}`", scope.0, scope.1);
                     let json = json!({ "statement": statement, "query_context": ctx });
                     Some(serde_json::to_vec(&json).unwrap())
                 } else {
@@ -313,6 +338,64 @@ impl QueryRequest {
                     Some(serde_json::to_vec(&json).unwrap())
                 }
             }
+        }
+    }
+
+    pub fn headers(&self) -> HashMap<&str, &str> {
+        match self {
+            Self::Execute { .. } => {
+                let mut h = HashMap::new();
+                h.insert("Content-Type", "application/json");
+                h
+            }
+            _ => HashMap::new(),
+        }
+    }
+}
+
+pub enum AnalyticsQueryRequest {
+    Execute {
+        statement: String,
+        scope: Option<(String, String)>,
+    },
+}
+
+impl AnalyticsQueryRequest {
+    pub fn path(&self) -> String {
+        match self {
+            Self::Execute { .. } => "/query/service".into(),
+        }
+    }
+
+    pub fn verb(&self) -> HttpVerb {
+        match self {
+            Self::Execute { .. } => HttpVerb::Post,
+        }
+    }
+
+    pub fn payload(&self) -> Option<Vec<u8>> {
+        match self {
+            Self::Execute { statement, scope } => {
+                if let Some(scope) = scope {
+                    let ctx = format!("`default`:`{}`.`{}`", scope.0, scope.1);
+                    let json = json!({ "statement": statement, "query_context": ctx });
+                    Some(serde_json::to_vec(&json).unwrap())
+                } else {
+                    let json = json!({ "statement": statement });
+                    Some(serde_json::to_vec(&json).unwrap())
+                }
+            }
+        }
+    }
+
+    pub fn headers(&self) -> HashMap<&str, &str> {
+        match self {
+            Self::Execute { .. } => {
+                let mut h = HashMap::new();
+                h.insert("Content-Type", "application/json");
+                h
+            }
+            _ => HashMap::new(),
         }
     }
 }
@@ -345,23 +428,26 @@ impl ClusterConfig {
     pub fn management_seeds(&self, tls: bool) -> Vec<(String, u32)> {
         let key = if tls { "mgmtSSL" } else { "mgmt" };
 
-        self.nodes_ext
-            .iter()
-            .filter(|node| node.services.contains_key(key))
-            .map(|node| {
-                let hostname = if node.hostname.is_some() {
-                    node.hostname.as_ref().unwrap().clone()
-                } else {
-                    self.loaded_from.as_ref().unwrap().clone()
-                };
-                (hostname, node.services.get(key).unwrap().clone())
-            })
-            .collect()
+        self.seeds(key)
     }
 
     pub fn query_seeds(&self, tls: bool) -> Vec<(String, u32)> {
         let key = if tls { "n1qlSSL" } else { "n1ql" };
 
+        self.seeds(key)
+    }
+
+    pub fn analytics_seeds(&self, tls: bool) -> Vec<(String, u32)> {
+        let key = if tls { "cbasSSL" } else { "cbas" };
+
+        self.seeds(key)
+    }
+
+    pub fn set_loaded_from(&mut self, loaded_from: String) {
+        self.loaded_from = Some(loaded_from);
+    }
+
+    fn seeds(&self, key: &str) -> Vec<(String, u32)> {
         self.nodes_ext
             .iter()
             .filter(|node| node.services.contains_key(key))
@@ -374,10 +460,6 @@ impl ClusterConfig {
                 (hostname, node.services.get(key).unwrap().clone())
             })
             .collect()
-    }
-
-    pub fn set_loaded_from(&mut self, loaded_from: String) {
-        self.loaded_from = Some(loaded_from);
     }
 }
 

@@ -1,3 +1,7 @@
+mod analytics;
+mod analytics_datasets;
+mod analytics_dataverses;
+mod analytics_indexes;
 mod buckets;
 mod buckets_builder;
 mod buckets_config;
@@ -22,6 +26,10 @@ mod util;
 mod version;
 mod whoami;
 
+pub use analytics::Analytics;
+pub use analytics_datasets::AnalyticsDatasets;
+pub use analytics_dataverses::AnalyticsDataverses;
+pub use analytics_indexes::AnalyticsIndexes;
 pub use buckets::Buckets;
 pub use buckets_config::BucketsConfig;
 pub use buckets_create::BucketsCreate;

@@ -1,9 +1,14 @@
+use crate::cli::util::convert_json_value_to_nu_value;
+use crate::client::AnalyticsQueryRequest;
 use crate::state::State;
 use log::debug;
 use nu_cli::ActionStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
+use nu_source::Tag;
+use nu_stream::OutputStream;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 pub struct Analytics {
@@ -72,37 +77,45 @@ fn run(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError>
         None => None,
     };
 
-    let scope_instance = match scope {
-        Some(s) => match bucket {
-            Some(b) => Some(active_cluster.bucket(b.as_str()).scope(s)),
-            None => match active_cluster.active_bucket() {
-                Some(b) => Some(active_cluster.bucket(b.as_str()).scope(s)),
-                None => {
-                    return Err(ShellError::untagged_runtime_error(format!(
-                        "Could not auto-select a bucket - please use --bucket instead"
-                    )));
-                }
-            },
-        },
-        None => None,
+    let maybe_scope = if bucket.is_some() && scope.is_some() {
+        Some((bucket.unwrap().clone(), scope.unwrap().clone()))
+    } else {
+        None
     };
+
+    let with_meta = args.get_flag::<bool>("with-meta").unwrap().is_some();
 
     debug!("Running analytics query {}", &statement);
-    let result = match scope_instance {
-        Some(s) => {
-            s.analytics_query(statement, AnalyticsOptions::default())
-                .await
-        }
-        None => {
-            active_cluster
-                .cluster()
-                .analytics_query(statement, AnalyticsOptions::default())
-                .await
-        }
-    };
 
-    match result {
-        Ok(mut r) => convert_couchbase_rows_json_to_nu_stream(ctrl_c, r.rows()),
-        Err(e) => Err(ShellError::untagged_runtime_error(format!("{}", e))),
+    let response =
+        active_cluster
+            .cluster()
+            .analytics_query_request(AnalyticsQueryRequest::Execute {
+                statement: statement.clone(),
+                scope: maybe_scope,
+            })?;
+
+    if with_meta {
+        let content: serde_json::Value = serde_json::from_str(response.content())?;
+        return Ok(ActionStream::one(convert_json_value_to_nu_value(
+            &content,
+            Tag::default(),
+        )?));
+    } else {
+        let mut content: HashMap<String, serde_json::Value> =
+            serde_json::from_str(response.content())?;
+        let removed = if content.contains_key("errors") {
+            content.remove("errors").unwrap()
+        } else {
+            content.remove("results").unwrap()
+        };
+
+        let values = removed
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|a| convert_json_value_to_nu_value(a, Tag::default()).unwrap())
+            .collect::<Vec<_>>();
+        return Ok(OutputStream::from(values).into());
     }
 }

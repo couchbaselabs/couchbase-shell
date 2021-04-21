@@ -165,6 +165,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let context = nu_cli::create_default_context(true)?;
     context.add_commands(vec![
+        nu_engine::whole_stream_command(Analytics::new(state.clone())),
+        nu_engine::whole_stream_command(AnalyticsDatasets::new(state.clone())),
+        nu_engine::whole_stream_command(AnalyticsDataverses::new(state.clone())),
+        nu_engine::whole_stream_command(AnalyticsIndexes::new(state.clone())),
         nu_engine::whole_stream_command(Buckets {}),
         nu_engine::whole_stream_command(BucketsConfig::new(state.clone())),
         nu_engine::whole_stream_command(BucketsCreate::new(state.clone())),
