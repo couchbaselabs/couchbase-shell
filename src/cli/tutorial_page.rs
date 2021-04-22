@@ -1,10 +1,11 @@
 use crate::state::State;
 use async_trait::async_trait;
-use nu_cli::{OutputStream, TaggedDictBuilder};
+use nu_cli::TaggedDictBuilder;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{ReturnSuccess, Signature, SyntaxShape, UntaggedValue, Value};
 use nu_source::Tag;
+use nu_stream::OutputStream;
 use std::sync::Arc;
 
 pub struct TutorialPage {
@@ -35,16 +36,13 @@ impl nu_engine::WholeStreamCommand for TutorialPage {
         "Step to a specific page in the Couchbase Shell tutorial"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        run_tutorial_page(self.state.clone(), args).await
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        run_tutorial_page(self.state.clone(), args)
     }
 }
 
-async fn run_tutorial_page(
-    state: Arc<State>,
-    args: CommandArgs,
-) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
+fn run_tutorial_page(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once()?;
 
     let name = match args.nth(0) {
         Some(a) => Some(a.as_string()?),
@@ -53,9 +51,9 @@ async fn run_tutorial_page(
 
     let tutorial = state.tutorial();
     if let Some(n) = name {
-        Ok(OutputStream::one(ReturnSuccess::value(
+        Ok(OutputStream::one(
             UntaggedValue::string(tutorial.goto_step(n)?).into_value(Tag::unknown()),
-        )))
+        ))
     } else {
         let mut results: Vec<Value> = vec![];
         let (current_step, steps) = tutorial.step_names();

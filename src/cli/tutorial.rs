@@ -1,11 +1,11 @@
+use crate::client::ManagementRequest;
 use crate::state::State;
 use async_trait::async_trait;
-use couchbase::GetBucketOptions;
-use nu_cli::OutputStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{ReturnSuccess, Signature, UntaggedValue};
 use nu_source::Tag;
+use nu_stream::OutputStream;
 use std::sync::Arc;
 
 pub struct Tutorial {
@@ -32,24 +32,24 @@ impl nu_engine::WholeStreamCommand for Tutorial {
         "Run the Couchbase Shell tutorial"
     }
 
-    async fn run(&self, _args: CommandArgs) -> Result<OutputStream, ShellError> {
-        run_tutorial(self.state.clone()).await
+    fn run(&self, _args: CommandArgs) -> Result<OutputStream, ShellError> {
+        run_tutorial(self.state.clone())
     }
 }
 
-async fn run_tutorial(state: Arc<State>) -> Result<OutputStream, ShellError> {
+fn run_tutorial(state: Arc<State>) -> Result<OutputStream, ShellError> {
     let tutorial = state.tutorial();
     let cluster = state.active_cluster().cluster();
-    let mgr = cluster.buckets();
-    let input = mgr
-        .get_bucket("travel-sample", GetBucketOptions::default())
-        .await;
-    let exists = match input {
-        Ok(_) => true,
-        Err(_) => false,
+    let resp = cluster.management_request(ManagementRequest::GetBucket {
+        name: "travel-sample".into(),
+    })?;
+
+    let exists = match resp.status() {
+        200 => true,
+        _ => false,
     };
 
-    Ok(OutputStream::one(ReturnSuccess::value(
+    Ok(OutputStream::one(
         UntaggedValue::string(tutorial.current_step(exists)).into_value(Tag::unknown()),
-    )))
+    ))
 }
