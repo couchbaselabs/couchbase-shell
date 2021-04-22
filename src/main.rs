@@ -187,6 +187,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(Query::new(state.clone())),
         nu_engine::whole_stream_command(QueryAdvise::new(state.clone())),
         nu_engine::whole_stream_command(QueryIndexes::new(state.clone())),
+        nu_engine::whole_stream_command(Search::new(state.clone())),
         nu_engine::whole_stream_command(Users::new(state.clone())),
         nu_engine::whole_stream_command(UsersGet::new(state.clone())),
         nu_engine::whole_stream_command(UsersRoles::new(state.clone())),

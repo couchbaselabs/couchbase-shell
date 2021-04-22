@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use crate::cli::User;
 use crate::config::ClusterTlsConfig;
 use isahc::{
     auth::{Authentication, Credentials},
@@ -225,6 +224,30 @@ impl Client {
             let uri = format!("{}://{}:{}{}", self.http_prefix(), seed.0, seed.1, &path);
             let (content, status) = match request.verb() {
                 HttpVerb::Get => self.http_get(&uri)?,
+                HttpVerb::Post => self.http_post(&uri, request.payload(), request.headers())?,
+                _ => {
+                    return Err(ClientError::RequestFailed {
+                        reason: Some("Method not allowed for analytics queries".into()),
+                    });
+                }
+            };
+
+            return Ok(HttpResponse { content, status });
+        }
+
+        Err(ClientError::RequestFailed { reason: None })
+    }
+
+    pub fn search_query_request(
+        &self,
+        request: SearchQueryRequest,
+    ) -> Result<HttpResponse, ClientError> {
+        let config = self.get_config()?;
+
+        let path = request.path();
+        for seed in config.search_seeds(self.tls_config.enabled()) {
+            let uri = format!("{}://{}:{}{}", self.http_prefix(), seed.0, seed.1, &path);
+            let (content, status) = match request.verb() {
                 HttpVerb::Post => self.http_post(&uri, request.payload(), request.headers())?,
                 _ => {
                     return Err(ClientError::RequestFailed {
@@ -485,6 +508,44 @@ impl AnalyticsQueryRequest {
     }
 }
 
+pub enum SearchQueryRequest {
+    Execute { index: String, query: String },
+}
+
+impl SearchQueryRequest {
+    pub fn path(&self) -> String {
+        match self {
+            Self::Execute { index, .. } => format!("/api/index/{}/query", index),
+        }
+    }
+
+    pub fn verb(&self) -> HttpVerb {
+        match self {
+            Self::Execute { .. } => HttpVerb::Post,
+        }
+    }
+
+    pub fn payload(&self) -> Option<Vec<u8>> {
+        match self {
+            Self::Execute { query, .. } => {
+                let json = json!({ "query": { "query": query }});
+                Some(serde_json::to_vec(&json).unwrap())
+            }
+        }
+    }
+
+    pub fn headers(&self) -> HashMap<&str, &str> {
+        match self {
+            Self::Execute { .. } => {
+                let mut h = HashMap::new();
+                h.insert("Content-Type", "application/json");
+                h
+            }
+            _ => HashMap::new(),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct HttpResponse {
     content: String,
@@ -524,6 +585,12 @@ impl ClusterConfig {
 
     pub fn analytics_seeds(&self, tls: bool) -> Vec<(String, u32)> {
         let key = if tls { "cbasSSL" } else { "cbas" };
+
+        self.seeds(key)
+    }
+
+    pub fn search_seeds(&self, tls: bool) -> Vec<(String, u32)> {
+        let key = if tls { "ftsSSL" } else { "fts" };
 
         self.seeds(key)
     }
