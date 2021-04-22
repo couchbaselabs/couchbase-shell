@@ -272,6 +272,7 @@ pub enum ManagementRequest {
     GetCollections {
         bucket: String,
     },
+    GetNodes,
     GetRoles {
         permission: Option<String>,
     },
@@ -318,6 +319,7 @@ impl ManagementRequest {
                 bucket, scope
             ),
             Self::GetCollections { bucket } => format!("/pools/default/buckets/{}/scopes", bucket),
+            Self::GetNodes => "/pools/default".into(),
             Self::GetUsers => "/settings/rbac/users/local".into(),
             Self::GetUser { username } => format!("/settings/rbac/users/local/{}", username),
             Self::GetRoles { permission } => match permission {
@@ -347,6 +349,7 @@ impl ManagementRequest {
             Self::GetUser { .. } => HttpVerb::Get,
             Self::GetRoles { .. } => HttpVerb::Get,
             Self::UpsertUser { .. } => HttpVerb::Put,
+            Self::GetNodes => HttpVerb::Get,
         }
     }
 

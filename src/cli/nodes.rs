@@ -1,15 +1,14 @@
-use crate::cli::convert_cb_error;
 use crate::cli::util::cluster_identifiers_from;
 use crate::state::State;
 
+use crate::client::ManagementRequest;
 use async_trait::async_trait;
-use couchbase::{GenericManagementRequest, Request};
 use futures::channel::oneshot;
-use nu_cli::OutputStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
+use nu_stream::OutputStream;
 use serde::Deserialize;
 use std::fmt;
 use std::sync::Arc;
@@ -43,55 +42,47 @@ impl nu_engine::WholeStreamCommand for Nodes {
         "Lists all nodes of the connected cluster"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        nodes(self.state.clone(), args).await
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        nodes(self.state.clone(), args)
     }
 }
 
-async fn nodes(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
+fn nodes(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once()?;
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
 
     let mut nodes = vec![];
     for identifier in cluster_identifiers {
-        let core = match state.clusters().get(&identifier) {
-            Some(c) => c.cluster().core(),
+        let active_cluster = match state.clusters().get(&identifier) {
+            Some(c) => c,
             None => {
                 return Err(ShellError::untagged_runtime_error("Cluster not found"));
             }
         };
-        let (sender, receiver) = oneshot::channel();
-        let request =
-            GenericManagementRequest::new(sender, "/pools/default".into(), "get".into(), None);
-        core.send(Request::GenericManagementRequest(request));
 
-        let input = match receiver.await {
-            Ok(i) => i,
-            Err(e) => {
+        let response = active_cluster
+            .cluster()
+            .management_request(ManagementRequest::GetNodes)?;
+
+        let resp: PoolInfo = match response.status() {
+            200 => match serde_json::from_str(response.content()) {
+                Ok(m) => m,
+                Err(e) => {
+                    return Err(ShellError::untagged_runtime_error(format!(
+                        "Failed to decode response body {}",
+                        e,
+                    )));
+                }
+            },
+            _ => {
                 return Err(ShellError::untagged_runtime_error(format!(
-                    "Error streaming result {}",
-                    e
-                )))
+                    "Request failed {}",
+                    response.content(),
+                )));
             }
         };
-        let result = convert_cb_error(input)?;
 
-        if !result.payload().is_some() {
-            return Err(ShellError::untagged_runtime_error(
-                "Empty response from cluster even though got 200 ok",
-            ));
-        }
-
-        let payload = match result.payload() {
-            Some(p) => p,
-            None => {
-                return Err(ShellError::untagged_runtime_error(
-                    "Empty response from cluster even though got 200 ok",
-                ));
-            }
-        };
-        let resp: PoolInfo = serde_json::from_slice(payload)?;
         let mut n = resp
             .nodes
             .into_iter()

@@ -1,0 +1,25 @@
+# Allows us to evolve in the future without breaking old config files
+version = 1
+
+
+[[clusters]]
+identifier = "default"
+hostnames = ["10.112.211.101"]
+default-bucket = "default"
+# The following can be part of the config or credentials
+# cert-path = "/Users/charlesdixon/dev/couchbase-shell/.cbsh/certs/ca.pem"
+username = "Administrator"
+password = "password"
+data-timeout = "2500ms"
+connect-timeout = "7500ms"
+query-timeout = "75s"
+
+
+
+# [clusters]
+# hostnames = ["10.112.210.101"]
+# default-bucket = "default"
+# The following can be part of the config or credentials
+# cert-path = "/Users/charlesdixon/dev/couchbase-shell/.cbsh/certs/ca.pem"
+# username = "Administrator"
+# password = "password"
