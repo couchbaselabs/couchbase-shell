@@ -1,18 +1,17 @@
-//! The `collections get` command fetches all of the collection names from the server.
-
+use crate::client::ManagementRequest;
 use crate::state::State;
-use couchbase::GetAllScopesOptions;
-
-use crate::cli::util::bucket_name_from_args;
 use async_trait::async_trait;
 use log::debug;
-use nu_cli::OutputStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
+use nu_protocol::hir::duration;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Value};
 use nu_source::Tag;
+use nu_stream::OutputStream;
 use num_bigint::BigInt;
+use serde_derive::Deserialize;
 use std::sync::Arc;
+use std::time::Duration;
 
 pub struct CollectionsGet {
     state: Arc<State>,
@@ -45,57 +44,115 @@ impl nu_engine::WholeStreamCommand for CollectionsGet {
         "Fetches collections through the HTTP API"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        collections_get(self.state.clone(), args).await
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        collections_get(self.state.clone(), args)
     }
 }
 
-async fn collections_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
+fn collections_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once()?;
 
-    let bucket = bucket_name_from_args(&args, state.active_cluster())?;
-    let scope = args.get("scope").map(|c| c.as_string().ok()).flatten();
+    let bucket = match args
+        .call_info
+        .args
+        .get("bucket")
+        .map(|bucket| bucket.as_string().ok())
+        .flatten()
+    {
+        Some(v) => v,
+        None => match state.active_cluster().active_bucket() {
+            Some(s) => s,
+            None => {
+                return Err(ShellError::untagged_runtime_error(format!(
+                    "Could not auto-select a bucket - please use --bucket instead"
+                )));
+            }
+        },
+    };
+
+    let scope = args
+        .call_info
+        .args
+        .get("scope")
+        .map(|c| c.as_string().ok())
+        .flatten();
 
     debug!(
         "Running collections get for bucket {:?}, scope {:?}",
         &bucket, &scope
     );
 
-    let mgr = state.active_cluster().bucket(bucket.as_str()).collections();
-    let result = mgr.get_all_scopes(GetAllScopesOptions::default()).await;
+    let active_cluster = state.active_cluster();
+    let response = active_cluster
+        .cluster()
+        .management_request(ManagementRequest::GetCollections { bucket })?;
 
-    match result {
-        Ok(res) => {
-            let mut results: Vec<Value> = vec![];
-            for scope_res in res {
-                if let Some(scope_name) = &scope {
-                    if scope_name != scope_res.name() {
-                        continue;
-                    }
-                }
-                let collections = scope_res.collections();
-                if collections.len() == 0 {
-                    let mut collected = TaggedDictBuilder::new(Tag::default());
-                    collected.insert_value("scope", scope_res.name());
-                    collected.insert_value("collection", "");
-                    collected.insert_value("max_expiry", UntaggedValue::duration(0));
-                    results.push(collected.into_value());
-                    continue;
-                }
-
-                for collection in collections {
-                    let mut collected = TaggedDictBuilder::new(Tag::default());
-                    collected.insert_value("scope", scope_res.name());
-                    collected.insert_value("collection", collection.name());
-                    collected.insert_value(
-                        "max_expiry",
-                        UntaggedValue::duration(BigInt::from(collection.max_expiry().as_nanos())),
-                    );
-                    results.push(collected.into_value());
-                }
+    let manifest: Manifest = match response.status() {
+        200 => match serde_json::from_str(response.content()) {
+            Ok(m) => m,
+            Err(e) => {
+                return Err(ShellError::untagged_runtime_error(format!(
+                    "Failed to decode response body {}",
+                    e,
+                )));
             }
-            Ok(OutputStream::from(results))
+        },
+        _ => {
+            return Err(ShellError::untagged_runtime_error(format!(
+                "Request failed {}",
+                response.content(),
+            )));
         }
-        Err(e) => Err(ShellError::untagged_runtime_error(format!("{}", e))),
+    };
+
+    let mut results: Vec<Value> = vec![];
+    for scope_res in manifest.scopes {
+        if let Some(scope_name) = &scope {
+            if scope_name != &scope_res.name {
+                continue;
+            }
+        }
+        let collections = scope_res.collections;
+        if collections.len() == 0 {
+            let mut collected = TaggedDictBuilder::new(Tag::default());
+            collected.insert_value("scope", scope_res.name.clone());
+            collected.insert_value("collection", "");
+            collected.insert_value("max_expiry", UntaggedValue::duration(0));
+            results.push(collected.into_value());
+            continue;
+        }
+
+        for collection in collections {
+            let mut collected = TaggedDictBuilder::new(Tag::default());
+            collected.insert_value("scope", scope_res.name.clone());
+            collected.insert_value("collection", collection.name);
+            collected.insert_value(
+                "max_expiry",
+                UntaggedValue::duration(Duration::from_secs(collection.max_expiry).as_nanos()),
+            );
+            results.push(collected.into_value());
+        }
     }
+    Ok(OutputStream::from(results))
+}
+
+#[derive(Debug, Deserialize)]
+struct ManifestCollection {
+    uid: String,
+    name: String,
+    #[serde(rename = "maxTTL")]
+    max_expiry: u64,
+}
+
+#[derive(Debug, Deserialize)]
+struct ManifestScope {
+    uid: String,
+    name: String,
+    collections: Vec<ManifestCollection>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Manifest {
+    uid: String,
+    scopes: Vec<ManifestScope>,
 }

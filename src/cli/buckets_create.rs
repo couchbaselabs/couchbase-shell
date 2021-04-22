@@ -1,8 +1,7 @@
 use crate::cli::buckets_builder::{BucketSettingsBuilder, BucketType, DurabilityLevel};
-use crate::client::{ManagementRequest, QueryRequest};
+use crate::client::ManagementRequest;
 use crate::state::State;
 use async_trait::async_trait;
-use futures::executor::block_on;
 use log::debug;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;

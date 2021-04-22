@@ -9,6 +9,7 @@ use isahc::{config::SslOption, prelude::*};
 use nu_errors::ShellError;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::time::Duration;
 
 pub struct Client {
     seeds: Vec<String>,
@@ -235,14 +236,37 @@ pub enum HttpVerb {
 }
 
 pub enum ManagementRequest {
-    BucketStats { name: String },
-    CreateBucket { payload: String },
-    DropBucket { name: String },
-    FlushBucket { name: String },
+    BucketStats {
+        name: String,
+    },
+    CreateBucket {
+        payload: String,
+    },
+    CreateCollection {
+        scope: String,
+        bucket: String,
+        payload: String,
+    },
+    DropBucket {
+        name: String,
+    },
+    FlushBucket {
+        name: String,
+    },
     GetBuckets,
-    GetBucket { name: String },
-    LoadSampleBucket { name: String },
-    UpdateBucket { name: String, payload: String },
+    GetBucket {
+        name: String,
+    },
+    GetCollections {
+        bucket: String,
+    },
+    LoadSampleBucket {
+        name: String,
+    },
+    UpdateBucket {
+        name: String,
+        payload: String,
+    },
     IndexStatus,
     SettingsAutoFailover,
     Whoami,
@@ -266,6 +290,11 @@ impl ManagementRequest {
             Self::UpdateBucket { name, .. } => {
                 format!("/pools/default/buckets/{}", name)
             }
+            Self::CreateCollection { scope, bucket, .. } => format!(
+                "/pools/default/buckets/{}/scopes/{}/collections",
+                bucket, scope
+            ),
+            Self::GetCollections { bucket } => format!("/pools/default/buckets/{}/scopes", bucket),
         }
     }
 
@@ -282,6 +311,8 @@ impl ManagementRequest {
             Self::FlushBucket { .. } => HttpVerb::Post,
             Self::LoadSampleBucket { .. } => HttpVerb::Post,
             Self::UpdateBucket { .. } => HttpVerb::Post,
+            Self::CreateCollection { .. } => HttpVerb::Post,
+            Self::GetCollections { .. } => HttpVerb::Get,
         }
     }
 
@@ -290,6 +321,7 @@ impl ManagementRequest {
             Self::CreateBucket { payload } => Some(payload.as_bytes().into()),
             Self::LoadSampleBucket { name } => Some(name.as_bytes().into()),
             Self::UpdateBucket { payload, .. } => Some(payload.as_bytes().into()),
+            Self::CreateCollection { payload, .. } => Some(payload.as_bytes().into()),
             _ => None,
         }
     }
@@ -297,6 +329,16 @@ impl ManagementRequest {
     pub fn headers(&self) -> HashMap<&str, &str> {
         match self {
             Self::CreateBucket { .. } => {
+                let mut h = HashMap::new();
+                h.insert("Content-Type", "application/x-www-form-urlencoded");
+                h
+            }
+            Self::UpdateBucket { .. } => {
+                let mut h = HashMap::new();
+                h.insert("Content-Type", "application/x-www-form-urlencoded");
+                h
+            }
+            Self::CreateCollection { .. } => {
                 let mut h = HashMap::new();
                 h.insert("Content-Type", "application/x-www-form-urlencoded");
                 h
