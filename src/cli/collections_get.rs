@@ -137,22 +137,22 @@ fn collections_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream,
 }
 
 #[derive(Debug, Deserialize)]
-struct ManifestCollection {
-    uid: String,
-    name: String,
+pub struct ManifestCollection {
+    pub uid: String,
+    pub name: String,
     #[serde(rename = "maxTTL")]
-    max_expiry: u64,
+    pub max_expiry: u64,
 }
 
 #[derive(Debug, Deserialize)]
-struct ManifestScope {
-    uid: String,
-    name: String,
-    collections: Vec<ManifestCollection>,
+pub struct ManifestScope {
+    pub uid: String,
+    pub name: String,
+    pub collections: Vec<ManifestCollection>,
 }
 
 #[derive(Debug, Deserialize)]
-struct Manifest {
-    uid: String,
-    scopes: Vec<ManifestScope>,
+pub struct Manifest {
+    pub uid: String,
+    pub scopes: Vec<ManifestScope>,
 }

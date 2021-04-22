@@ -1,9 +1,9 @@
 use async_trait::async_trait;
-use nu_cli::OutputStream;
-use nu_engine::CommandArgs;
+use nu_engine::{get_full_help, CommandArgs};
 use nu_errors::ShellError;
 use nu_protocol::{ReturnSuccess, Signature, UntaggedValue};
 use nu_source::Tag;
+use nu_stream::ActionStream;
 
 pub struct Scopes;
 
@@ -21,10 +21,9 @@ impl nu_engine::WholeStreamCommand for Scopes {
         "Perform scope management operations"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        Ok(OutputStream::one(ReturnSuccess::value(
-            UntaggedValue::string(nu_engine::get_help(&Scopes, &args.scope))
-                .into_value(Tag::unknown()),
+    fn run_with_actions(&self, args: CommandArgs) -> Result<ActionStream, ShellError> {
+        Ok(ActionStream::one(ReturnSuccess::value(
+            UntaggedValue::string(get_full_help(&Scopes, &args.scope)).into_value(Tag::unknown()),
         )))
     }
 }

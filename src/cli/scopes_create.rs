@@ -1,15 +1,11 @@
-//! The `collections get` command fetches all of the collection names from the server.
-
+use crate::client::ManagementRequest;
 use crate::state::State;
-use couchbase::CreateScopeOptions;
-
-use crate::cli::util::bucket_name_from_args;
 use async_trait::async_trait;
 use log::debug;
-use nu_cli::OutputStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
+use nu_stream::OutputStream;
 use std::sync::Arc;
 
 pub struct ScopesCreate {
@@ -43,15 +39,15 @@ impl nu_engine::WholeStreamCommand for ScopesCreate {
         "Creates scopes through the HTTP API"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        scopes_create(self.state.clone(), args).await
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        scopes_create(self.state.clone(), args)
     }
 }
 
-async fn scopes_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
+fn scopes_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once()?;
 
-    let scope = match args.get("name") {
+    let scope = match args.call_info.args.get("name") {
         Some(v) => match v.as_string() {
             Ok(uname) => uname,
             Err(e) => return Err(e),
@@ -59,18 +55,43 @@ async fn scopes_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStr
         None => return Err(ShellError::unexpected("name is required")),
     };
 
-    let bucket = bucket_name_from_args(&args, state.active_cluster())?;
+    let bucket = match args
+        .call_info
+        .args
+        .get("bucket")
+        .map(|bucket| bucket.as_string().ok())
+        .flatten()
+    {
+        Some(v) => v,
+        None => match state.active_cluster().active_bucket() {
+            Some(s) => s,
+            None => {
+                return Err(ShellError::untagged_runtime_error(format!(
+                    "Could not auto-select a bucket - please use --bucket instead"
+                )));
+            }
+        },
+    };
 
     debug!(
         "Running scope create for {:?} on bucket {:?}",
         &scope, &bucket
     );
 
-    let mgr = state.active_cluster().bucket(bucket.as_str()).collections();
-    let result = mgr.create_scope(scope, CreateScopeOptions::default()).await;
+    let mut form = vec![("name", scope)];
+    let payload = serde_urlencoded::to_string(&form).unwrap();
 
-    match result {
-        Ok(_) => Ok(OutputStream::empty()),
-        Err(e) => Err(ShellError::untagged_runtime_error(format!("{}", e))),
+    let active_cluster = state.active_cluster();
+    let response = active_cluster
+        .cluster()
+        .management_request(ManagementRequest::CreateScope { payload, bucket })?;
+
+    match response.status() {
+        200 => Ok(OutputStream::empty()),
+        202 => Ok(OutputStream::empty()),
+        _ => Err(ShellError::untagged_runtime_error(format!(
+            "{}",
+            response.content()
+        ))),
     }
 }

@@ -1,16 +1,13 @@
-//! The `collections get` command fetches all of the collection names from the server.
-
+use crate::cli::collections_get::Manifest;
+use crate::client::ManagementRequest;
 use crate::state::State;
-use couchbase::GetAllScopesOptions;
-
-use crate::cli::util::bucket_name_from_args;
 use async_trait::async_trait;
 use log::debug;
-use nu_cli::OutputStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, Value};
 use nu_source::Tag;
+use nu_stream::OutputStream;
 use std::sync::Arc;
 
 pub struct ScopesGet {
@@ -42,31 +39,62 @@ impl nu_engine::WholeStreamCommand for ScopesGet {
         "Fetches scopes through the HTTP API"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        scopes_get(self.state.clone(), args).await
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        scopes_get(self.state.clone(), args)
     }
 }
 
-async fn scopes_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
+fn scopes_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once()?;
 
-    let bucket = bucket_name_from_args(&args, state.active_cluster())?;
+    let bucket = match args
+        .call_info
+        .args
+        .get("bucket")
+        .map(|bucket| bucket.as_string().ok())
+        .flatten()
+    {
+        Some(v) => v,
+        None => match state.active_cluster().active_bucket() {
+            Some(s) => s,
+            None => {
+                return Err(ShellError::untagged_runtime_error(format!(
+                    "Could not auto-select a bucket - please use --bucket instead"
+                )));
+            }
+        },
+    };
 
     debug!("Running scopes get for bucket {:?}", &bucket);
 
-    let mgr = state.active_cluster().bucket(bucket.as_str()).collections();
-    let result = mgr.get_all_scopes(GetAllScopesOptions::default()).await;
+    let active_cluster = state.active_cluster();
+    let response = active_cluster
+        .cluster()
+        .management_request(ManagementRequest::GetScopes { bucket })?;
 
-    match result {
-        Ok(res) => {
-            let mut results: Vec<Value> = vec![];
-            for scope_res in res {
-                let mut collected = TaggedDictBuilder::new(Tag::default());
-                collected.insert_value("scope", scope_res.name());
-                results.push(collected.into_value());
+    let manifest: Manifest = match response.status() {
+        200 => match serde_json::from_str(response.content()) {
+            Ok(m) => m,
+            Err(e) => {
+                return Err(ShellError::untagged_runtime_error(format!(
+                    "Failed to decode response body {}",
+                    e,
+                )));
             }
-            Ok(OutputStream::from(results))
+        },
+        _ => {
+            return Err(ShellError::untagged_runtime_error(format!(
+                "Request failed {}",
+                response.content(),
+            )));
         }
-        Err(e) => Err(ShellError::untagged_runtime_error(format!("{}", e))),
+    };
+
+    let mut results: Vec<Value> = vec![];
+    for scope in manifest.scopes {
+        let mut collected = TaggedDictBuilder::new(Tag::default());
+        collected.insert_value("scope", scope.name);
+        results.push(collected.into_value());
     }
+    Ok(OutputStream::from(results))
 }

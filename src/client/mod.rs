@@ -282,6 +282,10 @@ pub enum ManagementRequest {
         bucket: String,
         payload: String,
     },
+    CreateScope {
+        bucket: String,
+        payload: String,
+    },
     DropBucket {
         name: String,
     },
@@ -298,6 +302,9 @@ pub enum ManagementRequest {
     GetNodes,
     GetRoles {
         permission: Option<String>,
+    },
+    GetScopes {
+        bucket: String,
     },
     GetUser {
         username: String,
@@ -350,6 +357,10 @@ impl ManagementRequest {
                 None => "/settings/rbac/roles".into(),
             },
             Self::UpsertUser { username, .. } => format!("/settings/rbac/users/local/{}", username),
+            Self::CreateScope { bucket, .. } => {
+                format!("/pools/default/buckets/{}/scopes/", bucket)
+            }
+            Self::GetScopes { bucket } => format!("/pools/default/buckets/{}/scopes", bucket),
         }
     }
 
@@ -373,6 +384,8 @@ impl ManagementRequest {
             Self::GetRoles { .. } => HttpVerb::Get,
             Self::UpsertUser { .. } => HttpVerb::Put,
             Self::GetNodes => HttpVerb::Get,
+            Self::CreateScope { .. } => HttpVerb::Post,
+            Self::GetScopes { .. } => HttpVerb::Get,
         }
     }
 
@@ -383,6 +396,7 @@ impl ManagementRequest {
             Self::UpdateBucket { payload, .. } => Some(payload.as_bytes().into()),
             Self::CreateCollection { payload, .. } => Some(payload.as_bytes().into()),
             Self::UpsertUser { payload, .. } => Some(payload.as_bytes().into()),
+            Self::CreateScope { payload, .. } => Some(payload.as_bytes().into()),
             _ => None,
         }
     }
