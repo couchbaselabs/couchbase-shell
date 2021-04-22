@@ -1,9 +1,9 @@
 mod common;
-use common::playground;
+//use common::playground;
 use futures::executor::block_on;
 use std::collections::HashMap;
 
-#[test]
+/*#[test]
 pub fn get_a_document() {
     playground::CBPlayground::setup("get_a_document", |dirs, sandbox| {
         let mut content = HashMap::new();
@@ -42,3 +42,4 @@ pub fn get_a_document_not_found() {
         assert!(out.out.contains("Document with the given ID not found"));
     });
 }
+*/

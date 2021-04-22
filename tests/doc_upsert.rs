@@ -1,7 +1,7 @@
 mod common;
-use common::playground;
+//use common::playground;
 
-#[test]
+/*#[test]
 pub fn upserts_a_document() {
     playground::CBPlayground::setup("upsert_a_document", |dirs, _sandbox| {
         let out =
@@ -17,3 +17,4 @@ pub fn upserts_a_document() {
         assert_eq!(serde_json::Value::Array(vec!()), json["failures"]);
     });
 }
+*/

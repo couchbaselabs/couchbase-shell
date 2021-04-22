@@ -1,4 +1,3 @@
-use couchbase::{Cluster, CouchbaseResult, MutationResult};
 use lazy_static::lazy_static;
 use nu_test_support::playground::*;
 use serde::Serialize;
