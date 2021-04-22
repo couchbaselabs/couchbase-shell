@@ -1,16 +1,14 @@
-use crate::cli::convert_cb_error;
 use crate::cli::util::cluster_identifiers_from;
 use crate::state::State;
 use async_trait::async_trait;
-use couchbase::{GenericManagementRequest, Request};
-use futures::channel::oneshot;
-use nu_cli::OutputStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
+use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder};
 
+use crate::cli::user_builder::RoleAndDescription;
+use crate::client::ManagementRequest;
 use nu_source::Tag;
-use serde::Deserialize;
+use nu_stream::OutputStream;
 use std::sync::Arc;
 
 pub struct UsersRoles {
@@ -49,92 +47,73 @@ impl nu_engine::WholeStreamCommand for UsersRoles {
         "Shows all roles available on the cluster"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        run_async(self.state.clone(), args).await
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        run_async(self.state.clone(), args)
     }
 }
 
-async fn run_async(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
+fn run_async(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once()?;
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
 
     let permission = args
+        .call_info
+        .args
         .get("permission")
         .map(|id| id.as_string().ok())
         .flatten();
 
     let mut entries = vec![];
     for identifier in cluster_identifiers {
-        let core = match state.clusters().get(&identifier) {
-            Some(c) => c.cluster().core(),
+        let active_cluster = match state.clusters().get(&identifier) {
+            Some(c) => c,
             None => {
                 return Err(ShellError::untagged_runtime_error("Cluster not found"));
             }
         };
 
-        let (sender, receiver) = oneshot::channel();
+        let response =
+            active_cluster
+                .cluster()
+                .management_request(ManagementRequest::GetRoles {
+                    permission: permission.clone(),
+                })?;
 
-        let path = if let Some(ref p) = permission {
-            format!("/settings/rbac/roles?permission={}", p)
-        } else {
-            "/settings/rbac/roles".into()
-        };
-
-        let request = GenericManagementRequest::new(sender, path, "get".into(), None);
-        core.send(Request::GenericManagementRequest(request));
-
-        let input = match receiver.await {
-            Ok(i) => i,
-            Err(e) => {
+        let roles: Vec<RoleAndDescription> = match response.status() {
+            200 => match serde_json::from_str(response.content()) {
+                Ok(m) => m,
+                Err(e) => {
+                    return Err(ShellError::untagged_runtime_error(format!(
+                        "Failed to decode response body {}",
+                        e,
+                    )));
+                }
+            },
+            _ => {
                 return Err(ShellError::untagged_runtime_error(format!(
-                    "Error streaming result {}",
-                    e
-                )))
-            }
-        };
-        let result = convert_cb_error(input)?;
-
-        if result.payload().is_none() {
-            return Err(ShellError::untagged_runtime_error(
-                "Empty response from cluster even though got 200 ok",
-            ));
-        }
-
-        let payload = match result.payload() {
-            Some(p) => p,
-            None => {
-                return Err(ShellError::untagged_runtime_error(
-                    "Empty response from cluster even though got 200 ok",
-                ));
+                    "Request failed {}",
+                    response.content(),
+                )));
             }
         };
 
-        let data = serde_json::from_slice::<Vec<Role>>(payload)?;
-
-        for role in data {
+        for role_and_desc in roles {
             let mut collected = TaggedDictBuilder::new(Tag::default());
 
             collected.insert_value("cluster", identifier.clone());
 
-            collected.insert_value("name", role.name);
-            collected.insert_value("role", role.role);
-            collected.insert_value("ce", UntaggedValue::boolean(role.ce.unwrap_or_default()));
-            collected.insert_value("bucket", role.bucket_name.unwrap_or_default());
-            collected.insert_value("description", role.desc);
+            let role = role_and_desc.role();
+            collected.insert_value("name", role_and_desc.display_name());
+            collected.insert_value("role", role.name());
+            collected.insert_value("bucket", role.bucket().unwrap_or_default());
+            collected.insert_value("scope", role.scope().unwrap_or_default());
+            collected.insert_value("collection", role.collection().unwrap_or_default());
+            collected.insert_value("description", role_and_desc.description());
 
             entries.push(collected.into_value());
         }
     }
 
     Ok(entries.into())
-}
-
-#[derive(Debug, Deserialize)]
-struct Role {
-    name: String,
-    role: String,
-    desc: String,
-    ce: Option<bool>,
-    bucket_name: Option<String>,
 }

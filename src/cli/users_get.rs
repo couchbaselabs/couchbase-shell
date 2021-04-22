@@ -1,12 +1,14 @@
+use crate::cli::user_builder::UserAndMetadata;
+use crate::client::ManagementRequest;
 use crate::state::State;
 use async_trait::async_trait;
-use couchbase::GetUserOptions;
 use log::debug;
-use nu_cli::{OutputStream, TaggedDictBuilder};
+use nu_cli::TaggedDictBuilder;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
+use nu_stream::OutputStream;
 use std::sync::Arc;
 
 pub struct UsersGet {
@@ -37,45 +39,60 @@ impl nu_engine::WholeStreamCommand for UsersGet {
         "Fetches a user"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        users_get(self.state.clone(), args).await
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        users_get(self.state.clone(), args)
     }
 }
 
-async fn users_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
+fn users_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once()?;
     let username = args.nth(0).expect("need username").as_string()?;
 
     debug!("Running users get {}", username);
 
-    let mgr = state.active_cluster().cluster().users();
-    let result = mgr.get_user(username, GetUserOptions::default()).await;
+    let active_cluster = state.active_cluster();
+    let response = active_cluster
+        .cluster()
+        .management_request(ManagementRequest::GetUser { username })?;
 
-    match result {
-        Ok(res) => {
-            let user = res.user();
-            let roles: Vec<String> = user
-                .roles()
-                .into_iter()
-                .map(|r| match r.bucket() {
-                    Some(b) => format!("{}[{}]", r.name(), b),
-                    None => format!("{}", r.name()),
-                })
-                .collect();
-
-            let mut collected = TaggedDictBuilder::new(Tag::default());
-            collected.insert_value("username", user.username());
-            collected.insert_value("display name", user.display_name().unwrap_or_default());
-            if let Some(groups) = user.groups() {
-                collected.insert_value("groups", groups.join(","))
+    let user_and_meta: UserAndMetadata = match response.status() {
+        200 => match serde_json::from_str(response.content()) {
+            Ok(m) => m,
+            Err(e) => {
+                return Err(ShellError::untagged_runtime_error(format!(
+                    "Failed to decode response body {}",
+                    e,
+                )));
             }
-            collected.insert_value("roles", roles.join(","));
-            if let Some(changed) = res.password_changed() {
-                collected.insert_value("password_last_changed", changed)
-            }
-
-            Ok(OutputStream::from(vec![collected.into_value()]))
+        },
+        _ => {
+            return Err(ShellError::untagged_runtime_error(format!(
+                "Request failed {}",
+                response.content(),
+            )));
         }
-        Err(e) => Err(ShellError::untagged_runtime_error(format!("{}", e))),
+    };
+
+    let user = user_and_meta.user();
+    let roles: Vec<String> = user
+        .roles()
+        .into_iter()
+        .map(|r| match r.bucket() {
+            Some(b) => format!("{}[{}]", r.name(), b),
+            None => format!("{}", r.name()),
+        })
+        .collect();
+
+    let mut collected = TaggedDictBuilder::new(Tag::default());
+    collected.insert_value("username", user.username());
+    collected.insert_value("display name", user.display_name().unwrap_or_default());
+    if let Some(groups) = user.groups() {
+        collected.insert_value("groups", groups.join(","))
     }
+    collected.insert_value("roles", roles.join(","));
+    if let Some(changed) = user_and_meta.password_changed() {
+        collected.insert_value("password_last_changed", changed)
+    }
+
+    Ok(OutputStream::from(vec![collected.into_value()]))
 }

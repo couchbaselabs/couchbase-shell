@@ -1,11 +1,11 @@
+use crate::client::ManagementRequest;
 use crate::state::State;
 use async_trait::async_trait;
-use couchbase::{Role, UpsertUserOptions, UserBuilder};
 use log::debug;
-use nu_cli::OutputStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
+use nu_stream::OutputStream;
 use std::sync::Arc;
 
 pub struct UsersUpsert {
@@ -62,83 +62,70 @@ impl nu_engine::WholeStreamCommand for UsersUpsert {
         "Upserts a user"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        users_upsert(self.state.clone(), args).await
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        users_upsert(self.state.clone(), args)
     }
 }
 
-async fn users_upsert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
-    let username = match args.get("username") {
+fn users_upsert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once()?;
+    let username = match args.call_info.args.get("username") {
         Some(v) => match v.as_string() {
             Ok(uname) => uname,
             Err(e) => return Err(e),
         },
         None => return Err(ShellError::unexpected("username is required")),
     };
-    let roles_string = match args.get("roles") {
+    let roles = match args.call_info.args.get("roles") {
         Some(v) => match v.as_string() {
             Ok(roles) => roles,
             Err(e) => return Err(e),
         },
-        None => return Err(ShellError::unexpected("username is required")),
+        None => return Err(ShellError::unexpected("roles is required")),
     };
-    let password = match args.get("password") {
+    let password = match args.call_info.args.get("password") {
         Some(v) => match v.as_string() {
             Ok(pwd) => Some(pwd),
             Err(e) => return Err(e),
         },
         None => None,
     };
-    let display_name = match args.get("display_name") {
+    let display_name = match args.call_info.args.get("display_name") {
         Some(v) => match v.as_string() {
             Ok(pwd) => Some(pwd),
             Err(e) => return Err(e),
         },
         None => None,
     };
-    let groups = match args.get("groups") {
+    let groups = match args.call_info.args.get("groups") {
         Some(v) => match v.as_string() {
             Ok(pwd) => Some(pwd),
             Err(e) => return Err(e),
         },
         None => None,
     };
-
-    let roles = roles_string
-        .split(",")
-        .collect::<Vec<&str>>()
-        .iter()
-        .map(|role| {
-            let role_sp = roles_string.split("[").collect::<Vec<&str>>();
-            if role_sp.len() > 1 {
-                Role::new(
-                    role_sp[0].to_string(),
-                    Some(role_sp[1].to_string().replace("]", "")),
-                )
-            } else {
-                Role::new(role.to_string(), None)
-            }
-        })
-        .collect();
 
     debug!("Running users upsert for user {}", &username);
 
-    let mgr = state.active_cluster().cluster().users();
-    let mut builder = UserBuilder::new(username, password, roles);
-    if let Some(dname) = display_name {
-        builder = builder.display_name(dname);
-    }
-    if let Some(g) = groups {
-        builder = builder.display_name(g);
-    }
+    let form = &[
+        ("name", display_name),
+        ("groups", groups),
+        ("roles", Some(roles)),
+        ("password", password),
+    ];
+    let payload = serde_urlencoded::to_string(form).unwrap();
 
-    let result = mgr
-        .upsert_user(builder.build(), UpsertUserOptions::default())
-        .await;
+    let response = state
+        .active_cluster()
+        .cluster()
+        .management_request(ManagementRequest::UpsertUser { username, payload })?;
 
-    match result {
-        Ok(_) => Ok(OutputStream::empty()),
-        Err(e) => Err(ShellError::untagged_runtime_error(format!("{}", e))),
+    match response.status() {
+        200 => Ok(OutputStream::empty()),
+        202 => Ok(OutputStream::empty()),
+        _ => Err(ShellError::untagged_runtime_error(format!(
+            "{}",
+            response.content()
+        ))),
     }
 }

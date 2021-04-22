@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::cli::User;
 use crate::config::ClusterTlsConfig;
 use isahc::{
     auth::{Authentication, Credentials},
@@ -9,7 +10,6 @@ use isahc::{config::SslOption, prelude::*};
 use nu_errors::ShellError;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::time::Duration;
 
 pub struct Client {
     seeds: Vec<String>,
@@ -161,6 +161,16 @@ impl Client {
         self.http_do(res_builder, payload, headers)
     }
 
+    fn http_put(
+        &self,
+        uri: &str,
+        payload: Option<Vec<u8>>,
+        headers: HashMap<&str, &str>,
+    ) -> Result<(String, u16), ClientError> {
+        let res_builder = isahc::Request::put(uri);
+        self.http_do(res_builder, payload, headers)
+    }
+
     pub fn management_request(
         &self,
         request: ManagementRequest,
@@ -174,6 +184,7 @@ impl Client {
                 HttpVerb::Get => self.http_get(&uri)?,
                 HttpVerb::Post => self.http_post(&uri, request.payload(), request.headers())?,
                 HttpVerb::Delete => self.http_delete(&uri)?,
+                HttpVerb::Put => self.http_put(&uri, request.payload(), request.headers())?,
             };
             return Ok(HttpResponse { content, status });
         }
@@ -230,9 +241,10 @@ impl Client {
 }
 
 pub enum HttpVerb {
+    Delete,
     Get,
     Post,
-    Delete,
+    Put,
 }
 
 pub enum ManagementRequest {
@@ -260,11 +272,22 @@ pub enum ManagementRequest {
     GetCollections {
         bucket: String,
     },
+    GetRoles {
+        permission: Option<String>,
+    },
+    GetUser {
+        username: String,
+    },
+    GetUsers,
     LoadSampleBucket {
         name: String,
     },
     UpdateBucket {
         name: String,
+        payload: String,
+    },
+    UpsertUser {
+        username: String,
         payload: String,
     },
     IndexStatus,
@@ -286,7 +309,7 @@ impl ManagementRequest {
             Self::FlushBucket { name } => {
                 format!("/pools/default/buckets/{}/controller/doFlush", name)
             }
-            Self::LoadSampleBucket { name } => "/sampleBuckets/install".into(),
+            Self::LoadSampleBucket { .. } => "/sampleBuckets/install".into(),
             Self::UpdateBucket { name, .. } => {
                 format!("/pools/default/buckets/{}", name)
             }
@@ -295,6 +318,13 @@ impl ManagementRequest {
                 bucket, scope
             ),
             Self::GetCollections { bucket } => format!("/pools/default/buckets/{}/scopes", bucket),
+            Self::GetUsers => "/settings/rbac/users/local".into(),
+            Self::GetUser { username } => format!("/settings/rbac/users/local/{}", username),
+            Self::GetRoles { permission } => match permission {
+                Some(p) => format!("/settings/rbac/roles?permission={}", p),
+                None => "/settings/rbac/roles".into(),
+            },
+            Self::UpsertUser { username, .. } => format!("/settings/rbac/users/local/{}", username),
         }
     }
 
@@ -313,6 +343,10 @@ impl ManagementRequest {
             Self::UpdateBucket { .. } => HttpVerb::Post,
             Self::CreateCollection { .. } => HttpVerb::Post,
             Self::GetCollections { .. } => HttpVerb::Get,
+            Self::GetUsers => HttpVerb::Get,
+            Self::GetUser { .. } => HttpVerb::Get,
+            Self::GetRoles { .. } => HttpVerb::Get,
+            Self::UpsertUser { .. } => HttpVerb::Put,
         }
     }
 
@@ -322,6 +356,7 @@ impl ManagementRequest {
             Self::LoadSampleBucket { name } => Some(name.as_bytes().into()),
             Self::UpdateBucket { payload, .. } => Some(payload.as_bytes().into()),
             Self::CreateCollection { payload, .. } => Some(payload.as_bytes().into()),
+            Self::UpsertUser { payload, .. } => Some(payload.as_bytes().into()),
             _ => None,
         }
     }
@@ -339,6 +374,11 @@ impl ManagementRequest {
                 h
             }
             Self::CreateCollection { .. } => {
+                let mut h = HashMap::new();
+                h.insert("Content-Type", "application/x-www-form-urlencoded");
+                h
+            }
+            Self::UpsertUser { .. } => {
                 let mut h = HashMap::new();
                 h.insert("Content-Type", "application/x-www-form-urlencoded");
                 h
