@@ -203,48 +203,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(Whoami::new(state.clone())),
         nu_engine::whole_stream_command(Version::new()),
         /*
-                nu_engine::whole_stream_command(Analytics::new(state.clone())),
-        nu_engine::whole_stream_command(AnalyticsIndexes::new(state.clone())),
-        nu_engine::whole_stream_command(AnalyticsDatasets::new(state.clone())),
-        nu_engine::whole_stream_command(AnalyticsDataverses::new(state.clone())),
-        // Performs analytics queries
-        // Performs kv get operations
         nu_engine::whole_stream_command(DocGet::new(state.clone())),
-        // Performs kv upsert operations
         nu_engine::whole_stream_command(DocUpsert::new(state.clone())),
-        // Performs kv insert operations
         nu_engine::whole_stream_command(DocInsert::new(state.clone())),
-        // Performs kv replace operations
         nu_engine::whole_stream_command(DocReplace::new(state.clone())),
         nu_engine::whole_stream_command(DocRemove::new(state.clone())),
         nu_engine::whole_stream_command(DataStats::new(state.clone())),
-        // Displays cluster manager node infos
-        nu_engine::whole_stream_command(Nodes::new(state.clone())),
-        // Displays cluster manager bucket infos
-        nu_engine::whole_stream_command(BucketsCreate::new(state.clone())),
-        nu_engine::whole_stream_command(BucketsUpdate::new(state.clone())),
-        nu_engine::whole_stream_command(BucketsDrop::new(state.clone())),
-        nu_engine::whole_stream_command(BucketsFlush::new(state.clone())),
-        nu_engine::whole_stream_command(BucketsSample::new(state.clone())),
-        // Performs n1ql queries
-        // Manages local cluster references
-        // Create fake data based on templates
-        // Displays indexes
-        // Allows to switch clusters, buckets and collections on the fly
         nu_engine::whole_stream_command(Doc {}),
         nu_engine::whole_stream_command(Data {}),
-        nu_engine::whole_stream_command(Users::new(state.clone())),
-        nu_engine::whole_stream_command(UsersGet::new(state.clone())),
-        nu_engine::whole_stream_command(UsersUpsert::new(state.clone())),
-        nu_engine::whole_stream_command(UsersRoles::new(state.clone())),
-        nu_engine::whole_stream_command(Search::new(state.clone())),
         nu_engine::whole_stream_command(Ping::new(state.clone())),
-        nu_engine::whole_stream_command(Collections {}),
-        nu_engine::whole_stream_command(CollectionsGet::new(state.clone())),
-        nu_engine::whole_stream_command(CollectionsCreate::new(state.clone())),
-        nu_engine::whole_stream_command(Scopes {}),
-        nu_engine::whole_stream_command(ScopesGet::new(state.clone())),
-        nu_engine::whole_stream_command(ScopesCreate::new(state.clone())),
         nu_engine::whole_stream_command(SDKLog {}),
         nu_engine::whole_stream_command(Help {}),
         nu_engine::whole_stream_command(Tutorial::new(state.clone())),
