@@ -180,6 +180,10 @@ impl RemoteCluster {
         self.username.as_str()
     }
 
+    pub fn password(&self) -> &str {
+        self.password.as_str()
+    }
+
     pub fn tls_config(&self) -> &ClusterTlsConfig {
         &self.tls_config
     }
