@@ -234,7 +234,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let config = r##"
     skip_welcome_message = true
-    prompt = "build-string '👤 ' $(ansi ub) $(use | get username) $(ansi reset) ' 🏠 ' $(ansi yb) $(use | get cluster) $(ansi reset) ' in 🗄 ' $(ansi wb) $(use | get bucket) $(ansi reset) '\n' '> '"
+    prompt = "build-string '👤 ' (ansi ub) (use | get username) (ansi reset) ' 🏠 ' (ansi yb) (use | get cluster) (ansi reset) ' in 🗄 ' (ansi wb) (use | get bucket) (ansi reset) '\n' '> '"
     "##;
     std::fs::write(&f, config.as_bytes()).unwrap();
 

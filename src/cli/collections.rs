@@ -23,7 +23,7 @@ impl nu_engine::WholeStreamCommand for Collections {
 
     fn run_with_actions(&self, args: CommandArgs) -> Result<ActionStream, ShellError> {
         Ok(ActionStream::one(ReturnSuccess::value(
-            UntaggedValue::string(get_full_help(&Collections, &args.scope))
+            UntaggedValue::string(get_full_help(&Collections, args.scope()))
                 .into_value(Tag::unknown()),
         )))
     }

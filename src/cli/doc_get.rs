@@ -9,12 +9,10 @@ use log::debug;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{
-    MaybeOwned, Primitive, ReturnSuccess, ReturnValue, Signature, SyntaxShape, TaggedDictBuilder,
-    UntaggedValue, Value,
+    MaybeOwned, Primitive, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Value,
 };
-use nu_source::{PrettyDebug, Tag};
+use nu_source::Tag;
 use nu_stream::OutputStream;
-use std::collections::HashMap;
 use std::sync::Arc;
 
 pub struct DocGet {
@@ -72,8 +70,8 @@ impl nu_engine::WholeStreamCommand for DocGet {
 }
 
 fn run_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let ctrl_c = args.ctrl_c();
     let mut args = args.evaluate_once()?;
-    let ctrl_c = args.ctrl_c.clone();
 
     let id_column = args
         .call_info

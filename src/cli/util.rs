@@ -1,6 +1,6 @@
 use crate::state::State;
 use nu_cli::ToPrimitive;
-use nu_engine::EvaluatedWholeStreamCommandArgs;
+use nu_engine::EvaluatedCommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Primitive, TaggedDictBuilder, UnspannedPathMember, UntaggedValue, Value};
 use nu_source::Tag;
@@ -178,7 +178,7 @@ fn json_list(input: &[Value]) -> Result<Vec<serde_json::Value>, ShellError> {
 
 pub fn cluster_identifiers_from(
     state: &Arc<State>,
-    args: &EvaluatedWholeStreamCommandArgs,
+    args: &EvaluatedCommandArgs,
     default_active: bool,
 ) -> Result<Vec<String>, ShellError> {
     let identifier_arg = match args

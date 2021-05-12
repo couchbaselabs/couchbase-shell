@@ -50,6 +50,7 @@ impl nu_engine::WholeStreamCommand for QueryIndexes {
 }
 
 fn indexes(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError> {
+    let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
     let active_cluster = match args.call_info.args.get("cluster") {
@@ -83,8 +84,6 @@ fn indexes(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellEr
     if fetch_defs {
         return index_definitions(active_cluster);
     }
-
-    let ctrl_c = args.ctrl_c.clone();
 
     let statement = "select keyspace_id as `bucket`, name, state, `using` as `type`, ifmissing(condition, null) as condition, ifmissing(is_primary, false) as `primary`, index_key from system:indexes";
 

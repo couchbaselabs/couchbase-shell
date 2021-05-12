@@ -23,7 +23,7 @@ impl nu_engine::WholeStreamCommand for Doc {
 
     fn run_with_actions(&self, args: CommandArgs) -> Result<ActionStream, ShellError> {
         Ok(ActionStream::one(ReturnSuccess::value(
-            UntaggedValue::string(get_full_help(&Doc, &args.scope)).into_value(Tag::unknown()),
+            UntaggedValue::string(get_full_help(&Doc, args.scope())).into_value(Tag::unknown()),
         )))
     }
 }
