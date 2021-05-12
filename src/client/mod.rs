@@ -1,14 +1,26 @@
+mod codec;
+mod kv;
+mod protocol;
+
 use std::collections::HashMap;
 
+use crate::client::kv::KvEndpoint;
+use crate::client::protocol::Status;
+use crate::client::ClientError::CollectionNotFound;
 use crate::config::ClusterTlsConfig;
+use crc::crc32;
 use isahc::{
     auth::{Authentication, Credentials},
     config::CaCertificate,
 };
 use isahc::{config::SslOption, prelude::*};
+use log::kv::Source;
 use nu_errors::ShellError;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::fmt;
+use std::ops::Deref;
+use tokio::runtime::Runtime;
 
 pub struct Client {
     seeds: Vec<String>,
@@ -20,7 +32,34 @@ pub struct Client {
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone, Serialize, Deserialize, Hash)]
 pub enum ClientError {
     ConfigurationLoadFailed,
+    CollectionManifestLoadFailed,
+    CollectionNotFound,
+    ScopeNotFound,
+    KeyNotFound,
+    KeyAlreadyExists,
+    AccessError,
+    AuthError,
     RequestFailed { reason: Option<String> },
+}
+
+impl fmt::Display for ClientError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let message = match self {
+            Self::ConfigurationLoadFailed => "failed to load config from cluster",
+            Self::CollectionManifestLoadFailed => "failed to load collection manifest",
+            Self::CollectionNotFound => "collection not found",
+            Self::ScopeNotFound => "scope not found",
+            Self::KeyNotFound => "key not found",
+            Self::KeyAlreadyExists => "key already exists",
+            Self::AccessError => "access error",
+            Self::AuthError => "authentication error",
+            Self::RequestFailed { reason } => {
+                let r = reason.as_ref().unwrap();
+                r.as_str()
+            }
+        };
+        write!(f, "{}", message)
+    }
 }
 
 impl From<ClientError> for ShellError {
@@ -94,6 +133,45 @@ impl Client {
             return Ok(config);
         }
         Err(ClientError::ConfigurationLoadFailed)
+    }
+
+    fn get_bucket_config(&self, bucket: String) -> Result<BucketConfig, ClientError> {
+        let path = format!("/pools/default/b/{}", bucket);
+        let port = if self.tls_config.enabled() {
+            18091
+        } else {
+            8091
+        };
+        for seed in &self.seeds {
+            let uri = format!("{}://{}:{}{}", self.http_prefix(), seed, port, &path);
+            let (content, status) = self.http_get(&uri)?;
+            if status != 200 {
+                continue;
+            }
+            let mut config: BucketConfig = serde_json::from_str(&content).unwrap();
+            config.set_loaded_from(seed.clone());
+            return Ok(config);
+        }
+        Err(ClientError::ConfigurationLoadFailed)
+    }
+
+    fn get_collection_manifest(&self, bucket: String) -> Result<CollectionManifest, ClientError> {
+        let path = format!("/pools/default/buckets/{}/scopes/", bucket);
+        let port = if self.tls_config.enabled() {
+            18091
+        } else {
+            8091
+        };
+        for seed in &self.seeds {
+            let uri = format!("{}://{}:{}{}", self.http_prefix(), seed, port, &path);
+            let (content, status) = self.http_get(&uri)?;
+            if status != 200 {
+                continue;
+            }
+            let manifest: CollectionManifest = serde_json::from_str(&content).unwrap();
+            return Ok(manifest);
+        }
+        Err(ClientError::CollectionManifestLoadFailed)
     }
 
     fn http_do(
@@ -260,6 +338,91 @@ impl Client {
         }
 
         Err(ClientError::RequestFailed { reason: None })
+    }
+
+    fn search_manifest(
+        &self,
+        scope: String,
+        collection: String,
+        manifest: CollectionManifest,
+    ) -> Result<u32, ClientError> {
+        for s in manifest.scopes {
+            if s.name == scope {
+                for c in s.collections {
+                    if c.name == collection {
+                        return Ok(c.uid.parse::<u32>().unwrap());
+                    }
+                }
+            }
+        }
+        return Err(CollectionNotFound);
+    }
+
+    pub fn key_value_request(
+        &self,
+        username: String,
+        password: String,
+        bucket: String,
+        scope: String,
+        collection: String,
+        request: KeyValueRequest,
+    ) -> Result<KvResponse, ClientError> {
+        let config = self.get_bucket_config(bucket.clone())?;
+        let mut cid: u32 = 0;
+        if (scope != "" && scope != "_default") || (collection != "" && collection != "_default") {
+            let manifest = match self.get_collection_manifest(bucket.clone()) {
+                Ok(m) => Some(m),
+                Err(e) => None,
+            };
+            if let Some(mani) = manifest {
+                cid = self.search_manifest(scope, collection, mani)?
+            }
+        }
+
+        let seeds = config.key_value_seeds(self.tls_config.enabled());
+        let num_partitions = config.vbucket_server_map.vbucket_map.len() as u32;
+
+        let key = match request {
+            KeyValueRequest::Get { key } => key,
+            _ => "".into(),
+        };
+        let sum = (crc32::checksum_ieee(key.as_bytes()) >> 16) & 0x7fff;
+        let partition = sum % num_partitions;
+        let node = config.vbucket_server_map.vbucket_map[partition as usize][0];
+
+        let seed = &seeds[node as usize];
+        let addr = seed.0.clone();
+        let port = seed.1.clone();
+
+        let rt = Runtime::new().unwrap();
+        let result = rt.block_on(async {
+            let mut ep = KvEndpoint::connect(addr, port, username, password, bucket).await;
+
+            ep.get(key, partition as u16, cid).await
+        });
+
+        match result {
+            Ok(mut r) => {
+                let content = if let Some(body) = r.body() {
+                    match serde_json::from_slice(body.as_ref()) {
+                        Ok(v) => Some(v),
+                        Err(e) => {
+                            return Err(ClientError::RequestFailed {
+                                reason: Some(e.to_string()),
+                            });
+                        }
+                    }
+                } else {
+                    None
+                };
+                Ok(KvResponse {
+                    status: r.status(),
+                    content,
+                    cas: r.cas(),
+                })
+            }
+            Err(e) => Err(e),
+        }
     }
 }
 
@@ -576,6 +739,27 @@ impl HttpResponse {
     }
 }
 
+#[derive(Debug)]
+pub struct KvResponse {
+    content: Option<serde_json::Value>,
+    status: Status,
+    cas: u64,
+}
+
+impl KvResponse {
+    pub fn content(&mut self) -> Option<serde_json::Value> {
+        self.content.take()
+    }
+
+    pub fn status(&self) -> Status {
+        self.status
+    }
+
+    pub fn cas(&self) -> u64 {
+        self.cas
+    }
+}
+
 #[derive(Deserialize, Debug)]
 struct ClusterConfig {
     rev: u64,
@@ -630,9 +814,106 @@ impl ClusterConfig {
 }
 
 #[derive(Deserialize, Debug)]
+struct CollectionManifestCollection {
+    uid: String,
+    name: String,
+    #[serde(alias = "maxTTL")]
+    max_ttl: Option<u32>,
+}
+
+#[derive(Deserialize, Debug)]
+struct CollectionManifestScope {
+    uid: String,
+    name: String,
+    collections: Vec<CollectionManifestCollection>,
+}
+
+#[derive(Deserialize, Debug)]
+struct CollectionManifest {
+    uid: String,
+    scopes: Vec<CollectionManifestScope>,
+}
+
+#[derive(Deserialize, Debug)]
+struct BucketConfig {
+    rev: u64,
+    #[serde(alias = "nodesExt")]
+    nodes_ext: Vec<NodeConfig>,
+    loaded_from: Option<String>,
+    #[serde(alias = "vBucketServerMap")]
+    vbucket_server_map: VBucketServerMap,
+}
+
+impl BucketConfig {
+    pub fn management_seeds(&self, tls: bool) -> Vec<(String, u32)> {
+        let key = if tls { "mgmtSSL" } else { "mgmt" };
+
+        self.seeds(key)
+    }
+
+    pub fn query_seeds(&self, tls: bool) -> Vec<(String, u32)> {
+        let key = if tls { "n1qlSSL" } else { "n1ql" };
+
+        self.seeds(key)
+    }
+
+    pub fn analytics_seeds(&self, tls: bool) -> Vec<(String, u32)> {
+        let key = if tls { "cbasSSL" } else { "cbas" };
+
+        self.seeds(key)
+    }
+
+    pub fn search_seeds(&self, tls: bool) -> Vec<(String, u32)> {
+        let key = if tls { "ftsSSL" } else { "fts" };
+
+        self.seeds(key)
+    }
+
+    pub fn key_value_seeds(&self, tls: bool) -> Vec<(String, u32)> {
+        let key = if tls { "kvSSL" } else { "kv" };
+
+        self.seeds(key)
+    }
+
+    pub fn set_loaded_from(&mut self, loaded_from: String) {
+        self.loaded_from = Some(loaded_from);
+    }
+
+    fn seeds(&self, key: &str) -> Vec<(String, u32)> {
+        self.nodes_ext
+            .iter()
+            .filter(|node| node.services.contains_key(key))
+            .map(|node| {
+                let hostname = if node.hostname.is_some() {
+                    node.hostname.as_ref().unwrap().clone()
+                } else {
+                    self.loaded_from.as_ref().unwrap().clone()
+                };
+                (hostname, node.services.get(key).unwrap().clone())
+            })
+            .collect()
+    }
+}
+
+#[derive(Deserialize, Debug)]
 struct NodeConfig {
     services: HashMap<String, u32>,
     #[serde(alias = "thisNode")]
     this_node: Option<bool>,
     hostname: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
+struct VBucketServerMap {
+    #[serde(alias = "numReplicas")]
+    num_replicas: u32,
+    #[serde(alias = "serverList")]
+    server_list: Vec<String>,
+    #[serde(alias = "vBucketMap")]
+    vbucket_map: Vec<Vec<i32>>,
+}
+
+pub enum KeyValueRequest {
+    Get { key: String },
+    Set { key: String, value: Option<Vec<u8>> },
 }

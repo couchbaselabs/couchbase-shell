@@ -182,6 +182,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(Collections {}),
         nu_engine::whole_stream_command(CollectionsCreate::new(state.clone())),
         nu_engine::whole_stream_command(CollectionsGet::new(state.clone())),
+        nu_engine::whole_stream_command(Doc {}),
+        nu_engine::whole_stream_command(DocGet::new(state.clone())),
         nu_engine::whole_stream_command(FakeData::new(state.clone())),
         nu_engine::whole_stream_command(Nodes::new(state.clone())),
         nu_engine::whole_stream_command(Query::new(state.clone())),
