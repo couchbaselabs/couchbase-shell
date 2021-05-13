@@ -3,6 +3,7 @@ use crate::client::protocol::{request, KvRequest, KvResponse, Status};
 use crate::client::{protocol, ClientError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use futures::{SinkExt, StreamExt};
+use log::warn;
 use serde_derive::Deserialize;
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
@@ -20,6 +21,7 @@ pub struct KvEndpoint {
     opaque: AtomicU32,
     in_flight: Arc<Mutex<HashMap<u32, oneshot::Sender<KvResponse>>>>,
     collections_enabled: bool,
+    error_map: Option<ErrorMap>,
 }
 
 impl KvEndpoint {
@@ -29,7 +31,7 @@ impl KvEndpoint {
         username: String,
         password: String,
         bucket: String,
-    ) -> KvEndpoint {
+    ) -> Result<KvEndpoint, ClientError> {
         let remote_addr: SocketAddr = format!("{}:{}", hostname, port).parse().unwrap();
 
         let socket = TcpStream::connect(remote_addr).await.unwrap();
@@ -44,6 +46,7 @@ impl KvEndpoint {
             in_flight: Arc::clone(&in_flight),
             tx,
             collections_enabled: false,
+            error_map: None,
         };
 
         let (r, w) = socket.into_split();
@@ -61,9 +64,14 @@ impl KvEndpoint {
                             let t = map.remove(&response.opaque());
 
                             if let Some(sender) = t {
-                                sender.send(response).unwrap();
+                                match sender.send(response) {
+                                    Ok(_) => {}
+                                    Err(e) => {
+                                        warn!("Could not send kv response")
+                                    }
+                                };
                             } else {
-                                dbg!("it went wrong!");
+                                warn!("No entry in request map for {}", &response.opaque());
                             }
                         }
                         Err(_e) => {
@@ -78,22 +86,90 @@ impl KvEndpoint {
         tokio::spawn(async move {
             loop {
                 if let Some(packet) = rx.recv().await {
-                    output.send(packet).await.unwrap();
+                    match output.send(packet).await {
+                        Ok(_) => {}
+                        Err(_e) => {
+                            warn!("Could not send kv request");
+                        }
+                    };
                 } else {
                     return;
                 }
             }
         });
 
-        let hello_rcvr = ep.send_hello().await.unwrap();
-        let err_map_rcvr = ep.send_error_map().await.unwrap();
-        let auth_rcvr = ep.send_auth(username, password).await.unwrap();
-        let bucket_rcvr = ep.send_select_bucket(bucket).await.unwrap();
+        let hello_rcvr = match ep.send_hello().await {
+            Ok(rcvr) => rcvr,
+            Err(e) => {
+                return Err(e);
+            }
+        };
+        let err_map_rcvr = match ep.send_error_map().await {
+            Ok(rcvr) => Some(rcvr),
+            Err(e) => None,
+        };
+        let auth_rcvr = match ep.send_auth(username, password).await {
+            Ok(rcvr) => rcvr,
+            Err(e) => {
+                return Err(e);
+            }
+        };
+        let bucket_rcvr = match ep.send_select_bucket(bucket).await {
+            Ok(rcvr) => rcvr,
+            Err(e) => {
+                return Err(e);
+            }
+        };
 
-        let features = hello_rcvr.await.unwrap().unwrap();
-        let error_map = err_map_rcvr.await.unwrap().unwrap();
-        auth_rcvr.await.unwrap().unwrap();
-        bucket_rcvr.await.unwrap().unwrap();
+        let features = match hello_rcvr.await {
+            Ok(r) => match r {
+                Ok(result) => result,
+                Err(e) => {
+                    return Err(e);
+                }
+            },
+            Err(e) => {
+                return Err(ClientError::RequestFailed {
+                    reason: Some(e.to_string()),
+                });
+            }
+        };
+        if let Some(rcvr) = err_map_rcvr {
+            let error_map = match rcvr.await {
+                Ok(r) => match r {
+                    Ok(result) => Some(result),
+                    Err(e) => None,
+                },
+                Err(e) => None,
+            };
+            ep.error_map = error_map;
+        }
+        match auth_rcvr.await {
+            Ok(r) => match r {
+                Ok(result) => result,
+                Err(e) => {
+                    return Err(e);
+                }
+            },
+            Err(e) => {
+                return Err(ClientError::RequestFailed {
+                    reason: Some(e.to_string()),
+                });
+            }
+        };
+        match bucket_rcvr.await {
+            Ok(r) => match r {
+                Ok(result) => result,
+                Err(e) => {
+                    return Err(e);
+                }
+            },
+            Err(e) => {
+                return Err(ClientError::RequestFailed {
+                    reason: Some(e.to_string()),
+                });
+            }
+        };
 
         if features.contains(&ServerFeature::Collections) {
             ep.collections_enabled = true;
@@ -101,7 +177,7 @@ impl KvEndpoint {
 
         // println!("Negotiated features {:?}", features);
         // println!("Error Map: {:?}", error_map);
-        ep
+        Ok(ep)
     }
 
     fn status_to_error(&self, status: Status) -> Result<(), ClientError> {
@@ -139,7 +215,12 @@ impl KvEndpoint {
         let (tx, rx) = oneshot::channel::<KvResponse>();
         self.send(req, tx).await?;
 
-        let response = rx.await.unwrap();
+        let response = match rx.await {
+            Ok(r) => Ok(r),
+            Err(e) => Err(ClientError::RequestFailed {
+                reason: Some(e.to_string()),
+            }),
+        }?;
         self.status_to_error(response.status())?;
         Ok(response)
     }
@@ -301,86 +382,134 @@ async fn receive_hello(
     rx: oneshot::Receiver<KvResponse>,
     completetx: oneshot::Sender<Result<Vec<ServerFeature>, ClientError>>,
 ) {
-    let mut response = rx.await.unwrap();
-    let status = response.status();
-    let result = match status {
-        Status::Success => {
-            let mut features = vec![];
-            if let Some(mut body) = response.body() {
-                let i = 0;
-                while body.remaining() > 0 {
-                    if let Ok(f) = ServerFeature::try_from(body.get_u16()) {
-                        features.push(f);
-                    } else {
-                        // todo: debug that we got an unknown server feature
+    let r = match rx.await {
+        Ok(r) => Some(r),
+        Err(e) => None,
+    };
+    let result = if let Some(mut response) = r {
+        let status = response.status();
+        match status {
+            Status::Success => {
+                let mut features = vec![];
+                if let Some(mut body) = response.body() {
+                    let i = 0;
+                    while body.remaining() > 0 {
+                        if let Ok(f) = ServerFeature::try_from(body.get_u16()) {
+                            features.push(f);
+                        } else {
+                            // todo: debug that we got an unknown server feature
+                        }
                     }
                 }
-            }
 
-            Ok(features)
+                Ok(features)
+            }
+            _ => Err(ClientError::RequestFailed {
+                reason: Some(status.as_string()),
+            }),
         }
-        _ => Err(ClientError::RequestFailed {
-            reason: Some(status.as_string()),
-        }),
+    } else {
+        Err(ClientError::RequestFailed { reason: None })
     };
 
-    completetx.send(result).unwrap();
+    match completetx.send(result) {
+        Ok(()) => {}
+        Err(_e) => {
+            warn!("hello receive failed");
+        }
+    };
 }
 
 async fn receive_error_map(
     rx: oneshot::Receiver<KvResponse>,
     completetx: oneshot::Sender<Result<ErrorMap, ClientError>>,
 ) {
-    let mut response = rx.await.unwrap();
-    let status = response.status();
+    let r = match rx.await {
+        Ok(r) => Some(r),
+        Err(e) => None,
+    };
+    let result = if let Some(mut response) = r {
+        let status = response.status();
 
-    let result = match status {
-        Status::Success => {
-            if let Some(body) = response.body() {
-                let error_map = serde_json::from_slice(body.as_ref()).unwrap();
-                Ok(error_map)
-            } else {
-                Err(ClientError::RequestFailed { reason: None })
+        match status {
+            Status::Success => {
+                if let Some(body) = response.body() {
+                    let error_map = serde_json::from_slice(body.as_ref()).unwrap();
+                    Ok(error_map)
+                } else {
+                    Err(ClientError::RequestFailed { reason: None })
+                }
             }
+            _ => Err(ClientError::RequestFailed {
+                reason: Some(status.as_string()),
+            }),
         }
-        _ => Err(ClientError::RequestFailed {
-            reason: Some(status.as_string()),
-        }),
+    } else {
+        Err(ClientError::RequestFailed { reason: None })
     };
 
-    completetx.send(result).unwrap();
+    match completetx.send(result) {
+        Ok(()) => {}
+        Err(_e) => {
+            warn!("error map receive failed");
+        }
+    };
 }
 
 async fn receive_auth(
     rx: oneshot::Receiver<KvResponse>,
     completetx: oneshot::Sender<Result<(), ClientError>>,
 ) {
-    let mut response = rx.await.unwrap();
-    let status = response.status();
-    let result = match status {
-        Status::Success => Ok(()),
-        _ => Err(ClientError::RequestFailed {
-            reason: Some(status.as_string()),
-        }),
+    let r = match rx.await {
+        Ok(r) => Some(r),
+        Err(e) => None,
+    };
+    let result = if let Some(mut response) = r {
+        let status = response.status();
+        match status {
+            Status::Success => Ok(()),
+            _ => Err(ClientError::RequestFailed {
+                reason: Some(status.as_string()),
+            }),
+        }
+    } else {
+        Err(ClientError::RequestFailed { reason: None })
     };
 
-    completetx.send(result).unwrap();
+    match completetx.send(result) {
+        Ok(()) => {}
+        Err(_e) => {
+            warn!("auth receive failed");
+        }
+    };
 }
 
 async fn receive_select_bucket(
     rx: oneshot::Receiver<KvResponse>,
     completetx: oneshot::Sender<Result<(), ClientError>>,
 ) {
-    let mut response = rx.await.unwrap();
-    let status = response.status();
-    let result = match status {
-        Status::Success => Ok(()),
-        _ => Err(ClientError::RequestFailed {
-            reason: Some(status.as_string()),
-        }),
+    let r = match rx.await {
+        Ok(r) => Some(r),
+        Err(e) => None,
+    };
+    let result = if let Some(mut response) = r {
+        let status = response.status();
+        match status {
+            Status::Success => Ok(()),
+            _ => Err(ClientError::RequestFailed {
+                reason: Some(status.as_string()),
+            }),
+        }
+    } else {
+        Err(ClientError::RequestFailed { reason: None })
     };
 
-    completetx.send(result).unwrap();
+    match completetx.send(result) {
+        Ok(()) => {}
+        Err(_e) => {
+            warn!("select bucket receive failed");
+        }
+    };
 }
 
 #[derive(Debug)]

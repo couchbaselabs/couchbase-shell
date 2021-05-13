@@ -167,7 +167,7 @@ pub struct ClusterCredentials {
 
 impl ClusterCredentials {}
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct ClusterTimeouts {
     #[serde(default)]
     #[serde(rename(deserialize = "data-timeout"), with = "humantime_serde")]
@@ -178,6 +178,16 @@ pub struct ClusterTimeouts {
     #[serde(default)]
     #[serde(rename(deserialize = "query-timeout"), with = "humantime_serde")]
     query_timeout: Option<Duration>,
+}
+
+impl Default for ClusterTimeouts {
+    fn default() -> Self {
+        ClusterTimeouts {
+            data_timeout: Some(Duration::from_millis(2500)),
+            connect_timeout: Some(Duration::from_millis(7000)),
+            query_timeout: Some(Duration::from_millis(75000)),
+        }
+    }
 }
 
 impl ClusterTimeouts {
@@ -197,6 +207,10 @@ impl ClusterTimeouts {
                 .unwrap_or(Duration::from_secs(75))
                 .as_secs(),
         )
+    }
+
+    pub fn data_timeout(&self) -> Option<&Duration> {
+        self.data_timeout.as_ref()
     }
 }
 

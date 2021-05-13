@@ -21,7 +21,10 @@ use serde_json::json;
 use std::fmt;
 use std::ops::Deref;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tokio::runtime::Runtime;
+use tokio::select;
+use tokio::time::sleep;
 
 pub struct Client {
     seeds: Vec<String>,
@@ -40,6 +43,7 @@ pub enum ClientError {
     KeyAlreadyExists,
     AccessError,
     AuthError,
+    Timeout,
     RequestFailed { reason: Option<String> },
 }
 
@@ -54,10 +58,11 @@ impl fmt::Display for ClientError {
             Self::KeyAlreadyExists => "key already exists",
             Self::AccessError => "access error",
             Self::AuthError => "authentication error",
-            Self::RequestFailed { reason } => {
-                let r = reason.as_ref().unwrap();
-                r.as_str()
-            }
+            Self::Timeout => "timeout",
+            Self::RequestFailed { reason } => match reason.as_ref() {
+                Some(re) => re.as_str(),
+                None => "",
+            },
         };
         write!(f, "{}", message)
     }
@@ -812,7 +817,11 @@ impl KvClient {
 
     // This being async is a definite disjunct but we can't spawn a runtime inside this or we'll drop
     // the sender within the endpoint we create.
-    pub async fn request(&mut self, request: KeyValueRequest) -> Result<KvResponse, ClientError> {
+    pub async fn request(
+        &mut self,
+        request: KeyValueRequest,
+        timeout: Duration,
+    ) -> Result<KvResponse, ClientError> {
         let cid = if let Some(collection) = self.collection.as_ref() {
             self.search_manifest(
                 collection.scope.clone(),
@@ -834,14 +843,19 @@ impl KvClient {
 
         let mut ep = self.endpoints.get(addr.clone().as_str());
         if ep.is_none() {
-            let endpoint = KvEndpoint::connect(
+            let connect = KvEndpoint::connect(
                 addr.clone(),
                 port,
                 self.username.clone(),
                 self.password.clone(),
                 self.bucket.clone(),
-            )
-            .await;
+            );
+            let deadline = sleep(timeout.clone());
+
+            let endpoint = select! {
+                res = connect => res,
+                () = deadline => Err(ClientError::Timeout),
+            }?;
 
             // Got to be a better way...
             self.endpoints.insert(addr.clone(), endpoint);
@@ -850,7 +864,14 @@ impl KvClient {
 
         let result = match request {
             KeyValueRequest::Get { key } => {
-                ep.unwrap().get(key.clone(), partition as u16, cid).await
+                // ep cannot be None so unwrap is safe to do.
+                let get = ep.unwrap().get(key.clone(), partition as u16, cid);
+                let deadline = sleep(timeout.clone());
+
+                select! {
+                    res = get => res,
+                    () = deadline => Err(ClientError::Timeout),
+                }
             }
             _ => Err(ClientError::RequestFailed {
                 reason: Some("unknown request type".into()),

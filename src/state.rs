@@ -1,5 +1,6 @@
 use crate::{client::Client, config::ClusterTlsConfig};
 
+use crate::config::ClusterTimeouts;
 use crate::tutorial::Tutorial;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -93,6 +94,7 @@ pub struct RemoteCluster {
     active_scope: Mutex<Option<String>>,
     active_collection: Mutex<Option<String>>,
     tls_config: ClusterTlsConfig,
+    timeouts: ClusterTimeouts,
 }
 
 impl RemoteCluster {
@@ -104,6 +106,7 @@ impl RemoteCluster {
         active_scope: Option<String>,
         active_collection: Option<String>,
         tls_config: ClusterTlsConfig,
+        timeouts: ClusterTimeouts,
     ) -> Self {
         Self {
             cluster: Mutex::new(None),
@@ -114,6 +117,7 @@ impl RemoteCluster {
             active_scope: Mutex::new(active_scope),
             active_collection: Mutex::new(active_collection),
             tls_config,
+            timeouts,
         }
     }
 
@@ -186,5 +190,9 @@ impl RemoteCluster {
 
     pub fn tls_config(&self) -> &ClusterTlsConfig {
         &self.tls_config
+    }
+
+    pub fn timeouts(&self) -> &ClusterTimeouts {
+        &self.timeouts
     }
 }

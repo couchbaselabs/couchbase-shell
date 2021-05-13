@@ -79,6 +79,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             opt.scope,
             opt.collection,
             ClusterTlsConfig::default(),
+            ClusterTimeouts::default(),
         );
         clusters.insert("default".into(), cluster);
         String::from("default")
@@ -146,6 +147,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 scope,
                 collection,
                 v.tls().clone(),
+                v.timeouts().clone(),
             );
             clusters.insert(name.clone(), cluster);
         }
