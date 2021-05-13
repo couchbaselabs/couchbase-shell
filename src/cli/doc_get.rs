@@ -14,6 +14,7 @@ use nu_protocol::{
 use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::sync::Arc;
+use tokio::runtime::Runtime;
 
 pub struct DocGet {
     state: Arc<State>,
@@ -44,11 +45,6 @@ impl nu_engine::WholeStreamCommand for DocGet {
                 "bucket",
                 SyntaxShape::String,
                 "the name of the bucket",
-                None,
-            )
-            .switch(
-                "flatten",
-                "If set, flattens the content into the toplevel",
                 None,
             )
             .named("scope", SyntaxShape::String, "the name of the scope", None)
@@ -155,15 +151,16 @@ fn run_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellEr
     let cluster = active_cluster.cluster();
 
     let mut results: Vec<Value> = vec![];
+    let rt = Runtime::new().unwrap();
+    let mut client = cluster.key_value_client(
+        active_cluster.username().into(),
+        active_cluster.password().into(),
+        bucket.clone(),
+        scope.clone(),
+        collection.clone(),
+    )?;
     for id in ids {
-        let response = cluster.key_value_request(
-            active_cluster.username().into(),
-            active_cluster.password().into(),
-            bucket.clone(),
-            scope.clone(),
-            collection.clone(),
-            KeyValueRequest::Get { key: id.clone() },
-        );
+        let response = rt.block_on(client.request(KeyValueRequest::Get { key: id.clone() }));
 
         match response {
             Ok(mut res) => {
@@ -188,5 +185,6 @@ fn run_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellEr
             }
         }
     }
+
     Ok(OutputStream::from(results))
 }

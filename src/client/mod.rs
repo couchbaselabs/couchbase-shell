@@ -20,6 +20,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::fmt;
 use std::ops::Deref;
+use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 
 pub struct Client {
@@ -340,89 +341,36 @@ impl Client {
         Err(ClientError::RequestFailed { reason: None })
     }
 
-    fn search_manifest(
-        &self,
-        scope: String,
-        collection: String,
-        manifest: CollectionManifest,
-    ) -> Result<u32, ClientError> {
-        for s in manifest.scopes {
-            if s.name == scope {
-                for c in s.collections {
-                    if c.name == collection {
-                        return Ok(c.uid.parse::<u32>().unwrap());
-                    }
-                }
-            }
-        }
-        return Err(CollectionNotFound);
-    }
-
-    pub fn key_value_request(
+    pub fn key_value_client<'a>(
         &self,
         username: String,
         password: String,
         bucket: String,
         scope: String,
         collection: String,
-        request: KeyValueRequest,
-    ) -> Result<KvResponse, ClientError> {
+    ) -> Result<KvClient, ClientError> {
         let config = self.get_bucket_config(bucket.clone())?;
-        let mut cid: u32 = 0;
+        let mut pair: Option<CollectionDetails> = None;
         if (scope != "" && scope != "_default") || (collection != "" && collection != "_default") {
-            let manifest = match self.get_collection_manifest(bucket.clone()) {
-                Ok(m) => Some(m),
-                Err(e) => None,
-            };
-            if let Some(mani) = manifest {
-                cid = self.search_manifest(scope, collection, mani)?
-            }
-        }
-
-        let seeds = config.key_value_seeds(self.tls_config.enabled());
-        let num_partitions = config.vbucket_server_map.vbucket_map.len() as u32;
-
-        let key = match request {
-            KeyValueRequest::Get { key } => key,
-            _ => "".into(),
+            // If we've been specifically asked to use a scope or collection and fetching the manifest
+            // fails then we need to report that.
+            let manifest = self.get_collection_manifest(bucket.clone())?;
+            pair = Some(CollectionDetails {
+                collection,
+                scope,
+                manifest,
+            })
         };
-        let sum = (crc32::checksum_ieee(key.as_bytes()) >> 16) & 0x7fff;
-        let partition = sum % num_partitions;
-        let node = config.vbucket_server_map.vbucket_map[partition as usize][0];
 
-        let seed = &seeds[node as usize];
-        let addr = seed.0.clone();
-        let port = seed.1.clone();
-
-        let rt = Runtime::new().unwrap();
-        let result = rt.block_on(async {
-            let mut ep = KvEndpoint::connect(addr, port, username, password, bucket).await;
-
-            ep.get(key, partition as u16, cid).await
-        });
-
-        match result {
-            Ok(mut r) => {
-                let content = if let Some(body) = r.body() {
-                    match serde_json::from_slice(body.as_ref()) {
-                        Ok(v) => Some(v),
-                        Err(e) => {
-                            return Err(ClientError::RequestFailed {
-                                reason: Some(e.to_string()),
-                            });
-                        }
-                    }
-                } else {
-                    None
-                };
-                Ok(KvResponse {
-                    status: r.status(),
-                    content,
-                    cas: r.cas(),
-                })
-            }
-            Err(e) => Err(e),
-        }
+        Ok(KvClient {
+            username,
+            password,
+            collection: pair,
+            config,
+            endpoints: HashMap::new(),
+            tls_config: self.tls_config.clone(),
+            bucket,
+        })
     }
 }
 
@@ -742,17 +690,12 @@ impl HttpResponse {
 #[derive(Debug)]
 pub struct KvResponse {
     content: Option<serde_json::Value>,
-    status: Status,
     cas: u64,
 }
 
 impl KvResponse {
     pub fn content(&mut self) -> Option<serde_json::Value> {
         self.content.take()
-    }
-
-    pub fn status(&self) -> Status {
-        self.status
     }
 
     pub fn cas(&self) -> u64 {
@@ -810,6 +753,131 @@ impl ClusterConfig {
                 (hostname, node.services.get(key).unwrap().clone())
             })
             .collect()
+    }
+}
+
+struct CollectionDetails {
+    scope: String,
+    collection: String,
+    manifest: CollectionManifest,
+}
+
+// Thinking here that some of this will need to go into arc mutexes at some point.
+pub struct KvClient {
+    username: String,
+    password: String,
+    collection: Option<CollectionDetails>,
+    endpoints: HashMap<String, KvEndpoint>,
+    config: BucketConfig,
+    tls_config: ClusterTlsConfig,
+    bucket: String,
+}
+
+impl KvClient {
+    fn partition_for_key(&self, key: String, config: &BucketConfig) -> u32 {
+        let num_partitions = config.vbucket_server_map.vbucket_map.len() as u32;
+
+        let sum = (crc32::checksum_ieee(key.as_bytes()) >> 16) & 0x7fff;
+        sum % num_partitions
+    }
+
+    fn node_for_partition(&self, partition: u32, config: &BucketConfig) -> (String, u32) {
+        let seeds = config.key_value_seeds(self.tls_config.enabled());
+        let node = config.vbucket_server_map.vbucket_map[partition as usize][0];
+
+        let seed = &seeds[node as usize];
+        let addr = seed.0.clone();
+        let port = seed.1.clone();
+
+        (addr, port)
+    }
+
+    fn search_manifest(
+        &self,
+        scope: String,
+        collection: String,
+        manifest: &CollectionManifest,
+    ) -> Result<u32, ClientError> {
+        for s in &manifest.scopes {
+            if s.name == scope {
+                for c in &s.collections {
+                    if c.name == collection {
+                        return Ok(c.uid.parse::<u32>().unwrap());
+                    }
+                }
+            }
+        }
+        return Err(CollectionNotFound);
+    }
+
+    // This being async is a definite disjunct but we can't spawn a runtime inside this or we'll drop
+    // the sender within the endpoint we create.
+    pub async fn request(&mut self, request: KeyValueRequest) -> Result<KvResponse, ClientError> {
+        let cid = if let Some(collection) = self.collection.as_ref() {
+            self.search_manifest(
+                collection.scope.clone(),
+                collection.collection.clone(),
+                &collection.manifest,
+            )?
+        } else {
+            0
+        };
+
+        let key = match request {
+            KeyValueRequest::Get { ref key } => key.clone(),
+            _ => "".into(),
+        };
+
+        let config = &self.config;
+        let partition = self.partition_for_key(key.clone(), config);
+        let (addr, port) = self.node_for_partition(partition.clone(), config);
+
+        let mut ep = self.endpoints.get(addr.clone().as_str());
+        if ep.is_none() {
+            let endpoint = KvEndpoint::connect(
+                addr.clone(),
+                port,
+                self.username.clone(),
+                self.password.clone(),
+                self.bucket.clone(),
+            )
+            .await;
+
+            // Got to be a better way...
+            self.endpoints.insert(addr.clone(), endpoint);
+            ep = self.endpoints.get(addr.clone().as_str());
+        }
+
+        let result = match request {
+            KeyValueRequest::Get { key } => {
+                ep.unwrap().get(key.clone(), partition as u16, cid).await
+            }
+            _ => Err(ClientError::RequestFailed {
+                reason: Some("unknown request type".into()),
+            }),
+        };
+
+        match result {
+            Ok(mut r) => {
+                let content = if let Some(body) = r.body() {
+                    match serde_json::from_slice(body.as_ref()) {
+                        Ok(v) => Some(v),
+                        Err(e) => {
+                            return Err(ClientError::RequestFailed {
+                                reason: Some(e.to_string()),
+                            });
+                        }
+                    }
+                } else {
+                    None
+                };
+                Ok(KvResponse {
+                    content,
+                    cas: r.cas(),
+                })
+            }
+            Err(e) => Err(e),
+        }
     }
 }
 

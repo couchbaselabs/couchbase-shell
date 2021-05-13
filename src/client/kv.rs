@@ -4,6 +4,7 @@ use crate::client::{protocol, ClientError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use futures::{SinkExt, StreamExt};
 use serde_derive::Deserialize;
+use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::net::SocketAddr;
@@ -29,7 +30,7 @@ impl KvEndpoint {
         password: String,
         bucket: String,
     ) -> KvEndpoint {
-        let remote_addr = format!("{}:{}", hostname, port).parse().unwrap();
+        let remote_addr: SocketAddr = format!("{}:{}", hostname, port).parse().unwrap();
 
         let socket = TcpStream::connect(remote_addr).await.unwrap();
 
@@ -38,7 +39,7 @@ impl KvEndpoint {
             HashMap::<u32, oneshot::Sender<KvResponse>>::new(),
         ));
         let mut ep = KvEndpoint {
-            remote_addr,
+            remote_addr: remote_addr.clone(),
             opaque: AtomicU32::new(0),
             in_flight: Arc::clone(&in_flight),
             tx,
@@ -119,7 +120,7 @@ impl KvEndpoint {
     }
 
     pub async fn get(
-        &mut self,
+        &self,
         key: String,
         partition: u16,
         collection_id: u32,
@@ -144,7 +145,7 @@ impl KvEndpoint {
     }
 
     async fn send(
-        &mut self,
+        &self,
         mut req: KvRequest,
         chan: oneshot::Sender<KvResponse>,
     ) -> Result<(), ClientError> {
@@ -160,7 +161,9 @@ impl KvEndpoint {
                 map.insert(opaque, chan);
                 Ok(())
             }
-            Err(e) => Ok(()),
+            Err(e) => Err(ClientError::RequestFailed {
+                reason: Some(e.to_string()),
+            }),
         }
     }
 
