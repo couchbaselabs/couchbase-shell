@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use nu_cli::TaggedDictBuilder;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
-use nu_protocol::{ReturnSuccess, Signature, SyntaxShape, UntaggedValue, Value};
+use nu_protocol::{Signature, SyntaxShape, UntaggedValue, Value};
 use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::sync::Arc;

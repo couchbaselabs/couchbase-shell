@@ -49,7 +49,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut default_scope: Option<String> = None;
     let mut default_collection: Option<String> = None;
     let active = if config.clusters().is_empty() {
-        let timeouts = ClusterTimeouts::default().export_lcb_args();
         let hostnames = if let Some(hosts) = opt.hostnames {
             hosts
         } else {

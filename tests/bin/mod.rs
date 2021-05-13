@@ -90,7 +90,7 @@ async fn main() {
     fetch_caves().await;
     println!("Fetched caves");
 
-    let mut listener = TcpListener::bind("127.0.0.1:0")
+    let listener = TcpListener::bind("127.0.0.1:0")
         .await
         .expect("Failed to bind tcp listener");
     let port = listener

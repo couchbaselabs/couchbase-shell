@@ -5,7 +5,6 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 use futures::{SinkExt, StreamExt};
 use log::warn;
 use serde_derive::Deserialize;
-use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::net::SocketAddr;
@@ -16,7 +15,6 @@ use tokio::sync::{mpsc, oneshot};
 use tokio_util::codec::{FramedRead, FramedWrite};
 
 pub struct KvEndpoint {
-    remote_addr: SocketAddr,
     tx: mpsc::Sender<Bytes>,
     opaque: AtomicU32,
     in_flight: Arc<Mutex<HashMap<u32, oneshot::Sender<KvResponse>>>>,
@@ -41,7 +39,6 @@ impl KvEndpoint {
             HashMap::<u32, oneshot::Sender<KvResponse>>::new(),
         ));
         let mut ep = KvEndpoint {
-            remote_addr: remote_addr.clone(),
             opaque: AtomicU32::new(0),
             in_flight: Arc::clone(&in_flight),
             tx,
@@ -66,7 +63,7 @@ impl KvEndpoint {
                             if let Some(sender) = t {
                                 match sender.send(response) {
                                     Ok(_) => {}
-                                    Err(e) => {
+                                    Err(_e) => {
                                         warn!("Could not send kv response")
                                     }
                                 };
@@ -106,7 +103,7 @@ impl KvEndpoint {
         };
         let err_map_rcvr = match ep.send_error_map().await {
             Ok(rcvr) => Some(rcvr),
-            Err(e) => None,
+            Err(_e) => None,
         };
         let auth_rcvr = match ep.send_auth(username, password).await {
             Ok(rcvr) => rcvr,
@@ -138,9 +135,9 @@ impl KvEndpoint {
             let error_map = match rcvr.await {
                 Ok(r) => match r {
                     Ok(result) => Some(result),
-                    Err(e) => None,
+                    Err(_e) => None,
                 },
-                Err(e) => None,
+                Err(_e) => None,
             };
             ep.error_map = error_map;
         }
@@ -409,8 +406,6 @@ impl KvEndpoint {
 
         Ok(completerx)
     }
-
-    fn close(&mut self) {}
 }
 
 async fn receive_hello(
@@ -419,7 +414,7 @@ async fn receive_hello(
 ) {
     let r = match rx.await {
         Ok(r) => Some(r),
-        Err(e) => None,
+        Err(_e) => None,
     };
     let result = if let Some(mut response) = r {
         let status = response.status();
@@ -427,7 +422,6 @@ async fn receive_hello(
             Status::Success => {
                 let mut features = vec![];
                 if let Some(mut body) = response.body() {
-                    let i = 0;
                     while body.remaining() > 0 {
                         if let Ok(f) = ServerFeature::try_from(body.get_u16()) {
                             features.push(f);
@@ -461,7 +455,7 @@ async fn receive_error_map(
 ) {
     let r = match rx.await {
         Ok(r) => Some(r),
-        Err(e) => None,
+        Err(_e) => None,
     };
     let result = if let Some(mut response) = r {
         let status = response.status();
@@ -497,9 +491,9 @@ async fn receive_auth(
 ) {
     let r = match rx.await {
         Ok(r) => Some(r),
-        Err(e) => None,
+        Err(_e) => None,
     };
-    let result = if let Some(mut response) = r {
+    let result = if let Some(response) = r {
         let status = response.status();
         match status {
             Status::Success => Ok(()),
@@ -525,9 +519,9 @@ async fn receive_select_bucket(
 ) {
     let r = match rx.await {
         Ok(r) => Some(r),
-        Err(e) => None,
+        Err(_e) => None,
     };
-    let result = if let Some(mut response) = r {
+    let result = if let Some(response) = r {
         let status = response.status();
         match status {
             Status::Success => Ok(()),

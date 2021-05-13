@@ -191,24 +191,6 @@ impl Default for ClusterTimeouts {
 }
 
 impl ClusterTimeouts {
-    pub fn export_lcb_args(&self) -> String {
-        format!(
-            "operation_timeout={}&config_total_timeout={}&config_node_timeout={}&query_timeout={}",
-            self.data_timeout
-                .unwrap_or(Duration::from_secs(30))
-                .as_secs(),
-            self.connect_timeout
-                .unwrap_or(Duration::from_secs(30))
-                .as_secs(),
-            self.connect_timeout
-                .unwrap_or(Duration::from_secs(30))
-                .as_secs(),
-            self.query_timeout
-                .unwrap_or(Duration::from_secs(75))
-                .as_secs(),
-        )
-    }
-
     pub fn data_timeout(&self) -> Option<&Duration> {
         self.data_timeout.as_ref()
     }

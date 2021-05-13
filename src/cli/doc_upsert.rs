@@ -98,12 +98,6 @@ fn run_upsert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shel
         .flatten()
         .unwrap_or_else(|| String::from("content"));
 
-    let expiry = args
-        .call_info
-        .args
-        .get("expiry")
-        .map(|e| Duration::from_secs(e.as_u64().unwrap_or_else(|_| 0)));
-
     let active_cluster = state.active_cluster();
     let bucket = match args
         .call_info

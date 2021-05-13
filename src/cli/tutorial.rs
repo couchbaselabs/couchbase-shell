@@ -3,7 +3,7 @@ use crate::state::State;
 use async_trait::async_trait;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
-use nu_protocol::{ReturnSuccess, Signature, UntaggedValue};
+use nu_protocol::{Signature, UntaggedValue};
 use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::sync::Arc;

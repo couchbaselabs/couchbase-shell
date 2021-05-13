@@ -78,7 +78,7 @@ fn scopes_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, S
         &scope, &bucket
     );
 
-    let mut form = vec![("name", scope)];
+    let form = vec![("name", scope)];
     let payload = serde_urlencoded::to_string(&form).unwrap();
 
     let active_cluster = state.active_cluster();

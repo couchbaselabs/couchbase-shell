@@ -1,18 +1,14 @@
 //! The `collections get` command fetches all of the collection names from the server.
 
+use crate::client::ManagementRequest::CreateCollection;
 use crate::state::State;
-
-use crate::client::ManagementRequest;
-use crate::client::ManagementRequest::{CreateBucket, CreateCollection};
 use async_trait::async_trait;
 use log::debug;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
-use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::sync::Arc;
-use std::time::Duration;
 
 pub struct CollectionsCreate {
     state: Arc<State>,
@@ -129,14 +125,13 @@ fn collections_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStre
 
     let form_encoded = serde_urlencoded::to_string(&form).unwrap();
 
-    let response =
-        active_cluster
-            .cluster()
-            .management_request(ManagementRequest::CreateCollection {
-                scope: scope_name,
-                bucket,
-                payload: form_encoded,
-            })?;
+    let response = active_cluster
+        .cluster()
+        .management_request(CreateCollection {
+            scope: scope_name,
+            bucket,
+            payload: form_encoded,
+        })?;
 
     match response.status() {
         200 => Ok(OutputStream::empty()),

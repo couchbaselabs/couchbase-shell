@@ -2,7 +2,6 @@
 
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use std::convert::TryFrom;
-use std::fmt::{Display, Formatter};
 
 pub static HEADER_SIZE: usize = 24;
 pub static ERROR_MAP_VERSION: u16 = 1;
@@ -42,10 +41,6 @@ impl KvRequest {
             opaque: 0,
             collection_id,
         }
-    }
-
-    pub fn opaque(&self) -> u32 {
-        self.opaque
     }
 
     pub fn set_opaque(&mut self, opaque: u32) {
@@ -208,7 +203,7 @@ pub fn request(req: KvRequest, collections_enabled: bool) -> BytesMut {
 }
 
 // Creates a flexible request with optional framing extras
-pub fn flexible_request(
+pub fn _flexible_request(
     opcode: Opcode,
     datatype: u8,
     partition: u16,
@@ -259,7 +254,7 @@ pub fn flexible_request(
 }
 
 /// Creates a regular, non-flex response with all fields necessary.
-pub fn response(
+pub fn _response(
     opcode: Opcode,
     datatype: u8,
     status: u16,
@@ -301,7 +296,7 @@ pub fn response(
 }
 
 /// Takes a full packet and extracts the body as a slice if possible.
-pub fn body(input: &Bytes) -> Option<Bytes> {
+pub fn _body(input: &Bytes) -> Option<Bytes> {
     let mut slice = input.slice(0..input.len());
 
     let flexible = Magic::from(slice.get_u8()).is_flexible();
@@ -334,7 +329,7 @@ pub fn body(input: &Bytes) -> Option<Bytes> {
 ///
 /// Note that this is only really suitable when you want to println a full
 /// packet, but nonetheless it is helpful for testing.
-pub fn dump(input: &Bytes) -> String {
+pub fn _dump(input: &Bytes) -> String {
     if input.len() < HEADER_SIZE {
         return "Received less bytes than a KV header, invalid data?".into();
     }
@@ -364,7 +359,7 @@ pub fn dump(input: &Bytes) -> String {
     let partition = slice.get_u16();
     output.push_str(&format!(" Partition: 0x{:x}\n", partition));
 
-    if let Some(body) = body(&input) {
+    if let Some(body) = _body(&input) {
         output.push_str(&format!("      Body: {:?}\n", body));
     }
 

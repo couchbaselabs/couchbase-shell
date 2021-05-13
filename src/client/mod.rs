@@ -5,7 +5,6 @@ mod protocol;
 use std::collections::HashMap;
 
 use crate::client::kv::KvEndpoint;
-use crate::client::protocol::Status;
 use crate::client::ClientError::CollectionNotFound;
 use crate::config::ClusterTlsConfig;
 use crc::crc32;
@@ -14,15 +13,11 @@ use isahc::{
     config::CaCertificate,
 };
 use isahc::{config::SslOption, prelude::*};
-use log::kv::Source;
 use nu_errors::ShellError;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::fmt;
-use std::ops::Deref;
-use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use tokio::runtime::Runtime;
 use tokio::select;
 use tokio::time::sleep;
 
@@ -586,7 +581,6 @@ impl QueryRequest {
                 h.insert("Content-Type", "application/json");
                 h
             }
-            _ => HashMap::new(),
         }
     }
 }
@@ -633,7 +627,6 @@ impl AnalyticsQueryRequest {
                 h.insert("Content-Type", "application/json");
                 h
             }
-            _ => HashMap::new(),
         }
     }
 }
@@ -671,7 +664,6 @@ impl SearchQueryRequest {
                 h.insert("Content-Type", "application/json");
                 h
             }
-            _ => HashMap::new(),
         }
     }
 }
@@ -943,30 +935,6 @@ struct BucketConfig {
 }
 
 impl BucketConfig {
-    pub fn management_seeds(&self, tls: bool) -> Vec<(String, u32)> {
-        let key = if tls { "mgmtSSL" } else { "mgmt" };
-
-        self.seeds(key)
-    }
-
-    pub fn query_seeds(&self, tls: bool) -> Vec<(String, u32)> {
-        let key = if tls { "n1qlSSL" } else { "n1ql" };
-
-        self.seeds(key)
-    }
-
-    pub fn analytics_seeds(&self, tls: bool) -> Vec<(String, u32)> {
-        let key = if tls { "cbasSSL" } else { "cbas" };
-
-        self.seeds(key)
-    }
-
-    pub fn search_seeds(&self, tls: bool) -> Vec<(String, u32)> {
-        let key = if tls { "ftsSSL" } else { "fts" };
-
-        self.seeds(key)
-    }
-
     pub fn key_value_seeds(&self, tls: bool) -> Vec<(String, u32)> {
         let key = if tls { "kvSSL" } else { "kv" };
 

@@ -12,7 +12,6 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Value};
 use nu_source::Tag;
 use nu_stream::OutputStream;
-use serde::Deserialize;
 use std::convert::TryFrom;
 use std::sync::Arc;
 

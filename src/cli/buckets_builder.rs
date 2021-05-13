@@ -228,28 +228,13 @@ impl BucketSettingsBuilder {
         self
     }
 
-    pub fn replica_indexes(mut self, enabled: bool) -> BucketSettingsBuilder {
-        self.replica_indexes = enabled;
-        self
-    }
-
     pub fn bucket_type(mut self, bucket_type: BucketType) -> BucketSettingsBuilder {
         self.bucket_type = bucket_type;
         self
     }
 
-    pub fn eviction_policy(mut self, eviction_policy: EvictionPolicy) -> BucketSettingsBuilder {
-        self.eviction_policy = Some(eviction_policy);
-        self
-    }
-
     pub fn max_expiry(mut self, max_expiry: Duration) -> BucketSettingsBuilder {
         self.max_expiry = max_expiry;
-        self
-    }
-
-    pub fn compression_mode(mut self, mode: CompressionMode) -> BucketSettingsBuilder {
-        self.compression_mode = mode;
         self
     }
 
@@ -259,15 +244,6 @@ impl BucketSettingsBuilder {
     ) -> BucketSettingsBuilder {
         self.durability_level = durability_level;
         self
-    }
-
-    pub fn conflict_resolution_type(
-        &mut self,
-        conflict_resolution_type: ConflictResolutionType,
-    ) -> Result<(), ShellError> {
-        self.conflict_resolution_type = Some(conflict_resolution_type);
-
-        Ok(())
     }
 
     pub fn build(self) -> BucketSettings {
@@ -473,24 +449,8 @@ impl BucketSettings {
         self.num_replicas
     }
 
-    pub fn replica_indexes(&self) -> bool {
-        self.replica_indexes
-    }
-
     pub fn bucket_type(&self) -> BucketType {
         self.bucket_type
-    }
-
-    pub fn eviction_policy(&self) -> Option<EvictionPolicy> {
-        self.eviction_policy
-    }
-
-    pub fn max_expiry(&self) -> Duration {
-        self.max_expiry
-    }
-
-    pub fn compression_mode(&self) -> CompressionMode {
-        self.compression_mode
     }
 
     pub fn minimum_durability_level(&self) -> DurabilityLevel {
@@ -509,24 +469,8 @@ impl BucketSettings {
         self.num_replicas = num_replicas;
     }
 
-    pub fn set_replica_indexes(&mut self, enabled: bool) {
-        self.replica_indexes = enabled;
-    }
-
-    pub fn set_bucket_type(&mut self, bucket_type: BucketType) {
-        self.bucket_type = bucket_type;
-    }
-
-    pub fn set_eviction_policy(&mut self, eviction_policy: EvictionPolicy) {
-        self.eviction_policy = Some(eviction_policy);
-    }
-
     pub fn set_max_expiry(&mut self, max_expiry: Duration) {
         self.max_expiry = max_expiry;
-    }
-
-    pub fn set_compression_mode(&mut self, mode: CompressionMode) {
-        self.compression_mode = mode;
     }
 
     pub fn set_minimum_durability_level(&mut self, durability_level: DurabilityLevel) {

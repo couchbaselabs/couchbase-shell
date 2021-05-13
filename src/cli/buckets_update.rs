@@ -151,13 +151,9 @@ fn buckets_update(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, 
         },
         None => {}
     };
-    let mut has_dura_changed = false;
     match args.call_info.args.get("durability") {
         Some(v) => match v.as_string() {
-            Ok(d) => {
-                has_dura_changed = true;
-                settings.set_minimum_durability_level(DurabilityLevel::try_from(d.as_str())?)
-            }
+            Ok(d) => settings.set_minimum_durability_level(DurabilityLevel::try_from(d.as_str())?),
             Err(e) => return Err(e),
         },
         None => {}

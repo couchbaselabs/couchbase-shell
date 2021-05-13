@@ -89,75 +89,11 @@ pub struct Origin {
     name: Option<String>,
 }
 
-impl Origin {
-    pub fn new(origin_type: String, name: Option<String>) -> Self {
-        Self { origin_type, name }
-    }
-
-    pub fn origin_type(&self) -> &str {
-        self.origin_type.as_str()
-    }
-
-    pub fn name(&self) -> Option<String> {
-        self.name.clone()
-    }
-}
-
 #[derive(Debug, Deserialize)]
 pub struct RoleAndOrigins {
     #[serde(flatten)]
     role: Role,
     origins: Vec<Origin>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Group {
-    #[serde(rename = "id")]
-    name: String,
-    description: Option<String>,
-    roles: Vec<Role>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "ldap_group_ref")]
-    ldap_group: Option<String>,
-}
-
-impl Group {
-    pub fn new(name: String, roles: Vec<Role>) -> Self {
-        Self {
-            name,
-            description: None,
-            roles,
-            ldap_group: None,
-        }
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    pub fn description(&self) -> Option<String> {
-        self.description.clone()
-    }
-
-    pub fn set_description(&mut self, description: String) {
-        self.description = Some(description)
-    }
-
-    pub fn roles(&self) -> &Vec<Role> {
-        self.roles.as_ref()
-    }
-
-    pub fn roles_mut(&mut self) -> &mut Vec<Role> {
-        self.roles.as_mut()
-    }
-
-    pub fn ldap_group_reference(&self) -> Option<String> {
-        self.ldap_group.clone()
-    }
-
-    pub fn set_ldap_group_reference(&mut self, reference: String) {
-        self.ldap_group = Some(reference)
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -182,28 +118,12 @@ impl User {
         self.display_name.clone()
     }
 
-    pub fn set_display_name(&mut self, display_name: String) {
-        self.display_name = Some(display_name);
-    }
-
     pub fn groups(&self) -> Option<&Vec<String>> {
         self.groups.as_ref()
     }
 
-    pub fn groups_mut(&mut self) -> Option<&mut Vec<String>> {
-        self.groups.as_mut()
-    }
-
     pub fn roles(&self) -> &Vec<Role> {
         self.roles.as_ref()
-    }
-
-    pub fn roles_mut(&mut self) -> &mut Vec<Role> {
-        self.roles.as_mut()
-    }
-
-    pub fn set_password(&mut self, password: String) {
-        self.password = Some(password)
     }
 }
 
@@ -263,10 +183,6 @@ pub struct UserAndMetadata {
 }
 
 impl UserAndMetadata {
-    pub fn domain(&self) -> AuthDomain {
-        self.domain.clone()
-    }
-
     pub fn user(&self) -> User {
         let mut builder = UserBuilder::new(self.username.clone(), None, self.user_roles());
         if let Some(display_name) = &self.display_name {
@@ -279,16 +195,8 @@ impl UserAndMetadata {
         builder.build()
     }
 
-    pub fn effective_roles(&self) -> &Vec<RoleAndOrigins> {
-        self.roles.as_ref()
-    }
-
     pub fn password_changed(&self) -> Option<String> {
         self.password_change_date.clone()
-    }
-
-    pub fn external_groups(&self) -> Option<&Vec<String>> {
-        self.groups.as_ref()
     }
 
     fn user_roles(&self) -> Vec<Role> {

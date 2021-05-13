@@ -3,7 +3,6 @@ use crate::state::State;
 
 use crate::client::ManagementRequest;
 use async_trait::async_trait;
-use futures::channel::oneshot;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
