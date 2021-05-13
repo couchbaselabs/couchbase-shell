@@ -3,19 +3,18 @@
 use super::util::convert_nu_value_to_json_value;
 
 use crate::state::State;
-use couchbase::UpsertOptions;
 
-use crate::cli::util::{collection_from_args, run_interruptable};
+use crate::client::KeyValueRequest;
 use async_trait::async_trait;
-use futures::{FutureExt, StreamExt};
-use nu_cli::OutputStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{MaybeOwned, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
+use nu_stream::OutputStream;
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
+use tokio::runtime::Runtime;
 
 pub struct DocUpsert {
     state: Arc<State>,
@@ -74,37 +73,87 @@ impl nu_engine::WholeStreamCommand for DocUpsert {
         "Upsert (insert or override) a document through the data service"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        run_upsert(self.state.clone(), args).await
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        run_upsert(self.state.clone(), args)
     }
 }
 
-async fn run_upsert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
-    let ctrl_c = args.ctrl_c.clone();
+fn run_upsert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let args = args.evaluate_once()?;
+    // let ctrl_c = args.ctrl_c.clone();
 
     let id_column = args
+        .call_info
+        .args
         .get("id-column")
         .map(|id| id.as_string().ok())
         .flatten()
         .unwrap_or_else(|| String::from("id"));
 
     let content_column = args
+        .call_info
+        .args
         .get("content-column")
         .map(|content| content.as_string().ok())
         .flatten()
         .unwrap_or_else(|| String::from("content"));
 
     let expiry = args
+        .call_info
+        .args
         .get("expiry")
         .map(|e| Duration::from_secs(e.as_u64().unwrap_or_else(|_| 0)));
 
-    let collection = match collection_from_args(&args, state.active_cluster()) {
-        Ok(c) => c,
-        Err(e) => {
-            return Err(e);
-        }
+    let active_cluster = state.active_cluster();
+    let bucket = match args
+        .call_info
+        .args
+        .get("bucket")
+        .map(|bucket| bucket.as_string().ok())
+        .flatten()
+        .or_else(|| active_cluster.active_bucket())
+    {
+        Some(v) => Ok(v),
+        None => Err(ShellError::untagged_runtime_error(format!(
+            "Could not auto-select a bucket - please use --bucket instead"
+        ))),
+    }?;
+
+    let scope = match args
+        .call_info
+        .args
+        .get("scope")
+        .map(|c| c.as_string().ok())
+        .flatten()
+    {
+        Some(s) => s,
+        None => match active_cluster.active_scope() {
+            Some(s) => s,
+            None => "".into(),
+        },
     };
+
+    let collection = match args
+        .call_info
+        .args
+        .get("collection")
+        .map(|c| c.as_string().ok())
+        .flatten()
+    {
+        Some(c) => c,
+        None => match active_cluster.active_collection() {
+            Some(c) => c,
+            None => "".into(),
+        },
+    };
+
+    let expiry_arg = args
+        .call_info
+        .args
+        .get("expiry")
+        .map(|e| e.as_u32().unwrap_or_else(|_| 0));
+
+    let expiry = expiry_arg.unwrap_or(0);
 
     let input_args = if let Some(id) = args.nth(0) {
         if let Some(content) = args.nth(1) {
@@ -121,75 +170,84 @@ async fn run_upsert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream
     let filtered = args.input.filter_map(move |i| {
         let id_column = id_column.clone();
         let content_column = content_column.clone();
-        async move {
-            if let UntaggedValue::Row(dict) = i.value {
-                let mut id = None;
-                let mut content = None;
-                if let MaybeOwned::Borrowed(d) = dict.get_data(id_column.as_ref()) {
-                    id = d.as_string().ok();
-                }
-                if let MaybeOwned::Borrowed(d) = dict.get_data(content_column.as_ref()) {
-                    content = convert_nu_value_to_json_value(d).ok();
-                }
-                if let Some(i) = id {
-                    if let Some(c) = content {
-                        return Some((i, c));
-                    }
+
+        if let UntaggedValue::Row(dict) = i.value {
+            let mut id = None;
+            let mut content = None;
+            if let MaybeOwned::Borrowed(d) = dict.get_data(id_column.as_ref()) {
+                id = d.as_string().ok();
+            }
+            if let MaybeOwned::Borrowed(d) = dict.get_data(content_column.as_ref()) {
+                content = convert_nu_value_to_json_value(d).ok();
+            }
+            if let Some(i) = id {
+                if let Some(c) = content {
+                    return Some((i, c));
                 }
             }
-            None
         }
+        None
     });
+    let cluster = active_cluster.cluster();
+    let mut client = cluster.key_value_client(
+        active_cluster.username().into(),
+        active_cluster.password().into(),
+        bucket.clone(),
+        scope.clone(),
+        collection.clone(),
+    )?;
+    let timeout = match active_cluster.timeouts().data_timeout() {
+        Some(t) => t.clone(),
+        None => Duration::from_millis(2500),
+    };
 
-    let mapped = filtered
-        .chain(futures::stream::iter(input_args))
-        .map(move |(id, content)| {
-            let collection = collection.clone();
-            let ctrl_c_clone = ctrl_c.clone();
-            async move {
-                let mut options = UpsertOptions::default();
-                if let Some(e) = expiry {
-                    options = options.expiry(e);
-                }
-
-                let upsert = collection.upsert(id, content, options);
-                run_interruptable(upsert, ctrl_c_clone.clone()).await
+    let rt = Runtime::new().unwrap();
+    let mut success = 0;
+    let mut failed = 0;
+    let mut fail_reasons: HashSet<String> = HashSet::new();
+    for item in filtered.chain(input_args).into_iter() {
+        let value = match serde_json::to_vec(&item.1) {
+            Ok(v) => v,
+            Err(e) => {
+                return Err(ShellError::untagged_runtime_error(e.to_string()));
             }
+        };
+
+        let result = rt
+            .block_on(client.request(
+                KeyValueRequest::Set {
+                    key: item.0,
+                    value,
+                    expiry: expiry.clone(),
+                },
+                timeout.clone(),
+            ))
+            .map_err(|e| ShellError::untagged_runtime_error(e.to_string()));
+
+        match result {
+            Ok(_) => success += 1,
+            Err(e) => {
+                failed += 1;
+                fail_reasons.insert(e.to_string());
+            }
+        };
+    }
+
+    let tag = Tag::default();
+    let mut collected = TaggedDictBuilder::new(&tag);
+    collected.insert_untagged("processed", UntaggedValue::int(success + failed));
+    collected.insert_untagged("success", UntaggedValue::int(success));
+    collected.insert_untagged("failed", UntaggedValue::int(failed));
+
+    let reasons = fail_reasons
+        .iter()
+        .map(|v| {
+            let mut collected_fails = TaggedDictBuilder::new(&tag);
+            collected_fails.insert_untagged("fail reason", UntaggedValue::string(v));
+            collected_fails.into()
         })
-        .buffer_unordered(1000)
-        .fold(
-            (0, 0, HashSet::new()),
-            |(mut success, mut failed, mut fail_reasons), res| async move {
-                match res {
-                    Ok(_) => success += 1,
-                    Err(e) => {
-                        fail_reasons.insert(e.to_string());
-                        failed += 1;
-                    }
-                };
-                (success, failed, fail_reasons)
-            },
-        )
-        .map(|(success, failed, fail_reasons)| {
-            let tag = Tag::default();
-            let mut collected = TaggedDictBuilder::new(&tag);
-            collected.insert_untagged("processed", UntaggedValue::int(success + failed));
-            collected.insert_untagged("success", UntaggedValue::int(success));
-            collected.insert_untagged("failed", UntaggedValue::int(failed));
+        .collect();
+    collected.insert_untagged("failures", UntaggedValue::Table(reasons));
 
-            let reasons = fail_reasons
-                .iter()
-                .map(|v| {
-                    let mut collected_fails = TaggedDictBuilder::new(&tag);
-                    collected_fails.insert_untagged("fail reason", UntaggedValue::string(v));
-                    collected_fails.into()
-                })
-                .collect();
-            collected.insert_untagged("failures", UntaggedValue::Table(reasons));
-
-            collected.into_value()
-        })
-        .into_stream();
-
-    Ok(OutputStream::from_input(mapped))
+    Ok(vec![collected.into_value()].into())
 }

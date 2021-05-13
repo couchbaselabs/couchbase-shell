@@ -102,8 +102,7 @@ impl From<&Bytes> for KvResponse {
         let total_body_len = slice.get_u32() as usize;
         // 10, 11, 12, 13
         let opaque = slice.get_u32();
-        // 14, 15
-        slice.advance(2);
+        // 14, 15, 16, 17, 18, 19, 20, 21
         let cas = slice.get_u64();
         let body_len = total_body_len - key_len - extras_len - flexible_extras_len;
 
@@ -377,6 +376,7 @@ pub fn dump(input: &Bytes) -> String {
 #[derive(Debug)]
 pub enum Opcode {
     Get,
+    Set,
     Hello,
     Noop,
     ErrorMap,
@@ -388,11 +388,12 @@ impl Opcode {
     pub fn encoded(&self) -> u8 {
         match self {
             Self::Get => 0x00,
-            Self::Hello => 0x1F,
+            Self::Set => 0x01,
             Self::Noop => 0x0A,
-            Self::ErrorMap => 0xFE,
+            Self::Hello => 0x1F,
             Self::Auth => 0x21,
             Self::SelectBucket => 0x89,
+            Self::ErrorMap => 0xFE,
         }
     }
 }
@@ -403,11 +404,12 @@ impl TryFrom<u8> for Opcode {
     fn try_from(input: u8) -> Result<Self, Self::Error> {
         Ok(match input {
             0x00 => Opcode::Get,
-            0x1F => Opcode::Hello,
+            0x01 => Opcode::Set,
             0x0A => Opcode::Noop,
-            0xFE => Opcode::ErrorMap,
+            0x1F => Opcode::Hello,
             0x21 => Opcode::Auth,
             0x89 => Opcode::SelectBucket,
+            0xFE => Opcode::ErrorMap,
             _ => return Err(input),
         })
     }

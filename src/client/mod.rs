@@ -834,7 +834,7 @@ impl KvClient {
 
         let key = match request {
             KeyValueRequest::Get { ref key } => key.clone(),
-            _ => "".into(),
+            KeyValueRequest::Set { ref key, .. } => key.clone(),
         };
 
         let config = &self.config;
@@ -873,9 +873,18 @@ impl KvClient {
                     () = deadline => Err(ClientError::Timeout),
                 }
             }
-            _ => Err(ClientError::RequestFailed {
-                reason: Some("unknown request type".into()),
-            }),
+            KeyValueRequest::Set { key, value, expiry } => {
+                // ep cannot be None so unwrap is safe to do.
+                let get = ep
+                    .unwrap()
+                    .set(key.clone(), value, expiry, partition as u16, cid);
+                let deadline = sleep(timeout.clone());
+
+                select! {
+                    res = get => res,
+                    () = deadline => Err(ClientError::Timeout),
+                }
+            }
         };
 
         match result {
@@ -1003,6 +1012,12 @@ struct VBucketServerMap {
 }
 
 pub enum KeyValueRequest {
-    Get { key: String },
-    Set { key: String, value: Option<Vec<u8>> },
+    Get {
+        key: String,
+    },
+    Set {
+        key: String,
+        value: Vec<u8>,
+        expiry: u32,
+    },
 }
