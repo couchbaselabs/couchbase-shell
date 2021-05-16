@@ -6,7 +6,9 @@ use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_stream::OutputStream;
+use std::ops::Add;
 use std::sync::Arc;
+use tokio::time::Instant;
 
 pub struct ScopesCreate {
     state: Arc<State>,
@@ -82,9 +84,10 @@ fn scopes_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, S
     let payload = serde_urlencoded::to_string(&form).unwrap();
 
     let active_cluster = state.active_cluster();
-    let response = active_cluster
-        .cluster()
-        .management_request(ManagementRequest::CreateScope { payload, bucket })?;
+    let response = active_cluster.cluster().management_request(
+        ManagementRequest::CreateScope { payload, bucket },
+        Instant::now().add(active_cluster.timeouts().query_timeout()),
+    )?;
 
     match response.status() {
         200 => Ok(OutputStream::empty()),

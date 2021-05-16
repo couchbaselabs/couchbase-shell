@@ -9,7 +9,9 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, Value};
 use nu_source::Tag;
 use nu_stream::OutputStream;
+use std::ops::Add;
 use std::sync::Arc;
+use tokio::time::Instant;
 
 pub struct Users {
     state: Arc<State>,
@@ -43,9 +45,10 @@ impl nu_engine::WholeStreamCommand for Users {
 fn users_get_all(state: Arc<State>) -> Result<OutputStream, ShellError> {
     debug!("Running users get all");
     let active_cluster = state.active_cluster();
-    let response = active_cluster
-        .cluster()
-        .management_request(ManagementRequest::GetUsers)?;
+    let response = active_cluster.cluster().management_request(
+        ManagementRequest::GetUsers,
+        Instant::now().add(active_cluster.timeouts().query_timeout()),
+    )?;
 
     let users: Vec<UserAndMetadata> = match response.status() {
         200 => match serde_json::from_str(response.content()) {

@@ -12,9 +12,10 @@ use nu_protocol::{MaybeOwned, Signature, SyntaxShape, TaggedDictBuilder, Untagge
 use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::collections::HashSet;
+use std::ops::Add;
 use std::sync::Arc;
-use std::time::Duration;
 use tokio::runtime::Runtime;
+use tokio::time::Instant;
 
 pub struct DocUpsert {
     state: Arc<State>,
@@ -183,17 +184,15 @@ fn run_upsert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shel
         None
     });
     let cluster = active_cluster.cluster();
+
     let mut client = cluster.key_value_client(
         active_cluster.username().into(),
         active_cluster.password().into(),
         bucket.clone(),
         scope.clone(),
         collection.clone(),
+        Instant::now().add(active_cluster.timeouts().data_timeout()),
     )?;
-    let timeout = match active_cluster.timeouts().data_timeout() {
-        Some(t) => t.clone(),
-        None => Duration::from_millis(2500),
-    };
 
     let rt = Runtime::new().unwrap();
     let mut success = 0;
@@ -207,6 +206,7 @@ fn run_upsert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shel
             }
         };
 
+        let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
         let result = rt
             .block_on(client.request(
                 KeyValueRequest::Set {
@@ -214,7 +214,7 @@ fn run_upsert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shel
                     value,
                     expiry: expiry.clone(),
                 },
-                timeout.clone(),
+                deadline,
             ))
             .map_err(|e| ShellError::untagged_runtime_error(e.to_string()));
 

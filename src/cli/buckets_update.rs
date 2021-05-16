@@ -8,8 +8,9 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_stream::OutputStream;
 use std::convert::TryFrom;
+use std::ops::Add;
 use std::sync::Arc;
-use tokio::time::Duration;
+use tokio::time::{Duration, Instant};
 
 pub struct BucketsUpdate {
     state: Arc<State>,
@@ -87,17 +88,13 @@ fn buckets_update(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, 
         },
         None => return Err(ShellError::unexpected("name is required")),
     };
-    let cluster = match state.clusters().get(&state.active()) {
-        Some(c) => c.cluster(),
-        None => {
-            return Err(ShellError::untagged_runtime_error("Cluster not found"));
-        }
-    };
-
+    let active_cluster = state.active_cluster();
     debug!("Running buckets update for bucket {}", &name);
 
-    let response =
-        cluster.management_request(ManagementRequest::GetBucket { name: name.clone() })?;
+    let response = active_cluster.cluster().management_request(
+        ManagementRequest::GetBucket { name: name.clone() },
+        Instant::now().add(active_cluster.timeouts().query_timeout()),
+    )?;
 
     let content: JSONBucketSettings = serde_json::from_str(response.content())?;
     let mut settings = BucketSettings::try_from(content)?;
@@ -169,10 +166,13 @@ fn buckets_update(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, 
     let form = settings.as_form(true)?;
     let payload = serde_urlencoded::to_string(&form).unwrap();
 
-    let response = cluster.management_request(ManagementRequest::UpdateBucket {
-        name: name.clone(),
-        payload,
-    })?;
+    let response = active_cluster.cluster().management_request(
+        ManagementRequest::UpdateBucket {
+            name: name.clone(),
+            payload,
+        },
+        Instant::now().add(active_cluster.timeouts().query_timeout()),
+    )?;
 
     match response.status() {
         200 => Ok(OutputStream::empty()),

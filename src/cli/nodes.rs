@@ -10,7 +10,9 @@ use nu_source::Tag;
 use nu_stream::OutputStream;
 use serde::Deserialize;
 use std::fmt;
+use std::ops::Add;
 use std::sync::Arc;
+use tokio::time::Instant;
 
 pub struct Nodes {
     state: Arc<State>,
@@ -60,9 +62,10 @@ fn nodes(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellErro
             }
         };
 
-        let response = active_cluster
-            .cluster()
-            .management_request(ManagementRequest::GetNodes)?;
+        let response = active_cluster.cluster().management_request(
+            ManagementRequest::GetNodes,
+            Instant::now().add(active_cluster.timeouts().query_timeout()),
+        )?;
 
         let resp: PoolInfo = match response.status() {
             200 => match serde_json::from_str(response.content()) {

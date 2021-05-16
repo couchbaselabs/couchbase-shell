@@ -6,7 +6,9 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, UntaggedValue};
 use nu_source::Tag;
 use nu_stream::OutputStream;
+use std::ops::Add;
 use std::sync::Arc;
+use tokio::time::Instant;
 
 pub struct Tutorial {
     state: Arc<State>,
@@ -39,10 +41,13 @@ impl nu_engine::WholeStreamCommand for Tutorial {
 
 fn run_tutorial(state: Arc<State>) -> Result<OutputStream, ShellError> {
     let tutorial = state.tutorial();
-    let cluster = state.active_cluster().cluster();
-    let resp = cluster.management_request(ManagementRequest::GetBucket {
-        name: "travel-sample".into(),
-    })?;
+    let active_cluster = state.active_cluster();
+    let resp = active_cluster.cluster().management_request(
+        ManagementRequest::GetBucket {
+            name: "travel-sample".into(),
+        },
+        Instant::now().add(active_cluster.timeouts().query_timeout()),
+    )?;
 
     let exists = match resp.status() {
         200 => true,

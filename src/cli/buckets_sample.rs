@@ -7,7 +7,9 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, Value};
 use nu_source::Tag;
 use nu_stream::OutputStream;
+use std::ops::Add;
 use std::sync::Arc;
+use tokio::time::Instant;
 
 pub struct BucketsSample {
     state: Arc<State>,
@@ -65,15 +67,18 @@ fn load_sample_bucket(state: Arc<State>, args: CommandArgs) -> Result<OutputStre
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
         let cluster = match state.clusters().get(&identifier) {
-            Some(c) => c.cluster(),
+            Some(c) => c,
             None => {
                 return Err(ShellError::untagged_runtime_error("Cluster not found"));
             }
         };
 
-        let response = cluster.management_request(ManagementRequest::LoadSampleBucket {
-            name: format!("[\"{}\"]", bucket_name),
-        })?;
+        let response = cluster.cluster().management_request(
+            ManagementRequest::LoadSampleBucket {
+                name: format!("[\"{}\"]", bucket_name),
+            },
+            Instant::now().add(cluster.timeouts().query_timeout()),
+        )?;
 
         match response.status() {
             202 => {}

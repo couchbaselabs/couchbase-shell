@@ -6,9 +6,9 @@ mod config;
 mod state;
 mod tutorial;
 
-use crate::cli::*;
-use crate::config::{ClusterTimeouts, ShellConfig};
+use crate::config::ShellConfig;
 use crate::state::RemoteCluster;
+use crate::{cli::*, state::ClusterTimeouts};
 use config::ClusterTlsConfig;
 use log::{debug, warn, LevelFilter};
 use log4rs::append::console::ConsoleAppender;
@@ -138,6 +138,16 @@ fn main() -> Result<(), Box<dyn Error>> {
                 default_collection = collection.clone();
             }
 
+            let timeouts = v.timeouts();
+            let data_timeout = match timeouts.data_timeout() {
+                Some(t) => t.to_owned(),
+                None => Duration::from_millis(30000),
+            };
+            let query_timeout = match timeouts.query_timeout() {
+                Some(t) => t.to_owned(),
+                None => Duration::from_millis(75000),
+            };
+
             let cluster = RemoteCluster::new(
                 v.hostnames().clone(),
                 username,
@@ -146,7 +156,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 scope,
                 collection,
                 v.tls().clone(),
-                v.timeouts().clone(),
+                ClusterTimeouts::new(data_timeout, query_timeout),
             );
             clusters.insert(name.clone(), cluster);
         }

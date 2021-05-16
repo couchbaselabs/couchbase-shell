@@ -8,7 +8,9 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
 use serde::Deserialize;
+use std::ops::Add;
 use std::sync::Arc;
+use tokio::time::Instant;
 
 pub struct QueryAdvise {
     state: Arc<State>,
@@ -73,12 +75,14 @@ fn run(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError>
     };
 
     debug!("Running n1ql query {}", &statement);
-    let response = active_cluster
-        .cluster()
-        .query_request(QueryRequest::Execute {
+
+    let response = active_cluster.cluster().query_request(
+        QueryRequest::Execute {
             statement: statement.clone(),
             scope: None,
-        })?;
+        },
+        Instant::now().add(active_cluster.timeouts().query_timeout()),
+    )?;
 
     let content: serde_json::Value = serde_json::from_str(response.content())?;
     let converted = convert_json_value_to_nu_value(&content, Tag::default())?;

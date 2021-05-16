@@ -8,7 +8,9 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
 use serde::Deserialize;
+use std::ops::Add;
 use std::sync::Arc;
+use tokio::time::Instant;
 
 pub struct QueryIndexes {
     state: Arc<State>,
@@ -89,12 +91,13 @@ fn indexes(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellEr
 
     debug!("Running n1ql query {}", &statement);
 
-    let response = active_cluster
-        .cluster()
-        .query_request(QueryRequest::Execute {
+    let response = active_cluster.cluster().query_request(
+        QueryRequest::Execute {
             statement: statement.into(),
             scope: None,
-        })?;
+        },
+        Instant::now().add(active_cluster.timeouts().query_timeout()),
+    )?;
 
     let content: serde_json::Value = serde_json::from_str(response.content())?;
     let converted = convert_json_value_to_nu_value(&content, Tag::default())?;
@@ -124,9 +127,10 @@ struct IndexStatus {
 fn index_definitions(cluster: &RemoteCluster) -> Result<ActionStream, ShellError> {
     debug!("Running fetch n1ql indexes");
 
-    let response = cluster
-        .cluster()
-        .management_request(ManagementRequest::IndexStatus)?;
+    let response = cluster.cluster().management_request(
+        ManagementRequest::IndexStatus,
+        Instant::now().add(cluster.timeouts().query_timeout()),
+    )?;
 
     let defs: IndexStatus = serde_json::from_str(response.content())?;
     let n = defs

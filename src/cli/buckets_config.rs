@@ -7,7 +7,9 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
 use nu_stream::OutputStream;
+use std::ops::Add;
 use std::sync::Arc;
+use tokio::time::Instant;
 
 pub struct BucketsConfig {
     state: Arc<State>,
@@ -54,15 +56,13 @@ fn buckets(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellEr
         }
     };
 
-    let cluster = match state.clusters().get(&state.active()) {
-        Some(c) => c.cluster(),
-        None => {
-            return Err(ShellError::untagged_runtime_error("Cluster not found"));
-        }
-    };
+    let active_cluster = state.active_cluster();
+    let cluster = active_cluster.cluster();
 
-    let response =
-        cluster.management_request(ManagementRequest::GetBucket { name: bucket_name })?;
+    let response = cluster.management_request(
+        ManagementRequest::GetBucket { name: bucket_name },
+        Instant::now().add(active_cluster.timeouts().query_timeout()),
+    )?;
 
     let content = serde_json::from_str(response.content())?;
     let converted = convert_json_value_to_nu_value(&content, Tag::default())?;

@@ -7,7 +7,9 @@ use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Valu
 use nu_source::Tag;
 use nu_stream::OutputStream;
 use serde::Deserialize;
+use std::ops::Add;
 use std::sync::Arc;
+use tokio::time::Instant;
 
 pub struct ClustersHealth {
     state: Arc<State>,
@@ -66,13 +68,16 @@ fn health(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellErr
 
 fn grab_bucket_names(state: Arc<State>, identifier: &str) -> Result<Vec<String>, ShellError> {
     let cluster = match state.clusters().get(identifier) {
-        Some(c) => c.cluster(),
+        Some(c) => c,
         None => {
             return Err(ShellError::untagged_runtime_error("Cluster not found"));
         }
     };
 
-    let response = cluster.management_request(ManagementRequest::GetBuckets)?;
+    let response = cluster.cluster().management_request(
+        ManagementRequest::GetBuckets,
+        Instant::now().add(cluster.timeouts().query_timeout()),
+    )?;
     let resp: Vec<BucketInfo> = serde_json::from_str(response.content())?;
     Ok(resp.into_iter().map(|b| b.name).collect::<Vec<_>>())
 }
@@ -86,13 +91,16 @@ fn check_autofailover(state: Arc<State>, identifier: &str) -> Result<Value, Shel
     let mut collected = TaggedDictBuilder::new(Tag::default());
 
     let cluster = match state.clusters().get(identifier) {
-        Some(c) => c.cluster(),
+        Some(c) => c,
         None => {
             return Err(ShellError::untagged_runtime_error("Cluster not found"));
         }
     };
 
-    let response = cluster.management_request(ManagementRequest::SettingsAutoFailover)?;
+    let response = cluster.cluster().management_request(
+        ManagementRequest::SettingsAutoFailover,
+        Instant::now().add(cluster.timeouts().query_timeout()),
+    )?;
     let resp: AutoFailoverSettings = serde_json::from_str(response.content())?;
 
     collected.insert_value("cluster", identifier.clone());
@@ -124,15 +132,18 @@ fn check_resident_ratio(
     let mut collected = TaggedDictBuilder::new(Tag::default());
 
     let cluster = match state.clusters().get(identifier) {
-        Some(c) => c.cluster(),
+        Some(c) => c,
         None => {
             return Err(ShellError::untagged_runtime_error("Cluster not found"));
         }
     };
 
-    let response = cluster.management_request(ManagementRequest::BucketStats {
-        name: bucket_name.to_string(),
-    })?;
+    let response = cluster.cluster().management_request(
+        ManagementRequest::BucketStats {
+            name: bucket_name.to_string(),
+        },
+        Instant::now().add(cluster.timeouts().query_timeout()),
+    )?;
     let resp: BucketStats = serde_json::from_str(response.content())?;
     let ratio = match resp.op.samples.active_resident_ratios.last() {
         Some(r) => *r,

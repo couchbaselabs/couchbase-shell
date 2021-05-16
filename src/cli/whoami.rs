@@ -8,7 +8,9 @@ use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
 use nu_stream::OutputStream;
 use serde_json::{json, Map, Value};
+use std::ops::Add;
 use std::sync::Arc;
+use tokio::time::Instant;
 
 pub struct Whoami {
     state: Arc<State>,
@@ -51,13 +53,16 @@ fn whoami(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellErr
     let mut entries = vec![];
     for identifier in cluster_identifiers {
         let cluster = match state.clusters().get(&identifier) {
-            Some(c) => c.cluster(),
+            Some(c) => c,
             None => {
                 return Err(ShellError::untagged_runtime_error("Cluster not found"));
             }
         };
 
-        let response = cluster.management_request(ManagementRequest::Whoami)?;
+        let response = cluster.cluster().management_request(
+            ManagementRequest::Whoami,
+            Instant::now().add(cluster.timeouts().query_timeout()),
+        )?;
         let mut content: Map<String, Value> = serde_json::from_str(response.content())?;
         content.insert("cluster".into(), json!(identifier.clone()));
         let converted = convert_json_value_to_nu_value(&Value::Object(content), Tag::default())?;

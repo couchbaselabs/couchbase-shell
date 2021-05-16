@@ -9,7 +9,9 @@ use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
 use nu_stream::OutputStream;
 use serde_derive::Deserialize;
+use std::ops::Add;
 use std::sync::Arc;
+use tokio::time::Instant;
 
 pub struct Search {
     state: Arc<State>,
@@ -76,9 +78,10 @@ fn run(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError>
         None => state.active_cluster(),
     };
 
-    let response = active_cluster
-        .cluster()
-        .search_query_request(SearchQueryRequest::Execute { query, index })?;
+    let response = active_cluster.cluster().search_query_request(
+        SearchQueryRequest::Execute { query, index },
+        Instant::now().add(active_cluster.timeouts().query_timeout()),
+    )?;
 
     let rows: SearchResultData = match response.status() {
         200 => match serde_json::from_str(response.content()) {

@@ -8,8 +8,10 @@ use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Valu
 use nu_source::Tag;
 use nu_stream::OutputStream;
 use serde_derive::Deserialize;
+use std::ops::Add;
 use std::sync::Arc;
 use std::time::Duration;
+use tokio::time::Instant;
 
 pub struct CollectionsGet {
     state: Arc<State>,
@@ -81,9 +83,11 @@ fn collections_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream,
     );
 
     let active_cluster = state.active_cluster();
-    let response = active_cluster
-        .cluster()
-        .management_request(ManagementRequest::GetCollections { bucket })?;
+
+    let response = active_cluster.cluster().management_request(
+        ManagementRequest::GetCollections { bucket },
+        Instant::now().add(active_cluster.timeouts().query_timeout()),
+    )?;
 
     let manifest: Manifest = match response.status() {
         200 => match serde_json::from_str(response.content()) {

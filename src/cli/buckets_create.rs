@@ -8,8 +8,9 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_stream::OutputStream;
 use std::convert::TryFrom;
+use std::ops::Add;
 use std::sync::Arc;
-use tokio::time::Duration;
+use tokio::time::{Duration, Instant};
 
 pub struct BucketsCreate {
     state: Arc<State>,
@@ -191,18 +192,17 @@ fn buckets_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, 
         builder = builder.max_expiry(Duration::from_secs(e));
     }
 
-    let cluster = match state.clusters().get(&state.active()) {
-        Some(c) => c.cluster(),
-        None => {
-            return Err(ShellError::untagged_runtime_error("Cluster not found"));
-        }
-    };
+    let active_cluster = state.active_cluster();
+    let cluster = active_cluster.cluster();
 
     let settings = builder.build();
     let form = settings.as_form(false)?;
     let payload = serde_urlencoded::to_string(&form).unwrap();
 
-    let response = cluster.management_request(ManagementRequest::CreateBucket { payload })?;
+    let response = cluster.management_request(
+        ManagementRequest::CreateBucket { payload },
+        Instant::now().add(active_cluster.timeouts().query_timeout()),
+    )?;
 
     match response.status() {
         200 => Ok(OutputStream::empty()),

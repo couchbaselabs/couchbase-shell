@@ -8,7 +8,9 @@ use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::Signature;
 use nu_source::Tag;
+use std::ops::Add;
 use std::sync::Arc;
+use tokio::time::Instant;
 
 pub struct AnalyticsIndexes {
     state: Arc<State>,
@@ -44,13 +46,14 @@ fn indexes(state: Arc<State>, _args: CommandArgs) -> Result<ActionStream, ShellE
 
     let active_cluster = state.active_cluster();
     debug!("Running analytics query {}", &statement);
-    let response =
-        active_cluster
-            .cluster()
-            .analytics_query_request(AnalyticsQueryRequest::Execute {
-                statement: statement.into(),
-                scope: None,
-            })?;
+
+    let response = active_cluster.cluster().analytics_query_request(
+        AnalyticsQueryRequest::Execute {
+            statement: statement.into(),
+            scope: None,
+        },
+        Instant::now().add(active_cluster.timeouts().query_timeout()),
+    )?;
 
     let content: serde_json::Value = serde_json::from_str(response.content())?;
     let converted = convert_json_value_to_nu_value(&content, Tag::default())?;

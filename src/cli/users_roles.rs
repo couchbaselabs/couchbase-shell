@@ -4,6 +4,8 @@ use async_trait::async_trait;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder};
+use std::ops::Add;
+use tokio::time::Instant;
 
 use crate::cli::user_builder::RoleAndDescription;
 use crate::client::ManagementRequest;
@@ -73,12 +75,12 @@ fn run_async(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shell
             }
         };
 
-        let response =
-            active_cluster
-                .cluster()
-                .management_request(ManagementRequest::GetRoles {
-                    permission: permission.clone(),
-                })?;
+        let response = active_cluster.cluster().management_request(
+            ManagementRequest::GetRoles {
+                permission: permission.clone(),
+            },
+            Instant::now().add(active_cluster.timeouts().query_timeout()),
+        )?;
 
         let roles: Vec<RoleAndDescription> = match response.status() {
             200 => match serde_json::from_str(response.content()) {

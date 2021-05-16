@@ -9,7 +9,9 @@ use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::collections::HashMap;
+use std::ops::Add;
 use std::sync::Arc;
+use tokio::time::Instant;
 
 pub struct Analytics {
     state: Arc<State>,
@@ -87,13 +89,13 @@ fn run(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError>
 
     debug!("Running analytics query {}", &statement);
 
-    let response =
-        active_cluster
-            .cluster()
-            .analytics_query_request(AnalyticsQueryRequest::Execute {
-                statement: statement.clone(),
-                scope: maybe_scope,
-            })?;
+    let response = active_cluster.cluster().analytics_query_request(
+        AnalyticsQueryRequest::Execute {
+            statement: statement.clone(),
+            scope: maybe_scope,
+        },
+        Instant::now().add(active_cluster.timeouts().query_timeout()),
+    )?;
 
     if with_meta {
         let content: serde_json::Value = serde_json::from_str(response.content())?;

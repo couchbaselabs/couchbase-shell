@@ -13,7 +13,9 @@ use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Valu
 use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::convert::TryFrom;
+use std::ops::Add;
 use std::sync::Arc;
+use tokio::time::Instant;
 
 pub struct BucketsGet {
     state: Arc<State>,
@@ -88,14 +90,16 @@ fn buckets_get_one(
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
         let cluster = match state.clusters().get(&identifier) {
-            Some(c) => c.cluster(),
+            Some(c) => c,
             None => {
                 return Err(ShellError::untagged_runtime_error("Cluster not found"));
             }
         };
 
-        let response =
-            cluster.management_request(ManagementRequest::GetBucket { name: name.clone() })?;
+        let response = cluster.cluster().management_request(
+            ManagementRequest::GetBucket { name: name.clone() },
+            Instant::now().add(cluster.timeouts().query_timeout()),
+        )?;
 
         let content: JSONBucketSettings = serde_json::from_str(response.content())?;
         results.push(bucket_to_tagged_dict(
@@ -114,13 +118,16 @@ fn buckets_get_all(
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
         let cluster = match state.clusters().get(&identifier) {
-            Some(c) => c.cluster(),
+            Some(c) => c,
             None => {
                 return Err(ShellError::untagged_runtime_error("Cluster not found"));
             }
         };
 
-        let response = cluster.management_request(ManagementRequest::GetBuckets)?;
+        let response = cluster.cluster().management_request(
+            ManagementRequest::GetBuckets,
+            Instant::now().add(cluster.timeouts().query_timeout()),
+        )?;
 
         let content: Vec<JSONBucketSettings> = serde_json::from_str(response.content())?;
 

@@ -13,9 +13,10 @@ use nu_protocol::{
 };
 use nu_source::Tag;
 use nu_stream::OutputStream;
+use std::ops::Add;
 use std::sync::Arc;
-use std::time::Duration;
 use tokio::runtime::Runtime;
+use tokio::time::Instant;
 
 pub struct DocGet {
     state: Arc<State>,
@@ -159,14 +160,12 @@ fn run_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellEr
         bucket.clone(),
         scope.clone(),
         collection.clone(),
+        Instant::now().add(active_cluster.timeouts().data_timeout()),
     )?;
-    let timeout = match active_cluster.timeouts().data_timeout() {
-        Some(t) => t.clone(),
-        None => Duration::from_millis(2500),
-    };
     for id in ids {
+        let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
         let response =
-            rt.block_on(client.request(KeyValueRequest::Get { key: id.clone() }, timeout.clone()));
+            rt.block_on(client.request(KeyValueRequest::Get { key: id.clone() }, deadline));
 
         match response {
             Ok(mut res) => {

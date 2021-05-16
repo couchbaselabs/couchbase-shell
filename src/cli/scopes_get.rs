@@ -8,7 +8,9 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, Value};
 use nu_source::Tag;
 use nu_stream::OutputStream;
+use std::ops::Add;
 use std::sync::Arc;
+use tokio::time::Instant;
 
 pub struct ScopesGet {
     state: Arc<State>,
@@ -68,9 +70,10 @@ fn scopes_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shel
     debug!("Running scopes get for bucket {:?}", &bucket);
 
     let active_cluster = state.active_cluster();
-    let response = active_cluster
-        .cluster()
-        .management_request(ManagementRequest::GetScopes { bucket })?;
+    let response = active_cluster.cluster().management_request(
+        ManagementRequest::GetScopes { bucket },
+        Instant::now().add(active_cluster.timeouts().query_timeout()),
+    )?;
 
     let manifest: Manifest = match response.status() {
         200 => match serde_json::from_str(response.content()) {

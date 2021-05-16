@@ -1,10 +1,9 @@
 use crate::{client::Client, config::ClusterTlsConfig};
 
-use crate::config::ClusterTimeouts;
 use crate::tutorial::Tutorial;
-use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::{collections::HashMap, time::Duration};
 
 pub struct State {
     active: Mutex<String>,
@@ -194,5 +193,37 @@ impl RemoteCluster {
 
     pub fn timeouts(&self) -> &ClusterTimeouts {
         &self.timeouts
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ClusterTimeouts {
+    data_timeout: Duration,
+    query_timeout: Duration,
+}
+
+impl Default for ClusterTimeouts {
+    fn default() -> Self {
+        ClusterTimeouts {
+            data_timeout: Duration::from_millis(30000),
+            query_timeout: Duration::from_millis(75000),
+        }
+    }
+}
+
+impl ClusterTimeouts {
+    pub fn new(data_timeout: Duration, query_timeout: Duration) -> Self {
+        ClusterTimeouts {
+            data_timeout,
+            query_timeout,
+        }
+    }
+
+    pub fn data_timeout(&self) -> Duration {
+        self.data_timeout.clone()
+    }
+
+    pub fn query_timeout(&self) -> Duration {
+        self.query_timeout.clone()
     }
 }

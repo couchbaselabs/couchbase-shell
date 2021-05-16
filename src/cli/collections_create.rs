@@ -8,7 +8,9 @@ use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_stream::OutputStream;
+use std::ops::Add;
 use std::sync::Arc;
+use tokio::time::Instant;
 
 pub struct CollectionsCreate {
     state: Arc<State>,
@@ -125,13 +127,14 @@ fn collections_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStre
 
     let form_encoded = serde_urlencoded::to_string(&form).unwrap();
 
-    let response = active_cluster
-        .cluster()
-        .management_request(CreateCollection {
+    let response = active_cluster.cluster().management_request(
+        CreateCollection {
             scope: scope_name,
             bucket,
             payload: form_encoded,
-        })?;
+        },
+        Instant::now().add(active_cluster.timeouts().query_timeout()),
+    )?;
 
     match response.status() {
         200 => Ok(OutputStream::empty()),

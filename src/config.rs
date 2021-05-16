@@ -120,7 +120,7 @@ pub struct ClusterConfig {
     #[serde(flatten)]
     credentials: ClusterCredentials,
     #[serde(flatten)]
-    timeouts: ClusterTimeouts,
+    timeouts: ClusterConfigTimeouts,
     #[serde(flatten)]
     tls: ClusterTlsConfig,
 }
@@ -151,7 +151,7 @@ impl ClusterConfig {
     pub fn credentials_mut(&mut self) -> &mut ClusterCredentials {
         &mut self.credentials
     }
-    pub fn timeouts(&self) -> &ClusterTimeouts {
+    pub fn timeouts(&self) -> &ClusterConfigTimeouts {
         &self.timeouts
     }
     pub fn tls(&self) -> &ClusterTlsConfig {
@@ -168,7 +168,7 @@ pub struct ClusterCredentials {
 impl ClusterCredentials {}
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct ClusterTimeouts {
+pub struct ClusterConfigTimeouts {
     #[serde(default)]
     #[serde(rename(deserialize = "data-timeout"), with = "humantime_serde")]
     data_timeout: Option<Duration>,
@@ -180,9 +180,9 @@ pub struct ClusterTimeouts {
     query_timeout: Option<Duration>,
 }
 
-impl Default for ClusterTimeouts {
+impl Default for ClusterConfigTimeouts {
     fn default() -> Self {
-        ClusterTimeouts {
+        ClusterConfigTimeouts {
             data_timeout: Some(Duration::from_millis(2500)),
             connect_timeout: Some(Duration::from_millis(7000)),
             query_timeout: Some(Duration::from_millis(75000)),
@@ -190,9 +190,13 @@ impl Default for ClusterTimeouts {
     }
 }
 
-impl ClusterTimeouts {
+impl ClusterConfigTimeouts {
     pub fn data_timeout(&self) -> Option<&Duration> {
         self.data_timeout.as_ref()
+    }
+    
+    pub fn query_timeout(&self) -> Option<&Duration> {
+        self.query_timeout.as_ref()
     }
 }
 

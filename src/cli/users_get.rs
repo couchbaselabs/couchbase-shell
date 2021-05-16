@@ -9,7 +9,9 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
 use nu_stream::OutputStream;
+use std::ops::Add;
 use std::sync::Arc;
+use tokio::time::Instant;
 
 pub struct UsersGet {
     state: Arc<State>,
@@ -51,9 +53,10 @@ fn users_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shell
     debug!("Running users get {}", username);
 
     let active_cluster = state.active_cluster();
-    let response = active_cluster
-        .cluster()
-        .management_request(ManagementRequest::GetUser { username })?;
+    let response = active_cluster.cluster().management_request(
+        ManagementRequest::GetUser { username },
+        Instant::now().add(active_cluster.timeouts().query_timeout()),
+    )?;
 
     let user_and_meta: UserAndMetadata = match response.status() {
         200 => match serde_json::from_str(response.content()) {

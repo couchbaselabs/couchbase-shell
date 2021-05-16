@@ -10,7 +10,9 @@ use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_stream::OutputStream;
+use std::ops::Add;
 use std::sync::Arc;
+use tokio::time::Instant;
 
 pub struct BucketsFlush {
     state: Arc<State>,
@@ -74,14 +76,16 @@ fn buckets_flush(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, S
 
     for identifier in cluster_identifiers {
         let cluster = match state.clusters().get(&identifier) {
-            Some(c) => c.cluster(),
+            Some(c) => c,
             None => {
                 return Err(ShellError::untagged_runtime_error("Cluster not found"));
             }
         };
 
-        let result =
-            cluster.management_request(ManagementRequest::FlushBucket { name: name.clone() })?;
+        let result = cluster.cluster().management_request(
+            ManagementRequest::FlushBucket { name: name.clone() },
+            Instant::now().add(cluster.timeouts().query_timeout()),
+        )?;
 
         match result.status() {
             200 => {}
