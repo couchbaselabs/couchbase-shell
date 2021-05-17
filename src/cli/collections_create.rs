@@ -61,6 +61,7 @@ impl nu_engine::WholeStreamCommand for CollectionsCreate {
 }
 
 fn collections_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
     let active_cluster = state.active_cluster();
@@ -134,6 +135,7 @@ fn collections_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStre
             payload: form_encoded,
         },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
+        ctrl_c.clone(),
     )?;
 
     match response.status() {

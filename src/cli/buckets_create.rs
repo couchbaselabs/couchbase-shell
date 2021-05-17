@@ -80,6 +80,7 @@ impl nu_engine::WholeStreamCommand for BucketsCreate {
 }
 
 fn buckets_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
     let name = match args.call_info.args.get("name") {
         Some(v) => match v.as_string() {
@@ -202,6 +203,7 @@ fn buckets_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, 
     let response = cluster.management_request(
         ManagementRequest::CreateBucket { payload },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
+        ctrl_c.clone(),
     )?;
 
     match response.status() {

@@ -62,8 +62,9 @@ impl nu_engine::WholeStreamCommand for Query {
 }
 
 fn run(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError> {
+    let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
-    // let ctrl_c = args.ctrl_c.clone();
+
     let statement = args.nth(0).expect("need statement").as_string()?;
     let active_cluster = match args.call_info.args.get("cluster") {
         Some(c) => {
@@ -122,6 +123,7 @@ fn run(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError>
             scope: maybe_scope,
         },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
+        ctrl_c.clone(),
     )?;
 
     if with_meta {

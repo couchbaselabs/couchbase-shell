@@ -161,11 +161,15 @@ fn run_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellEr
         scope.clone(),
         collection.clone(),
         Instant::now().add(active_cluster.timeouts().data_timeout()),
+        ctrl_c.clone(),
     )?;
     for id in ids {
         let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
-        let response =
-            rt.block_on(client.request(KeyValueRequest::Get { key: id.clone() }, deadline));
+        let response = rt.block_on(client.request(
+            KeyValueRequest::Get { key: id.clone() },
+            deadline,
+            ctrl_c.clone(),
+        ));
 
         match response {
             Ok(mut res) => {

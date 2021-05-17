@@ -70,6 +70,7 @@ impl nu_engine::WholeStreamCommand for UsersUpsert {
 }
 
 fn users_upsert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
     let username = match args.call_info.args.get("username") {
         Some(v) => match v.as_string() {
@@ -122,6 +123,7 @@ fn users_upsert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Sh
     let response = active_cluster.cluster().management_request(
         ManagementRequest::UpsertUser { username, payload },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
+        ctrl_c.clone(),
     )?;
 
     match response.status() {

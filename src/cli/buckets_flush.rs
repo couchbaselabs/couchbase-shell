@@ -51,6 +51,7 @@ impl nu_engine::WholeStreamCommand for BucketsFlush {
 }
 
 fn buckets_flush(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
@@ -85,6 +86,7 @@ fn buckets_flush(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, S
         let result = cluster.cluster().management_request(
             ManagementRequest::FlushBucket { name: name.clone() },
             Instant::now().add(cluster.timeouts().query_timeout()),
+            ctrl_c.clone(),
         )?;
 
         match result.status() {

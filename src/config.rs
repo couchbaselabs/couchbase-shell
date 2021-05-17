@@ -194,7 +194,7 @@ impl ClusterConfigTimeouts {
     pub fn data_timeout(&self) -> Option<&Duration> {
         self.data_timeout.as_ref()
     }
-    
+
     pub fn query_timeout(&self) -> Option<&Duration> {
         self.query_timeout.as_ref()
     }

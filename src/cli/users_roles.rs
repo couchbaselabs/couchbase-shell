@@ -55,6 +55,7 @@ impl nu_engine::WholeStreamCommand for UsersRoles {
 }
 
 fn run_async(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
@@ -80,6 +81,7 @@ fn run_async(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shell
                 permission: permission.clone(),
             },
             Instant::now().add(active_cluster.timeouts().query_timeout()),
+            ctrl_c.clone(),
         )?;
 
         let roles: Vec<RoleAndDescription> = match response.status() {

@@ -45,8 +45,8 @@ impl nu_engine::WholeStreamCommand for QueryAdvise {
 }
 
 fn run(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError> {
+    let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
-    //let ctrl_c = args.ctrl_c.clone();
 
     let statement = args.nth(0).expect("need statement").as_string()?;
     let statement = format!("ADVISE {}", statement);
@@ -82,6 +82,7 @@ fn run(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError>
             scope: None,
         },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
+        ctrl_c.clone(),
     )?;
 
     let content: serde_json::Value = serde_json::from_str(response.content())?;

@@ -41,7 +41,8 @@ impl nu_engine::WholeStreamCommand for AnalyticsDataverses {
     }
 }
 
-fn dataverses(state: Arc<State>, _args: CommandArgs) -> Result<ActionStream, ShellError> {
+fn dataverses(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError> {
+    let ctrl_c = args.ctrl_c();
     let statement = "SELECT d.* FROM Metadata.`Dataverse` d WHERE d.DataverseName <> \"Metadata\"";
 
     let active_cluster = state.active_cluster();
@@ -53,6 +54,7 @@ fn dataverses(state: Arc<State>, _args: CommandArgs) -> Result<ActionStream, She
             scope: None,
         },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
+        ctrl_c.clone(),
     )?;
 
     let content: serde_json::Value = serde_json::from_str(response.content())?;

@@ -8,6 +8,7 @@ use nu_source::Tag;
 use nu_stream::OutputStream;
 use serde::Deserialize;
 use std::ops::Add;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tokio::time::Instant;
 
@@ -45,20 +46,26 @@ impl nu_engine::WholeStreamCommand for ClustersHealth {
 }
 
 fn health(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellError> {
+    let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
 
     let mut converted = vec![];
     for identifier in cluster_identifiers {
-        converted.push(check_autofailover(state.clone(), &identifier)?);
+        converted.push(check_autofailover(
+            state.clone(),
+            &identifier,
+            ctrl_c.clone(),
+        )?);
 
-        let bucket_names = grab_bucket_names(state.clone(), &identifier)?;
+        let bucket_names = grab_bucket_names(state.clone(), &identifier, ctrl_c.clone())?;
         for bucket_name in bucket_names {
             converted.push(check_resident_ratio(
                 state.clone(),
                 &bucket_name,
                 &identifier,
+                ctrl_c.clone(),
             )?);
         }
     }
@@ -66,7 +73,11 @@ fn health(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellErr
     Ok(converted.into())
 }
 
-fn grab_bucket_names(state: Arc<State>, identifier: &str) -> Result<Vec<String>, ShellError> {
+fn grab_bucket_names(
+    state: Arc<State>,
+    identifier: &str,
+    ctrl_c: Arc<AtomicBool>,
+) -> Result<Vec<String>, ShellError> {
     let cluster = match state.clusters().get(identifier) {
         Some(c) => c,
         None => {
@@ -77,6 +88,7 @@ fn grab_bucket_names(state: Arc<State>, identifier: &str) -> Result<Vec<String>,
     let response = cluster.cluster().management_request(
         ManagementRequest::GetBuckets,
         Instant::now().add(cluster.timeouts().query_timeout()),
+        ctrl_c.clone(),
     )?;
     let resp: Vec<BucketInfo> = serde_json::from_str(response.content())?;
     Ok(resp.into_iter().map(|b| b.name).collect::<Vec<_>>())
@@ -87,7 +99,11 @@ struct BucketInfo {
     name: String,
 }
 
-fn check_autofailover(state: Arc<State>, identifier: &str) -> Result<Value, ShellError> {
+fn check_autofailover(
+    state: Arc<State>,
+    identifier: &str,
+    ctrl_c: Arc<AtomicBool>,
+) -> Result<Value, ShellError> {
     let mut collected = TaggedDictBuilder::new(Tag::default());
 
     let cluster = match state.clusters().get(identifier) {
@@ -100,6 +116,7 @@ fn check_autofailover(state: Arc<State>, identifier: &str) -> Result<Value, Shel
     let response = cluster.cluster().management_request(
         ManagementRequest::SettingsAutoFailover,
         Instant::now().add(cluster.timeouts().query_timeout()),
+        ctrl_c.clone(),
     )?;
     let resp: AutoFailoverSettings = serde_json::from_str(response.content())?;
 
@@ -128,6 +145,7 @@ fn check_resident_ratio(
     state: Arc<State>,
     bucket_name: &str,
     identifier: &str,
+    ctrl_c: Arc<AtomicBool>,
 ) -> Result<Value, ShellError> {
     let mut collected = TaggedDictBuilder::new(Tag::default());
 
@@ -143,6 +161,7 @@ fn check_resident_ratio(
             name: bucket_name.to_string(),
         },
         Instant::now().add(cluster.timeouts().query_timeout()),
+        ctrl_c.clone(),
     )?;
     let resp: BucketStats = serde_json::from_str(response.content())?;
     let ratio = match resp.op.samples.active_resident_ratios.last() {

@@ -47,6 +47,7 @@ impl nu_engine::WholeStreamCommand for UsersGet {
 }
 
 fn users_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
     let username = args.nth(0).expect("need username").as_string()?;
 
@@ -56,6 +57,7 @@ fn users_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shell
     let response = active_cluster.cluster().management_request(
         ManagementRequest::GetUser { username },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
+        ctrl_c.clone(),
     )?;
 
     let user_and_meta: UserAndMetadata = match response.status() {

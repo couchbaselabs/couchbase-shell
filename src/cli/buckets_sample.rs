@@ -52,6 +52,7 @@ impl nu_engine::WholeStreamCommand for BucketsSample {
 }
 
 fn load_sample_bucket(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
@@ -78,6 +79,7 @@ fn load_sample_bucket(state: Arc<State>, args: CommandArgs) -> Result<OutputStre
                 name: format!("[\"{}\"]", bucket_name),
             },
             Instant::now().add(cluster.timeouts().query_timeout()),
+            ctrl_c.clone(),
         )?;
 
         match response.status() {

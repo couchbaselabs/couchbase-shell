@@ -49,6 +49,7 @@ impl nu_engine::WholeStreamCommand for Nodes {
 }
 
 fn nodes(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
@@ -65,6 +66,7 @@ fn nodes(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellErro
         let response = active_cluster.cluster().management_request(
             ManagementRequest::GetNodes,
             Instant::now().add(active_cluster.timeouts().query_timeout()),
+            ctrl_c.clone(),
         )?;
 
         let resp: PoolInfo = match response.status() {

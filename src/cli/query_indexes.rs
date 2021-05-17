@@ -9,6 +9,7 @@ use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
 use serde::Deserialize;
 use std::ops::Add;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tokio::time::Instant;
 
@@ -84,7 +85,7 @@ fn indexes(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellEr
     };
 
     if fetch_defs {
-        return index_definitions(active_cluster);
+        return index_definitions(active_cluster, ctrl_c.clone());
     }
 
     let statement = "select keyspace_id as `bucket`, name, state, `using` as `type`, ifmissing(condition, null) as condition, ifmissing(is_primary, false) as `primary`, index_key from system:indexes";
@@ -97,6 +98,7 @@ fn indexes(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellEr
             scope: None,
         },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
+        ctrl_c.clone(),
     )?;
 
     let content: serde_json::Value = serde_json::from_str(response.content())?;
@@ -124,12 +126,16 @@ struct IndexStatus {
     indexes: Vec<IndexDefinition>,
 }
 
-fn index_definitions(cluster: &RemoteCluster) -> Result<ActionStream, ShellError> {
+fn index_definitions(
+    cluster: &RemoteCluster,
+    ctrl_c: Arc<AtomicBool>,
+) -> Result<ActionStream, ShellError> {
     debug!("Running fetch n1ql indexes");
 
     let response = cluster.cluster().management_request(
         ManagementRequest::IndexStatus,
         Instant::now().add(cluster.timeouts().query_timeout()),
+        ctrl_c.clone(),
     )?;
 
     let defs: IndexStatus = serde_json::from_str(response.content())?;

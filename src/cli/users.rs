@@ -10,6 +10,7 @@ use nu_protocol::{Signature, Value};
 use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::ops::Add;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tokio::time::Instant;
 
@@ -37,17 +38,19 @@ impl nu_engine::WholeStreamCommand for Users {
         "Lists all users"
     }
 
-    fn run(&self, _args: CommandArgs) -> Result<OutputStream, ShellError> {
-        users_get_all(self.state.clone())
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        let ctrl_c = args.ctrl_c();
+        users_get_all(self.state.clone(), ctrl_c.clone())
     }
 }
 
-fn users_get_all(state: Arc<State>) -> Result<OutputStream, ShellError> {
+fn users_get_all(state: Arc<State>, ctrl_c: Arc<AtomicBool>) -> Result<OutputStream, ShellError> {
     debug!("Running users get all");
     let active_cluster = state.active_cluster();
     let response = active_cluster.cluster().management_request(
         ManagementRequest::GetUsers,
         Instant::now().add(active_cluster.timeouts().query_timeout()),
+        ctrl_c.clone(),
     )?;
 
     let users: Vec<UserAndMetadata> = match response.status() {

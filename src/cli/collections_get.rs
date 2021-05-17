@@ -50,6 +50,7 @@ impl nu_engine::WholeStreamCommand for CollectionsGet {
 }
 
 fn collections_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
     let bucket = match args
@@ -87,6 +88,7 @@ fn collections_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream,
     let response = active_cluster.cluster().management_request(
         ManagementRequest::GetCollections { bucket },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
+        ctrl_c.clone(),
     )?;
 
     let manifest: Manifest = match response.status() {

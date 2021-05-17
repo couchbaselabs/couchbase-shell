@@ -41,7 +41,8 @@ impl nu_engine::WholeStreamCommand for AnalyticsIndexes {
     }
 }
 
-fn indexes(state: Arc<State>, _args: CommandArgs) -> Result<ActionStream, ShellError> {
+fn indexes(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError> {
+    let ctrl_c = args.ctrl_c();
     let statement = "SELECT d.* FROM Metadata.`Index` d WHERE d.DataverseName <> \"Metadata\"";
 
     let active_cluster = state.active_cluster();
@@ -53,6 +54,7 @@ fn indexes(state: Arc<State>, _args: CommandArgs) -> Result<ActionStream, ShellE
             scope: None,
         },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
+        ctrl_c.clone(),
     )?;
 
     let content: serde_json::Value = serde_json::from_str(response.content())?;

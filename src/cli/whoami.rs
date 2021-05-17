@@ -46,6 +46,7 @@ impl nu_engine::WholeStreamCommand for Whoami {
 }
 
 fn whoami(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
@@ -62,6 +63,7 @@ fn whoami(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellErr
         let response = cluster.cluster().management_request(
             ManagementRequest::Whoami,
             Instant::now().add(cluster.timeouts().query_timeout()),
+            ctrl_c.clone(),
         )?;
         let mut content: Map<String, Value> = serde_json::from_str(response.content())?;
         content.insert("cluster".into(), json!(identifier.clone()));

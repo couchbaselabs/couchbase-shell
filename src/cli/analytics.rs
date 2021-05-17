@@ -95,6 +95,7 @@ fn run(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError>
             scope: maybe_scope,
         },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
+        ctrl_c.clone(),
     )?;
 
     if with_meta {

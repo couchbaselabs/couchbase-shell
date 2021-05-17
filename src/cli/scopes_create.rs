@@ -47,6 +47,7 @@ impl nu_engine::WholeStreamCommand for ScopesCreate {
 }
 
 fn scopes_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
     let scope = match args.call_info.args.get("name") {
@@ -87,6 +88,7 @@ fn scopes_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, S
     let response = active_cluster.cluster().management_request(
         ManagementRequest::CreateScope { payload, bucket },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
+        ctrl_c.clone(),
     )?;
 
     match response.status() {

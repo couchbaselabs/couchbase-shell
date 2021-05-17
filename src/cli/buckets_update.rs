@@ -79,6 +79,7 @@ impl nu_engine::WholeStreamCommand for BucketsUpdate {
 }
 
 fn buckets_update(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
     let name = match args.call_info.args.get("name") {
@@ -94,6 +95,7 @@ fn buckets_update(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, 
     let response = active_cluster.cluster().management_request(
         ManagementRequest::GetBucket { name: name.clone() },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
+        ctrl_c.clone(),
     )?;
 
     let content: JSONBucketSettings = serde_json::from_str(response.content())?;
@@ -172,6 +174,7 @@ fn buckets_update(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, 
             payload,
         },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
+        ctrl_c.clone(),
     )?;
 
     match response.status() {

@@ -47,6 +47,7 @@ impl nu_engine::WholeStreamCommand for ScopesGet {
 }
 
 fn scopes_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
     let bucket = match args
@@ -73,6 +74,7 @@ fn scopes_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shel
     let response = active_cluster.cluster().management_request(
         ManagementRequest::GetScopes { bucket },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
+        ctrl_c.clone(),
     )?;
 
     let manifest: Manifest = match response.status() {

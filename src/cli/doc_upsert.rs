@@ -80,8 +80,8 @@ impl nu_engine::WholeStreamCommand for DocUpsert {
 }
 
 fn run_upsert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
-    // let ctrl_c = args.ctrl_c.clone();
 
     let id_column = args
         .call_info
@@ -192,6 +192,7 @@ fn run_upsert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shel
         scope.clone(),
         collection.clone(),
         Instant::now().add(active_cluster.timeouts().data_timeout()),
+        ctrl_c.clone(),
     )?;
 
     let rt = Runtime::new().unwrap();
@@ -215,6 +216,7 @@ fn run_upsert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shel
                     expiry: expiry.clone(),
                 },
                 deadline,
+                ctrl_c.clone(),
             ))
             .map_err(|e| ShellError::untagged_runtime_error(e.to_string()));
 

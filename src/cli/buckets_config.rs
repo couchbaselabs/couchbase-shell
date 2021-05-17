@@ -45,6 +45,7 @@ impl nu_engine::WholeStreamCommand for BucketsConfig {
 }
 
 fn buckets(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellError> {
+    let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
     let bucket_name = match args.nth(0) {
@@ -62,6 +63,7 @@ fn buckets(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellEr
     let response = cluster.management_request(
         ManagementRequest::GetBucket { name: bucket_name },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
+        ctrl_c.clone(),
     )?;
 
     let content = serde_json::from_str(response.content())?;

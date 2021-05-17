@@ -14,6 +14,7 @@ use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::convert::TryFrom;
 use std::ops::Add;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tokio::time::Instant;
 
@@ -59,6 +60,7 @@ impl nu_engine::WholeStreamCommand for BucketsGet {
 }
 
 fn buckets_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
@@ -76,9 +78,9 @@ fn buckets_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, She
     debug!("Running buckets get for bucket {:?}", &bucket);
 
     if bucket == "" {
-        buckets_get_all(state, cluster_identifiers)
+        buckets_get_all(state, cluster_identifiers, ctrl_c)
     } else {
-        buckets_get_one(state, cluster_identifiers, bucket)
+        buckets_get_one(state, cluster_identifiers, bucket, ctrl_c)
     }
 }
 
@@ -86,6 +88,7 @@ fn buckets_get_one(
     state: Arc<State>,
     cluster_identifiers: Vec<String>,
     name: String,
+    ctrl_c: Arc<AtomicBool>,
 ) -> Result<OutputStream, ShellError> {
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
@@ -99,6 +102,7 @@ fn buckets_get_one(
         let response = cluster.cluster().management_request(
             ManagementRequest::GetBucket { name: name.clone() },
             Instant::now().add(cluster.timeouts().query_timeout()),
+            ctrl_c.clone(),
         )?;
 
         let content: JSONBucketSettings = serde_json::from_str(response.content())?;
@@ -114,6 +118,7 @@ fn buckets_get_one(
 fn buckets_get_all(
     state: Arc<State>,
     cluster_identifiers: Vec<String>,
+    ctrl_c: Arc<AtomicBool>,
 ) -> Result<OutputStream, ShellError> {
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
@@ -127,6 +132,7 @@ fn buckets_get_all(
         let response = cluster.cluster().management_request(
             ManagementRequest::GetBuckets,
             Instant::now().add(cluster.timeouts().query_timeout()),
+            ctrl_c.clone(),
         )?;
 
         let content: Vec<JSONBucketSettings> = serde_json::from_str(response.content())?;

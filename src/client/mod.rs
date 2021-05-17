@@ -4,6 +4,7 @@ mod protocol;
 
 use std::{collections::HashMap, ops::Sub};
 
+use crate::cli::CtrlcFuture;
 use crate::client::kv::KvEndpoint;
 use crate::client::ClientError::CollectionNotFound;
 use crate::config::ClusterTlsConfig;
@@ -11,12 +12,16 @@ use crc::crc32;
 use isahc::{
     auth::{Authentication, Credentials},
     config::CaCertificate,
+    ResponseFuture,
 };
 use isahc::{config::SslOption, prelude::*};
 use nu_errors::ShellError;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::fmt;
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
+use tokio::runtime::Runtime;
 use tokio::time::sleep;
 use tokio::{select, time::Instant};
 
@@ -38,6 +43,7 @@ pub enum ClientError {
     AccessError,
     AuthError,
     Timeout,
+    Cancelled,
     RequestFailed { reason: Option<String> },
 }
 
@@ -53,6 +59,7 @@ impl fmt::Display for ClientError {
             Self::AccessError => "access error",
             Self::AuthError => "authentication error",
             Self::Timeout => "timeout",
+            Self::Cancelled => "request cancelled",
             Self::RequestFailed { reason } => match reason.as_ref() {
                 Some(re) => re.as_str(),
                 None => "",
@@ -115,7 +122,11 @@ impl Client {
         }
     }
 
-    fn get_config(&self, deadline: Instant) -> Result<ClusterConfig, ClientError> {
+    fn get_config(
+        &self,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<ClusterConfig, ClientError> {
         let path = "/pools/default/nodeServices";
         let port = if self.tls_config.enabled() {
             18091
@@ -124,7 +135,7 @@ impl Client {
         };
         for seed in &self.seeds {
             let uri = format!("{}://{}:{}{}", self.http_prefix(), seed, port, &path);
-            let (content, status) = self.http_get(&uri, deadline)?;
+            let (content, status) = self.http_get(&uri, deadline, ctrl_c.clone())?;
             if status != 200 {
                 continue;
             }
@@ -139,6 +150,7 @@ impl Client {
         &self,
         bucket: String,
         deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
     ) -> Result<BucketConfig, ClientError> {
         let path = format!("/pools/default/b/{}", bucket);
         let port = if self.tls_config.enabled() {
@@ -148,7 +160,7 @@ impl Client {
         };
         for seed in &self.seeds {
             let uri = format!("{}://{}:{}{}", self.http_prefix(), seed, port, &path);
-            let (content, status) = self.http_get(&uri, deadline)?;
+            let (content, status) = self.http_get(&uri, deadline, ctrl_c.clone())?;
             if status != 200 {
                 continue;
             }
@@ -163,6 +175,7 @@ impl Client {
         &self,
         bucket: String,
         deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
     ) -> Result<CollectionManifest, ClientError> {
         let path = format!("/pools/default/buckets/{}/scopes/", bucket);
         let port = if self.tls_config.enabled() {
@@ -172,7 +185,7 @@ impl Client {
         };
         for seed in &self.seeds {
             let uri = format!("{}://{}:{}{}", self.http_prefix(), seed, port, &path);
-            let (content, status) = self.http_get(&uri, deadline)?;
+            let (content, status) = self.http_get(&uri, deadline, ctrl_c.clone())?;
             if status != 200 {
                 continue;
             }
@@ -188,12 +201,15 @@ impl Client {
         payload: Option<Vec<u8>>,
         headers: HashMap<&str, &str>,
         deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
     ) -> Result<(String, u16), ClientError> {
         let now = Instant::now();
         if now >= deadline {
             return Err(ClientError::Timeout);
         }
         let timeout = deadline.sub(now);
+        let ctrl_c_fut = CtrlcFuture::new(ctrl_c);
+
         res_builder = res_builder
             .authentication(Authentication::basic())
             .credentials(Credentials::new(&self.username, &self.password))
@@ -210,26 +226,45 @@ impl Client {
             res_builder = res_builder.header(key, value);
         }
 
-        let mut res: http::Response<isahc::Body>;
+        let res_fut: ResponseFuture;
         if let Some(p) = payload {
-            res = res_builder.body(p)?.send()?;
+            res_fut = res_builder.body(p)?.send_async();
         } else {
-            res = res_builder.body(())?.send()?;
+            res_fut = res_builder.body(())?.send_async();
         }
 
-        let content = res.text()?;
-        let status = res.status().into();
-        Ok((content, status))
+        let rt = Runtime::new().unwrap();
+        rt.block_on(async {
+            select! {
+                result = res_fut => {
+                    let mut response = result.map_err(|e| ClientError::from(e))?;
+                    let content = response.text().await?;
+                    let status = response.status().into();
+                    return Ok((content, status));
+                },
+                () = ctrl_c_fut => Err(ClientError::Cancelled),
+            }
+        })
     }
 
-    fn http_get(&self, uri: &str, deadline: Instant) -> Result<(String, u16), ClientError> {
+    fn http_get(
+        &self,
+        uri: &str,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<(String, u16), ClientError> {
         let res_builder = isahc::Request::get(uri);
-        self.http_do(res_builder, None, HashMap::new(), deadline)
+        self.http_do(res_builder, None, HashMap::new(), deadline, ctrl_c)
     }
 
-    fn http_delete(&self, uri: &str, deadline: Instant) -> Result<(String, u16), ClientError> {
+    fn http_delete(
+        &self,
+        uri: &str,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<(String, u16), ClientError> {
         let res_builder = isahc::Request::delete(uri);
-        self.http_do(res_builder, None, HashMap::new(), deadline)
+        self.http_do(res_builder, None, HashMap::new(), deadline, ctrl_c)
     }
 
     fn http_ssl_opts(&self) -> SslOption {
@@ -249,9 +284,10 @@ impl Client {
         payload: Option<Vec<u8>>,
         headers: HashMap<&str, &str>,
         deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
     ) -> Result<(String, u16), ClientError> {
         let res_builder = isahc::Request::post(uri);
-        self.http_do(res_builder, payload, headers, deadline)
+        self.http_do(res_builder, payload, headers, deadline, ctrl_c)
     }
 
     fn http_put(
@@ -260,30 +296,40 @@ impl Client {
         payload: Option<Vec<u8>>,
         headers: HashMap<&str, &str>,
         deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
     ) -> Result<(String, u16), ClientError> {
         let res_builder = isahc::Request::put(uri);
-        self.http_do(res_builder, payload, headers, deadline)
+        self.http_do(res_builder, payload, headers, deadline, ctrl_c)
     }
 
     pub fn management_request(
         &self,
         request: ManagementRequest,
         deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
     ) -> Result<HttpResponse, ClientError> {
-        let config = self.get_config(deadline)?;
+        let config = self.get_config(deadline, ctrl_c.clone())?;
 
         let path = request.path();
         for seed in config.management_seeds(self.tls_config.enabled()) {
             let uri = format!("{}://{}:{}{}", self.http_prefix(), seed.0, seed.1, &path);
             let (content, status) = match request.verb() {
-                HttpVerb::Get => self.http_get(&uri, deadline)?,
-                HttpVerb::Post => {
-                    self.http_post(&uri, request.payload(), request.headers(), deadline)?
-                }
-                HttpVerb::Delete => self.http_delete(&uri, deadline)?,
-                HttpVerb::Put => {
-                    self.http_put(&uri, request.payload(), request.headers(), deadline)?
-                }
+                HttpVerb::Get => self.http_get(&uri, deadline, ctrl_c.clone())?,
+                HttpVerb::Post => self.http_post(
+                    &uri,
+                    request.payload(),
+                    request.headers(),
+                    deadline,
+                    ctrl_c.clone(),
+                )?,
+                HttpVerb::Delete => self.http_delete(&uri, deadline, ctrl_c.clone())?,
+                HttpVerb::Put => self.http_put(
+                    &uri,
+                    request.payload(),
+                    request.headers(),
+                    deadline,
+                    ctrl_c.clone(),
+                )?,
             };
             return Ok(HttpResponse { content, status });
         }
@@ -295,17 +341,22 @@ impl Client {
         &self,
         request: QueryRequest,
         deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
     ) -> Result<HttpResponse, ClientError> {
-        let config = self.get_config(deadline)?;
+        let config = self.get_config(deadline, ctrl_c.clone())?;
 
         let path = request.path();
         for seed in config.query_seeds(self.tls_config.enabled()) {
             let uri = format!("{}://{}:{}{}", self.http_prefix(), seed.0, seed.1, &path);
             let (content, status) = match request.verb() {
-                HttpVerb::Get => self.http_get(&uri, deadline)?,
-                HttpVerb::Post => {
-                    self.http_post(&uri, request.payload(), request.headers(), deadline)?
-                }
+                HttpVerb::Get => self.http_get(&uri, deadline, ctrl_c.clone())?,
+                HttpVerb::Post => self.http_post(
+                    &uri,
+                    request.payload(),
+                    request.headers(),
+                    deadline,
+                    ctrl_c.clone(),
+                )?,
                 _ => {
                     return Err(ClientError::RequestFailed {
                         reason: Some("Method not allowed for queries".into()),
@@ -323,17 +374,22 @@ impl Client {
         &self,
         request: AnalyticsQueryRequest,
         deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
     ) -> Result<HttpResponse, ClientError> {
-        let config = self.get_config(deadline)?;
+        let config = self.get_config(deadline, ctrl_c.clone())?;
 
         let path = request.path();
         for seed in config.analytics_seeds(self.tls_config.enabled()) {
             let uri = format!("{}://{}:{}{}", self.http_prefix(), seed.0, seed.1, &path);
             let (content, status) = match request.verb() {
-                HttpVerb::Get => self.http_get(&uri, deadline)?,
-                HttpVerb::Post => {
-                    self.http_post(&uri, request.payload(), request.headers(), deadline)?
-                }
+                HttpVerb::Get => self.http_get(&uri, deadline, ctrl_c.clone())?,
+                HttpVerb::Post => self.http_post(
+                    &uri,
+                    request.payload(),
+                    request.headers(),
+                    deadline,
+                    ctrl_c.clone(),
+                )?,
                 _ => {
                     return Err(ClientError::RequestFailed {
                         reason: Some("Method not allowed for analytics queries".into()),
@@ -351,16 +407,21 @@ impl Client {
         &self,
         request: SearchQueryRequest,
         deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
     ) -> Result<HttpResponse, ClientError> {
-        let config = self.get_config(deadline)?;
+        let config = self.get_config(deadline, ctrl_c.clone())?;
 
         let path = request.path();
         for seed in config.search_seeds(self.tls_config.enabled()) {
             let uri = format!("{}://{}:{}{}", self.http_prefix(), seed.0, seed.1, &path);
             let (content, status) = match request.verb() {
-                HttpVerb::Post => {
-                    self.http_post(&uri, request.payload(), request.headers(), deadline)?
-                }
+                HttpVerb::Post => self.http_post(
+                    &uri,
+                    request.payload(),
+                    request.headers(),
+                    deadline,
+                    ctrl_c.clone(),
+                )?,
                 _ => {
                     return Err(ClientError::RequestFailed {
                         reason: Some("Method not allowed for analytics queries".into()),
@@ -382,13 +443,15 @@ impl Client {
         scope: String,
         collection: String,
         deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
     ) -> Result<KvClient, ClientError> {
-        let config = self.get_bucket_config(bucket.clone(), deadline)?;
+        let config = self.get_bucket_config(bucket.clone(), deadline, ctrl_c.clone())?;
         let mut pair: Option<CollectionDetails> = None;
         if (scope != "" && scope != "_default") || (collection != "" && collection != "_default") {
             // If we've been specifically asked to use a scope or collection and fetching the manifest
             // fails then we need to report that.
-            let manifest = self.get_collection_manifest(bucket.clone(), deadline)?;
+            let manifest =
+                self.get_collection_manifest(bucket.clone(), deadline, ctrl_c.clone())?;
             pair = Some(CollectionDetails {
                 collection,
                 scope,
@@ -847,6 +910,7 @@ impl KvClient {
         &mut self,
         request: KeyValueRequest,
         deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
     ) -> Result<KvResponse, ClientError> {
         let now = Instant::now();
         if now >= deadline {
@@ -854,6 +918,9 @@ impl KvClient {
         }
         let deadline_sleep = sleep(deadline.sub(now));
         tokio::pin!(deadline_sleep);
+
+        let ctrl_c_fut = CtrlcFuture::new(ctrl_c);
+        tokio::pin!(ctrl_c_fut);
 
         let cid = if let Some(collection) = self.collection.as_ref() {
             self.search_manifest(
@@ -887,6 +954,7 @@ impl KvClient {
             let endpoint = select! {
                 res = connect => res,
                 () = &mut deadline_sleep => Err(ClientError::Timeout),
+                () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
             }?;
 
             // Got to be a better way...
@@ -902,6 +970,7 @@ impl KvClient {
                 select! {
                     res = get => res,
                     () = &mut deadline_sleep => Err(ClientError::Timeout),
+                    () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
                 }
             }
             KeyValueRequest::Set { key, value, expiry } => {
@@ -913,6 +982,7 @@ impl KvClient {
                 select! {
                     res = get => res,
                     () = &mut deadline_sleep => Err(ClientError::Timeout),
+                    () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
                 }
             }
         };

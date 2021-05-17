@@ -49,6 +49,7 @@ impl nu_engine::WholeStreamCommand for Search {
 }
 
 fn run(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
     let index = args.nth(0).expect("need index name").as_string()?;
     let query = args.nth(1).expect("need query text").as_string()?;
@@ -81,6 +82,7 @@ fn run(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError>
     let response = active_cluster.cluster().search_query_request(
         SearchQueryRequest::Execute { query, index },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
+        ctrl_c.clone(),
     )?;
 
     let rows: SearchResultData = match response.status() {
