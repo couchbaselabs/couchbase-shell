@@ -372,6 +372,9 @@ pub fn _dump(input: &Bytes) -> String {
 pub enum Opcode {
     Get,
     Set,
+    Add,
+    Replace,
+    Remove,
     Hello,
     Noop,
     ErrorMap,
@@ -384,6 +387,9 @@ impl Opcode {
         match self {
             Self::Get => 0x00,
             Self::Set => 0x01,
+            Self::Add => 0x02,
+            Self::Replace => 0x03,
+            Self::Remove => 0x04,
             Self::Noop => 0x0A,
             Self::Hello => 0x1F,
             Self::Auth => 0x21,
@@ -400,6 +406,9 @@ impl TryFrom<u8> for Opcode {
         Ok(match input {
             0x00 => Opcode::Get,
             0x01 => Opcode::Set,
+            0x02 => Opcode::Add,
+            0x03 => Opcode::Replace,
+            0x04 => Opcode::Remove,
             0x0A => Opcode::Noop,
             0x1F => Opcode::Hello,
             0x21 => Opcode::Auth,

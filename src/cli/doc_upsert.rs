@@ -4,6 +4,7 @@ use super::util::convert_nu_value_to_json_value;
 
 use crate::state::State;
 
+use crate::cli::util::namespace_from_args;
 use crate::client::KeyValueRequest;
 use async_trait::async_trait;
 use nu_engine::CommandArgs;
@@ -100,47 +101,7 @@ fn run_upsert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shel
         .unwrap_or_else(|| String::from("content"));
 
     let active_cluster = state.active_cluster();
-    let bucket = match args
-        .call_info
-        .args
-        .get("bucket")
-        .map(|bucket| bucket.as_string().ok())
-        .flatten()
-        .or_else(|| active_cluster.active_bucket())
-    {
-        Some(v) => Ok(v),
-        None => Err(ShellError::untagged_runtime_error(format!(
-            "Could not auto-select a bucket - please use --bucket instead"
-        ))),
-    }?;
-
-    let scope = match args
-        .call_info
-        .args
-        .get("scope")
-        .map(|c| c.as_string().ok())
-        .flatten()
-    {
-        Some(s) => s,
-        None => match active_cluster.active_scope() {
-            Some(s) => s,
-            None => "".into(),
-        },
-    };
-
-    let collection = match args
-        .call_info
-        .args
-        .get("collection")
-        .map(|c| c.as_string().ok())
-        .flatten()
-    {
-        Some(c) => c,
-        None => match active_cluster.active_collection() {
-            Some(c) => c,
-            None => "".into(),
-        },
-    };
+    let (bucket, scope, collection) = namespace_from_args(&args, active_cluster)?;
 
     let expiry_arg = args
         .call_info

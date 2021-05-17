@@ -935,6 +935,9 @@ impl KvClient {
         let key = match request {
             KeyValueRequest::Get { ref key } => key.clone(),
             KeyValueRequest::Set { ref key, .. } => key.clone(),
+            KeyValueRequest::Insert { ref key, .. } => key.clone(),
+            KeyValueRequest::Replace { ref key, .. } => key.clone(),
+            KeyValueRequest::Remove { ref key, .. } => key.clone(),
         };
 
         let config = &self.config;
@@ -965,22 +968,56 @@ impl KvClient {
         let result = match request {
             KeyValueRequest::Get { key } => {
                 // ep cannot be None so unwrap is safe to do.
-                let get = ep.unwrap().get(key.clone(), partition as u16, cid);
+                let op = ep.unwrap().get(key.clone(), partition as u16, cid);
 
                 select! {
-                    res = get => res,
+                    res = op => res,
                     () = &mut deadline_sleep => Err(ClientError::Timeout),
                     () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
                 }
             }
             KeyValueRequest::Set { key, value, expiry } => {
                 // ep cannot be None so unwrap is safe to do.
-                let get = ep
+                let op = ep
                     .unwrap()
                     .set(key.clone(), value, expiry, partition as u16, cid);
 
                 select! {
-                    res = get => res,
+                    res = op => res,
+                    () = &mut deadline_sleep => Err(ClientError::Timeout),
+                    () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
+                }
+            }
+            KeyValueRequest::Insert { key, value, expiry } => {
+                // ep cannot be None so unwrap is safe to do.
+                let op = ep
+                    .unwrap()
+                    .add(key.clone(), value, expiry, partition as u16, cid);
+
+                select! {
+                    res = op => res,
+                    () = &mut deadline_sleep => Err(ClientError::Timeout),
+                    () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
+                }
+            }
+            KeyValueRequest::Replace { key, value, expiry } => {
+                // ep cannot be None so unwrap is safe to do.
+                let op = ep
+                    .unwrap()
+                    .replace(key.clone(), value, expiry, partition as u16, cid);
+
+                select! {
+                    res = op => res,
+                    () = &mut deadline_sleep => Err(ClientError::Timeout),
+                    () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
+                }
+            }
+            KeyValueRequest::Remove { key } => {
+                // ep cannot be None so unwrap is safe to do.
+                let op = ep.unwrap().remove(key.clone(), partition as u16, cid);
+
+                select! {
+                    res = op => res,
                     () = &mut deadline_sleep => Err(ClientError::Timeout),
                     () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
                 }
@@ -1095,5 +1132,18 @@ pub enum KeyValueRequest {
         key: String,
         value: Vec<u8>,
         expiry: u32,
+    },
+    Insert {
+        key: String,
+        value: Vec<u8>,
+        expiry: u32,
+    },
+    Replace {
+        key: String,
+        value: Vec<u8>,
+        expiry: u32,
+    },
+    Remove {
+        key: String,
     },
 }

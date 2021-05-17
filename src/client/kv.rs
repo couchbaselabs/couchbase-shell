@@ -257,6 +257,106 @@ impl KvEndpoint {
         Ok(response)
     }
 
+    pub async fn add(
+        &self,
+        key: String,
+        value: Vec<u8>,
+        expiry: u32,
+        partition: u16,
+        collection_id: u32,
+    ) -> Result<KvResponse, ClientError> {
+        let mut extras = BytesMut::with_capacity(8);
+        extras.put_u32(0);
+        extras.put_u32(expiry);
+        let req = KvRequest::new(
+            protocol::Opcode::Add,
+            0,
+            partition,
+            0,
+            Some(key.into()),
+            Some(extras.freeze()),
+            Some(value.into()),
+            collection_id,
+        );
+
+        let (tx, rx) = oneshot::channel::<KvResponse>();
+        self.send(req, tx).await?;
+
+        let response = match rx.await {
+            Ok(r) => Ok(r),
+            Err(e) => Err(ClientError::RequestFailed {
+                reason: Some(e.to_string()),
+            }),
+        }?;
+        self.status_to_error(response.status())?;
+        Ok(response)
+    }
+
+    pub async fn replace(
+        &self,
+        key: String,
+        value: Vec<u8>,
+        expiry: u32,
+        partition: u16,
+        collection_id: u32,
+    ) -> Result<KvResponse, ClientError> {
+        let mut extras = BytesMut::with_capacity(8);
+        extras.put_u32(0);
+        extras.put_u32(expiry);
+        let req = KvRequest::new(
+            protocol::Opcode::Replace,
+            0,
+            partition,
+            0,
+            Some(key.into()),
+            Some(extras.freeze()),
+            Some(value.into()),
+            collection_id,
+        );
+
+        let (tx, rx) = oneshot::channel::<KvResponse>();
+        self.send(req, tx).await?;
+
+        let response = match rx.await {
+            Ok(r) => Ok(r),
+            Err(e) => Err(ClientError::RequestFailed {
+                reason: Some(e.to_string()),
+            }),
+        }?;
+        self.status_to_error(response.status())?;
+        Ok(response)
+    }
+
+    pub async fn remove(
+        &self,
+        key: String,
+        partition: u16,
+        collection_id: u32,
+    ) -> Result<KvResponse, ClientError> {
+        let req = KvRequest::new(
+            protocol::Opcode::Remove,
+            0,
+            partition,
+            0,
+            Some(key.into()),
+            None,
+            None,
+            collection_id,
+        );
+
+        let (tx, rx) = oneshot::channel::<KvResponse>();
+        self.send(req, tx).await?;
+
+        let response = match rx.await {
+            Ok(r) => Ok(r),
+            Err(e) => Err(ClientError::RequestFailed {
+                reason: Some(e.to_string()),
+            }),
+        }?;
+        self.status_to_error(response.status())?;
+        Ok(response)
+    }
+
     async fn send(
         &self,
         mut req: KvRequest,
