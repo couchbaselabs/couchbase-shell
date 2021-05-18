@@ -64,7 +64,7 @@ Once in the shell, you can start to execute commands (see the introduction secti
 Or if you have the `travel-sample` bucket installed you can switch to it and then fetch a document:
 
 ```
->  doc get airline_10 --bucket travel-sample --flatten
+>  doc get airline_10 --bucket travel-sample | flatten
 ───┬────┬─────────────────────┬──────┬─────────────┬──────────┬──────┬───────────────┬─────────┬───────
  # │ id │         cas         │ icao │    name     │ callsign │ iata │    country    │  type   │ error 
 ───┼────┼─────────────────────┼──────┼─────────────┼──────────┼──────┼───────────────┼─────────┼───────
