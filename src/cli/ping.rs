@@ -11,7 +11,6 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
 use nu_stream::OutputStream;
-use num_bigint::BigInt;
 use std::ops::Add;
 use std::sync::Arc;
 use tokio::runtime::Runtime;

@@ -35,8 +35,8 @@ pub struct Client {
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone, Serialize, Deserialize, Hash)]
 pub enum ClientError {
-    ConfigurationLoadFailed,
-    CollectionManifestLoadFailed,
+    ConfigurationLoadFailed { reason: Option<String> },
+    CollectionManifestLoadFailed { reason: Option<String> },
     CollectionNotFound,
     ScopeNotFound,
     KeyNotFound,
@@ -51,19 +51,25 @@ pub enum ClientError {
 impl fmt::Display for ClientError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let message = match self {
-            Self::ConfigurationLoadFailed => "failed to load config from cluster",
-            Self::CollectionManifestLoadFailed => "failed to load collection manifest",
-            Self::CollectionNotFound => "collection not found",
-            Self::ScopeNotFound => "scope not found",
-            Self::KeyNotFound => "key not found",
-            Self::KeyAlreadyExists => "key already exists",
-            Self::AccessError => "access error",
-            Self::AuthError => "authentication error",
-            Self::Timeout => "timeout",
-            Self::Cancelled => "request cancelled",
+            Self::ConfigurationLoadFailed { reason } => match reason.as_ref() {
+                Some(re) => format!("failed to load config from cluster: {}", re),
+                None => "failed to load config from cluster".into(),
+            },
+            Self::CollectionManifestLoadFailed { reason } => match reason.as_ref() {
+                Some(re) => format!("failed to load collection manifest from cluster: {}", re),
+                None => "failed to load collection manifest from cluster".into(),
+            },
+            Self::CollectionNotFound => "collection not found".into(),
+            Self::ScopeNotFound => "scope not found".into(),
+            Self::KeyNotFound => "key not found".into(),
+            Self::KeyAlreadyExists => "key already exists".into(),
+            Self::AccessError => "access error".into(),
+            Self::AuthError => "authentication error".into(),
+            Self::Timeout => "timeout".into(),
+            Self::Cancelled => "request cancelled".into(),
             Self::RequestFailed { reason } => match reason.as_ref() {
-                Some(re) => re.as_str(),
-                None => "",
+                Some(re) => format!("request failed: {}", re),
+                None => "request failed".into(),
             },
         };
         write!(f, "{}", message)
@@ -73,7 +79,7 @@ impl fmt::Display for ClientError {
 impl From<ClientError> for ShellError {
     fn from(ce: ClientError) -> Self {
         // todo: this can definitely be improved with more detail and reporting specifics
-        ShellError::untagged_runtime_error(serde_json::to_string(&ce).unwrap())
+        ShellError::untagged_runtime_error(ce.to_string())
     }
 }
 
@@ -123,6 +129,16 @@ impl Client {
         }
     }
 
+    fn status_to_reason(&self, status: u16) -> Option<String> {
+        match status {
+            400 => Some("bad request".into()),
+            401 => Some("unauthorized".into()),
+            403 => Some("forbidden".into()),
+            404 => Some("not found".into()),
+            _ => None,
+        }
+    }
+
     fn get_config(
         &self,
         deadline: Instant,
@@ -134,17 +150,27 @@ impl Client {
         } else {
             8091
         };
+        let mut final_error_content = None;
+        let mut final_error_status = 0;
         for seed in &self.seeds {
             let uri = format!("{}://{}:{}{}", self.http_prefix(), seed, port, &path);
             let (content, status) = self.http_get(&uri, deadline, ctrl_c.clone())?;
             if status != 200 {
+                if content != "" {
+                    final_error_content = Some(content);
+                }
+                final_error_status = status;
                 continue;
             }
             let mut config: ClusterConfig = serde_json::from_str(&content).unwrap();
             config.set_loaded_from(seed.clone());
             return Ok(config);
         }
-        Err(ClientError::ConfigurationLoadFailed)
+        let mut reason = final_error_content;
+        if reason.is_none() {
+            reason = self.status_to_reason(final_error_status);
+        }
+        Err(ClientError::ConfigurationLoadFailed { reason })
     }
 
     fn get_bucket_config(
@@ -159,17 +185,27 @@ impl Client {
         } else {
             8091
         };
+        let mut final_error_content = None;
+        let mut final_error_status = 0;
         for seed in &self.seeds {
             let uri = format!("{}://{}:{}{}", self.http_prefix(), seed, port, &path);
             let (content, status) = self.http_get(&uri, deadline, ctrl_c.clone())?;
             if status != 200 {
+                if content != "" {
+                    final_error_content = Some(content);
+                }
+                final_error_status = status;
                 continue;
             }
             let mut config: BucketConfig = serde_json::from_str(&content).unwrap();
             config.set_loaded_from(seed.clone());
             return Ok(config);
         }
-        Err(ClientError::ConfigurationLoadFailed)
+        let mut reason = final_error_content;
+        if reason.is_none() {
+            reason = self.status_to_reason(final_error_status);
+        }
+        Err(ClientError::ConfigurationLoadFailed { reason })
     }
 
     fn get_collection_manifest(
@@ -184,16 +220,26 @@ impl Client {
         } else {
             8091
         };
+        let mut final_error_content = None;
+        let mut final_error_status = 0;
         for seed in &self.seeds {
             let uri = format!("{}://{}:{}{}", self.http_prefix(), seed, port, &path);
             let (content, status) = self.http_get(&uri, deadline, ctrl_c.clone())?;
             if status != 200 {
+                if content != "" {
+                    final_error_content = Some(content);
+                }
+                final_error_status = status;
                 continue;
             }
             let manifest: CollectionManifest = serde_json::from_str(&content).unwrap();
             return Ok(manifest);
         }
-        Err(ClientError::CollectionManifestLoadFailed)
+        let mut reason = final_error_content;
+        if reason.is_none() {
+            reason = self.status_to_reason(final_error_status);
+        }
+        Err(ClientError::CollectionManifestLoadFailed { reason })
     }
 
     fn http_do(
