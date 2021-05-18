@@ -86,8 +86,9 @@ lazy_static! {
     static ref STEPS_ORDER: &'static [&'static str] = &[
         "start",
         "overview",
-        "doc",
+        "navigation",
         "pipeline",
+        "doc",
         "query",
         "conclusion"
     ];
@@ -129,24 +130,18 @@ Try 'buckets get' to list the buckets in the active cluster.
 And, use 'tutorial next' to move to the next step in the tutorial.
     ",
         );
-        m.insert("doc", "
-You can retrieve documents by using the 'doc get KEY' command.
+        m.insert(
+            "navigation",
+            "
+Nushell offers the ability to auto complete commands that you've run previously.
 
-Try...
+Try 'ls | sort-by size' which list the items in the current directory sorted by size.
 
-  doc get airline_10
-
-The doc command also takes optional flags in order to
-format or reshape the output data.
-
-Try...
-
-  doc get airline_10 --flatten
-
-To learn more, try 'help doc' and 'help doc get'.
+Now try typing 'ls' you will see that the previous command is shown, to perform auto-completion press the right arrow key and you'll see that 'ls | sort-by size' is now ready to run.
 
 Use 'tutorial next' to move to the next step in the tutorial.
-    ");
+    ",
+        );
         m.insert(
             "pipeline",
             "
@@ -165,6 +160,28 @@ Try...
 Use 'tutorial next' to move to the next step in the tutorial.
     ",
         );
+        m.insert("doc", "
+You can retrieve documents by using the 'doc get KEY' command.
+
+Try...
+
+  doc get airline_10
+
+The doc command also takes optional flags in order to
+format or reshape the output data.
+
+Try...
+
+  doc get airline_10 | flatten
+
+You can pipe to flatten as many times as you need:
+
+  doc get airline_10 | flatten | flatten | flatten
+
+To learn more, try 'help doc' and 'help doc get'.
+
+Use 'tutorial next' to move to the next step in the tutorial.
+    ");
         m.insert("query", "
 You can use the query command to run N1QL queries (or SQL for JSON queries) against the Couchbase Server database.
 

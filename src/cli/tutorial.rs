@@ -50,11 +50,14 @@ fn run_tutorial(state: Arc<State>, ctrl_c: Arc<AtomicBool>) -> Result<OutputStre
         },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
         ctrl_c.clone(),
-    )?;
+    );
 
-    let exists = match resp.status() {
-        200 => true,
-        _ => false,
+    let exists = match resp {
+        Ok(r) => match r.status() {
+            200 => true,
+            _ => false,
+        },
+        Err(_) => false,
     };
 
     Ok(OutputStream::one(
