@@ -21,6 +21,7 @@ use serde_json::json;
 use std::fmt;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::runtime::Runtime;
 use tokio::time::sleep;
 use tokio::{select, time::Instant};
@@ -300,6 +301,94 @@ impl Client {
     ) -> Result<(String, u16), ClientError> {
         let res_builder = isahc::Request::put(uri);
         self.http_do(res_builder, payload, headers, deadline, ctrl_c)
+    }
+
+    fn ping_endpoint(
+        &self,
+        uri: String,
+        address: String,
+        service: ServiceType,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<PingResponse, ClientError> {
+        let start = Instant::now();
+        let result = self.http_get(&uri, deadline, ctrl_c.clone());
+        let end = Instant::now();
+
+        let error = match result {
+            Ok(_) => None,
+            Err(e) => Some(e),
+        };
+
+        let mut state = "OK".into();
+        if error.is_some() {
+            state = "Error".into();
+        }
+
+        Ok(PingResponse {
+            state,
+            address,
+            service,
+            latency: end.sub(start),
+            error,
+        })
+    }
+
+    // TODO: parallelize this.
+    pub fn ping_all_http_request(
+        &self,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<Vec<PingResponse>, ClientError> {
+        let config = self.get_config(deadline, ctrl_c.clone())?;
+
+        let mut results: Vec<PingResponse> = Vec::new();
+        for seed in config.search_seeds(self.tls_config.enabled()) {
+            let uri = format!("{}://{}:{}/api/ping", self.http_prefix(), seed.0, seed.1);
+            let address = format!("{}:{}", seed.0, seed.1);
+            results.push(self.ping_endpoint(
+                uri,
+                address,
+                ServiceType::Search,
+                deadline.clone(),
+                ctrl_c.clone(),
+            )?);
+        }
+        for seed in config.query_seeds(self.tls_config.enabled()) {
+            let uri = format!("{}://{}:{}/admin/ping", self.http_prefix(), seed.0, seed.1);
+            let address = format!("{}:{}", seed.0, seed.1);
+            results.push(self.ping_endpoint(
+                uri,
+                address,
+                ServiceType::Query,
+                deadline.clone(),
+                ctrl_c.clone(),
+            )?);
+        }
+        for seed in config.analytics_seeds(self.tls_config.enabled()) {
+            let uri = format!("{}://{}:{}/admin/ping", self.http_prefix(), seed.0, seed.1);
+            let address = format!("{}:{}", seed.0, seed.1);
+            results.push(self.ping_endpoint(
+                uri,
+                address,
+                ServiceType::Analytics,
+                deadline.clone(),
+                ctrl_c.clone(),
+            )?);
+        }
+        for seed in config.view_seeds(self.tls_config.enabled()) {
+            let uri = format!("{}://{}:{}/", self.http_prefix(), seed.0, seed.1);
+            let address = format!("{}:{}", seed.0, seed.1);
+            results.push(self.ping_endpoint(
+                uri,
+                address,
+                ServiceType::Views,
+                deadline.clone(),
+                ctrl_c.clone(),
+            )?);
+        }
+
+        Ok(results)
     }
 
     pub fn management_request(
@@ -782,6 +871,58 @@ impl HttpResponse {
 }
 
 #[derive(Debug)]
+pub struct PingResponse {
+    state: String,
+    address: String,
+    service: ServiceType,
+    latency: Duration,
+    error: Option<ClientError>,
+}
+
+impl PingResponse {
+    pub fn state(&self) -> &str {
+        &self.state
+    }
+
+    pub fn address(&self) -> &str {
+        &self.address
+    }
+
+    pub fn service(&self) -> &ServiceType {
+        &self.service
+    }
+
+    pub fn latency(&self) -> Duration {
+        self.latency.clone()
+    }
+
+    pub fn error(&self) -> Option<&ClientError> {
+        self.error.as_ref()
+    }
+}
+
+#[derive(Debug)]
+pub enum ServiceType {
+    KeyValue,
+    Query,
+    Search,
+    Analytics,
+    Views,
+}
+
+impl ServiceType {
+    pub fn as_string(&self) -> String {
+        match self {
+            ServiceType::KeyValue => "KeyValue".into(),
+            ServiceType::Query => "Query".into(),
+            ServiceType::Search => "Search".into(),
+            ServiceType::Analytics => "Analytics".into(),
+            ServiceType::Views => "Views".into(),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct KvResponse {
     content: Option<serde_json::Value>,
     cas: u64,
@@ -826,6 +967,12 @@ impl ClusterConfig {
 
     pub fn search_seeds(&self, tls: bool) -> Vec<(String, u32)> {
         let key = if tls { "ftsSSL" } else { "fts" };
+
+        self.seeds(key)
+    }
+
+    pub fn view_seeds(&self, tls: bool) -> Vec<(String, u32)> {
+        let key = if tls { "capiSSL" } else { "capi" };
 
         self.seeds(key)
     }
@@ -904,8 +1051,78 @@ impl KvClient {
         return Err(CollectionNotFound);
     }
 
-    // This being async is a definite disjunct but we can't spawn a runtime inside this or we'll drop
-    // the sender within the endpoint we create.
+    pub async fn ping_all(
+        &mut self,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<Vec<PingResponse>, ClientError> {
+        let now = Instant::now();
+        if now >= deadline {
+            return Err(ClientError::Timeout);
+        }
+        let deadline_sleep = sleep(deadline.sub(now));
+        tokio::pin!(deadline_sleep);
+
+        let ctrl_c_fut = CtrlcFuture::new(ctrl_c);
+        tokio::pin!(ctrl_c_fut);
+
+        let mut results: Vec<PingResponse> = Vec::new();
+        for seed in self.config.key_value_seeds(self.tls_config.enabled()) {
+            let addr = seed.0;
+            let port = seed.1;
+            let mut ep = self.endpoints.get(addr.clone().as_str());
+            if ep.is_none() {
+                let connect = KvEndpoint::connect(
+                    addr.clone(),
+                    port.clone(),
+                    self.username.clone(),
+                    self.password.clone(),
+                    self.bucket.clone(),
+                );
+
+                let endpoint = select! {
+                    res = connect => res,
+                    () = &mut deadline_sleep => Err(ClientError::Timeout),
+                    () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
+                }?;
+
+                // Got to be a better way...
+                self.endpoints.insert(addr.clone(), endpoint);
+                ep = self.endpoints.get(addr.clone().as_str());
+            };
+
+            let op = ep.unwrap().noop();
+
+            let start = Instant::now();
+            let result = select! {
+                res = op => res,
+                () = &mut deadline_sleep => Err(ClientError::Timeout),
+                () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
+            };
+            let end = Instant::now();
+
+            let error = match result {
+                Ok(_) => None,
+                Err(e) => Some(e),
+            };
+
+            let mut state = "OK".into();
+            if error.is_some() {
+                state = "Error".into();
+            }
+
+            results.push(PingResponse {
+                address: format!("{}:{}", addr.clone(), port.clone()),
+                service: ServiceType::KeyValue,
+                state,
+                error,
+                latency: end.sub(start),
+            });
+        }
+
+        Ok(results)
+    }
+
     pub async fn request(
         &mut self,
         request: KeyValueRequest,

@@ -357,6 +357,22 @@ impl KvEndpoint {
         Ok(response)
     }
 
+    pub async fn noop(&self) -> Result<KvResponse, ClientError> {
+        let req = KvRequest::new(protocol::Opcode::Noop, 0, 0, 0, None, None, None, 0);
+
+        let (tx, rx) = oneshot::channel::<KvResponse>();
+        self.send(req, tx).await?;
+
+        let response = match rx.await {
+            Ok(r) => Ok(r),
+            Err(e) => Err(ClientError::RequestFailed {
+                reason: Some(e.to_string()),
+            }),
+        }?;
+        self.status_to_error(response.status())?;
+        Ok(response)
+    }
+
     async fn send(
         &self,
         mut req: KvRequest,

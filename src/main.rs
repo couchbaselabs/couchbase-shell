@@ -201,6 +201,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(DocUpsert::new(state.clone())),
         nu_engine::whole_stream_command(FakeData::new(state.clone())),
         nu_engine::whole_stream_command(Nodes::new(state.clone())),
+        nu_engine::whole_stream_command(Ping::new(state.clone())),
         nu_engine::whole_stream_command(Query::new(state.clone())),
         nu_engine::whole_stream_command(QueryAdvise::new(state.clone())),
         nu_engine::whole_stream_command(QueryIndexes::new(state.clone())),

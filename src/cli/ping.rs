@@ -2,17 +2,20 @@
 
 use crate::cli::util::cluster_identifiers_from;
 use crate::state::State;
-use couchbase::PingOptions;
 
+use crate::client::ServiceType;
 use async_trait::async_trait;
 use log::debug;
-use nu_cli::OutputStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
+use nu_stream::OutputStream;
 use num_bigint::BigInt;
+use std::ops::Add;
 use std::sync::Arc;
+use tokio::runtime::Runtime;
+use tokio::time::Instant;
 
 pub struct Ping {
     state: Arc<State>,
@@ -50,15 +53,18 @@ impl nu_engine::WholeStreamCommand for Ping {
         "Ping available services in the cluster"
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        run_ping(self.state.clone(), args).await
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        run_ping(self.state.clone(), args)
     }
 }
 
-async fn run_ping(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once().await?;
+fn run_ping(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let ctrl_c = args.ctrl_c();
+    let args = args.evaluate_once()?;
 
     let bucket_name = match args
+        .call_info
+        .args
         .get("bucket")
         .map(|id| id.as_string().ok())
         .flatten()
@@ -76,6 +82,7 @@ async fn run_ping(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, 
 
     debug!("Running ping");
 
+    let rt = Runtime::new().unwrap();
     let clusters_len = cluster_identifiers.len();
     let mut results = vec![];
     for identifier in cluster_identifiers {
@@ -83,30 +90,91 @@ async fn run_ping(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, 
             Some(c) => c,
             None => continue, //This can't actually happen, we filter the clusters in cluster_identifiers_from
         };
-        let bucket = cluster.cluster().bucket(&bucket_name);
-        match bucket.ping(PingOptions::default()).await {
+        let deadline = Instant::now().add(cluster.timeouts().query_timeout());
+        let result = cluster
+            .cluster()
+            .ping_all_http_request(deadline, ctrl_c.clone());
+        match result {
             Ok(res) => {
-                for (service_type, endpoints) in res.endpoints().iter() {
-                    for endpoint in endpoints {
-                        let tag = Tag::default();
-                        let mut collected = TaggedDictBuilder::new(&tag);
-                        if clusters_len > 1 {
-                            collected.insert_value("cluster", identifier.clone());
-                        }
-                        collected.insert_value("service", service_type.to_string());
-                        collected.insert_value("conn id", endpoint.id());
-                        collected.insert_value("local", endpoint.local().unwrap_or_default());
-                        collected.insert_value("remote", endpoint.remote().unwrap_or_default());
-                        collected.insert_value(
-                            "latency",
-                            UntaggedValue::duration(BigInt::from(endpoint.latency().as_secs()))
-                                .into_untagged_value(),
-                        );
-                        collected.insert_value("state", endpoint.state().to_string());
-                        collected.insert_value("error", endpoint.error().unwrap_or_default());
-                        collected.insert_value("bucket", endpoint.namespace().unwrap_or_default());
-                        results.push(collected.into_value());
+                for ping in res {
+                    let tag = Tag::default();
+                    let mut collected = TaggedDictBuilder::new(&tag);
+                    if clusters_len > 1 {
+                        collected.insert_value("cluster", identifier.clone());
                     }
+                    collected.insert_value("service", ping.service().as_string());
+                    collected.insert_value("remote", ping.address().to_string());
+                    collected.insert_value(
+                        "latency",
+                        UntaggedValue::duration(ping.latency().as_nanos()).into_untagged_value(),
+                    );
+                    collected.insert_value("state", ping.state().to_string());
+
+                    let error = match ping.error() {
+                        Some(e) => e.to_string(),
+                        None => "".into(),
+                    };
+
+                    collected.insert_value("error", error);
+                    results.push(collected.into_value());
+                }
+            }
+            Err(_e) => {}
+        };
+
+        // TODO: do this in parallel to http ops.
+        let kv_deadline = Instant::now().add(cluster.timeouts().data_timeout());
+        let mut client = match cluster.cluster().key_value_client(
+            cluster.username().to_string(),
+            cluster.password().to_string(),
+            bucket_name.clone(),
+            "".into(),
+            "".into(),
+            kv_deadline.clone(),
+            ctrl_c.clone(),
+        ) {
+            Ok(c) => c,
+            Err(e) => {
+                let tag = Tag::default();
+                let mut collected = TaggedDictBuilder::new(&tag);
+                if clusters_len > 1 {
+                    collected.insert_value("cluster", identifier.clone());
+                }
+                collected.insert_value("service", ServiceType::KeyValue.as_string());
+                collected.insert_value("remote", "".to_string());
+                collected.insert_value("latency", "".to_string());
+                collected.insert_value("state", "error".to_string());
+
+                collected.insert_value("error", e.to_string());
+                results.push(collected.into_value());
+                continue;
+            }
+        };
+
+        let kv_result = rt.block_on(client.ping_all(kv_deadline.clone(), ctrl_c.clone()));
+        match kv_result {
+            Ok(res) => {
+                for ping in res {
+                    let tag = Tag::default();
+                    let mut collected = TaggedDictBuilder::new(&tag);
+                    if clusters_len > 1 {
+                        collected.insert_value("cluster", identifier.clone());
+                    }
+                    collected.insert_value("service", ping.service().as_string());
+                    collected.insert_value("remote", ping.address().to_string());
+                    collected.insert_value(
+                        "latency",
+                        UntaggedValue::duration(ping.latency().as_nanos()).into_untagged_value(),
+                    );
+                    collected.insert_value("state", ping.state().to_string());
+
+                    let error = match ping.error() {
+                        Some(e) => e.to_string(),
+                        None => "".into(),
+                    };
+
+                    collected.insert_value("error", error);
+                    results.push(collected.into_value());
                 }
             }
             Err(_e) => {}
