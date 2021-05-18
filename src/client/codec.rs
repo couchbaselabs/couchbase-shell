@@ -99,7 +99,7 @@ mod tests {
     fn waits_until_header_complete() {
         let mut codec = KeyValueCodec::new();
 
-        let mut input = response(Opcode::Noop, 0, 0, 0, 0, None, None, None);
+        let mut input = _response(Opcode::Noop, 0, 0, 0, 0, None, None, None);
         let expected = input.clone();
         let trailing = input.split_off(12);
 
@@ -117,7 +117,7 @@ mod tests {
         let mut codec = KeyValueCodec::new();
 
         let key = Bytes::from("Key");
-        let mut input = response(Opcode::Noop, 0, 0, 0, 0, Some(key), None, None);
+        let mut input = _response(Opcode::Noop, 0, 0, 0, 0, Some(key), None, None);
         let expected = input.clone();
         let trailing = input.split_off(22);
 
@@ -134,8 +134,8 @@ mod tests {
     fn splits_packets_on_boundaries() {
         let mut codec = KeyValueCodec::new();
 
-        let response1 = response(Opcode::Noop, 0, 0, 0, 0, None, None, None);
-        let response2 = response(Opcode::Get, 0, 0, 0, 0, None, None, None);
+        let response1 = _response(Opcode::Noop, 0, 0, 0, 0, None, None, None);
+        let response2 = _response(Opcode::Get, 0, 0, 0, 0, None, None, None);
         let mut input = BytesMut::with_capacity(response1.len() + response2.len());
         input.put(response1);
         input.put(response2);
