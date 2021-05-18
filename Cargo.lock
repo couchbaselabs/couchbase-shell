@@ -977,6 +977,7 @@ dependencies = [
  "temp-dir",
  "tera",
  "tokio 1.5.0",
+ "tokio-native-tls",
  "tokio-util 0.6.6",
  "toml",
  "url",

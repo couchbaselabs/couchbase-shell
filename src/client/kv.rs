@@ -1,17 +1,22 @@
 use crate::client::codec::KeyValueCodec;
 use crate::client::protocol::{request, KvRequest, KvResponse, Status};
 use crate::client::{protocol, ClientError};
+use crate::config::ClusterTlsConfig;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use futures::{SinkExt, StreamExt};
 use log::warn;
 use serde_derive::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
+use std::fs;
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
+use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
 use tokio::sync::{mpsc, oneshot};
+use tokio_native_tls::native_tls::Certificate;
+use tokio_native_tls::TlsConnector;
 use tokio_util::codec::{FramedRead, FramedWrite};
 
 pub struct KvEndpoint {
@@ -29,11 +34,52 @@ impl KvEndpoint {
         username: String,
         password: String,
         bucket: String,
+        tls_config: ClusterTlsConfig,
     ) -> Result<KvEndpoint, ClientError> {
         let remote_addr: SocketAddr = format!("{}:{}", hostname, port).parse().unwrap();
 
-        let socket = TcpStream::connect(remote_addr).await.unwrap();
+        if tls_config.enabled() {
+            let tcp_socket = TcpStream::connect(remote_addr).await.unwrap();
 
+            let mut builder = tokio_native_tls::native_tls::TlsConnector::builder();
+            if tls_config.accept_all_certs() {
+                builder.danger_accept_invalid_certs(true);
+            }
+            if let Some(path) = tls_config.cert_path() {
+                let cert = fs::read(path).map_err(|e| ClientError::from(e))?;
+                builder.add_root_certificate(Certificate::from_pem(cert.as_slice()).map_err(
+                    |e| ClientError::RequestFailed {
+                        reason: Some(e.to_string()),
+                    },
+                )?);
+            }
+
+            let connector = builder.build().unwrap();
+            let connector = TlsConnector::from(connector);
+            let socket = connector
+                .connect(hostname.as_str(), tcp_socket)
+                .await
+                .map_err(|e| ClientError::RequestFailed {
+                    reason: Some(e.to_string()),
+                })?;
+            KvEndpoint::setup(username, password, bucket, socket).await
+        } else {
+            let socket =
+                TcpStream::connect(remote_addr)
+                    .await
+                    .map_err(|e| ClientError::RequestFailed {
+                        reason: Some(e.to_string()),
+                    })?;
+            KvEndpoint::setup(username, password, bucket, socket).await
+        }
+    }
+
+    async fn setup<C: AsyncRead + AsyncWrite + Send + Unpin + 'static>(
+        username: String,
+        password: String,
+        bucket: String,
+        stream: C,
+    ) -> Result<KvEndpoint, ClientError> {
         let (tx, mut rx) = mpsc::channel::<Bytes>(1024);
         let in_flight = Arc::new(Mutex::new(
             HashMap::<u32, oneshot::Sender<KvResponse>>::new(),
@@ -46,7 +92,7 @@ impl KvEndpoint {
             error_map: None,
         };
 
-        let (r, w) = socket.into_split();
+        let (r, w) = tokio::io::split(stream);
         let mut output = FramedWrite::new(w, KeyValueCodec::new());
         let mut input = FramedRead::new(r, KeyValueCodec::new());
 

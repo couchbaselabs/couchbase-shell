@@ -1124,6 +1124,7 @@ impl KvClient {
                     self.username.clone(),
                     self.password.clone(),
                     self.bucket.clone(),
+                    self.tls_config.clone(),
                 );
 
                 let endpoint = select! {
@@ -1215,6 +1216,7 @@ impl KvClient {
                 self.username.clone(),
                 self.password.clone(),
                 self.bucket.clone(),
+                self.tls_config.clone(),
             );
 
             let endpoint = select! {

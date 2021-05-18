@@ -46,6 +46,7 @@ tera = "1.1"
 temp-dir = "0.1"
 tokio = { version = "1", features = ["full"] }
 tokio-util = { version = "0.6.6", features = ["codec"] }
+tokio-native-tls = "0.3.0"
 toml = "0.5"
 url = "2.1"
 uuid = { version = "0.8", features = ["v4"] }
