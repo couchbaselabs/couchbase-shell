@@ -80,6 +80,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             ClusterTlsConfig::default(),
             ClusterTimeouts::default(),
         );
+        println!(
+            "Using PLAIN authentication for cluster default, credentials will sent in plaintext - configure tls to disable this warning"
+        );
         clusters.insert("default".into(), cluster);
         String::from("default")
     } else {
@@ -158,6 +161,12 @@ fn main() -> Result<(), Box<dyn Error>> {
                 v.tls().clone(),
                 ClusterTimeouts::new(data_timeout, query_timeout),
             );
+            if !v.tls().clone().enabled() {
+                println!(
+                    "Using PLAIN authentication for cluster {}, credentials will sent in plaintext - configure tls to disable this warning",
+                    name.clone()
+                );
+            }
             clusters.insert(name.clone(), cluster);
         }
         active.unwrap()
