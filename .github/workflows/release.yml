@@ -50,19 +50,12 @@ jobs:
         echo "$HOME/.cargo/bin" >> $GITHUB_PATH
       if: matrix.os == 'macos-latest'
 
-    - name: Install dependencies - Set vcpkg root (windows)
-      if: matrix.os == 'windows-2016'
-      run: echo "VCPKG_ROOT=$Env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-
     - name: Build
       run: cargo build --verbose --release
       if: matrix.os == 'ubuntu-latest'
 
     - name: Build
       run: cargo build --verbose --release
-      env:
-        VCPKGRS_DYNAMIC: 1
-        RUSTFLAGS: -Ctarget-feature=+crt-static
       if: matrix.os == 'windows-2016'
 
     - name: Build (macos)
