@@ -10,6 +10,7 @@ env:
   # Could, potentially automatically parse
   # the bin name, but let's do it automatically for now.
   RELEASE_BIN: cbsh
+  RELEASE_BIN_WINDOWS: cbsh.exe
 
   # Space separated paths to include in the archive.
   # Start relative paths with a dot if you don't want
@@ -83,7 +84,7 @@ jobs:
     - name: Create archive for Windows
       run: |
         choco install 7zip
-        7z a -tzip ./artifacts/${{ env.ARTIFACT_BIN }}-${{ env.SHA8 }}-windows-x86_64.zip ./target/release/${{ env.ARTIFACT_BIN_WINDOWS }} ${{ env.ARTIFACT_ADDS }}
+        7z a -tzip ./artifacts/${{ env.RELEASE_BIN }}-windows-x86_64.zip ./target/release/${{ env.RELEASE_BIN_WINDOWS }} ${{ env.RELEASE_ADDS }}
       if: matrix.os == 'windows-2016'
 
     # This will double-zip
