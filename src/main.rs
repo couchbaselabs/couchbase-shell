@@ -209,6 +209,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(DocReplace::new(state.clone())),
         nu_engine::whole_stream_command(DocUpsert::new(state.clone())),
         nu_engine::whole_stream_command(FakeData::new(state.clone())),
+        nu_engine::whole_stream_command(Help {}),
         nu_engine::whole_stream_command(Nodes::new(state.clone())),
         nu_engine::whole_stream_command(Ping::new(state.clone())),
         nu_engine::whole_stream_command(Query::new(state.clone())),
@@ -237,11 +238,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(DataStats::new(state.clone())),
         nu_engine::whole_stream_command(Data {}),
         nu_engine::whole_stream_command(SDKLog {}),
-        nu_engine::whole_stream_command(Help {}),
-        nu_engine::whole_stream_command(Tutorial::new(state.clone())),
-        nu_engine::whole_stream_command(TutorialPage::new(state.clone())),
-        nu_engine::whole_stream_command(TutorialPrev::new(state.clone())),
-        nu_engine::whole_stream_command(TutorialNext::new(state.clone())),
         */
     ]);
 

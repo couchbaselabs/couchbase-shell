@@ -1,11 +1,16 @@
-use async_trait::async_trait;
-use futures::{Stream, StreamExt};
-use nu_cli::{OutputStream, ValueExt};
-use nu_engine::{command_dict, generate_docs, get_help, CommandArgs, Scope, WholeStreamCommand};
+use nu_cli::ActionStream;
+use nu_cli::TaggedListBuilder;
+use nu_cli::ValueExt;
+use nu_engine::{documentation::generate_docs, get_full_help, CommandArgs, Scope};
+use nu_engine::{Command, WholeStreamCommand};
 use nu_errors::ShellError;
-use nu_protocol::{ReturnSuccess, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Value};
-use nu_source::SpannedItem;
-use nu_source::{Tag, Tagged};
+use nu_protocol::{
+    NamedType, PositionalType, ReturnSuccess, Signature, SyntaxShape, TaggedDictBuilder,
+    UntaggedValue, Value,
+};
+use nu_source::Tag;
+use nu_source::{SpannedItem, Tagged};
+use nu_stream::ToActionStream;
 use serde::Deserialize;
 
 pub struct Help;
@@ -15,7 +20,6 @@ pub struct HelpArgs {
     rest: Vec<Tagged<String>>,
 }
 
-#[async_trait]
 impl WholeStreamCommand for Help {
     fn name(&self) -> &str {
         "help"
@@ -29,15 +33,15 @@ impl WholeStreamCommand for Help {
         "Display help information about commands."
     }
 
-    async fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        help(args).await
+    fn run_with_actions(&self, args: CommandArgs) -> Result<ActionStream, ShellError> {
+        help(args)
     }
 }
 
-async fn help(args: CommandArgs) -> Result<OutputStream, ShellError> {
+fn help(args: CommandArgs) -> Result<ActionStream, ShellError> {
     let name = args.call_info.name_tag.clone();
-    let scope = args.scope.clone();
-    let (HelpArgs { rest }, ..) = args.process().await?;
+    let scope = args.scope().clone();
+    let (HelpArgs { rest }, ..) = args.process()?;
 
     if !rest.is_empty() {
         if rest[0].item == "commands" {
@@ -152,25 +156,25 @@ async fn help(args: CommandArgs) -> Result<OutputStream, ShellError> {
                         ReturnSuccess::value(short_desc.into_value())
                     });
 
-            Ok(futures::stream::iter(iterator).to_output_stream())
+            Ok(iterator.to_action_stream())
         } else if rest[0].item == "generate_docs" {
-            Ok(OutputStream::one(ReturnSuccess::value(generate_docs(
+            Ok(ActionStream::one(ReturnSuccess::value(generate_docs(
                 &scope,
             ))))
         } else if rest.len() == 2 {
             // Check for a subcommand
             let command_name = format!("{} {}", rest[0].item, rest[1].item);
             if let Some(command) = scope.get_command(&command_name) {
-                Ok(OutputStream::one(ReturnSuccess::value(
-                    UntaggedValue::string(get_help(command.stream_command(), &scope))
+                Ok(ActionStream::one(ReturnSuccess::value(
+                    UntaggedValue::string(get_full_help(command.stream_command(), &scope))
                         .into_value(Tag::unknown()),
                 )))
             } else {
-                Ok(OutputStream::empty())
+                Ok(ActionStream::empty())
             }
         } else if let Some(command) = scope.get_command(&rest[0].item) {
-            Ok(OutputStream::one(ReturnSuccess::value(
-                UntaggedValue::string(get_help(command.stream_command(), &scope))
+            Ok(ActionStream::one(ReturnSuccess::value(
+                UntaggedValue::string(get_full_help(command.stream_command(), &scope))
                     .into_value(Tag::unknown()),
             )))
         } else {
@@ -203,25 +207,64 @@ Open a JSON file, transform the data, and upsert it into your active bucket:
 
 You can also learn more at http://couchbase.sh/docs/ and https://www.nushell.sh/book/"#;
 
-        Ok(OutputStream::one(ReturnSuccess::value(
+        Ok(ActionStream::one(ReturnSuccess::value(
             UntaggedValue::string(msg).into_value(Tag::unknown()),
         )))
     }
 }
 
-#[allow(clippy::wrong_self_convention)]
-pub trait ToOutputStream {
-    fn to_output_stream(self) -> OutputStream;
+fn for_spec(name: &str, ty: &str, required: bool, tag: impl Into<Tag>) -> Value {
+    let tag = tag.into();
+
+    let mut spec = TaggedDictBuilder::new(tag);
+
+    spec.insert_untagged("name", UntaggedValue::string(name));
+    spec.insert_untagged("type", UntaggedValue::string(ty));
+    spec.insert_untagged(
+        "required",
+        UntaggedValue::string(if required { "yes" } else { "no" }),
+    );
+
+    spec.into_value()
 }
 
-impl<T, U> ToOutputStream for T
-where
-    T: Stream<Item = U> + Send + 'static,
-    U: Into<nu_protocol::ReturnValue>,
-{
-    fn to_output_stream(self) -> OutputStream {
-        OutputStream {
-            values: self.map(|item| item.into()).boxed(),
+pub fn signature_dict(signature: Signature, tag: impl Into<Tag>) -> Value {
+    let tag = tag.into();
+    let mut sig = TaggedListBuilder::new(&tag);
+
+    for arg in signature.positional.iter() {
+        let is_required = matches!(arg.0, PositionalType::Mandatory(_, _));
+
+        sig.push_value(for_spec(arg.0.name(), "argument", is_required, &tag));
+    }
+
+    if signature.rest_positional.is_some() {
+        let is_required = false;
+        sig.push_value(for_spec("rest", "argument", is_required, &tag));
+    }
+
+    for (name, ty) in signature.named.iter() {
+        match ty.0 {
+            NamedType::Mandatory(_, _) => sig.push_value(for_spec(name, "flag", true, &tag)),
+            NamedType::Optional(_, _) => sig.push_value(for_spec(name, "flag", false, &tag)),
+            NamedType::Switch(_) => sig.push_value(for_spec(name, "switch", false, &tag)),
         }
     }
+
+    sig.into_value()
+}
+
+fn command_dict(command: Command, tag: impl Into<Tag>) -> Value {
+    let tag = tag.into();
+
+    let mut cmd_dict = TaggedDictBuilder::new(&tag);
+
+    cmd_dict.insert_untagged("name", UntaggedValue::string(command.name()));
+
+    cmd_dict.insert_untagged("type", UntaggedValue::string("Command"));
+
+    cmd_dict.insert_value("signature", signature_dict(command.signature(), tag));
+    cmd_dict.insert_untagged("usage", UntaggedValue::string(command.usage()));
+
+    cmd_dict.into_value()
 }
