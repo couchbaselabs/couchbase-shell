@@ -1,9 +1,9 @@
 use crate::state::{RemoteCluster, State};
 use nu_cli::ToPrimitive;
 use nu_engine::EvaluatedCommandArgs;
-use nu_errors::ShellError;
+use nu_errors::{CoerceInto, ShellError};
 use nu_protocol::{Primitive, TaggedDictBuilder, UnspannedPathMember, UntaggedValue, Value};
-use nu_source::Tag;
+use nu_source::{Tag, TaggedItem};
 use regex::Regex;
 use std::fs::File;
 use std::path::PathBuf;
@@ -69,7 +69,7 @@ pub fn convert_nu_value_to_json_value(v: &Value) -> Result<serde_json::Value, Sh
     Ok(match &v.value {
         UntaggedValue::Primitive(Primitive::Boolean(b)) => serde_json::Value::Bool(*b),
         UntaggedValue::Primitive(Primitive::Filesize(b)) => serde_json::Value::Number(
-            serde_json::Number::from(b.to_u64().expect("what about really big numbers?")),
+            serde_json::Number::from(b.to_u64().expect("What about really big numbers")),
         ),
         UntaggedValue::Primitive(Primitive::Duration(i)) => {
             serde_json::Value::String(i.to_string())
@@ -78,7 +78,7 @@ pub fn convert_nu_value_to_json_value(v: &Value) -> Result<serde_json::Value, Sh
         UntaggedValue::Primitive(Primitive::EndOfStream) => serde_json::Value::Null,
         UntaggedValue::Primitive(Primitive::BeginningOfStream) => serde_json::Value::Null,
         UntaggedValue::Primitive(Primitive::Decimal(f)) => {
-            if let Some(f) = f.to_f32() {
+            if let Some(f) = f.to_f64() {
                 if let Some(num) = serde_json::Number::from_f64(
                     f.to_f64().expect("TODO: What about really big decimals?"),
                 ) {
@@ -100,14 +100,13 @@ pub fn convert_nu_value_to_json_value(v: &Value) -> Result<serde_json::Value, Sh
         }
 
         UntaggedValue::Primitive(Primitive::Int(i)) => {
-            if let Some(ias) = i.to_i64() {
-                serde_json::Value::Number(serde_json::Number::from(ias))
-            } else {
-                return Err(ShellError::untagged_runtime_error(format!(
-                    "Could not get value as number {}",
-                    i
-                )));
-            }
+            serde_json::Value::Number(serde_json::Number::from(*i))
+        }
+        UntaggedValue::Primitive(Primitive::BigInt(i)) => {
+            serde_json::Value::Number(serde_json::Number::from(CoerceInto::<i64>::coerce_into(
+                i.tagged(&v.tag),
+                "converting to JSON number",
+            )?))
         }
         UntaggedValue::Primitive(Primitive::Nothing) => serde_json::Value::Null,
         UntaggedValue::Primitive(Primitive::GlobPattern(s)) => serde_json::Value::String(s.clone()),
@@ -119,14 +118,7 @@ pub fn convert_nu_value_to_json_value(v: &Value) -> Result<serde_json::Value, Sh
                         Ok(serde_json::Value::String(string.clone()))
                     }
                     UnspannedPathMember::Int(int) => {
-                        if let Some(ias) = int.to_i64() {
-                            Ok(serde_json::Value::Number(serde_json::Number::from(ias)))
-                        } else {
-                            return Err(ShellError::untagged_runtime_error(format!(
-                                "Could not get value as number {}",
-                                int
-                            )));
-                        }
+                        Ok(serde_json::Value::Number(serde_json::Number::from(*int)))
                     }
                 })
                 .collect::<Result<Vec<serde_json::Value>, ShellError>>()?,
@@ -140,6 +132,8 @@ pub fn convert_nu_value_to_json_value(v: &Value) -> Result<serde_json::Value, Sh
         UntaggedValue::Block(_) | UntaggedValue::Primitive(Primitive::Range(_)) => {
             serde_json::Value::Null
         }
+        #[cfg(feature = "dataframe")]
+        UntaggedValue::Dataframe(_) => serde_json::Value::Null,
         UntaggedValue::Primitive(Primitive::Binary(b)) => serde_json::Value::Array(
             b.iter()
                 .map(|x| {
@@ -229,7 +223,7 @@ pub fn cbsh_home_path() -> Result<PathBuf, ShellError> {
     Ok(path)
 }
 
-pub fn read_file_from_home(filename: String) -> Result<File, ShellError> {
+pub fn _read_file_from_home(filename: String) -> Result<File, ShellError> {
     let mut path = cbsh_home_path()?;
     path.push(filename);
     match File::open(path) {

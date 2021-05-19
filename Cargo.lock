@@ -430,7 +430,7 @@ dependencies = [
  "lazy_static 1.4.0",
  "path_abs",
  "semver 0.11.0",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde_yaml",
  "shell-words",
  "syntect",
@@ -447,7 +447,7 @@ dependencies = [
  "num-bigint 0.3.2",
  "num-integer",
  "num-traits 0.2.14",
- "serde 1.0.125",
+ "serde 1.0.126",
 ]
 
 [[package]]
@@ -456,7 +456,7 @@ version = "1.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
 dependencies = [
- "serde 1.0.125",
+ "serde 1.0.126",
 ]
 
 [[package]]
@@ -554,7 +554,7 @@ dependencies = [
  "linked-hash-map 0.5.4",
  "md5 0.6.1",
  "rand 0.7.3",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde_json",
  "time 0.1.44",
 ]
@@ -568,7 +568,7 @@ dependencies = [
  "lazy_static 1.4.0",
  "memchr",
  "regex-automata",
- "serde 1.0.125",
+ "serde 1.0.126",
 ]
 
 [[package]]
@@ -676,7 +676,7 @@ dependencies = [
  "encoding_rs",
  "log 0.4.14",
  "quick-xml 0.19.0",
- "serde 1.0.125",
+ "serde 1.0.126",
  "zip",
 ]
 
@@ -716,7 +716,7 @@ dependencies = [
  "libc",
  "num-integer",
  "num-traits 0.2.14",
- "serde 1.0.125",
+ "serde 1.0.126",
  "time 0.1.44",
  "winapi 0.3.9",
 ]
@@ -791,7 +791,7 @@ version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3538270d33cc669650c4b093848450d380def10c331d38c768e34cac80576e6e"
 dependencies = [
- "serde 1.0.125",
+ "serde 1.0.126",
  "termcolor",
  "unicode-width",
 ]
@@ -837,7 +837,7 @@ dependencies = [
  "lazy_static 1.4.0",
  "nom 5.1.2",
  "rust-ini",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde-hjson",
  "serde_json",
  "toml",
@@ -950,7 +950,7 @@ dependencies = [
  "http 0.2.4",
  "http-types",
  "humantime-serde",
- "isahc 1.3.1",
+ "isahc 1.4.0",
  "lazy_static 1.4.0",
  "log 0.4.14",
  "log4rs",
@@ -969,16 +969,16 @@ dependencies = [
  "reqwest 0.11.3",
  "rpassword",
  "rust-embed",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde_derive",
  "serde_json",
  "serde_urlencoded 0.6.1",
  "structopt",
  "temp-dir",
  "tera",
- "tokio 1.5.0",
+ "tokio 1.6.0",
  "tokio-native-tls",
- "tokio-util 0.6.6",
+ "tokio-util 0.6.7",
  "toml",
  "url",
  "uuid",
@@ -986,9 +986,9 @@ dependencies = [
 
 [[package]]
 name = "cpufeatures"
-version = "0.1.1"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dec1028182c380cc45a2e2c5ec841134f2dfd0f8f5f0a5bcd68004f81b5efdf4"
+checksum = "ed00c67cb5d0a7d64a44f6ad2668db7e7530311dd53ea79bcd4fb022c64911c8"
 dependencies = [
  "libc",
 ]
@@ -1236,7 +1236,7 @@ dependencies = [
  "csv-core",
  "itoa",
  "ryu",
- "serde 1.0.125",
+ "serde 1.0.126",
 ]
 
 [[package]]
@@ -1279,24 +1279,24 @@ dependencies = [
 
 [[package]]
 name = "curl"
-version = "0.4.35"
+version = "0.4.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a872858e9cb9e3b96c80dd78774ad9e32e44d3b05dc31e142b858d14aebc82c"
+checksum = "adba2012502267c1fdde381e0e3acc44bf8be96b2f7d455089dcc2c8ad2f67bd"
 dependencies = [
  "curl-sys",
  "libc",
  "openssl-probe",
  "openssl-sys",
  "schannel",
- "socket2 0.3.19",
+ "socket2 0.4.0",
  "winapi 0.3.9",
 ]
 
 [[package]]
 name = "curl-sys"
-version = "0.4.42+curl-7.76.0"
+version = "0.4.43+curl-7.76.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4636d8d6109c842707018a104051436bffb8991ea20b2d1293db70b6e0ee4c7c"
+checksum = "a802c7a9828b7d139efaed1bc92471ab6681ed86d19a105605f5eadcb0837d11"
 dependencies = [
  "cc",
  "libc",
@@ -1390,9 +1390,9 @@ dependencies = [
 
 [[package]]
 name = "derive_more"
-version = "0.99.13"
+version = "0.99.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f82b1b72f1263f214c0f823371768776c4f5841b942c9883aa8e5ec584fd0ba6"
+checksum = "5cc7b9cef1e351660e5443924e4f43ab25fbbed3e9a5f052df3677deb4d6b320"
 dependencies = [
  "convert_case",
  "proc-macro2",
@@ -1776,6 +1776,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fd-lock"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0010f02effd88c702318c5dde0463206be67495d0b4d906ba7c0a8f166cc7f06"
+dependencies = [
+ "libc",
+ "winapi 0.3.9",
+]
+
+[[package]]
 name = "filesize"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1842,16 +1852,6 @@ checksum = "5fc25a87fa4fd2094bffb06925852034d90a17f0d1e05197d4956d3555752191"
 dependencies = [
  "matches",
  "percent-encoding 2.1.0",
-]
-
-[[package]]
-name = "fs2"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9564fc758e15025b46aa6643b1b77d047d1a56a1aea6e01002ac0c7026876213"
-dependencies = [
- "libc",
- "winapi 0.3.9",
 ]
 
 [[package]]
@@ -2307,8 +2307,8 @@ dependencies = [
  "http 0.2.4",
  "indexmap",
  "slab 0.4.3",
- "tokio 1.5.0",
- "tokio-util 0.6.6",
+ "tokio 1.6.0",
+ "tokio-util 0.6.7",
  "tracing",
 ]
 
@@ -2475,9 +2475,9 @@ dependencies = [
 
 [[package]]
 name = "http-client"
-version = "6.3.5"
+version = "6.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5566ecc26bc6b04e773e680d66141fced78e091ad818e420d726c152b05a64ff"
+checksum = "7f232b7a4e96a185acf80225b55224fbd02cc2c9058757ae61e2ab93d3e58a49"
 dependencies = [
  "async-std",
  "async-trait",
@@ -2489,6 +2489,7 @@ dependencies = [
  "hyper-tls 0.4.3",
  "isahc 0.9.14",
  "log 0.4.14",
+ "tokio 0.2.25",
 ]
 
 [[package]]
@@ -2507,7 +2508,7 @@ dependencies = [
  "infer",
  "pin-project-lite 0.2.6",
  "rand 0.7.3",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde_json",
  "serde_qs",
  "serde_urlencoded 0.7.0",
@@ -2560,7 +2561,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac34a56cfd4acddb469cc7fff187ed5ac36f498ba085caf8bbc725e3ff474058"
 dependencies = [
  "humantime 2.1.0",
- "serde 1.0.125",
+ "serde 1.0.126",
 ]
 
 [[package]]
@@ -2632,7 +2633,7 @@ dependencies = [
  "itoa",
  "pin-project 1.0.7",
  "socket2 0.4.0",
- "tokio 1.5.0",
+ "tokio 1.6.0",
  "tower-service",
  "tracing",
  "want 0.3.0",
@@ -2660,7 +2661,7 @@ dependencies = [
  "bytes 1.0.1",
  "hyper 0.14.7",
  "native-tls",
- "tokio 1.5.0",
+ "tokio 1.6.0",
  "tokio-native-tls",
 ]
 
@@ -2740,7 +2741,7 @@ checksum = "824845a0bf897a9042383849b02c1bc219c2383772efcd5c6f9766fa4b81aef3"
 dependencies = [
  "autocfg",
  "hashbrown",
- "serde 1.0.125",
+ "serde 1.0.126",
 ]
 
 [[package]]
@@ -2827,15 +2828,16 @@ dependencies = [
 
 [[package]]
 name = "isahc"
-version = "1.3.1"
+version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3bd9294f1ecdda747b8a092b07873285e613adc14e9c9526205eacedcf3ecd2b"
+checksum = "81c01404730bb4574bbacb59ca0855f969f8eabd688ca22866f2cc333f1a4f69"
 dependencies = [
  "async-channel",
  "crossbeam-utils 0.8.4",
  "curl",
  "curl-sys",
  "encoding_rs",
+ "event-listener",
  "futures-lite",
  "http 0.2.4",
  "log 0.4.14",
@@ -3021,8 +3023,8 @@ version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7fb9b38af92608140b86b693604b9ffcc5824240a484d1ecd4795bacb2fe88f3"
 dependencies = [
- "serde 1.0.125",
- "serde_test 1.0.125",
+ "serde 1.0.126",
+ "serde_test 1.0.126",
 ]
 
 [[package]]
@@ -3059,7 +3061,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51b9bbe6c47d51fc3e1a9b945965946b4c44142ab8792c50835a980d362c2710"
 dependencies = [
  "cfg-if 1.0.0",
- "serde 1.0.125",
+ "serde 1.0.126",
  "value-bag",
 ]
 
@@ -3086,7 +3088,7 @@ dependencies = [
  "log-mdc",
  "parking_lot 0.11.1",
  "regex 1.5.4",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde-value 0.7.0",
  "serde_json",
  "serde_yaml",
@@ -3321,7 +3323,7 @@ dependencies = [
  "bincode",
  "cfg-if 0.1.10",
  "log 0.4.14",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde_derive",
  "wasm-bindgen",
 ]
@@ -3412,7 +3414,7 @@ dependencies = [
 [[package]]
 name = "nu"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "clap",
  "futures 0.3.15",
@@ -3462,7 +3464,7 @@ dependencies = [
 [[package]]
 name = "nu-ansi-term"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "winapi 0.3.9",
 ]
@@ -3470,7 +3472,7 @@ dependencies = [
 [[package]]
 name = "nu-cli"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "Inflector",
  "arboard",
@@ -3537,7 +3539,7 @@ dependencies = [
  "roxmltree",
  "rust-embed",
  "rustyline",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde_bytes",
  "serde_ini",
  "serde_json",
@@ -3568,7 +3570,7 @@ dependencies = [
 [[package]]
 name = "nu-command"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "Inflector",
  "arboard",
@@ -3631,7 +3633,7 @@ dependencies = [
  "roxmltree",
  "rust-embed",
  "rustyline",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde_bytes",
  "serde_ini",
  "serde_json",
@@ -3662,7 +3664,7 @@ dependencies = [
 [[package]]
 name = "nu-data"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "bigdecimal",
  "byte-unit",
@@ -3685,7 +3687,7 @@ dependencies = [
  "num-format",
  "num-traits 0.2.14",
  "query_interface",
- "serde 1.0.125",
+ "serde 1.0.126",
  "sha2 0.9.5",
  "toml",
  "users",
@@ -3694,7 +3696,7 @@ dependencies = [
 [[package]]
 name = "nu-engine"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "ansi_term 0.12.1",
  "async-recursion",
@@ -3726,13 +3728,14 @@ dependencies = [
  "nu-protocol 0.31.1",
  "nu-source 0.31.1",
  "nu-stream",
+ "nu-test-support 0.31.1",
  "nu-value-ext 0.31.1",
  "num-bigint 0.3.2",
  "num-format",
  "num-traits 0.2.14",
  "parking_lot 0.11.1",
  "rayon",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde_json",
  "tempfile",
  "term_size",
@@ -3758,7 +3761,7 @@ dependencies = [
  "nu-source 0.29.0",
  "num-bigint 0.3.2",
  "num-traits 0.2.14",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde_json",
  "serde_yaml",
  "toml",
@@ -3767,7 +3770,7 @@ dependencies = [
 [[package]]
 name = "nu-errors"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "bigdecimal",
  "codespan-reporting",
@@ -3778,7 +3781,7 @@ dependencies = [
  "nu-source 0.31.1",
  "num-bigint 0.3.2",
  "num-traits 0.2.14",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde_json",
  "serde_yaml",
  "toml",
@@ -3787,19 +3790,19 @@ dependencies = [
 [[package]]
 name = "nu-json"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "lazy_static 1.4.0",
  "linked-hash-map 0.5.4",
  "num-traits 0.2.14",
  "regex 1.5.4",
- "serde 1.0.125",
+ "serde 1.0.126",
 ]
 
 [[package]]
 name = "nu-parser"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "bigdecimal",
  "codespan-reporting",
@@ -3815,7 +3818,7 @@ dependencies = [
  "nu-test-support 0.31.1",
  "num-bigint 0.3.2",
  "num-traits 0.2.14",
- "serde 1.0.125",
+ "serde 1.0.126",
  "shellexpand",
  "smart-default",
 ]
@@ -3823,7 +3826,7 @@ dependencies = [
 [[package]]
 name = "nu-plugin"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "bigdecimal",
  "indexmap",
@@ -3833,14 +3836,14 @@ dependencies = [
  "nu-test-support 0.31.1",
  "nu-value-ext 0.31.1",
  "num-bigint 0.3.2",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde_json",
 ]
 
 [[package]]
 name = "nu-pretty-hex"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "nu-ansi-term 0.29.0",
  "rand 0.8.3",
@@ -3864,7 +3867,7 @@ dependencies = [
  "num-bigint 0.3.2",
  "num-integer",
  "num-traits 0.2.14",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde_bytes",
  "serde_json",
  "serde_yaml",
@@ -3874,7 +3877,7 @@ dependencies = [
 [[package]]
 name = "nu-protocol"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "bigdecimal",
  "byte-unit",
@@ -3888,7 +3891,7 @@ dependencies = [
  "num-bigint 0.3.2",
  "num-integer",
  "num-traits 0.2.14",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde_bytes",
  "serde_json",
  "serde_yaml",
@@ -3904,26 +3907,26 @@ dependencies = [
  "derive-new",
  "getset",
  "pretty",
- "serde 1.0.125",
+ "serde 1.0.126",
  "termcolor",
 ]
 
 [[package]]
 name = "nu-source"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "derive-new",
  "getset",
  "pretty",
- "serde 1.0.125",
+ "serde 1.0.126",
  "termcolor",
 ]
 
 [[package]]
 name = "nu-stream"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "futures 0.3.15",
  "nu-errors 0.31.1",
@@ -3934,7 +3937,7 @@ dependencies = [
 [[package]]
 name = "nu-table"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "nu-ansi-term 0.31.1",
  "regex 1.5.4",
@@ -3965,7 +3968,7 @@ dependencies = [
 [[package]]
 name = "nu-test-support"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "bigdecimal",
  "chrono",
@@ -3999,7 +4002,7 @@ dependencies = [
 [[package]]
 name = "nu-value-ext"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "indexmap",
  "itertools",
@@ -4012,7 +4015,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_binaryview"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "crossterm 0.19.0",
  "image 0.22.5",
@@ -4029,7 +4032,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_chart"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "crossterm 0.19.0",
  "nu-cli",
@@ -4045,7 +4048,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_fetch"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "base64 0.13.0",
  "futures 0.3.15",
@@ -4061,7 +4064,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_from_bson"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "bigdecimal",
  "bson",
@@ -4076,7 +4079,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_from_sqlite"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "bigdecimal",
  "nu-errors 0.31.1",
@@ -4092,7 +4095,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_inc"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "nu-errors 0.31.1",
  "nu-plugin",
@@ -4106,7 +4109,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_match"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "nu-errors 0.31.1",
  "nu-plugin",
@@ -4118,7 +4121,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_post"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "base64 0.13.0",
  "futures 0.3.15",
@@ -4135,7 +4138,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_ps"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "futures 0.3.15",
  "futures-timer",
@@ -4150,7 +4153,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_query_json"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "gjson",
  "nu-errors 0.31.1",
@@ -4162,7 +4165,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_s3"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "futures 0.3.15",
  "nu-errors 0.31.1",
@@ -4175,7 +4178,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_selector"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "nipper",
  "nu-errors 0.31.1",
@@ -4187,7 +4190,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_start"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "glob",
  "nu-errors 0.31.1",
@@ -4202,7 +4205,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_sys"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "futures 0.3.15",
  "futures-util",
@@ -4217,7 +4220,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_textview"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "bat",
  "nu-ansi-term 0.31.1",
@@ -4233,7 +4236,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_to_bson"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "bson",
  "nu-errors 0.31.1",
@@ -4247,7 +4250,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_to_sqlite"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "hex 0.4.3",
  "nu-errors 0.31.1",
@@ -4263,7 +4266,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_tree"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "derive-new",
  "nu-errors 0.31.1",
@@ -4276,7 +4279,7 @@ dependencies = [
 [[package]]
 name = "nu_plugin_xpath"
 version = "0.31.1"
-source = "git+https://github.com/nushell/nushell.git?branch=main#3aa00b78f95b308a6d76eef086e018cd0e0252d0"
+source = "git+https://github.com/nushell/nushell.git?branch=main#0ff08bb63a0035436b500befa7fea893519868fc"
 dependencies = [
  "bigdecimal",
  "indexmap",
@@ -4322,7 +4325,7 @@ dependencies = [
  "autocfg",
  "num-integer",
  "num-traits 0.2.14",
- "serde 1.0.125",
+ "serde 1.0.126",
 ]
 
 [[package]]
@@ -4839,7 +4842,7 @@ dependencies = [
  "chrono",
  "indexmap",
  "line-wrap",
- "serde 1.0.125",
+ "serde 1.0.126",
  "xml-rs",
 ]
 
@@ -4989,7 +4992,7 @@ dependencies = [
  "config",
  "directories",
  "petgraph",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde-value 0.6.0",
  "tint",
 ]
@@ -5205,9 +5208,9 @@ dependencies = [
 
 [[package]]
 name = "rayon"
-version = "1.5.0"
+version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b0d8e0819fadc20c74ea8373106ead0600e3a67ef1fe8da56e39b9ae7275674"
+checksum = "c06aca804d41dbc8ba42dfd964f0d01334eceb64314b9ecf7c5fad5188a06d90"
 dependencies = [
  "autocfg",
  "crossbeam-deque 0.8.0",
@@ -5217,9 +5220,9 @@ dependencies = [
 
 [[package]]
 name = "rayon-core"
-version = "1.9.0"
+version = "1.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ab346ac5921dc62ffa9f89b7a773907511cdfa5490c572ae9be1be33e8afa4a"
+checksum = "d78120e2c850279833f1dd3582f730c4ab53ed95aeaaaa862a2a5c71b1656d8e"
 dependencies = [
  "crossbeam-channel 0.5.1",
  "crossbeam-deque 0.8.0",
@@ -5358,7 +5361,7 @@ dependencies = [
  "native-tls",
  "percent-encoding 2.1.0",
  "pin-project-lite 0.2.6",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde_urlencoded 0.7.0",
  "tokio 0.2.25",
  "tokio-tls",
@@ -5392,10 +5395,10 @@ dependencies = [
  "native-tls",
  "percent-encoding 2.1.0",
  "pin-project-lite 0.2.6",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde_json",
  "serde_urlencoded 0.7.0",
- "tokio 1.5.0",
+ "tokio 1.6.0",
  "tokio-native-tls",
  "url",
  "wasm-bindgen",
@@ -5505,7 +5508,7 @@ dependencies = [
  "byteorder",
  "lazy_static 1.4.0",
  "num",
- "serde 1.0.125",
+ "serde 1.0.126",
 ]
 
 [[package]]
@@ -5531,20 +5534,22 @@ dependencies = [
 
 [[package]]
 name = "rustversion"
-version = "1.0.4"
+version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb5d2a036dc6d2d8fd16fde3498b04306e29bd193bf306a57427019b823d5acd"
+checksum = "61b3909d758bb75c79f23d4736fac9433868679d3ad2ea7a61e3c25cfda9a088"
 
 [[package]]
 name = "rustyline"
-version = "8.0.0"
+version = "8.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9e1b597fcd1eeb1d6b25b493538e5aa19629eb08932184b85fef931ba87e893"
+checksum = "53e628a0a8e3e278dc96badc1f54492e5c5201037c7df14935c8b9571e9d2923"
 dependencies = [
  "bitflags",
  "cfg-if 1.0.0",
+ "clipboard-win",
  "dirs-next",
- "fs2",
+ "error-code",
+ "fd-lock",
  "libc",
  "log 0.4.14",
  "memchr",
@@ -5591,7 +5596,7 @@ dependencies = [
  "reqwest 0.10.10",
  "rust-crypto",
  "rustc-serialize",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde_derive",
  "serde_json",
  "sha2 0.6.0",
@@ -5726,9 +5731,9 @@ checksum = "9dad3f759919b92c3068c696c15c3d17238234498bbdcc80f2c469606f948ac8"
 
 [[package]]
 name = "serde"
-version = "1.0.125"
+version = "1.0.126"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "558dc50e1a5a5fa7112ca2ce4effcb321b0300c0d4ccf0776a9f60cd89031171"
+checksum = "ec7505abeacaec74ae4778d9d9328fe5a5d04253220a85c4ee022239fc996d03"
 dependencies = [
  "serde_derive",
 ]
@@ -5753,7 +5758,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a65a7291a8a568adcae4c10a677ebcedbc6c9cec91c054dee2ce40b0e3290eb"
 dependencies = [
  "ordered-float 1.1.1",
- "serde 1.0.125",
+ "serde 1.0.126",
 ]
 
 [[package]]
@@ -5763,7 +5768,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f3a1a3341211875ef120e117ea7fd5228530ae7e7036a779fdc9117be6b3282c"
 dependencies = [
  "ordered-float 2.2.0",
- "serde 1.0.125",
+ "serde 1.0.126",
 ]
 
 [[package]]
@@ -5772,14 +5777,14 @@ version = "0.11.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "16ae07dd2f88a366f15bd0632ba725227018c69a1c8550a927324f8eb8368bb9"
 dependencies = [
- "serde 1.0.125",
+ "serde 1.0.126",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.125"
+version = "1.0.126"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b093b7a2bb58203b5da3056c05b4ec1fed827dcfdb37347a8841695263b3d06d"
+checksum = "963a7dbc9895aeac7ac90e74f34a5d5261828f79df35cbed41e10189d3804d43"
 dependencies = [
  "proc-macro2",
  "quote 1.0.9",
@@ -5793,7 +5798,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eb236687e2bb073a7521c021949be944641e671b8505a94069ca37b656c81139"
 dependencies = [
  "result",
- "serde 1.0.125",
+ "serde 1.0.126",
  "void",
 ]
 
@@ -5806,7 +5811,7 @@ dependencies = [
  "indexmap",
  "itoa",
  "ryu",
- "serde 1.0.125",
+ "serde 1.0.126",
 ]
 
 [[package]]
@@ -5817,7 +5822,7 @@ checksum = "5af82de3c6549b001bec34961ff2d6a54339a87bab37ce901b693401f27de6cb"
 dependencies = [
  "data-encoding",
  "percent-encoding 2.1.0",
- "serde 1.0.125",
+ "serde 1.0.126",
  "thiserror",
 ]
 
@@ -5832,11 +5837,11 @@ dependencies = [
 
 [[package]]
 name = "serde_test"
-version = "1.0.125"
+version = "1.0.126"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4bb5fef7eaf5a97917567183607ac4224c5b451c15023930f23b937cce879fe"
+checksum = "bd1055d1c20532080b9da5040ec8e27425f4d4573d8e29eb19ba4ff1e4b9da2d"
 dependencies = [
- "serde 1.0.125",
+ "serde 1.0.126",
 ]
 
 [[package]]
@@ -5847,7 +5852,7 @@ checksum = "9ec5d77e2d4c73717816afac02670d5c4f534ea95ed430442cad02e7a6e32c97"
 dependencies = [
  "dtoa",
  "itoa",
- "serde 1.0.125",
+ "serde 1.0.126",
  "url",
 ]
 
@@ -5860,7 +5865,7 @@ dependencies = [
  "form_urlencoded",
  "itoa",
  "ryu",
- "serde 1.0.125",
+ "serde 1.0.126",
 ]
 
 [[package]]
@@ -5871,7 +5876,7 @@ checksum = "15654ed4ab61726bf918a39cb8d98a2e2995b002387807fa6ba58fdf7f59bb23"
 dependencies = [
  "dtoa",
  "linked-hash-map 0.5.4",
- "serde 1.0.125",
+ "serde 1.0.126",
  "yaml-rust",
 ]
 
@@ -6084,9 +6089,9 @@ dependencies = [
 
 [[package]]
 name = "spinning_top"
-version = "0.2.3"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8bd0ab6b8c375d2d963503b90d3770010d95bc3b5f98036f948dee24bf4e8879"
+checksum = "75adad84ee84b521fb2cca2d4fd0f1dab1d8d026bda3c5bea4ca63b5f9f9293c"
 dependencies = [
  "lock_api 0.4.4",
 ]
@@ -6140,7 +6145,7 @@ checksum = "c87a60a40fccc84bef0652345bbbbbe20a605bf5d0ce81719fc476f5c03b50ef"
 dependencies = [
  "proc-macro2",
  "quote 1.0.9",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde_derive",
  "syn 1.0.72",
 ]
@@ -6154,7 +6159,7 @@ dependencies = [
  "base-x",
  "proc-macro2",
  "quote 1.0.9",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde_derive",
  "serde_json",
  "sha1 0.6.0",
@@ -6183,7 +6188,7 @@ dependencies = [
  "new_debug_unreachable",
  "phf_shared",
  "precomputed-hash",
- "serde 1.0.125",
+ "serde 1.0.126",
 ]
 
 [[package]]
@@ -6256,7 +6261,7 @@ dependencies = [
  "log 0.4.14",
  "mime",
  "mime_guess",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde_json",
  "serde_urlencoded 0.6.1",
  "url",
@@ -6282,7 +6287,7 @@ dependencies = [
  "mime_guess",
  "once_cell",
  "pin-project-lite 0.2.6",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde_json",
  "web-sys",
 ]
@@ -6367,7 +6372,7 @@ dependencies = [
  "onig",
  "plist",
  "regex-syntax 0.6.25",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde_derive",
  "serde_json",
  "walkdir",
@@ -6429,9 +6434,9 @@ dependencies = [
 
 [[package]]
 name = "tera"
-version = "1.8.0"
+version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b64b021b8d3ab1f59ceae9e6cd1c26c8e7ce0322a9ebfff6c0e22b3b66938935"
+checksum = "d8e88150b29f8844dea83fcaec7c03d3365992f5cec749f1e7cbf2a5594b22eb"
 dependencies = [
  "chrono",
  "chrono-tz",
@@ -6443,7 +6448,7 @@ dependencies = [
  "pest_derive",
  "rand 0.8.3",
  "regex 1.5.4",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde_json",
  "slug",
  "unic-segment",
@@ -6481,9 +6486,9 @@ dependencies = [
 
 [[package]]
 name = "terminal_size"
-version = "0.1.16"
+version = "0.1.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86ca8ced750734db02076f44132d802af0b33b09942331f4459dde8636fd2406"
+checksum = "633c1a546cee861a1a6d0dc69ebeca693bf4296661ba7852b9d21d159e0506df"
 dependencies = [
  "libc",
  "winapi 0.3.9",
@@ -6693,9 +6698,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.5.0"
+version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83f0c8e7c0addab50b663055baf787d0af7f413a46e6e7fb9559a4e4db7137a5"
+checksum = "bd3076b5c8cc18138b8f8814895c11eb4de37114a5d127bafdc5e55798ceef37"
 dependencies = [
  "autocfg",
  "bytes 1.0.1",
@@ -6707,7 +6712,7 @@ dependencies = [
  "parking_lot 0.11.1",
  "pin-project-lite 0.2.6",
  "signal-hook-registry",
- "tokio-macros 1.1.0",
+ "tokio-macros 1.2.0",
  "winapi 0.3.9",
 ]
 
@@ -6796,9 +6801,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-macros"
-version = "1.1.0"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "caf7b11a536f46a809a8a9f0bb4237020f70ecbf115b842360afb127ea2fda57"
+checksum = "c49e3df43841dafb86046472506755d8501c5615673955f6aa17181125d13c37"
 dependencies = [
  "proc-macro2",
  "quote 1.0.9",
@@ -6812,7 +6817,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f7d995660bd2b7f8c1568414c1126076c13fbb725c40112dc0120b78eb9b717b"
 dependencies = [
  "native-tls",
- "tokio 1.5.0",
+ "tokio 1.6.0",
 ]
 
 [[package]]
@@ -6973,16 +6978,16 @@ dependencies = [
 
 [[package]]
 name = "tokio-util"
-version = "0.6.6"
+version = "0.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "940a12c99365c31ea8dd9ba04ec1be183ffe4920102bb7122c2f515437601e8e"
+checksum = "1caa0b0c8d94a049db56b5acf8cba99dc0623aab1b26d5b5f5e2d945846b3592"
 dependencies = [
  "bytes 1.0.1",
  "futures-core",
  "futures-sink",
  "log 0.4.14",
  "pin-project-lite 0.2.6",
- "tokio 1.5.0",
+ "tokio 1.6.0",
 ]
 
 [[package]]
@@ -6991,7 +6996,7 @@ version = "0.5.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a31142970826733df8241ef35dc040ef98c679ab14d7c3e54d827099b3acecaa"
 dependencies = [
- "serde 1.0.125",
+ "serde 1.0.126",
 ]
 
 [[package]]
@@ -7252,7 +7257,7 @@ dependencies = [
  "idna",
  "matches",
  "percent-encoding 2.1.0",
- "serde 1.0.125",
+ "serde 1.0.126",
 ]
 
 [[package]]
@@ -7316,11 +7321,12 @@ dependencies = [
 
 [[package]]
 name = "value-bag"
-version = "1.0.0-alpha.6"
+version = "1.0.0-alpha.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b676010e055c99033117c2343b33a40a30b91fecd6c49055ac9cd2d6c305ab1"
+checksum = "dd320e1520f94261153e96f7534476ad869c14022aee1e59af7c778075d840ae"
 dependencies = [
  "ctor",
+ "version_check",
 ]
 
 [[package]]
@@ -7413,7 +7419,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d54ee1d4ed486f78874278e63e4069fc1ab9f6a18ca492076ffb90c5eb2997fd"
 dependencies = [
  "cfg-if 1.0.0",
- "serde 1.0.125",
+ "serde 1.0.126",
  "serde_json",
  "wasm-bindgen-macro",
 ]

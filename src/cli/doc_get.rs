@@ -176,7 +176,10 @@ fn run_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellEr
                 let tag = Tag::default();
                 let mut collected = TaggedDictBuilder::new(&tag);
                 collected.insert_value(&id_column, id.clone());
-                collected.insert_value("cas", UntaggedValue::int(res.cas()).into_untagged_value());
+                collected.insert_value(
+                    "cas",
+                    UntaggedValue::int(res.cas() as i64).into_untagged_value(),
+                );
                 let content = res.content().unwrap();
                 let content_converted = convert_json_value_to_nu_value(&content, Tag::default())?;
                 collected.insert_value("content", content_converted);

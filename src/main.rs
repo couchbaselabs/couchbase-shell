@@ -234,15 +234,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(Whoami::new(state.clone())),
         nu_engine::whole_stream_command(Version::new()),
         /*
-        nu_engine::whole_stream_command(DocGet::new(state.clone())),
-        nu_engine::whole_stream_command(DocUpsert::new(state.clone())),
-        nu_engine::whole_stream_command(DocInsert::new(state.clone())),
-        nu_engine::whole_stream_command(DocReplace::new(state.clone())),
-        nu_engine::whole_stream_command(DocRemove::new(state.clone())),
         nu_engine::whole_stream_command(DataStats::new(state.clone())),
-        nu_engine::whole_stream_command(Doc {}),
         nu_engine::whole_stream_command(Data {}),
-        nu_engine::whole_stream_command(Ping::new(state.clone())),
         nu_engine::whole_stream_command(SDKLog {}),
         nu_engine::whole_stream_command(Help {}),
         nu_engine::whole_stream_command(Tutorial::new(state.clone())),
@@ -285,7 +278,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 /// Fetches a helpful MOTD from couchbase.sh
 ///
 /// Note that this can be disabled with the --no-motd cli flag if needed.
-async fn fetch_and_print_motd() {
+async fn _fetch_and_print_motd() {
     let agent = format!(
         "cbsh {} {}/{}",
         option_env!("CARGO_PKG_VERSION").unwrap_or("0.0.0"),
