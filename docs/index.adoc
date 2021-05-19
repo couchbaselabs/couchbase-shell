@@ -18,6 +18,4 @@ include::commands.adoc[]
 
 include::reference.adoc[]
 
-include::troubleshooting.adoc[]
-
 include::recipes.adoc[]
