@@ -21,4 +21,6 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: ./
+          publish_dir: ./docs
+          destination_dir: ./docs
+          exclude_assets: '*.adoc,build.sh,lib/,recipes/'
