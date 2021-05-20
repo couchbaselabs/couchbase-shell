@@ -2,6 +2,12 @@
 
 All user visible changes to this project will be documented in this file.
 
+## 1.0.0-alpha.1 - 2021-05-20
+
+ - Removed libcouchbase, cbshell is now pure rust and optimized for shell-type workloads.
+ - TLS is turned on by default.
+ - Reduced binary sizes, including windows.
+
 ## 0.5.0 - 2021-03-19
 
  - Updated documentation and examples
