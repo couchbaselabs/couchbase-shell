@@ -246,10 +246,18 @@ fn main() -> Result<(), Box<dyn Error>> {
     let d = TempDir::new().unwrap();
     let f = d.child("config.toml");
 
-    let config = r##"
-    skip_welcome_message = true
-    prompt = "build-string '👤 ' (ansi ub) (use | get username) (ansi reset) ' 🏠 ' (ansi yb) (use | get cluster) (ansi reset) ' in 🗄 ' (ansi wb) (use | get bucket) (ansi reset) '\n' '> '"
-    "##;
+    let config = if cfg!(windows) {
+        r##"
+        skip_welcome_message = true
+        prompt = "build-string (ansi ub) (use | get username) (ansi reset) ' at ' (ansi yb) (use | get cluster) (ansi reset) ' in ' (ansi wb) (use | get bucket) (ansi reset) '\n' '> '"
+        "##
+    } else {
+        r##"
+        skip_welcome_message = true
+        prompt = "build-string '👤 ' (ansi ub) (use | get username) (ansi reset) ' 🏠 ' (ansi yb) (use | get cluster) (ansi reset) ' in 🗄 ' (ansi wb) (use | get bucket) (ansi reset) '\n' '> '"
+        "##
+    };
+
     std::fs::write(&f, config.as_bytes()).unwrap();
 
     options.config = Some(std::ffi::OsString::from(f));
