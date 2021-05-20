@@ -10,12 +10,7 @@ use crate::config::ShellConfig;
 use crate::state::RemoteCluster;
 use crate::{cli::*, state::ClusterTimeouts};
 use config::ClusterTlsConfig;
-use log::{debug, warn, LevelFilter};
-use log4rs::append::console::ConsoleAppender;
-use log4rs::append::file::FileAppender;
-use log4rs::config::{Appender, Logger, Root};
-use log4rs::encode::pattern::PatternEncoder;
-use log4rs::Config;
+use log::{debug, warn};
 use nu_cli::{NuScript, Options};
 use serde::Deserialize;
 use state::State;
@@ -30,8 +25,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     const DEFAULT_PASSWORD: &str = "password";
     const DEFAULT_HOSTNAME: &str = "localhost";
     const DEFAULT_USERNAME: &str = "Administrator";
-
-    configure_logging();
 
     let opt = CliOptions::from_args();
     debug!("Effective {:?}", opt);
@@ -237,7 +230,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         /*
         nu_engine::whole_stream_command(DataStats::new(state.clone())),
         nu_engine::whole_stream_command(Data {}),
-        nu_engine::whole_stream_command(SDKLog {}),
         */
     ]);
 
@@ -361,30 +353,4 @@ struct CliOptions {
     no_motd: bool,
     #[structopt(long = "cert-path")]
     cert_path: Option<String>,
-}
-
-fn configure_logging() {
-    let stdout = ConsoleAppender::builder().build();
-
-    let mut config_path = cbsh_home_path().unwrap();
-    config_path.push("sdk.log");
-
-    let requests = FileAppender::builder()
-        .encoder(Box::new(PatternEncoder::new("{d} - {m}{n}")))
-        .build(config_path)
-        .unwrap();
-
-    let config = Config::builder()
-        .appender(Appender::builder().build("stdout", Box::new(stdout)))
-        .appender(Appender::builder().build("requests", Box::new(requests)))
-        .logger(
-            Logger::builder()
-                .appender("requests")
-                .additive(false)
-                .build("couchbase", LevelFilter::Trace),
-        )
-        .build(Root::builder().appender("stdout").build(LevelFilter::Error))
-        .unwrap();
-
-    log4rs::init_config(config).unwrap();
 }

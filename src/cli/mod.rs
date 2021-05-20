@@ -105,8 +105,6 @@ pub use users_upsert::UsersUpsert;
 pub use version::Version;
 pub use whoami::Whoami;
 
-pub use util::cbsh_home_path;
-
 /*
 mod analytics;
 mod analytics_datasets;
