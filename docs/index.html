@@ -50,9 +50,8 @@
 <li><a href="#_removing">3.7.3. Removing</a></li>
 </ul>
 </li>
-<li><a href="#_interacting_with_the_data_service">3.8. Interacting with the <code>data</code> service</a></li>
-<li><a href="#_whoami">3.9. <code>whoami</code>?</a></li>
-<li><a href="#_version">3.10. <code>version</code></a></li>
+<li><a href="#_whoami">3.8. <code>whoami</code>?</a></li>
+<li><a href="#_version">3.9. <code>version</code></a></li>
 </ul>
 </li>
 <li><a href="#_reference">4. Reference</a>
@@ -863,40 +862,7 @@ If you have pivot mode (detailed above) turned off then this command can produce
 </div>
 </div>
 <div class="sect2">
-<h3 id="_interacting_with_the_data_service">3.8. Interacting with the <code>data</code> service</h3>
-<div class="paragraph">
-<p>Note that the <code>data</code> commands are intended to work directly against the data (Key/Value) service. If you are looking for manipulating doucments, please use the <code>doc</code> commands instead.</p>
-</div>
-<div class="paragraph">
-<p>You can use the <code>data stats</code> subcommand to list the KV stats for all the nodes connected for the current cluster. In the following example we are filtering on a subset of the stats since the full output can get quite verbose.</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code>&gt; data stats | where key =~ cmd_
-────┬─────────┬───────────┬──────────────────────────────┬──────────
- #  │ cluster │ node      │ key                          │ value
-────┼─────────┼───────────┼──────────────────────────────┼──────────
- 0  │ local   │ 127.0.0.1 │ cmd_get                      │ 2095
- 1  │ local   │ 127.0.0.1 │ cmd_set                      │ 1
- 2  │ local   │ 127.0.0.1 │ cmd_flush                    │ 0
- 3  │ local   │ 127.0.0.1 │ cmd_subdoc_lookup            │ 0
- 4  │ local   │ 127.0.0.1 │ cmd_subdoc_mutation          │ 0
- 5  │ local   │ 127.0.0.1 │ cmd_total_sets               │ 41049
- 6  │ local   │ 127.0.0.1 │ cmd_total_gets               │ 12595
- 7  │ local   │ 127.0.0.1 │ cmd_total_ops                │ 53644
- 8  │ local   │ 127.0.0.1 │ cmd_mutation                 │ 2
- 9  │ local   │ 127.0.0.1 │ cmd_lookup                   │ 2095
- 10 │ local   │ 127.0.0.1 │ cmd_lock                     │ 0
- 11 │ local   │ 127.0.0.1 │ cmd_lookup_10s_count         │ 0
- 12 │ local   │ 127.0.0.1 │ cmd_lookup_10s_duration_us   │ 0
- 13 │ local   │ 127.0.0.1 │ cmd_mutation_10s_count       │ 536440
- 14 │ local   │ 127.0.0.1 │ cmd_mutation_10s_duration_us │ 22059071
-────┴─────────┴───────────┴──────────────────────────────┴──────────</code></pre>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_whoami">3.9. <code>whoami</code>?</h3>
+<h3 id="_whoami">3.8. <code>whoami</code>?</h3>
 <div class="paragraph">
 <p>Sometimes simple commands are helpful when debugging. The <code>whoami</code> command will ask the same question to the active cluster and return various information about the user.</p>
 </div>
@@ -924,7 +890,7 @@ If you have pivot mode (detailed above) turned off then this command can produce
 </div>
 </div>
 <div class="sect2">
-<h3 id="_version">3.10. <code>version</code></h3>
+<h3 id="_version">3.9. <code>version</code></h3>
 <div class="paragraph">
 <p>The <code>version</code> command lists the version of the couchbase shell.</p>
 </div>
@@ -961,10 +927,11 @@ default-collection = &quot;my-collection&quot;
 # The following can be part of the config or credentials
 username = &quot;Administrator&quot;
 password = &quot;password&quot;
-# To enable TLS
-# tls-cert-path = &quot;/absolute/path/to/server.cert&quot;
-# To use TLS whilst ignoring certificate verification
+# TLS defaults to on, accepting all certs
+# tls-enabled = true
+# tls-cert-path = &quot;/path/to/cert&quot; # either accept all certs or provide a cert path
 # tls-accept-all-certs = true
+# tls-validate-hostnames = false
 
 data-timeout = &quot;25s&quot;
 connect-timeout = &quot;7500ms&quot;
@@ -986,10 +953,11 @@ version = 1
 identifier = &quot;default&quot;
 username = &quot;Administrator&quot;
 password = &quot;password&quot;
-# To enable TLS
-# tls-cert-path = &quot;/absolute/path/to/server.cert&quot;
-# To use TLS whilst ignoring certificate verification
-# tls-accept-all-certs = true</code></pre>
+# TLS defaults to on, accepting all certs
+# tls-enabled = true
+# tls-cert-path = &quot;/path/to/cert&quot; # either accept all certs or provide a cert path
+# tls-accept-all-certs = true
+# tls-validate-hostnames = false</code></pre>
 </div>
 </div>
 </div>
@@ -1414,7 +1382,7 @@ There are two ways that we can do this.</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2021-05-20 16:49:00 UTC
+Last updated 2021-05-20 18:00:46 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
