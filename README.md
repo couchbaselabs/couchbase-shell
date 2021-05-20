@@ -26,30 +26,32 @@ Prerequisites:
 Next, clone the repository and then run `cargo run`. The first time it will take some time since it builds all the dependencies, but you should end up in a shell. You can use `cargo run -- -h` to see all the available flags:
 
 ```
-$ ./cbsh --help
-The Couchbase Shell 0.5.0
+$ ./cbsh -h
+The Couchbase Shell 1.0.0-alpha.1
 Alternative Shell and UI for Couchbase Server and Cloud
 
 USAGE:
     cbsh [FLAGS] [OPTIONS]
 
 FLAGS:
-    -h, --help        Prints help information
-        --no-motd     
-    -p, --password    
-        --stdin       
-    -V, --version     Prints version information
+        --disable-tls
+        --dont-validate-hostnames
+    -h, --help                       Prints help information
+        --no-motd
+    -p, --password
+        --stdin
+    -V, --version                    Prints version information
 
 OPTIONS:
-        --bucket <bucket>            
-        --cert-path <cert-path>      
-        --cluster <cluster>          
-        --collection <collection>    
-    -c, --command <command>          
-        --hostnames <hostnames>      
-        --scope <scope>              
-        --script <script>            
-    -u, --username <username>    
+        --bucket <bucket>
+        --cluster <cluster>
+        --collection <collection>
+    -c, --command <command>
+        --hostnames <hostnames>
+        --scope <scope>
+        --script <script>
+        --tls-cert-path <tls-cert-path>
+    -u, --username <username>
 ```
 
 Note that if you want to spawn the highly experimental ui, use the `--ui` flag.
