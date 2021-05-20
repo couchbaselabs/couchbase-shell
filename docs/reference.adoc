@@ -18,10 +18,11 @@ default-collection = "my-collection"
 # The following can be part of the config or credentials
 username = "Administrator"
 password = "password"
-# To enable TLS
-# tls-cert-path = "/absolute/path/to/server.cert"
-# To use TLS whilst ignoring certificate verification
+# TLS defaults to on, accepting all certs
+# tls-enabled = true
+# tls-cert-path = "/path/to/cert" # either accept all certs or provide a cert path
 # tls-accept-all-certs = true
+# tls-validate-hostnames = false
 
 data-timeout = "25s"
 connect-timeout = "7500ms"
@@ -41,8 +42,9 @@ version = 1
 identifier = "default"
 username = "Administrator"
 password = "password"
-# To enable TLS
-# tls-cert-path = "/absolute/path/to/server.cert"
-# To use TLS whilst ignoring certificate verification
+# TLS defaults to on, accepting all certs
+# tls-enabled = true
+# tls-cert-path = "/path/to/cert" # either accept all certs or provide a cert path
 # tls-accept-all-certs = true
+# tls-validate-hostnames = false
 ----

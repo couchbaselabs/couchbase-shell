@@ -270,35 +270,6 @@ Similar to `doc get`, if you want to delete more than one document at the same t
 ───────────┴───
 ```
 
-=== Interacting with the `data` service
-
-Note that the `data` commands are intended to work directly against the data (Key/Value) service. If you are looking for manipulating doucments, please use the `doc` commands instead.
-
-You can use the `data stats` subcommand to list the KV stats for all the nodes connected for the current cluster. In the following example we are filtering on a subset of the stats since the full output can get quite verbose.
-
-```
-> data stats | where key =~ cmd_
-────┬─────────┬───────────┬──────────────────────────────┬──────────
- #  │ cluster │ node      │ key                          │ value    
-────┼─────────┼───────────┼──────────────────────────────┼──────────
- 0  │ local   │ 127.0.0.1 │ cmd_get                      │ 2095     
- 1  │ local   │ 127.0.0.1 │ cmd_set                      │ 1        
- 2  │ local   │ 127.0.0.1 │ cmd_flush                    │ 0        
- 3  │ local   │ 127.0.0.1 │ cmd_subdoc_lookup            │ 0        
- 4  │ local   │ 127.0.0.1 │ cmd_subdoc_mutation          │ 0        
- 5  │ local   │ 127.0.0.1 │ cmd_total_sets               │ 41049    
- 6  │ local   │ 127.0.0.1 │ cmd_total_gets               │ 12595    
- 7  │ local   │ 127.0.0.1 │ cmd_total_ops                │ 53644    
- 8  │ local   │ 127.0.0.1 │ cmd_mutation                 │ 2        
- 9  │ local   │ 127.0.0.1 │ cmd_lookup                   │ 2095     
- 10 │ local   │ 127.0.0.1 │ cmd_lock                     │ 0        
- 11 │ local   │ 127.0.0.1 │ cmd_lookup_10s_count         │ 0        
- 12 │ local   │ 127.0.0.1 │ cmd_lookup_10s_duration_us   │ 0        
- 13 │ local   │ 127.0.0.1 │ cmd_mutation_10s_count       │ 536440   
- 14 │ local   │ 127.0.0.1 │ cmd_mutation_10s_duration_us │ 22059071 
-────┴─────────┴───────────┴──────────────────────────────┴──────────
-```
-
 === `whoami`?
 
 Sometimes simple commands are helpful when debugging. The `whoami` command will ask the same question to the active cluster and return various information about the user.
