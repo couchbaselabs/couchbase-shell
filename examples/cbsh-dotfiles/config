@@ -8,4 +8,7 @@ default-bucket = "travel-sample"
 # The following can be part of the config or credentials
 username = "Administrator"
 password = "password"
-tls-cert-path = "/absolute/path/to/server.cert"
+#tls-enabled = true
+#tls-cert-path = "/path/to/cert" # either accept all certs or provide a cert path
+#tls-accept-all-certs = true
+#tls-validate-hostnames = false

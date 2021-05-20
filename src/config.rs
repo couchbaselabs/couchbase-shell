@@ -202,19 +202,34 @@ impl ClusterConfigTimeouts {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct ClusterTlsConfig {
+    #[serde(default = "default_as_true")]
+    enabled: bool,
     #[serde(rename(deserialize = "tls-cert-path"))]
     cert_path: Option<String>,
     #[serde(rename(deserialize = "tls-validate-hostnames"))]
-    #[serde(default = "default_as_true")]
+    #[serde(default = "default_as_false")]
     validate_hostnames: bool,
     #[serde(rename(deserialize = "tls-accept-all-certs"))]
-    #[serde(default = "default_as_false")]
+    #[serde(default = "default_as_true")]
     accept_all_certs: bool,
 }
 
 impl ClusterTlsConfig {
+    pub fn new(
+        enabled: bool,
+        cert_path: Option<String>,
+        validate_hostnames: bool,
+        accept_all_certs: bool,
+    ) -> Self {
+        Self {
+            enabled,
+            cert_path,
+            validate_hostnames,
+            accept_all_certs,
+        }
+    }
     pub fn enabled(&self) -> bool {
-        self.accept_all_certs || self.cert_path.is_some()
+        self.enabled
     }
 
     pub fn cert_path(&self) -> &Option<String> {
@@ -233,9 +248,10 @@ impl ClusterTlsConfig {
 impl Default for ClusterTlsConfig {
     fn default() -> Self {
         Self {
+            enabled: true,
             cert_path: None,
-            validate_hostnames: true,
-            accept_all_certs: false,
+            validate_hostnames: false,
+            accept_all_certs: true,
         }
     }
 }

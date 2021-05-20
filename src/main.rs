@@ -63,6 +63,17 @@ fn main() -> Result<(), Box<dyn Error>> {
         default_scope = opt.scope.clone();
         default_collection = opt.collection.clone();
 
+        let tls_config = ClusterTlsConfig::new(
+            !opt.disable_tls,
+            opt.tls_cert_path.clone(),
+            !opt.dont_validate_hostnames,
+            opt.tls_cert_path.is_none(),
+        );
+        if !tls_config.enabled() {
+            println!(
+                "Using PLAIN authentication for cluster default, credentials will sent in plaintext - configure tls to disable this warning"
+            );
+        }
         let cluster = RemoteCluster::new(
             hostnames.split(",").map(|v| v.to_owned()).collect(),
             username,
@@ -70,11 +81,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             opt.bucket,
             opt.scope,
             opt.collection,
-            ClusterTlsConfig::default(),
+            tls_config,
             ClusterTimeouts::default(),
-        );
-        println!(
-            "Using PLAIN authentication for cluster default, credentials will sent in plaintext - configure tls to disable this warning"
         );
         clusters.insert("default".into(), cluster);
         String::from("default")
@@ -351,6 +359,10 @@ struct CliOptions {
     stdin: bool,
     #[structopt(long = "no-motd")]
     no_motd: bool,
-    #[structopt(long = "cert-path")]
-    cert_path: Option<String>,
+    #[structopt(long = "disable-tls")]
+    disable_tls: bool,
+    #[structopt(long = "dont-validate-hostnames")]
+    dont_validate_hostnames: bool,
+    #[structopt(long = "tls-cert-path")]
+    tls_cert_path: Option<String>,
 }
