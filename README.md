@@ -56,9 +56,9 @@ OPTIONS:
 
 Note that if you want to spawn the highly experimental ui, use the `--ui` flag.
 
-# Supported Commands
+# cbsh commands
 
-This is heavily in flux right now, but you can try these commands (always try with `--help` if you are unsure about args and flags).
+These couchbase-specific commands are added on top of the regular nushell commands (always try with `--help` if you are unsure about args and flags).
 
  - `analytics <statement>` - Perform an analytics query
  - `analytics dataverses` - List all dataverses
