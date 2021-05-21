@@ -2,6 +2,11 @@
 
 All user visible changes to this project will be documented in this file.
 
+## 1.0.0-alpha.2 - Unreleased
+
+ - fix disabling tls in the config (property is now correctly called `tls-enabled`)
+ - Added examples to: doc get
+
 ## 1.0.0-alpha.1 - 2021-05-20
 
  - Removed libcouchbase, cbshell is now pure rust and optimized for shell-type workloads.

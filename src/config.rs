@@ -202,6 +202,7 @@ impl ClusterConfigTimeouts {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct ClusterTlsConfig {
+    #[serde(rename(deserialize = "tls-enabled"))]
     #[serde(default = "default_as_true")]
     enabled: bool,
     #[serde(rename(deserialize = "tls-cert-path"))]
