@@ -2,11 +2,11 @@ use crate::cli::util::convert_json_value_to_nu_value;
 use crate::client::QueryRequest;
 use crate::state::State;
 use log::debug;
-use nu_cli::ActionStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
+use nu_stream::OutputStream;
 use serde::Deserialize;
 use std::ops::Add;
 use std::sync::Arc;
@@ -39,12 +39,12 @@ impl nu_engine::WholeStreamCommand for QueryAdvise {
         "Calls the query adviser and lists recommended indexes"
     }
 
-    fn run_with_actions(&self, args: CommandArgs) -> Result<ActionStream, ShellError> {
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
         run(self.state.clone(), args)
     }
 }
 
-fn run(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError> {
+fn run(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
@@ -87,7 +87,7 @@ fn run(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError>
 
     let content: serde_json::Value = serde_json::from_str(response.content())?;
     let converted = convert_json_value_to_nu_value(&content, Tag::default())?;
-    Ok(ActionStream::one(converted))
+    Ok(OutputStream::one(converted))
 }
 
 #[derive(Debug, Deserialize)]

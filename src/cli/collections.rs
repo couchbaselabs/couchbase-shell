@@ -1,9 +1,9 @@
 use async_trait::async_trait;
-use nu_cli::ActionStream;
 use nu_engine::{get_full_help, CommandArgs};
 use nu_errors::ShellError;
-use nu_protocol::{ReturnSuccess, Signature, UntaggedValue};
+use nu_protocol::{Signature, UntaggedValue};
 use nu_source::Tag;
+use nu_stream::OutputStream;
 
 pub struct Collections;
 
@@ -21,10 +21,10 @@ impl nu_engine::WholeStreamCommand for Collections {
         "Perform collection management operations"
     }
 
-    fn run_with_actions(&self, args: CommandArgs) -> Result<ActionStream, ShellError> {
-        Ok(ActionStream::one(ReturnSuccess::value(
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        Ok(OutputStream::one(
             UntaggedValue::string(get_full_help(&Collections, args.scope()))
                 .into_value(Tag::unknown()),
-        )))
+        ))
     }
 }

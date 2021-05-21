@@ -2,11 +2,11 @@ use crate::cli::util::convert_json_value_to_nu_value;
 use crate::client::{ManagementRequest, QueryRequest};
 use crate::state::{RemoteCluster, State};
 use log::debug;
-use nu_cli::ActionStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
+use nu_stream::OutputStream;
 use serde::Deserialize;
 use std::ops::Add;
 use std::sync::atomic::AtomicBool;
@@ -47,12 +47,12 @@ impl nu_engine::WholeStreamCommand for QueryIndexes {
         "Lists all query indexes"
     }
 
-    fn run_with_actions(&self, args: CommandArgs) -> Result<ActionStream, ShellError> {
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
         indexes(self.state.clone(), args)
     }
 }
 
-fn indexes(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError> {
+fn indexes(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
@@ -103,7 +103,7 @@ fn indexes(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellEr
 
     let content: serde_json::Value = serde_json::from_str(response.content())?;
     let converted = convert_json_value_to_nu_value(&content, Tag::default())?;
-    Ok(ActionStream::one(converted))
+    Ok(OutputStream::one(converted))
 }
 
 #[derive(Debug, Deserialize)]
@@ -129,7 +129,7 @@ struct IndexStatus {
 fn index_definitions(
     cluster: &RemoteCluster,
     ctrl_c: Arc<AtomicBool>,
-) -> Result<ActionStream, ShellError> {
+) -> Result<OutputStream, ShellError> {
     debug!("Running fetch n1ql indexes");
 
     let response = cluster.cluster().management_request(

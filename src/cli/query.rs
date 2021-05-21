@@ -2,7 +2,6 @@ use crate::cli::util::convert_json_value_to_nu_value;
 use crate::client::QueryRequest;
 use crate::state::State;
 use log::debug;
-use nu_cli::ActionStream;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
@@ -56,12 +55,12 @@ impl nu_engine::WholeStreamCommand for Query {
         "Performs a n1ql query"
     }
 
-    fn run_with_actions(&self, args: CommandArgs) -> Result<ActionStream, ShellError> {
+    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
         run(self.state.clone(), args)
     }
 }
 
-fn run(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError> {
+fn run(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
@@ -128,7 +127,7 @@ fn run(state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError>
 
     if with_meta {
         let content: serde_json::Value = serde_json::from_str(response.content())?;
-        return Ok(ActionStream::one(convert_json_value_to_nu_value(
+        return Ok(OutputStream::one(convert_json_value_to_nu_value(
             &content,
             Tag::default(),
         )?));
