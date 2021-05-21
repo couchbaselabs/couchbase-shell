@@ -14,6 +14,7 @@ bytes = "1.0"
 chrono = { version = "0.4.11", features = ["serde"] }
 crc = "1.8.1"
 dirs = "2.0"
+env_logger = "0.8"
 fake = { version = "2.4", features = ["chrono"] }
 futures = "0.3"
 http = "0.2"

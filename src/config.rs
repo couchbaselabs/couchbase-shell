@@ -266,7 +266,15 @@ pub struct StandaloneCredentialsConfig {
 impl StandaloneCredentialsConfig {
     /// Builds the config from a raw input string.
     pub fn from_str(input: &str) -> Self {
-        toml::from_str(input).unwrap()
+        // Note: ideally this propagates up into a central error handling facility,
+        // but for now just logging it nicely and bailing out is probably goint to be fine.
+        match toml::from_str(input) {
+            Ok(i) => i,
+            Err(e) => {
+                error!("Failed to parse credentials config file: {}", e);
+                std::process::exit(-1);
+            }
+        }
     }
 }
 

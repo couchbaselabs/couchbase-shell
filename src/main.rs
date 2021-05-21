@@ -22,6 +22,8 @@ use structopt::StructOpt;
 use temp_dir::TempDir;
 
 fn main() -> Result<(), Box<dyn Error>> {
+    env_logger::init();
+    
     const DEFAULT_PASSWORD: &str = "password";
     const DEFAULT_HOSTNAME: &str = "localhost";
     const DEFAULT_USERNAME: &str = "Administrator";
