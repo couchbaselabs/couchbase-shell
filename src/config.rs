@@ -138,10 +138,24 @@ impl ClusterConfig {
         &self.hostnames
     }
     pub fn username(&self) -> String {
-        self.credentials.username.as_ref().unwrap().clone()
+        if let Some(u) = &self.credentials.username {
+            return u.clone();
+        }
+        error!(
+            "No username found in config or credentials file for identifier \"{}\"!",
+            self.identifier
+        );
+        std::process::exit(-1);
     }
     pub fn password(&self) -> String {
-        self.credentials.password.as_ref().unwrap().clone()
+        if let Some(p) = &self.credentials.password {
+            return p.clone();
+        }
+        error!(
+            "No password found in config or credentials file for identifier \"{}\"!",
+            self.identifier
+        );
+        std::process::exit(-1);
     }
     pub fn default_bucket(&self) -> Option<String> {
         self.default_bucket.as_ref().map(|s| s.clone())
