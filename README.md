@@ -60,27 +60,48 @@ Note that if you want to spawn the highly experimental ui, use the `--ui` flag.
 
 This is heavily in flux right now, but you can try these commands (always try with `--help` if you are unsure about args and flags).
 
- - `query <statement>`: Perform a N1QL query
- - `query indexes`: list query indexes
- - `query advise`: ask the query advisor
- - `analytics <statement>`: Perform an analytics query
- - `analytics dataverses`: List all dataverses
- - `analytics datasets`: List all datasets
- - `use`: Change the active bucket or cluster on the fly
- - `doc get`: Perform a KV get operation
- - `doc upsert`: Perform a KV upsert operation
- - `doc insert`: Perform a KV insert operation
- - `doc replace`: Perform a KV replace operation
- - `doc remove`: Removes a KV document
- - `nodes`: List all nodes in the active cluster
- - `buckets`: List all buckets in the active cluster
- - `clusters`: List and manage (active) clusters
- - `fake`: Generate fake/mock data
- - `users`: List all users
- - `users get`: show a specific user
- - `users upsert`: create a new user or replace one
- - `data stats`: displays kv service statistics
- - `search`: runs a query against a search index
+ - `analytics <statement>` - Perform an analytics query
+ - `analytics dataverses` - List all dataverses
+ - `analytics datasets` - List all datasets
+ - `analytics indexes` - List all analytics indexes
+ - `buckets config` - Shows the bucket config (low level)
+ - `buckets create` - Creates a bucket
+ - `buckets drop` - Drops buckets through the HTTP API
+ - `buckets flush` - Flushes buckets through the HTTP API
+ - `buckets get` - Fetches buckets through the HTTP API
+ - `buckets load-sample` - Load a sample bucket
+ - `buckets update` - Updates a bucket
+ - `clusters` - List (active) clusters
+ - `clusters health` - Performs health checks on the target cluster(s)
+ - `collections create` - Creates collections through the HTTP API
+ - `collections get` - Fetches collections through the HTTP API
+ - `doc get` - Perform a KV get operation
+ - `doc insert` - Perform a KV insert operation
+ - `doc remove` - Removes a KV document 
+ - `doc replace` - Perform a KV replace operation
+ - `doc upsert` - Perform a KV upsert operation
+ - `fake` - Generate fake/mock data
+ - `nodes` - List all nodes in the active cluster
+ - `ping` - Ping available services in the cluster
+ - `query <statement>` - Perform a N1QL query
+ - `query indexes` - list query indexes
+ - `query advise` - ask the query advisor
+ - `use` - Change the active bucket or cluster on the fly
+ - `scopes create` - Creates scopes through the HTTP API
+ - `scopes get` - Fetches scopes through the HTTP API
+ - `search` - runs a query against a search index
+ - `tutorial` - runs you through a tutorial of both nushell and cbshell
+ - `use` - lists the currently active bucket, collection, etc.
+ - `use bucket` - Sets the active bucket based on its name
+ - `use cluster` - Sets the active cluster based on its identifier
+ - `use collection` - Sets the active collection based on its name
+ - `use scope` - Sets the active scope based on its name
+ - `users` - List all users
+ - `users roles` - list roles available on the cluster
+ - `users get` - show a specific user
+ - `users upsert` - create a new user or replace one
+ - `version` - shows the version of the shell
+ - `whoami` - Shows roles and domain for the connected user
 
 # Config & Multiple Clusters
 
