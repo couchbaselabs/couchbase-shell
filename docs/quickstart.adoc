@@ -84,14 +84,14 @@ The downloaded zip contains an example already, but here is a small sample confi
 ```
 version = 1
 
-[[clusters]]
+[[cluster]]
 identifier = "local"
 hostnames = ["127.0.0.1"]
 default-bucket = "travel-sample"
 username = "Administrator"
 password = "password"
 
-# [[clusters]]
+# [[cluster]]
 # identifier = "remote"
 # hostnames = ["10.143.200.101"]
 # default-bucket = "myapp"

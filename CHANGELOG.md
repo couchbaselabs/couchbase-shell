@@ -4,6 +4,7 @@ All user visible changes to this project will be documented in this file.
 
 ## 1.0.0-alpha.2 - Unreleased
 
+ - renamed `[[clusters]]` to `[[cluster]]`, but kept the old style too for backwards compatibility
  - fix disabling tls in the config (property is now correctly called `tls-enabled`)
  - Added examples to: doc get
  - handle config syntax errors gracefully and log them nicely on startup

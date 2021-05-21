@@ -9,7 +9,7 @@ The `~/.cbsh/config` file with examples:
 # Allows us to evolve in the future without breaking old config files
 version = 1
 
-[[clusters]]
+[[cluster]]
 identifier = "default"
 hostnames = ["127.0.0.1"]
 default-bucket = "travel-sample"
@@ -38,7 +38,7 @@ The optional `~/.cbsh/credentials` file with examples:
 # Allows us to evolve in the future without breaking old config files
 version = 1
 
-[[clusters]]
+[[cluster]]
 identifier = "default"
 username = "Administrator"
 password = "password"

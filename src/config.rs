@@ -9,6 +9,10 @@ use std::time::Duration;
 #[derive(Debug, Deserialize)]
 pub struct ShellConfig {
     version: usize,
+    /// Note: clusters is kept for backwards compatibility and
+    /// convenience, docs should only mention cluster
+    #[serde(alias = "cluster")]
+    #[serde(alias = "clusters")]
     clusters: Vec<ClusterConfig>,
 }
 
@@ -260,6 +264,10 @@ impl Default for ClusterTlsConfig {
 #[derive(Debug, Deserialize)]
 pub struct StandaloneCredentialsConfig {
     version: usize,
+    /// Note: clusters is kept for backwards compatibility and
+    /// convenience, docs should only mention cluster
+    #[serde(alias = "cluster")]
+    #[serde(alias = "clusters")]
     clusters: Vec<StandaloneClusterCredentials>,
 }
 
