@@ -72,7 +72,7 @@ impl nu_engine::WholeStreamCommand for DocGet {
                 result: None,
             },
             Example {
-                description: "Fetches a single document with IDs from the previous operation",
+                description: "Fetches multiple documents with IDs from the previous command",
                 example: "echo [[id]; [airline_10] [airline_11]] | doc get",
                 result: None,
             },
