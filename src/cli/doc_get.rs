@@ -4,9 +4,8 @@ use super::util::convert_json_value_to_nu_value;
 use crate::state::State;
 
 use crate::client::KeyValueRequest;
-use async_trait::async_trait;
 use log::debug;
-use nu_engine::CommandArgs;
+use nu_engine::{CommandArgs, Example};
 use nu_errors::ShellError;
 use nu_protocol::{
     MaybeOwned, Primitive, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Value,
@@ -28,7 +27,6 @@ impl DocGet {
     }
 }
 
-#[async_trait]
 impl nu_engine::WholeStreamCommand for DocGet {
     fn name(&self) -> &str {
         "doc get"
@@ -64,6 +62,21 @@ impl nu_engine::WholeStreamCommand for DocGet {
 
     fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
         run_get(self.state.clone(), args)
+    }
+
+    fn examples(&self) -> Vec<Example> {
+        vec![
+            Example {
+                description: "Fetches a single document with the ID as an argument",
+                example: "doc get my_doc_id",
+                result: None,
+            },
+            Example {
+                description: "Fetches a single document with IDs from the previous operation",
+                example: "echo [[id]; [airline_10] [airline_11]] | doc get",
+                result: None,
+            },
+        ]
     }
 }
 
