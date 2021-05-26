@@ -29,7 +29,7 @@ jobs:
         build: [linux, macos, windows]
         include:
           - build: linux
-            os: ubuntu-latest
+            os: ubuntu-18.04
             rust: stable
           - build: macos
             os: macos-latest
@@ -73,7 +73,7 @@ jobs:
       run: |
         cargo build --verbose
         cargo run --bin runtests
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-18.04'
 
     - name: Build
       run: |
@@ -97,7 +97,7 @@ jobs:
 
     - name: Create archive for Linux
       run: 7z a -ttar -so -an ./target/debug/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }} | 7z a -si ./artifacts/${{ env.ARTIFACT_BIN }}-${{ env.SHA8 }}-linux-x86_64.tar.gz
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-18.04'
 
     - name: Install p7zip
       # 7Zip not available on MacOS, install p7zip via homebrew.
@@ -124,7 +124,7 @@ jobs:
 
   rustfmt:
     name: Rustfmt
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@master
     - name: Install Rust

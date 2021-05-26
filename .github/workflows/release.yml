@@ -28,7 +28,7 @@ jobs:
         build: [linux, macos, windows]
         include:
           - build: linux
-            os: ubuntu-latest
+            os: ubuntu-18.04
             rust: stable
           - build: macos
             os: macos-latest
@@ -53,7 +53,7 @@ jobs:
 
     - name: Build
       run: cargo build --verbose --release
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-18.04'
 
     - name: Build
       run: cargo build --verbose --release
@@ -70,7 +70,7 @@ jobs:
 
     - name: Create archive for Linux
       run: 7z a -ttar -so -an ./target/release/${{ env.RELEASE_BIN }} ${{ env.RELEASE_ADDS }} | 7z a -si ./artifacts/${{ env.RELEASE_BIN }}-linux-x86_64.tar.gz
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-18.04'
 
     - name: Install p7zip
       # 7Zip not available on MacOS, install p7zip via homebrew.
