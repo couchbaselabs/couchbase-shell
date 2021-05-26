@@ -1,22 +1,17 @@
 mod common;
-//use common::playground;
-use futures::executor::block_on;
-use std::collections::HashMap;
+use common::playground;
 
-/*#[test]
+#[test]
 pub fn get_a_document() {
-    playground::CBPlayground::setup("get_a_document", |dirs, sandbox| {
-        let mut content = HashMap::new();
-        content.insert("Hello", "Rust!");
-
-        block_on(sandbox.with_document(
+    playground::CBPlayground::setup("get_a_document", |dirs, _sandbox| {
+        common::create_document(
+            &dirs.test,
             playground::default_bucket(),
             playground::default_scope(),
             playground::default_collection(),
-            "get_a_document".into(),
-            content,
-        ))
-        .unwrap();
+            "get_a_document",
+            r#"{"testkey": "testvalue"}"#,
+        );
 
         let out = common::execute_command(
             &dirs.test,
@@ -25,8 +20,8 @@ pub fn get_a_document() {
 
         let json = common::parse_out_to_json(out.out);
 
-        // assert_eq!("", out.err); If we do this then Windows will ALWAYS fail due to the openssl warning
-        assert_eq!("Rust!", json["Hello"]);
+        assert_eq!("", out.err);
+        assert_eq!("testvalue", json["testkey"]);
     });
 }
 
@@ -38,8 +33,7 @@ pub fn get_a_document_not_found() {
             r#"doc get "get_a_document_not_found" | get error"#,
         );
 
-        // assert_eq!("", out.err); If we do this then Windows will ALWAYS fail due to the openssl warning
-        assert!(out.out.contains("Document with the given ID not found"));
+        assert_eq!("", out.err);
+        assert!(out.out.contains("key not found"));
     });
 }
-*/

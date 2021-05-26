@@ -1,5 +1,5 @@
 mod fs;
-//pub mod playground;
+pub mod playground;
 
 use std::io::prelude::*;
 use std::panic;
@@ -64,8 +64,10 @@ pub fn execute_command(cwd: &PathBuf, command: &str) -> Outcome {
         .wait_with_output()
         .expect("couldn't read from stdout/stderr");
 
-    let out = read_std(&output.stdout);
+    let mut out = read_std(&output.stdout);
     let err = String::from_utf8_lossy(&output.stderr);
+
+    out = out.strip_prefix("Using PLAIN authentication for cluster local, credentials will sent in plaintext - configure tls to disable this warning").unwrap_or_else(|| out.as_str()).to_string();
 
     Outcome::new(out, err.into_owned())
 }
@@ -90,4 +92,34 @@ pub fn read_std(std: &[u8]) -> String {
 
 pub fn parse_out_to_json(out: String) -> serde_json::Value {
     serde_json::from_str(out.as_str()).unwrap()
+}
+
+#[allow(dead_code)]
+pub fn create_document(
+    cwd: &PathBuf,
+    bucket: String,
+    scope: String,
+    collection: String,
+    key: &str,
+    content: &str,
+) {
+    let mut command = format!("doc upsert {} {}  --bucket {}", key, content, bucket);
+    if !scope.is_empty() {
+        command = format!("{} --scope {}", command, scope)
+    }
+    if !collection.is_empty() {
+        command = format!("{} --collection {}", command, collection)
+    }
+    command = format!("{} | to json", command);
+
+    let out = execute_command(cwd, command.as_str());
+
+    assert_eq!("", out.err);
+
+    let json = parse_out_to_json(out.out);
+
+    assert_eq!(1, json["success"]);
+    assert_eq!(1, json["processed"]);
+    assert_eq!(0, json["failed"]);
+    assert_eq!(serde_json::Value::Array(vec!()), json["failures"]);
 }

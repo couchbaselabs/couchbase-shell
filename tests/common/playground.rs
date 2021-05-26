@@ -1,20 +1,21 @@
 use lazy_static::lazy_static;
 use nu_test_support::playground::*;
-use serde::Serialize;
 use std::env;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
 
 lazy_static! {
     static ref STATE: State = State {
-        connstr: env::var("CBSH_CONNSTRING").unwrap_or("localhost".to_string()),
+        hostnames: env::var("CBSH_HOSTNAMES")
+            .unwrap_or("localhost".to_string())
+            .split(',')
+            .map(|v| v.to_owned())
+            .collect(),
         bucket: env::var("CBSH_BUCKET").unwrap_or("default".to_string()),
         scope: env::var("CBSH_SCOPE").unwrap_or("".to_string()),
         collection: env::var("CBSH_COLLECTION").unwrap_or("".to_string()),
         username: env::var("CBSH_USERNAME").unwrap_or("Administrator".to_string()),
         password: env::var("CBSH_PASSWORD").unwrap_or("password".to_string()),
     };
-    static ref CLUSTER: Mutex<Option<Arc<Cluster>>> = Mutex::new(None);
 }
 
 // dead_code seems to pick up several functions in this file even though they are used.
@@ -34,7 +35,7 @@ pub fn default_collection() -> String {
 }
 
 struct State {
-    connstr: String,
+    hostnames: Vec<String>,
     bucket: String,
     scope: String,
     collection: String,
@@ -46,21 +47,6 @@ pub struct CBPlayground {}
 
 impl CBPlayground {
     pub fn setup(topic: &str, block: impl FnOnce(Dirs, &mut CBPlayground)) {
-        let mut c = CLUSTER.lock().unwrap();
-        if c.is_none() {
-            let mut connstr = STATE.connstr.clone();
-            if !connstr.contains("couchbase") {
-                connstr = format!("couchbase://{}", connstr);
-            }
-            println!("Setting up new sdk instance against {}", connstr);
-            *c = Some(Arc::new(Cluster::connect(
-                connstr,
-                STATE.username.clone(),
-                STATE.password.clone(),
-            )));
-        }
-        drop(c);
-
         Playground::setup(topic, |dirs, _sandbox| {
             let mut playground = CBPlayground {};
             let mut config_dir = dirs.test.join(".cbsh".to_string());
@@ -81,8 +67,9 @@ default-bucket = \"{}\"
 default-collection = \"{}\"
 default-scope = \"{}\"
 username = \"{}\"
-password = \"{}\"",
-                STATE.connstr,
+password = \"{}\"
+tls-enabled = false",
+                STATE.hostnames[0],
                 STATE.bucket,
                 STATE.collection,
                 STATE.scope,
@@ -96,33 +83,5 @@ password = \"{}\"",
 
             block(dirs, &mut playground);
         })
-    }
-
-    #[allow(dead_code)]
-    pub async fn with_document<T>(
-        &self,
-        bucket: String,
-        scope: String,
-        collection: String,
-        key: String,
-        content: T,
-    ) -> CouchbaseResult<MutationResult>
-    where
-        T: Serialize,
-    {
-        // TODO: This is going to lock for the duration which is bad.
-        let m = CLUSTER.lock().unwrap();
-        let c = m.as_ref();
-        match c {
-            Some(cluster) => {
-                cluster
-                    .bucket(bucket)
-                    .scope(scope)
-                    .collection(collection)
-                    .upsert(key, content, couchbase::UpsertOptions::default())
-                    .await
-            }
-            None => panic!("Cluster not initialized"),
-        }
     }
 }

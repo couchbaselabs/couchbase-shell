@@ -1,5 +1,6 @@
 use bytes::Buf;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::PermissionsExt;
@@ -13,6 +14,7 @@ use tokio::io::BufReader;
 use tokio::net::tcp::ReadHalf;
 use tokio::net::TcpListener;
 use uuid::Uuid;
+
 #[cfg(target_os = "windows")]
 const CAVES_BINARY: &str = "gocaves-windows.exe";
 #[cfg(target_os = "macos")]
@@ -20,8 +22,8 @@ const CAVES_BINARY: &str = "gocaves-macos";
 #[cfg(target_os = "linux")]
 const CAVES_BINARY: &str = "gocaves-linux";
 
-const CAVES_URL: &str = "https://github.com/chvck/gocaves/releases/download";
-const CAVES_VERSION: &str = "v0.0.2";
+const CAVES_URL: &str = "https://github.com/couchbaselabs/gocaves/releases/download";
+const CAVES_VERSION: &str = "v0.0.1-38";
 
 async fn fetch_caves() {
     let response =
@@ -133,10 +135,10 @@ async fn main() {
     println!("Received create cluster response {}", &create_msg);
 
     let addr = parse_create_cluster_response(create_msg);
-    println!("Setting connstring to {}", &addr);
+    println!("Setting hostnames to {}", &addr);
 
-    env::set_var("CBSH_CONNSTRING", addr);
-    // env::set_var("RUST_LOG", "couchbase=debug");
+    env::set_var("CBSH_HOSTNAMES", addr);
+    // env::set_var("RUST_LOG", "debug");
 
     let output = Command::new("cargo")
         .arg("test")
@@ -159,19 +161,25 @@ async fn main() {
 }
 
 fn parse_create_cluster_response(msg: String) -> String {
-    let j: HashMap<String, String> =
+    let j: HashMap<String, Value> =
         serde_json::from_str(msg.as_str()).expect("Failed to parse json response");
 
-    let connstring = j
-        .get("connstr")
-        .expect("Response did not have connstr field");
-    let raw_addrs = connstring
-        .strip_prefix("couchbase://")
-        .unwrap_or(connstring);
-    let split_addrs: Vec<&str> = raw_addrs.split(',').collect();
-    assert!(!split_addrs.is_empty());
+    let addrs = j
+        .get("mgmt_addrs")
+        .expect("Response did not have mgmt_addrs field");
+    let mut hosts: Vec<String> = Vec::new();
+    for addr in addrs.as_array().unwrap() {
+        let addr_str = addr.as_str().unwrap();
+        hosts.push(
+            addr_str
+                .strip_prefix("http://")
+                .unwrap_or(addr_str)
+                .to_string(),
+        );
+    }
+    assert!(!hosts.is_empty());
 
-    split_addrs[0].into()
+    hosts[0].clone()
 }
 
 async fn read_from_stream(buf_reader: &mut BufReader<ReadHalf<'_>>) -> String {
