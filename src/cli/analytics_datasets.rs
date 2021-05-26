@@ -52,7 +52,7 @@ fn datasets(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellE
             scope: None,
         },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c.clone(),
+        ctrl_c,
     )?;
 
     let content: serde_json::Value = serde_json::from_str(response.content())?;

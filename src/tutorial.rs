@@ -10,12 +10,10 @@ pub struct Tutorial {
 
 impl Tutorial {
     pub fn new() -> Self {
-        let tutorial = Self {
+        Self {
             current_step: Mutex::new(0),
             num_steps: (STEPS_ORDER.len() as i8),
-        };
-
-        tutorial
+        }
     }
 
     fn additional_info(&self, travel_sample_exists: bool) -> String {
@@ -221,7 +219,7 @@ That's it for this quick tutorial!
 
 For more info, please see the cbsh documentation at...
 
-    http://couchbase.sh/docs/
+    https://couchbase.sh/docs/
     ",
         );
         m

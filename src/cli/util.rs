@@ -27,15 +27,13 @@ pub fn convert_json_value_to_nu_value(
                         v
                     )));
                 }
+            } else if let Some(nas) = n.as_f64() {
+                UntaggedValue::decimal_from_float(nas, span).into_value(&tag)
             } else {
-                if let Some(nas) = n.as_f64() {
-                    UntaggedValue::decimal_from_float(nas, span).into_value(&tag)
-                } else {
-                    return Err(ShellError::untagged_runtime_error(format!(
-                        "Could not get value as number {}",
-                        v
-                    )));
-                }
+                return Err(ShellError::untagged_runtime_error(format!(
+                    "Could not get value as number {}",
+                    v
+                )));
             }
         }
         serde_json::Value::String(s) => {
@@ -202,7 +200,7 @@ pub fn cluster_identifiers_from(
         .clusters()
         .keys()
         .filter(|k| re.is_match(k))
-        .map(|v| v.clone())
+        .cloned()
         .collect())
 }
 
@@ -219,9 +217,9 @@ pub fn namespace_from_args(
         .or_else(|| active_cluster.active_bucket())
     {
         Some(v) => Ok(v),
-        None => Err(ShellError::untagged_runtime_error(format!(
-            "Could not auto-select a bucket - please use --bucket instead"
-        ))),
+        None => Err(ShellError::untagged_runtime_error(
+            "Could not auto-select a bucket - please use --bucket instead".to_string(),
+        )),
     }?;
 
     let scope = match args

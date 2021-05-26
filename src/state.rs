@@ -134,11 +134,7 @@ impl RemoteCluster {
     }
 
     pub fn active_bucket(&self) -> Option<String> {
-        self.active_bucket
-            .lock()
-            .unwrap()
-            .as_ref()
-            .map(|s| s.clone())
+        self.active_bucket.lock().unwrap().as_ref().cloned()
     }
 
     pub fn set_active_bucket(&self, name: String) {
@@ -147,11 +143,7 @@ impl RemoteCluster {
     }
 
     pub fn active_scope(&self) -> Option<String> {
-        self.active_scope
-            .lock()
-            .unwrap()
-            .as_ref()
-            .map(|s| s.clone())
+        self.active_scope.lock().unwrap().as_ref().cloned()
     }
 
     pub fn set_active_scope(&self, name: String) {
@@ -160,11 +152,7 @@ impl RemoteCluster {
     }
 
     pub fn active_collection(&self) -> Option<String> {
-        self.active_collection
-            .lock()
-            .unwrap()
-            .as_ref()
-            .map(|s| s.clone())
+        self.active_collection.lock().unwrap().as_ref().cloned()
     }
 
     pub fn set_active_collection(&self, name: String) {
@@ -220,10 +208,10 @@ impl ClusterTimeouts {
     }
 
     pub fn data_timeout(&self) -> Duration {
-        self.data_timeout.clone()
+        self.data_timeout
     }
 
     pub fn query_timeout(&self) -> Duration {
-        self.query_timeout.clone()
+        self.query_timeout
     }
 }

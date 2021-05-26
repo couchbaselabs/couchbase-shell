@@ -77,7 +77,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             );
         }
         let cluster = RemoteCluster::new(
-            hostnames.split(",").map(|v| v.to_owned()).collect(),
+            hostnames.split(',').map(|v| v.to_owned()).collect(),
             username,
             rpassword,
             opt.bucket,
@@ -235,7 +235,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(UseCmd::new(state.clone())),
         nu_engine::whole_stream_command(UseCollection::new(state.clone())),
         nu_engine::whole_stream_command(UseScope::new(state.clone())),
-        nu_engine::whole_stream_command(Whoami::new(state.clone())),
+        nu_engine::whole_stream_command(Whoami::new(state)),
         nu_engine::whole_stream_command(Version::new()),
         /*
         nu_engine::whole_stream_command(DataStats::new(state.clone())),

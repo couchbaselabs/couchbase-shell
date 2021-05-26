@@ -37,7 +37,7 @@ impl nu_engine::WholeStreamCommand for Tutorial {
 
     fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
         let ctrl_c = args.ctrl_c();
-        run_tutorial(self.state.clone(), ctrl_c.clone())
+        run_tutorial(self.state.clone(), ctrl_c)
     }
 }
 
@@ -49,14 +49,11 @@ fn run_tutorial(state: Arc<State>, ctrl_c: Arc<AtomicBool>) -> Result<OutputStre
             name: "travel-sample".into(),
         },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c.clone(),
+        ctrl_c,
     );
 
     let exists = match resp {
-        Ok(r) => match r.status() {
-            200 => true,
-            _ => false,
-        },
+        Ok(r) => matches!(r.status(), 200),
         Err(_) => false,
     };
 

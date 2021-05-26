@@ -59,9 +59,9 @@ fn load_sample_bucket(state: Arc<State>, args: CommandArgs) -> Result<OutputStre
     let bucket_name = match args.nth(0) {
         Some(n) => n.as_string()?,
         None => {
-            return Err(ShellError::untagged_runtime_error(format!(
-                "No bucket name was specified"
-            )))
+            return Err(ShellError::untagged_runtime_error(
+                "No bucket name was specified".to_string(),
+            ))
         }
     };
 
@@ -85,10 +85,9 @@ fn load_sample_bucket(state: Arc<State>, args: CommandArgs) -> Result<OutputStre
         match response.status() {
             202 => {}
             _ => {
-                return Err(ShellError::untagged_runtime_error(format!(
-                    "{}",
-                    response.content()
-                )))
+                return Err(ShellError::untagged_runtime_error(
+                    response.content().to_string(),
+                ))
             }
         }
 

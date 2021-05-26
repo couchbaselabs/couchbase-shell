@@ -96,7 +96,7 @@ fn run_fake(_state: Arc<State>, args: CommandArgs) -> Result<ActionStream, Shell
                         Err(e) => Err(e),
                     }
                 });
-                return Ok(ActionStream::new(converted));
+                Ok(ActionStream::new(converted))
             }
             _ => unimplemented!(),
         }
@@ -122,15 +122,15 @@ fn run_fake(_state: Arc<State>, args: CommandArgs) -> Result<ActionStream, Shell
             .map_err(|e| ShellError::untagged_runtime_error(format!("{}", e)))?;
 
         let converted = std::iter::repeat_with(move || {
-            match tera.render_str(&template, &ctx) {
+            return match tera.render_str(&template, &ctx) {
                 Ok(generated) => match serde_json::from_str(&generated) {
                     Ok(content) => match convert_json_value_to_nu_value(&content, Tag::default()) {
-                        Ok(c) => return Ok(ReturnSuccess::Value(c)),
-                        Err(e) => return Err(e),
+                        Ok(c) => Ok(ReturnSuccess::Value(c)),
+                        Err(e) => Err(e),
                     },
-                    Err(e) => return Err(ShellError::untagged_runtime_error(format!("{}", e))),
+                    Err(e) => Err(ShellError::untagged_runtime_error(format!("{}", e))),
                 },
-                Err(e) => return Err(ShellError::untagged_runtime_error(format!("{}", e))),
+                Err(e) => Err(ShellError::untagged_runtime_error(format!("{}", e))),
             };
         })
         .take(num_rows as usize);

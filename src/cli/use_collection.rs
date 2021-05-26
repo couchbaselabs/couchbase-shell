@@ -55,8 +55,7 @@ impl nu_engine::WholeStreamCommand for UseCollection {
             "collection",
             active
                 .active_collection()
-                .map(|s| s.clone())
-                .unwrap_or(String::from("<not set>")),
+                .unwrap_or_else(|| String::from("<not set>")),
         );
         let clusters = vec![using_now.into_value()];
         Ok(clusters.into())

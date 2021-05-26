@@ -24,7 +24,7 @@ impl ShellConfig {
     pub fn new() -> Self {
         let mut config = try_config_from_path(std::env::current_dir().unwrap())
             .or_else(|| try_config_from_path(dirs::home_dir().unwrap()))
-            .unwrap_or(ShellConfig::default());
+            .unwrap_or_default();
 
         let standalone_credentials = try_credentials_from_path(std::env::current_dir().unwrap())
             .or_else(|| try_credentials_from_path(dirs::home_dir().unwrap()));
@@ -158,13 +158,13 @@ impl ClusterConfig {
         std::process::exit(-1);
     }
     pub fn default_bucket(&self) -> Option<String> {
-        self.default_bucket.as_ref().map(|s| s.clone())
+        self.default_bucket.as_ref().cloned()
     }
     pub fn default_scope(&self) -> Option<String> {
-        self.default_scope.as_ref().map(|s| s.clone())
+        self.default_scope.as_ref().cloned()
     }
     pub fn default_collection(&self) -> Option<String> {
-        self.default_collection.as_ref().map(|s| s.clone())
+        self.default_collection.as_ref().cloned()
     }
     pub fn credentials_mut(&mut self) -> &mut ClusterCredentials {
         &mut self.credentials

@@ -440,10 +440,7 @@ impl Magic {
     }
 
     pub fn is_flexible(&self) -> bool {
-        match self {
-            Self::FlexibleRequest | Self::FlexibleResponse => true,
-            _ => false,
-        }
+        matches!(self, Self::FlexibleRequest | Self::FlexibleResponse)
     }
 }
 
@@ -502,7 +499,7 @@ impl From<u16> for Status {
 }
 
 fn make_uleb128_32(key: Bytes, collection_id: u32) -> Bytes {
-    let mut cid = collection_id.clone();
+    let mut cid = collection_id;
     let mut builder = BytesMut::with_capacity(key.len() + 5);
     loop {
         let mut c: u8 = (cid & 0x7f) as u8;
@@ -517,7 +514,7 @@ fn make_uleb128_32(key: Bytes, collection_id: u32) -> Bytes {
         }
     }
     for k in key {
-        builder.put_u8(k.into());
+        builder.put_u8(k);
     }
 
     builder.freeze()

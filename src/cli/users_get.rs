@@ -57,7 +57,7 @@ fn users_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shell
     let response = active_cluster.cluster().management_request(
         ManagementRequest::GetUser { username },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c.clone(),
+        ctrl_c,
     )?;
 
     let user_and_meta: UserAndMetadata = match response.status() {
@@ -81,10 +81,10 @@ fn users_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shell
     let user = user_and_meta.user();
     let roles: Vec<String> = user
         .roles()
-        .into_iter()
+        .iter()
         .map(|r| match r.bucket() {
             Some(b) => format!("{}[{}]", r.name(), b),
-            None => format!("{}", r.name()),
+            None => r.name().to_string(),
         })
         .collect();
 

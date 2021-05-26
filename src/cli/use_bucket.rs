@@ -49,8 +49,7 @@ impl nu_engine::WholeStreamCommand for UseBucket {
             "bucket",
             active
                 .active_bucket()
-                .map(|s| s.clone())
-                .unwrap_or(String::from("<not set>")),
+                .unwrap_or_else(|| String::from("<not set>")),
         );
         let clusters = vec![using_now.into_value()];
         Ok(clusters.into())

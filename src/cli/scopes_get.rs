@@ -61,9 +61,9 @@ fn scopes_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shel
         None => match state.active_cluster().active_bucket() {
             Some(s) => s,
             None => {
-                return Err(ShellError::untagged_runtime_error(format!(
-                    "Could not auto-select a bucket - please use --bucket instead"
-                )));
+                return Err(ShellError::untagged_runtime_error(
+                    "Could not auto-select a bucket - please use --bucket instead".to_string(),
+                ));
             }
         },
     };
@@ -74,7 +74,7 @@ fn scopes_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shel
     let response = active_cluster.cluster().management_request(
         ManagementRequest::GetScopes { bucket },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c.clone(),
+        ctrl_c,
     )?;
 
     let manifest: Manifest = match response.status() {

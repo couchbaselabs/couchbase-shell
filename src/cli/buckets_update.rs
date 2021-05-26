@@ -101,17 +101,16 @@ fn buckets_update(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, 
     let content: JSONBucketSettings = serde_json::from_str(response.content())?;
     let mut settings = BucketSettings::try_from(content)?;
 
-    match args.call_info.args.get("ram") {
-        Some(v) => match v.as_u64() {
+    if let Some(v) = args.call_info.args.get("ram") {
+        match v.as_u64() {
             Ok(ram) => {
                 settings.set_ram_quota_mb(ram);
             }
             Err(e) => return Err(e),
-        },
-        None => {}
+        }
     };
-    match args.call_info.args.get("replicas") {
-        Some(v) => match v.as_u64() {
+    if let Some(v) = args.call_info.args.get("replicas") {
+        match v.as_u64() {
             Ok(replicas) => settings.set_num_replicas(match u32::try_from(replicas) {
                 Ok(bt) => bt,
                 Err(e) => {
@@ -122,11 +121,10 @@ fn buckets_update(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, 
                 }
             }),
             Err(e) => return Err(e),
-        },
-        None => {}
+        }
     };
-    match args.call_info.args.get("flush") {
-        Some(v) => match v.as_string() {
+    if let Some(v) = args.call_info.args.get("flush") {
+        match v.as_string() {
             Ok(f) => {
                 let flush_str = match f.strip_prefix("$") {
                     Some(f2) => f2,
@@ -147,42 +145,35 @@ fn buckets_update(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, 
                 Ok(f) => settings.set_flush_enabled(f),
                 Err(e) => return Err(e),
             },
-        },
-        None => {}
+        }
     };
-    match args.call_info.args.get("durability") {
-        Some(v) => match v.as_string() {
+    if let Some(v) = args.call_info.args.get("durability") {
+        match v.as_string() {
             Ok(d) => settings.set_minimum_durability_level(DurabilityLevel::try_from(d.as_str())?),
             Err(e) => return Err(e),
-        },
-        None => {}
+        }
     };
-    match args.call_info.args.get("expiry") {
-        Some(v) => match v.as_u64() {
+    if let Some(v) = args.call_info.args.get("expiry") {
+        match v.as_u64() {
             Ok(ex) => settings.set_max_expiry(Duration::from_secs(ex)),
             Err(e) => return Err(e),
-        },
-        None => {}
+        }
     };
 
     let form = settings.as_form(true)?;
     let payload = serde_urlencoded::to_string(&form).unwrap();
 
     let response = active_cluster.cluster().management_request(
-        ManagementRequest::UpdateBucket {
-            name: name.clone(),
-            payload,
-        },
+        ManagementRequest::UpdateBucket { name, payload },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c.clone(),
+        ctrl_c,
     )?;
 
     match response.status() {
         200 => Ok(OutputStream::empty()),
         202 => Ok(OutputStream::empty()),
-        _ => Err(ShellError::untagged_runtime_error(format!(
-            "{}",
-            response.content()
-        ))),
+        _ => Err(ShellError::untagged_runtime_error(
+            response.content().to_string(),
+        )),
     }
 }

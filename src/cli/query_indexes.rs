@@ -70,9 +70,9 @@ fn indexes(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellEr
             match state.clusters().get(identifier.as_str()) {
                 Some(c) => c,
                 None => {
-                    return Err(ShellError::untagged_runtime_error(format!(
-                        "Could not get cluster from available clusters",
-                    )));
+                    return Err(ShellError::untagged_runtime_error(
+                        "Could not get cluster from available clusters".to_string(),
+                    ));
                 }
             }
         }
@@ -85,7 +85,7 @@ fn indexes(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellEr
     };
 
     if fetch_defs {
-        return index_definitions(active_cluster, ctrl_c.clone());
+        return index_definitions(active_cluster, ctrl_c);
     }
 
     let statement = "select keyspace_id as `bucket`, name, state, `using` as `type`, ifmissing(condition, null) as condition, ifmissing(is_primary, false) as `primary`, index_key from system:indexes";
@@ -98,7 +98,7 @@ fn indexes(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellEr
             scope: None,
         },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c.clone(),
+        ctrl_c,
     )?;
 
     let content: serde_json::Value = serde_json::from_str(response.content())?;
@@ -135,7 +135,7 @@ fn index_definitions(
     let response = cluster.cluster().management_request(
         ManagementRequest::IndexStatus,
         Instant::now().add(cluster.timeouts().query_timeout()),
-        ctrl_c.clone(),
+        ctrl_c,
     )?;
 
     let defs: IndexStatus = serde_json::from_str(response.content())?;
@@ -145,8 +145,8 @@ fn index_definitions(
         .map(|d| {
             let mut collected = TaggedDictBuilder::new(Tag::default());
             collected.insert_value("bucket", d.bucket);
-            collected.insert_value("scope", d.scope.unwrap_or("".into()));
-            collected.insert_value("collection", d.collection.unwrap_or("".into()));
+            collected.insert_value("scope", d.scope.unwrap_or_else(|| "".into()));
+            collected.insert_value("collection", d.collection.unwrap_or_else(|| "".into()));
             collected.insert_value("name", d.index_name);
             collected.insert_value("status", d.status);
             collected.insert_value("storage_mode", d.storage_mode);

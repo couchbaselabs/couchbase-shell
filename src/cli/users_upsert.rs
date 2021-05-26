@@ -123,15 +123,14 @@ fn users_upsert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Sh
     let response = active_cluster.cluster().management_request(
         ManagementRequest::UpsertUser { username, payload },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c.clone(),
+        ctrl_c,
     )?;
 
     match response.status() {
         200 => Ok(OutputStream::empty()),
         202 => Ok(OutputStream::empty()),
-        _ => Err(ShellError::untagged_runtime_error(format!(
-            "{}",
-            response.content()
-        ))),
+        _ => Err(ShellError::untagged_runtime_error(
+            response.content().to_string(),
+        )),
     }
 }

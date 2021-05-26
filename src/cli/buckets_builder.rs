@@ -322,7 +322,7 @@ impl TryFrom<JSONBucketSettings> for BucketSettings {
         Ok(BucketSettings {
             name: settings.name,
             ram_quota_mb: settings.quota.raw_ram / 1024 / 1024,
-            flush_enabled: settings.controllers.flush != "",
+            flush_enabled: !settings.controllers.flush.is_empty(),
             num_replicas: settings.num_replicas,
             replica_indexes: settings.replica_indexes,
             bucket_type: BucketType::try_from(settings.bucket_type.as_str())?,

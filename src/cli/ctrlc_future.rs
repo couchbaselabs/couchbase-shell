@@ -19,7 +19,7 @@ struct CtrlcState {
 impl CtrlcFuture {
     pub fn new(ctrl_c: Arc<AtomicBool>) -> CtrlcFuture {
         let state = Arc::new(Mutex::new(CtrlcState {
-            interrupt: ctrl_c.clone(),
+            interrupt: ctrl_c,
             waker: None,
             halt: Arc::new(AtomicBool::new(false)),
         }));

@@ -205,7 +205,7 @@ Get all of the buckets of type couchbase in your active cluster:
 Open a JSON file, transform the data, and upsert it into your active bucket:
     open mydoc.json | wrap content | insert id {echo $it.content.airportname} | doc upsert
 
-You can also learn more at http://couchbase.sh/docs/ and https://www.nushell.sh/book/"#;
+You can also learn more at https://couchbase.sh/docs/ and https://www.nushell.sh/book/"#;
 
         Ok(ActionStream::one(ReturnSuccess::value(
             UntaggedValue::string(msg).into_value(Tag::unknown()),

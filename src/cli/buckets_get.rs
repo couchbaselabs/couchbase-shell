@@ -77,7 +77,7 @@ fn buckets_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, She
 
     debug!("Running buckets get for bucket {:?}", &bucket);
 
-    if bucket == "" {
+    if bucket.is_empty() {
         buckets_get_all(state, cluster_identifiers, ctrl_c)
     } else {
         buckets_get_one(state, cluster_identifiers, bucket, ctrl_c)

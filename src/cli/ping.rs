@@ -71,9 +71,9 @@ fn run_ping(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellE
     {
         Some(v) => v,
         None => {
-            return Err(ShellError::untagged_runtime_error(format!(
-                "Could not auto-select a bucket - please use --bucket instead"
-            )))
+            return Err(ShellError::untagged_runtime_error(
+                "Could not auto-select a bucket - please use --bucket instead".to_string(),
+            ))
         }
     };
 
@@ -129,7 +129,7 @@ fn run_ping(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellE
             bucket_name.clone(),
             "".into(),
             "".into(),
-            kv_deadline.clone(),
+            kv_deadline,
             ctrl_c.clone(),
         ) {
             Ok(c) => c,
@@ -150,7 +150,7 @@ fn run_ping(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellE
             }
         };
 
-        let kv_result = rt.block_on(client.ping_all(kv_deadline.clone(), ctrl_c.clone()));
+        let kv_result = rt.block_on(client.ping_all(kv_deadline, ctrl_c.clone()));
         match kv_result {
             Ok(res) => {
                 for ping in res {

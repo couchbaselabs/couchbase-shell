@@ -92,10 +92,9 @@ fn buckets_drop(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Sh
         match result.status() {
             200 => {}
             _ => {
-                return Err(ShellError::untagged_runtime_error(format!(
-                    "{}",
-                    result.content()
-                )))
+                return Err(ShellError::untagged_runtime_error(
+                    result.content().to_string(),
+                ))
             }
         }
     }

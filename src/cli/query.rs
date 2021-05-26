@@ -79,25 +79,22 @@ fn run(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError>
             match state.clusters().get(identifier.as_str()) {
                 Some(c) => c,
                 None => {
-                    return Err(ShellError::untagged_runtime_error(format!(
-                        "Could not get cluster from available clusters",
-                    )));
+                    return Err(ShellError::untagged_runtime_error(
+                        "Could not get cluster from available clusters".to_string(),
+                    ));
                 }
             }
         }
         None => state.active_cluster(),
     };
-    let bucket = match args
+    let bucket = args
         .call_info
         .args
         .get("bucket")
         .map(|bucket| bucket.as_string().ok())
         .flatten()
-        .or_else(|| active_cluster.active_bucket())
-    {
-        Some(v) => Some(v),
-        None => None,
-    };
+        .or_else(|| active_cluster.active_bucket());
+
     let scope = match args.call_info.args.get("scope") {
         Some(v) => match v.as_string() {
             Ok(name) => Some(name),
@@ -106,11 +103,7 @@ fn run(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError>
         None => None,
     };
 
-    let maybe_scope = if bucket.is_some() && scope.is_some() {
-        Some((bucket.unwrap().clone(), scope.unwrap().clone()))
-    } else {
-        None
-    };
+    let maybe_scope = bucket.map(|b| scope.map(|s| (b, s))).flatten();
 
     let with_meta = args.get_flag::<bool>("with-meta").unwrap().is_some();
 
@@ -118,19 +111,19 @@ fn run(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError>
 
     let response = active_cluster.cluster().query_request(
         QueryRequest::Execute {
-            statement: statement.clone(),
+            statement,
             scope: maybe_scope,
         },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c.clone(),
+        ctrl_c,
     )?;
 
     if with_meta {
         let content: serde_json::Value = serde_json::from_str(response.content())?;
-        return Ok(OutputStream::one(convert_json_value_to_nu_value(
+        Ok(OutputStream::one(convert_json_value_to_nu_value(
             &content,
             Tag::default(),
-        )?));
+        )?))
     } else {
         let mut content: HashMap<String, serde_json::Value> =
             serde_json::from_str(response.content())?;
@@ -146,6 +139,6 @@ fn run(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError>
             .iter()
             .map(|a| convert_json_value_to_nu_value(a, Tag::default()).unwrap())
             .collect::<Vec<_>>();
-        return Ok(OutputStream::from(values).into());
+        Ok(OutputStream::from(values))
     }
 }

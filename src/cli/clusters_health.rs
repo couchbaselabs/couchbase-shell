@@ -88,7 +88,7 @@ fn grab_bucket_names(
     let response = cluster.cluster().management_request(
         ManagementRequest::GetBuckets,
         Instant::now().add(cluster.timeouts().query_timeout()),
-        ctrl_c.clone(),
+        ctrl_c,
     )?;
     let resp: Vec<BucketInfo> = serde_json::from_str(response.content())?;
     Ok(resp.into_iter().map(|b| b.name).collect::<Vec<_>>())
@@ -116,13 +116,13 @@ fn check_autofailover(
     let response = cluster.cluster().management_request(
         ManagementRequest::SettingsAutoFailover,
         Instant::now().add(cluster.timeouts().query_timeout()),
-        ctrl_c.clone(),
+        ctrl_c,
     )?;
     let resp: AutoFailoverSettings = serde_json::from_str(response.content())?;
 
-    collected.insert_value("cluster", identifier.clone());
-    collected.insert_value("check", "Autofailover Enabled".clone());
-    collected.insert_value("bucket", "-".clone());
+    collected.insert_value("cluster", identifier.to_string());
+    collected.insert_value("check", "Autofailover Enabled".to_string());
+    collected.insert_value("bucket", "-".to_string());
     collected.insert_value("expected", UntaggedValue::boolean(true));
     collected.insert_value("actual", UntaggedValue::boolean(resp.enabled));
 
@@ -131,7 +131,7 @@ fn check_autofailover(
     } else {
         "Enable Autofailover"
     };
-    collected.insert_value("remedy", remedy.clone());
+    collected.insert_value("remedy", remedy.to_string());
 
     Ok(collected.into_value())
 }
@@ -161,7 +161,7 @@ fn check_resident_ratio(
             name: bucket_name.to_string(),
         },
         Instant::now().add(cluster.timeouts().query_timeout()),
-        ctrl_c.clone(),
+        ctrl_c,
     )?;
     let resp: BucketStats = serde_json::from_str(response.content())?;
     let ratio = match resp.op.samples.active_resident_ratios.last() {
@@ -172,9 +172,9 @@ fn check_resident_ratio(
         }
     };
 
-    collected.insert_value("cluster", identifier.clone());
-    collected.insert_value("check", "Resident Ratio Too Low".clone());
-    collected.insert_value("bucket", bucket_name.clone());
+    collected.insert_value("cluster", identifier.to_string());
+    collected.insert_value("check", "Resident Ratio Too Low".to_string());
+    collected.insert_value("bucket", bucket_name.to_string());
     collected.insert_value("expected", ">= 10%");
     collected.insert_value("actual", format!("{}%", &ratio));
 
@@ -183,7 +183,7 @@ fn check_resident_ratio(
     } else {
         "Should be more than 10%"
     };
-    collected.insert_value("remedy", remedy.clone());
+    collected.insert_value("remedy", remedy.to_string());
 
     Ok(collected.into_value())
 }

@@ -51,9 +51,9 @@ fn buckets(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellEr
     let bucket_name = match args.nth(0) {
         Some(n) => n.as_string()?,
         None => {
-            return Err(ShellError::untagged_runtime_error(format!(
-                "No bucket name was specified"
-            )))
+            return Err(ShellError::untagged_runtime_error(
+                "No bucket name was specified".to_string(),
+            ))
         }
     };
 
@@ -63,7 +63,7 @@ fn buckets(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellEr
     let response = cluster.management_request(
         ManagementRequest::GetBucket { name: bucket_name },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c.clone(),
+        ctrl_c,
     )?;
 
     let content = serde_json::from_str(response.content())?;

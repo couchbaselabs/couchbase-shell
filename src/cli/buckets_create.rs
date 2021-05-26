@@ -203,15 +203,14 @@ fn buckets_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, 
     let response = cluster.management_request(
         ManagementRequest::CreateBucket { payload },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c.clone(),
+        ctrl_c,
     )?;
 
     match response.status() {
         200 => Ok(OutputStream::empty()),
         202 => Ok(OutputStream::empty()),
-        _ => Err(ShellError::untagged_runtime_error(format!(
-            "{}",
-            response.content()
-        ))),
+        _ => Err(ShellError::untagged_runtime_error(
+            response.content().to_string(),
+        )),
     }
 }

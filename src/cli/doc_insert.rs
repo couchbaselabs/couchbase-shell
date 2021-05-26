@@ -103,7 +103,7 @@ fn run_insert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shel
         .call_info
         .args
         .get("expiry")
-        .map(|e| e.as_u32().unwrap_or_else(|_| 0));
+        .map(|e| e.as_u32().unwrap_or(0));
 
     let expiry = expiry_arg.unwrap_or(0);
 
@@ -148,9 +148,9 @@ fn run_insert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shel
     let mut client = cluster.key_value_client(
         active_cluster.username().into(),
         active_cluster.password().into(),
-        bucket.clone(),
-        scope.clone(),
-        collection.clone(),
+        bucket,
+        scope,
+        collection,
         Instant::now().add(active_cluster.timeouts().data_timeout()),
         ctrl_c.clone(),
     )?;
@@ -173,7 +173,7 @@ fn run_insert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shel
                 KeyValueRequest::Insert {
                     key: item.0,
                     value,
-                    expiry: expiry.clone(),
+                    expiry,
                 },
                 deadline,
                 ctrl_c.clone(),

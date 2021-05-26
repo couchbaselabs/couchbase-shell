@@ -61,7 +61,7 @@ fn run_tutorial_page(state: Arc<State>, args: CommandArgs) -> Result<OutputStrea
             let mut collected = TaggedDictBuilder::new(Tag::default());
             let mut step_name = s.clone();
             if s == current_step {
-                step_name = step_name + " (active)";
+                step_name += " (active)";
             }
             collected.insert_value("page_name", step_name);
             results.push(collected.into_value());

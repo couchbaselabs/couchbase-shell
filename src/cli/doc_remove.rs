@@ -102,9 +102,9 @@ fn run_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellEr
     let mut client = cluster.key_value_client(
         active_cluster.username().into(),
         active_cluster.password().into(),
-        bucket.clone(),
-        scope.clone(),
-        collection.clone(),
+        bucket,
+        scope,
+        collection,
         Instant::now().add(active_cluster.timeouts().data_timeout()),
         ctrl_c.clone(),
     )?;

@@ -64,9 +64,9 @@ fn collections_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream,
         None => match state.active_cluster().active_bucket() {
             Some(s) => s,
             None => {
-                return Err(ShellError::untagged_runtime_error(format!(
-                    "Could not auto-select a bucket - please use --bucket instead"
-                )));
+                return Err(ShellError::untagged_runtime_error(
+                    "Could not auto-select a bucket - please use --bucket instead".to_string(),
+                ));
             }
         },
     };
@@ -88,7 +88,7 @@ fn collections_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream,
     let response = active_cluster.cluster().management_request(
         ManagementRequest::GetCollections { bucket },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c.clone(),
+        ctrl_c,
     )?;
 
     let manifest: Manifest = match response.status() {
@@ -117,7 +117,7 @@ fn collections_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream,
             }
         }
         let collections = scope_res.collections;
-        if collections.len() == 0 {
+        if collections.is_empty() {
             let mut collected = TaggedDictBuilder::new(Tag::default());
             collected.insert_value("scope", scope_res.name.clone());
             collected.insert_value("collection", "");

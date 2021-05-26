@@ -160,7 +160,7 @@ async fn main() {
 
 fn parse_create_cluster_response(msg: String) -> String {
     let j: HashMap<String, String> =
-        serde_json::from_str(format!("{}", msg).as_str()).expect("Failed to parse json response");
+        serde_json::from_str(msg.as_str()).expect("Failed to parse json response");
 
     let connstring = j
         .get("connstr")
@@ -169,7 +169,7 @@ fn parse_create_cluster_response(msg: String) -> String {
         .strip_prefix("couchbase://")
         .unwrap_or(connstring);
     let split_addrs: Vec<&str> = raw_addrs.split(',').collect();
-    assert!(split_addrs.len() > 0);
+    assert!(!split_addrs.is_empty());
 
     split_addrs[0].into()
 }

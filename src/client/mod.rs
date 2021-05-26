@@ -16,6 +16,7 @@ use isahc::{
 };
 use isahc::{config::SslOption, prelude::*};
 use nu_errors::ShellError;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::fmt;
@@ -118,7 +119,7 @@ impl Client {
             seeds,
             username,
             password,
-            tls_config: tls_config.clone(),
+            tls_config,
         }
     }
 
@@ -156,7 +157,7 @@ impl Client {
             let uri = format!("{}://{}:{}{}", self.http_prefix(), seed, port, &path);
             let (content, status) = self.http_get(&uri, deadline, ctrl_c.clone())?;
             if status != 200 {
-                if content != "" {
+                if !content.is_empty() {
                     final_error_content = Some(content);
                 }
                 final_error_status = status;
@@ -191,7 +192,7 @@ impl Client {
             let uri = format!("{}://{}:{}{}", self.http_prefix(), seed, port, &path);
             let (content, status) = self.http_get(&uri, deadline, ctrl_c.clone())?;
             if status != 200 {
-                if content != "" {
+                if !content.is_empty() {
                     final_error_content = Some(content);
                 }
                 final_error_status = status;
@@ -226,7 +227,7 @@ impl Client {
             let uri = format!("{}://{}:{}{}", self.http_prefix(), seed, port, &path);
             let (content, status) = self.http_get(&uri, deadline, ctrl_c.clone())?;
             if status != 200 {
-                if content != "" {
+                if !content.is_empty() {
                     final_error_content = Some(content);
                 }
                 final_error_status = status;
@@ -284,10 +285,10 @@ impl Client {
         rt.block_on(async {
             select! {
                 result = res_fut => {
-                    let mut response = result.map_err(|e| ClientError::from(e))?;
+                    let mut response = result.map_err(ClientError::from)?;
                     let content = response.text().await?;
                     let status = response.status().into();
-                    return Ok((content, status));
+                    Ok((content, status))
                 },
                 () = ctrl_c_fut => Err(ClientError::Cancelled),
             }
@@ -317,10 +318,10 @@ impl Client {
     fn http_ssl_opts(&self) -> SslOption {
         let mut ssl_opts = SslOption::NONE;
         if !self.tls_config.validate_hostnames() {
-            ssl_opts = ssl_opts | SslOption::DANGER_ACCEPT_INVALID_HOSTS;
+            ssl_opts |= SslOption::DANGER_ACCEPT_INVALID_HOSTS;
         }
         if self.tls_config.accept_all_certs() {
-            ssl_opts = ssl_opts | SslOption::DANGER_ACCEPT_INVALID_CERTS;
+            ssl_opts |= SslOption::DANGER_ACCEPT_INVALID_CERTS;
         }
         ssl_opts
     }
@@ -358,7 +359,7 @@ impl Client {
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<PingResponse, ClientError> {
         let start = Instant::now();
-        let result = self.http_get(&uri, deadline, ctrl_c.clone());
+        let result = self.http_get(&uri, deadline, ctrl_c);
         let end = Instant::now();
 
         let error = match result {
@@ -396,7 +397,7 @@ impl Client {
                 uri,
                 address,
                 ServiceType::Search,
-                deadline.clone(),
+                deadline,
                 ctrl_c.clone(),
             )?);
         }
@@ -407,7 +408,7 @@ impl Client {
                 uri,
                 address,
                 ServiceType::Query,
-                deadline.clone(),
+                deadline,
                 ctrl_c.clone(),
             )?);
         }
@@ -418,7 +419,7 @@ impl Client {
                 uri,
                 address,
                 ServiceType::Analytics,
-                deadline.clone(),
+                deadline,
                 ctrl_c.clone(),
             )?);
         }
@@ -429,7 +430,7 @@ impl Client {
                 uri,
                 address,
                 ServiceType::Views,
-                deadline.clone(),
+                deadline,
                 ctrl_c.clone(),
             )?);
         }
@@ -446,25 +447,17 @@ impl Client {
         let config = self.get_config(deadline, ctrl_c.clone())?;
 
         let path = request.path();
-        for seed in config.management_seeds(self.tls_config.enabled()) {
+        if let Some(seed) = config.random_management_seed(self.tls_config.enabled()) {
             let uri = format!("{}://{}:{}{}", self.http_prefix(), seed.0, seed.1, &path);
             let (content, status) = match request.verb() {
-                HttpVerb::Get => self.http_get(&uri, deadline, ctrl_c.clone())?,
-                HttpVerb::Post => self.http_post(
-                    &uri,
-                    request.payload(),
-                    request.headers(),
-                    deadline,
-                    ctrl_c.clone(),
-                )?,
-                HttpVerb::Delete => self.http_delete(&uri, deadline, ctrl_c.clone())?,
-                HttpVerb::Put => self.http_put(
-                    &uri,
-                    request.payload(),
-                    request.headers(),
-                    deadline,
-                    ctrl_c.clone(),
-                )?,
+                HttpVerb::Get => self.http_get(&uri, deadline, ctrl_c)?,
+                HttpVerb::Post => {
+                    self.http_post(&uri, request.payload(), request.headers(), deadline, ctrl_c)?
+                }
+                HttpVerb::Delete => self.http_delete(&uri, deadline, ctrl_c)?,
+                HttpVerb::Put => {
+                    self.http_put(&uri, request.payload(), request.headers(), deadline, ctrl_c)?
+                }
             };
             return Ok(HttpResponse { content, status });
         }
@@ -481,17 +474,13 @@ impl Client {
         let config = self.get_config(deadline, ctrl_c.clone())?;
 
         let path = request.path();
-        for seed in config.query_seeds(self.tls_config.enabled()) {
+        if let Some(seed) = config.random_query_seed(self.tls_config.enabled()) {
             let uri = format!("{}://{}:{}{}", self.http_prefix(), seed.0, seed.1, &path);
             let (content, status) = match request.verb() {
-                HttpVerb::Get => self.http_get(&uri, deadline, ctrl_c.clone())?,
-                HttpVerb::Post => self.http_post(
-                    &uri,
-                    request.payload(),
-                    request.headers(),
-                    deadline,
-                    ctrl_c.clone(),
-                )?,
+                HttpVerb::Get => self.http_get(&uri, deadline, ctrl_c)?,
+                HttpVerb::Post => {
+                    self.http_post(&uri, request.payload(), request.headers(), deadline, ctrl_c)?
+                }
                 _ => {
                     return Err(ClientError::RequestFailed {
                         reason: Some("Method not allowed for queries".into()),
@@ -514,17 +503,13 @@ impl Client {
         let config = self.get_config(deadline, ctrl_c.clone())?;
 
         let path = request.path();
-        for seed in config.analytics_seeds(self.tls_config.enabled()) {
+        if let Some(seed) = config.random_analytics_seed(self.tls_config.enabled()) {
             let uri = format!("{}://{}:{}{}", self.http_prefix(), seed.0, seed.1, &path);
             let (content, status) = match request.verb() {
-                HttpVerb::Get => self.http_get(&uri, deadline, ctrl_c.clone())?,
-                HttpVerb::Post => self.http_post(
-                    &uri,
-                    request.payload(),
-                    request.headers(),
-                    deadline,
-                    ctrl_c.clone(),
-                )?,
+                HttpVerb::Get => self.http_get(&uri, deadline, ctrl_c)?,
+                HttpVerb::Post => {
+                    self.http_post(&uri, request.payload(), request.headers(), deadline, ctrl_c)?
+                }
                 _ => {
                     return Err(ClientError::RequestFailed {
                         reason: Some("Method not allowed for analytics queries".into()),
@@ -547,16 +532,12 @@ impl Client {
         let config = self.get_config(deadline, ctrl_c.clone())?;
 
         let path = request.path();
-        for seed in config.search_seeds(self.tls_config.enabled()) {
+        if let Some(seed) = config.random_search_seed(self.tls_config.enabled()) {
             let uri = format!("{}://{}:{}{}", self.http_prefix(), seed.0, seed.1, &path);
             let (content, status) = match request.verb() {
-                HttpVerb::Post => self.http_post(
-                    &uri,
-                    request.payload(),
-                    request.headers(),
-                    deadline,
-                    ctrl_c.clone(),
-                )?,
+                HttpVerb::Post => {
+                    self.http_post(&uri, request.payload(), request.headers(), deadline, ctrl_c)?
+                }
                 _ => {
                     return Err(ClientError::RequestFailed {
                         reason: Some("Method not allowed for analytics queries".into()),
@@ -570,7 +551,7 @@ impl Client {
         Err(ClientError::RequestFailed { reason: None })
     }
 
-    pub fn key_value_client<'a>(
+    pub fn key_value_client(
         &self,
         username: String,
         password: String,
@@ -582,14 +563,15 @@ impl Client {
     ) -> Result<KvClient, ClientError> {
         let config = self.get_bucket_config(bucket.clone(), deadline, ctrl_c.clone())?;
         let mut pair: Option<CollectionDetails> = None;
-        if (scope != "" && scope != "_default") || (collection != "" && collection != "_default") {
+        if (!scope.is_empty() && scope != "_default")
+            || (!collection.is_empty() && collection != "_default")
+        {
             // If we've been specifically asked to use a scope or collection and fetching the manifest
             // fails then we need to report that.
-            let manifest =
-                self.get_collection_manifest(bucket.clone(), deadline, ctrl_c.clone())?;
+            let manifest = self.get_collection_manifest(bucket.clone(), deadline, ctrl_c)?;
             pair = Some(CollectionDetails {
-                collection,
                 scope,
+                collection,
                 manifest,
             })
         };
@@ -939,7 +921,7 @@ impl PingResponse {
     }
 
     pub fn latency(&self) -> Duration {
-        self.latency.clone()
+        self.latency
     }
 
     pub fn error(&self) -> Option<&ClientError> {
@@ -1037,9 +1019,42 @@ impl ClusterConfig {
                 } else {
                     self.loaded_from.as_ref().unwrap().clone()
                 };
-                (hostname, node.services.get(key).unwrap().clone())
+                (hostname, *node.services.get(key).unwrap())
             })
             .collect()
+    }
+
+    fn random_management_seed(&self, tls: bool) -> Option<(String, u32)> {
+        self.random_seed(self.management_seeds(tls))
+    }
+
+    fn random_query_seed(&self, tls: bool) -> Option<(String, u32)> {
+        self.random_seed(self.query_seeds(tls))
+    }
+
+    fn random_analytics_seed(&self, tls: bool) -> Option<(String, u32)> {
+        self.random_seed(self.analytics_seeds(tls))
+    }
+
+    fn random_search_seed(&self, tls: bool) -> Option<(String, u32)> {
+        self.random_seed(self.search_seeds(tls))
+    }
+
+    fn random_seed(&self, seeds: Vec<(String, u32)>) -> Option<(String, u32)> {
+        let mut rng = rand::thread_rng();
+
+        if seeds.is_empty() {
+            return None;
+        }
+
+        let seed_idx = rng.gen_range(0..seeds.len());
+        let seed = seeds.get(seed_idx);
+
+        if let Some(s) = seed {
+            return Some((s.0.clone(), s.1));
+        }
+
+        None
     }
 }
 
@@ -1074,7 +1089,7 @@ impl KvClient {
 
         let seed = &seeds[node as usize];
         let addr = seed.0.clone();
-        let port = seed.1.clone();
+        let port = seed.1;
 
         (addr, port)
     }
@@ -1094,7 +1109,7 @@ impl KvClient {
                 }
             }
         }
-        return Err(CollectionNotFound);
+        Err(CollectionNotFound)
     }
 
     pub async fn ping_all(
@@ -1120,7 +1135,7 @@ impl KvClient {
             if ep.is_none() {
                 let connect = KvEndpoint::connect(
                     addr.clone(),
-                    port.clone(),
+                    port,
                     self.username.clone(),
                     self.password.clone(),
                     self.bucket.clone(),
@@ -1206,7 +1221,7 @@ impl KvClient {
 
         let config = &self.config;
         let partition = self.partition_for_key(key.clone(), config);
-        let (addr, port) = self.node_for_partition(partition.clone(), config);
+        let (addr, port) = self.node_for_partition(partition, config);
 
         let mut ep = self.endpoints.get(addr.clone().as_str());
         if ep.is_none() {
@@ -1365,7 +1380,7 @@ impl BucketConfig {
                 } else {
                     self.loaded_from.as_ref().unwrap().clone()
                 };
-                (hostname, node.services.get(key).unwrap().clone())
+                (hostname, *node.services.get(key).unwrap())
             })
             .collect()
     }

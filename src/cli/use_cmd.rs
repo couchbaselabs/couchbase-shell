@@ -47,22 +47,17 @@ fn use_cmd(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellEr
         "bucket",
         active
             .active_bucket()
-            .map(|s| s.clone())
-            .unwrap_or(String::from("<not set>")),
+            .unwrap_or_else(|| String::from("<not set>")),
     );
     using_now.insert_value(
         "scope",
-        active
-            .active_scope()
-            .map(|s| s.clone())
-            .unwrap_or(String::from("")),
+        active.active_scope().unwrap_or_else(|| String::from("")),
     );
     using_now.insert_value(
         "collection",
         active
             .active_collection()
-            .map(|s| s.clone())
-            .unwrap_or(String::from("")),
+            .unwrap_or_else(|| String::from("")),
     );
     let clusters = vec![using_now.into_value()];
 

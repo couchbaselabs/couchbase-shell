@@ -69,9 +69,9 @@ fn scopes_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, S
         None => match state.active_cluster().active_bucket() {
             Some(s) => s,
             None => {
-                return Err(ShellError::untagged_runtime_error(format!(
-                    "Could not auto-select a bucket - please use --bucket instead"
-                )));
+                return Err(ShellError::untagged_runtime_error(
+                    "Could not auto-select a bucket - please use --bucket instead".to_string(),
+                ));
             }
         },
     };
@@ -88,15 +88,14 @@ fn scopes_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, S
     let response = active_cluster.cluster().management_request(
         ManagementRequest::CreateScope { payload, bucket },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c.clone(),
+        ctrl_c,
     )?;
 
     match response.status() {
         200 => Ok(OutputStream::empty()),
         202 => Ok(OutputStream::empty()),
-        _ => Err(ShellError::untagged_runtime_error(format!(
-            "{}",
-            response.content()
-        ))),
+        _ => Err(ShellError::untagged_runtime_error(
+            response.content().to_string(),
+        )),
     }
 }

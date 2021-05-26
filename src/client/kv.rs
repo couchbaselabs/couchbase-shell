@@ -46,7 +46,7 @@ impl KvEndpoint {
                 builder.danger_accept_invalid_certs(true);
             }
             if let Some(path) = tls_config.cert_path() {
-                let cert = fs::read(path).map_err(|e| ClientError::from(e))?;
+                let cert = fs::read(path).map_err(ClientError::from)?;
                 builder.add_root_certificate(Certificate::from_pem(cert.as_slice()).map_err(
                     |e| ClientError::RequestFailed {
                         reason: Some(e.to_string()),
@@ -425,10 +425,10 @@ impl KvEndpoint {
         chan: oneshot::Sender<KvResponse>,
     ) -> Result<(), ClientError> {
         let opaque = self.opaque.fetch_add(1, Ordering::SeqCst);
-        req.set_opaque(opaque.clone());
+        req.set_opaque(opaque);
         match self
             .tx
-            .send(request(req, self.collections_enabled.clone()).freeze())
+            .send(request(req, self.collections_enabled).freeze())
             .await
         {
             Ok(_) => {

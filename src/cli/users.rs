@@ -40,7 +40,7 @@ impl nu_engine::WholeStreamCommand for Users {
 
     fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
         let ctrl_c = args.ctrl_c();
-        users_get_all(self.state.clone(), ctrl_c.clone())
+        users_get_all(self.state.clone(), ctrl_c)
     }
 }
 
@@ -50,7 +50,7 @@ fn users_get_all(state: Arc<State>, ctrl_c: Arc<AtomicBool>) -> Result<OutputStr
     let response = active_cluster.cluster().management_request(
         ManagementRequest::GetUsers,
         Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c.clone(),
+        ctrl_c,
     )?;
 
     let users: Vec<UserAndMetadata> = match response.status() {
@@ -77,10 +77,10 @@ fn users_get_all(state: Arc<State>, ctrl_c: Arc<AtomicBool>) -> Result<OutputStr
             let user = v.user();
             let roles: Vec<String> = user
                 .roles()
-                .into_iter()
+                .iter()
                 .map(|r| match r.bucket() {
                     Some(b) => format!("{}[{}]", r.name(), b),
-                    None => format!("{}", r.name()),
+                    None => r.name().to_string(),
                 })
                 .collect();
 

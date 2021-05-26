@@ -96,17 +96,12 @@ fn run_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellEr
     while let Some(item) = args.input.next() {
         let untagged = item.into();
         match untagged {
-            UntaggedValue::Primitive(p) => match p {
-                Primitive::String(s) => ids.push(s.clone()),
-                _ => {}
-            },
+            UntaggedValue::Primitive(Primitive::String(s)) => ids.push(s.clone()),
             UntaggedValue::Row(d) => {
                 if let MaybeOwned::Borrowed(d) = d.get_data(id_column.as_ref()) {
                     let untagged = &d.value;
-                    if let UntaggedValue::Primitive(p) = untagged {
-                        if let Primitive::String(s) = p {
-                            ids.push(s.clone())
-                        }
+                    if let UntaggedValue::Primitive(Primitive::String(s)) = untagged {
+                        ids.push(s.clone())
                     }
                 }
             }
@@ -128,9 +123,9 @@ fn run_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellEr
         .or_else(|| active_cluster.active_bucket())
     {
         Some(v) => Ok(v),
-        None => Err(ShellError::untagged_runtime_error(format!(
-            "Could not auto-select a bucket - please use --bucket instead"
-        ))),
+        None => Err(ShellError::untagged_runtime_error(
+            "Could not auto-select a bucket - please use --bucket instead".to_string(),
+        )),
     }?;
 
     let scope = match args
@@ -170,9 +165,9 @@ fn run_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellEr
     let mut client = cluster.key_value_client(
         active_cluster.username().into(),
         active_cluster.password().into(),
-        bucket.clone(),
-        scope.clone(),
-        collection.clone(),
+        bucket,
+        scope,
+        collection,
         Instant::now().add(active_cluster.timeouts().data_timeout()),
         ctrl_c.clone(),
     )?;

@@ -65,9 +65,9 @@ fn run(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError>
             match state.clusters().get(identifier.as_str()) {
                 Some(c) => c,
                 None => {
-                    return Err(ShellError::untagged_runtime_error(format!(
-                        "Could not get cluster from available clusters",
-                    )));
+                    return Err(ShellError::untagged_runtime_error(
+                        "Could not get cluster from available clusters".to_string(),
+                    ));
                 }
             }
         }
@@ -78,11 +78,11 @@ fn run(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError>
 
     let response = active_cluster.cluster().query_request(
         QueryRequest::Execute {
-            statement: statement.clone(),
+            statement,
             scope: None,
         },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c.clone(),
+        ctrl_c,
     )?;
 
     let content: serde_json::Value = serde_json::from_str(response.content())?;
