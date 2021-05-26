@@ -959,6 +959,7 @@ dependencies = [
  "nu-test-support 0.29.0",
  "num-bigint 0.4.0",
  "pretty_env_logger 0.3.1",
+ "rand 0.8.3",
  "regex 1.5.4",
  "reqwest 0.11.3",
  "rpassword",
