@@ -834,18 +834,21 @@ pub enum AnalyticsQueryRequest {
         statement: String,
         scope: Option<(String, String)>,
     },
+    PendingMutations,
 }
 
 impl AnalyticsQueryRequest {
     pub fn path(&self) -> String {
         match self {
             Self::Execute { .. } => "/query/service".into(),
+            Self::PendingMutations => "/analytics/node/agg/stats/remaining".into(),
         }
     }
 
     pub fn verb(&self) -> HttpVerb {
         match self {
             Self::Execute { .. } => HttpVerb::Post,
+            Self::PendingMutations => HttpVerb::Get,
         }
     }
 
@@ -861,6 +864,7 @@ impl AnalyticsQueryRequest {
                     Some(serde_json::to_vec(&json).unwrap())
                 }
             }
+            Self::PendingMutations => None,
         }
     }
 
@@ -871,6 +875,7 @@ impl AnalyticsQueryRequest {
                 h.insert("Content-Type", "application/json");
                 h
             }
+            Self::PendingMutations => HashMap::new(),
         }
     }
 }

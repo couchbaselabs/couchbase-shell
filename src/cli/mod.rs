@@ -1,8 +1,10 @@
 mod analytics;
+mod analytics_buckets;
 mod analytics_datasets;
 mod analytics_dataverses;
 mod analytics_indexes;
 mod analytics_links;
+mod analytics_pending_mutations;
 mod buckets;
 mod buckets_builder;
 mod buckets_config;
@@ -54,10 +56,12 @@ mod version;
 mod whoami;
 
 pub use analytics::Analytics;
+pub use analytics_buckets::AnalyticsBuckets;
 pub use analytics_datasets::AnalyticsDatasets;
 pub use analytics_dataverses::AnalyticsDataverses;
 pub use analytics_indexes::AnalyticsIndexes;
 pub use analytics_links::AnalyticsLinks;
+pub use analytics_pending_mutations::AnalyticsPendingMutations;
 pub use buckets::Buckets;
 pub use buckets_config::BucketsConfig;
 pub use buckets_create::BucketsCreate;
