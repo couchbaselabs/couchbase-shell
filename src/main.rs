@@ -192,6 +192,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(AnalyticsDatasets::new(state.clone())),
         nu_engine::whole_stream_command(AnalyticsDataverses::new(state.clone())),
         nu_engine::whole_stream_command(AnalyticsIndexes::new(state.clone())),
+        nu_engine::whole_stream_command(AnalyticsLinks::new(state.clone())),
         nu_engine::whole_stream_command(Buckets {}),
         nu_engine::whole_stream_command(BucketsConfig::new(state.clone())),
         nu_engine::whole_stream_command(BucketsCreate::new(state.clone())),
