@@ -9,6 +9,7 @@ All user visible changes to this project will be documented in this file.
  - fix disabling tls in the config (property is now correctly called `tls-enabled`)
  - Added examples to: doc get
  - handle config syntax errors gracefully and log them nicely on startup
+ - Added the `analytics links` command
 
 ## 1.0.0-alpha.1 - 2021-05-20
 
