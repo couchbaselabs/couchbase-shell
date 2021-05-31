@@ -29,7 +29,11 @@ impl nu_engine::WholeStreamCommand for AnalyticsIndexes {
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("analytics indexes")
+        Signature::build("analytics indexes").switch(
+            "with-meta",
+            "Includes related metadata in the result",
+            None,
+        )
     }
 
     fn usage(&self) -> &str {
@@ -57,7 +61,28 @@ fn indexes(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellEr
         ctrl_c,
     )?;
 
+    let with_meta = args.call_info().switch_present("with-meta");
     let content: serde_json::Value = serde_json::from_str(response.content())?;
-    let converted = convert_json_value_to_nu_value(&content, Tag::default())?;
-    Ok(OutputStream::one(converted))
+    if with_meta {
+        let converted = convert_json_value_to_nu_value(&content, Tag::default())?;
+        Ok(OutputStream::one(converted))
+    } else {
+        if let Some(results) = content.get("results") {
+            if let Some(arr) = results.as_array() {
+                let mut converted = vec![];
+                for result in arr {
+                    converted.push(convert_json_value_to_nu_value(result, Tag::default())?);
+                }
+                Ok(OutputStream::from(converted))
+            } else {
+                Err(ShellError::untagged_runtime_error(
+                    "Analytics result not an array - malformed response",
+                ))
+            }
+        } else {
+            Err(ShellError::untagged_runtime_error(
+                "Analytics toplevel result not  an object - malformed response",
+            ))
+        }
+    }
 }
