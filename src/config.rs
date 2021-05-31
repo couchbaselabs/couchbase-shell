@@ -14,6 +14,9 @@ pub struct ShellConfig {
     #[serde(alias = "cluster")]
     #[serde(alias = "clusters")]
     clusters: Vec<ClusterConfig>,
+
+    /// Stores the path from which it got loaded, if present
+    path: Option<PathBuf>,
 }
 
 impl ShellConfig {
@@ -50,6 +53,10 @@ impl ShellConfig {
         config
     }
 
+    pub fn location(&self) -> &Option<PathBuf> {
+        &self.path
+    }
+
     /// Builds the config from a raw input string.
     pub fn from_str(input: &str) -> Self {
         // Note: ideally this propagates up into a central error handling facility,
@@ -78,6 +85,7 @@ impl Default for ShellConfig {
         Self {
             clusters: vec![],
             version: 1,
+            path: None,
         }
     }
 }
@@ -88,7 +96,11 @@ fn try_config_from_path(mut path: PathBuf) -> Option<ShellConfig> {
 
     let read = fs::read_to_string(&path);
     match read {
-        Ok(r) => Some(ShellConfig::from_str(&r)),
+        Ok(r) => {
+            let mut conf = ShellConfig::from_str(&r);
+            conf.path = Some(path.clone());
+            Some(conf)
+        }
         Err(e) => {
             debug!("Could not locate {:?} becaue of {:?}", path, e);
             None

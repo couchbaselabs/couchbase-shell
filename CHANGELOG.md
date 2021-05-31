@@ -4,6 +4,7 @@ All user visible changes to this project will be documented in this file.
 
 ## 1.0.0-alpha.2 - Unreleased
 
+ - fixed the history (now in the .cbsh dir as a `history.txt` file)
  - the linux builder has been switched from ubuntu 20.04 to 18.04 to be more conservative and target more linux users
  - renamed `[[clusters]]` to `[[cluster]]`, but kept the old style too for backwards compatibility
  - fix disabling tls in the config (property is now correctly called `tls-enabled`)

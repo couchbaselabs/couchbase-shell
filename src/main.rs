@@ -251,17 +251,22 @@ fn main() -> Result<(), Box<dyn Error>> {
     let d = TempDir::new().unwrap();
     let f = d.child("config.toml");
 
-    let config = if cfg!(windows) {
-        r##"
-        skip_welcome_message = true
-        prompt = "build-string (ansi ub) (use | get username) (ansi reset) ' at ' (ansi yb) (use | get cluster) (ansi reset) ' in ' (ansi wb) (use | get bucket) (ansi reset) '\n' '> '"
-        "##
+    let history_path: String = if let Some(p) = config.location() {
+        let mut p = p.clone();
+        p.pop();
+        p.push("history.txt");
+        format!("history-path = \"{}\"", p.to_str().unwrap())
     } else {
-        r##"
-        skip_welcome_message = true
-        prompt = "build-string '👤 ' (ansi ub) (use | get username) (ansi reset) ' 🏠 ' (ansi yb) (use | get cluster) (ansi reset) ' in 🗄 ' (ansi wb) (use | get bucket) (ansi reset) '\n' '> '"
-        "##
+        "".into()
     };
+
+    let prompt = if cfg!(windows) {
+        r##"prompt = "build-string (ansi ub) (use | get username) (ansi reset) ' at ' (ansi yb) (use | get cluster) (ansi reset) ' in ' (ansi wb) (use | get bucket) (ansi reset) '\n' '> '""##
+    } else {
+        r##"prompt = "build-string '👤 ' (ansi ub) (use | get username) (ansi reset) ' 🏠 ' (ansi yb) (use | get cluster) (ansi reset) ' in 🗄 ' (ansi wb) (use | get bucket) (ansi reset) '\n' '> '""##
+    };
+
+    let config = format!("skip_welcome_message = true\n{}\n{}", history_path, prompt);
 
     std::fs::write(&f, config.as_bytes()).unwrap();
 
