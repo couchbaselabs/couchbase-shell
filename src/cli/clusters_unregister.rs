@@ -1,9 +1,12 @@
+use crate::cli::clusters_register::update_config_file;
+use crate::config::{ClusterConfig, ShellConfig};
 use crate::state::State;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_stream::OutputStream;
-use std::sync::{Arc, Mutex};
+use std::fs;
+use std::sync::{Arc, Mutex, MutexGuard};
 
 pub struct ClustersUnregister {
     state: Arc<Mutex<State>>,
@@ -21,11 +24,17 @@ impl nu_engine::WholeStreamCommand for ClustersUnregister {
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("clusters unregister").required(
-            "identifier",
-            SyntaxShape::String,
-            "the identifier to use for this cluster",
-        )
+        Signature::build("clusters unregister")
+            .required(
+                "identifier",
+                SyntaxShape::String,
+                "the identifier to use for this cluster",
+            )
+            .switch(
+                "save",
+                "whether or not to add the cluster to the .cbsh config file, defaults to false",
+                None,
+            )
     }
 
     fn usage(&self) -> &str {
@@ -50,12 +59,17 @@ fn clusters_unregister(
         },
         None => return Err(ShellError::unexpected("identifier is required")),
     };
+    let save = args.get_flag::<bool>("save")?.unwrap_or(false);
 
     let mut guard = state.lock().unwrap();
     if guard.remove_cluster(identifier).is_none() {
         return Err(ShellError::unexpected(
             "identifier is not registered to a cluster",
         ));
+    };
+
+    if save {
+        update_config_file(&mut guard)?;
     };
 
     Ok(OutputStream::empty())

@@ -2,6 +2,7 @@ use crate::{client::Client, config::ClusterTlsConfig};
 
 use crate::tutorial::Tutorial;
 use nu_errors::ShellError;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::{collections::HashMap, time::Duration};
@@ -12,6 +13,7 @@ pub struct State {
     default_scope: Option<String>,
     default_collection: Option<String>,
     tutorial: Tutorial,
+    config_path: Option<PathBuf>,
 }
 
 impl State {
@@ -20,6 +22,7 @@ impl State {
         active: String,
         default_scope: Option<String>,
         default_collection: Option<String>,
+        config_path: Option<PathBuf>,
     ) -> Self {
         let state = Self {
             active: Mutex::new(active.clone()),
@@ -27,6 +30,7 @@ impl State {
             default_scope,
             default_collection,
             tutorial: Tutorial::new(),
+            config_path,
         };
         state.set_active(active).unwrap();
         state
@@ -96,6 +100,10 @@ impl State {
 
     pub fn tutorial(&self) -> &Tutorial {
         &self.tutorial
+    }
+
+    pub fn config_path(&self) -> &Option<PathBuf> {
+        &self.config_path
     }
 }
 
@@ -180,6 +188,10 @@ impl RemoteCluster {
         if c.is_some() {
             *c = None;
         }
+    }
+
+    pub fn hostnames(&self) -> &Vec<String> {
+        &self.hostnames
     }
 
     pub fn username(&self) -> &str {

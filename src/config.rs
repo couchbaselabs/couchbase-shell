@@ -1,12 +1,14 @@
+use crate::state::RemoteCluster;
 use log::debug;
 use log::error;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 use std::time::Duration;
+use toml::ser::Error;
 
 /// Holds the complete config in an aggregated manner.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct ShellConfig {
     version: usize,
     /// Note: clusters is kept for backwards compatibility and
@@ -53,6 +55,14 @@ impl ShellConfig {
         config
     }
 
+    pub fn new_from_clusters(clusters: Vec<ClusterConfig>) -> Self {
+        Self {
+            clusters,
+            path: None,
+            version: 1,
+        }
+    }
+
     pub fn location(&self) -> &Option<PathBuf> {
         &self.path
     }
@@ -68,6 +78,10 @@ impl ShellConfig {
                 std::process::exit(-1);
             }
         }
+    }
+
+    pub fn to_str(&self) -> Result<String, Error> {
+        toml::to_string(self)
     }
 
     /// Returns the individual configurations for all the clusters configured.
@@ -102,7 +116,7 @@ fn try_config_from_path(mut path: PathBuf) -> Option<ShellConfig> {
             Some(conf)
         }
         Err(e) => {
-            debug!("Could not locate {:?} becaue of {:?}", path, e);
+            debug!("Could not locate {:?} because of {:?}", path, e);
             None
         }
     }
@@ -122,15 +136,15 @@ fn try_credentials_from_path(mut path: PathBuf) -> Option<StandaloneCredentialsC
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct ClusterConfig {
     identifier: String,
     hostnames: Vec<String>,
-    #[serde(rename(deserialize = "default-bucket"))]
+    #[serde(rename(deserialize = "default-bucket", serialize = "default-bucket"))]
     default_bucket: Option<String>,
-    #[serde(rename(deserialize = "default-scope"))]
+    #[serde(rename(deserialize = "default-scope", serialize = "default-scope"))]
     default_scope: Option<String>,
-    #[serde(rename(deserialize = "default-collection"))]
+    #[serde(rename(deserialize = "default-collection", serialize = "default-collection"))]
     default_collection: Option<String>,
 
     #[serde(flatten)]
@@ -189,7 +203,29 @@ impl ClusterConfig {
     }
 }
 
-#[derive(Debug, Deserialize)]
+impl From<(String, &RemoteCluster)> for ClusterConfig {
+    fn from(cluster: (String, &RemoteCluster)) -> Self {
+        Self {
+            identifier: cluster.0,
+            hostnames: cluster.1.hostnames().clone(),
+            default_collection: cluster.1.active_collection(),
+            default_scope: cluster.1.active_scope(),
+            default_bucket: cluster.1.active_bucket(),
+            timeouts: ClusterConfigTimeouts {
+                connect_timeout: None,
+                data_timeout: Some(cluster.1.timeouts().data_timeout()),
+                query_timeout: Some(cluster.1.timeouts().query_timeout()),
+            },
+            tls: cluster.1.tls_config().clone(),
+            credentials: ClusterCredentials {
+                username: Some(cluster.1.username().to_string()),
+                password: Some(cluster.1.password().to_string()),
+            },
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct ClusterCredentials {
     username: Option<String>,
     password: Option<String>,
@@ -197,16 +233,25 @@ pub struct ClusterCredentials {
 
 impl ClusterCredentials {}
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct ClusterConfigTimeouts {
     #[serde(default)]
-    #[serde(rename(deserialize = "data-timeout"), with = "humantime_serde")]
+    #[serde(
+        rename(deserialize = "data-timeout", serialize = "data-timeout"),
+        with = "humantime_serde"
+    )]
     data_timeout: Option<Duration>,
     #[serde(default)]
-    #[serde(rename(deserialize = "connect-timeout"), with = "humantime_serde")]
+    #[serde(
+        rename(deserialize = "connect-timeout", serialize = "connect-timeout"),
+        with = "humantime_serde"
+    )]
     connect_timeout: Option<Duration>,
     #[serde(default)]
-    #[serde(rename(deserialize = "query-timeout"), with = "humantime_serde")]
+    #[serde(
+        rename(deserialize = "query-timeout", serialize = "query-timeout"),
+        with = "humantime_serde"
+    )]
     query_timeout: Option<Duration>,
 }
 
@@ -230,17 +275,23 @@ impl ClusterConfigTimeouts {
     }
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct ClusterTlsConfig {
-    #[serde(rename(deserialize = "tls-enabled"))]
+    #[serde(rename(deserialize = "tls-enabled", serialize = "tls-enabled"))]
     #[serde(default = "default_as_true")]
     enabled: bool,
-    #[serde(rename(deserialize = "tls-cert-path"))]
+    #[serde(rename(deserialize = "tls-cert-path", serialize = "tls-cert-path"))]
     cert_path: Option<String>,
-    #[serde(rename(deserialize = "tls-validate-hostnames"))]
+    #[serde(rename(
+        deserialize = "tls-validate-hostnames",
+        serialize = "tls-validate-hostnames"
+    ))]
     #[serde(default = "default_as_false")]
     validate_hostnames: bool,
-    #[serde(rename(deserialize = "tls-accept-all-certs"))]
+    #[serde(rename(
+        deserialize = "tls-accept-all-certs",
+        serialize = "tls-accept-all-certs"
+    ))]
     #[serde(default = "default_as_true")]
     accept_all_certs: bool,
 }

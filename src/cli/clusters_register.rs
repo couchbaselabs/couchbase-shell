@@ -1,11 +1,12 @@
 use crate::cli::util::parse_optional_as_bool;
-use crate::config::ClusterTlsConfig;
+use crate::config::{ClusterConfig, ClusterTlsConfig, ShellConfig};
 use crate::state::{ClusterTimeouts, RemoteCluster, State};
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_stream::OutputStream;
-use std::sync::{Arc, Mutex};
+use std::fs;
+use std::sync::{Arc, Mutex, MutexGuard};
 
 pub struct ClustersRegister {
     state: Arc<Mutex<State>>,
@@ -85,9 +86,14 @@ impl nu_engine::WholeStreamCommand for ClustersRegister {
                 None,
             )
             .named(
-                "tls-accept-all-hosts",
+                "tls-validate-hosts",
                 SyntaxShape::String,
-                "whether or not to accept all hosts with tls, defaults to false",
+                "whether or not to validate hosts with tls, defaults to false",
+                None,
+            )
+            .switch(
+                "save",
+                "whether or not to add the cluster to the .cbsh config file, defaults to false",
                 None,
             )
     }
@@ -160,7 +166,7 @@ fn clusters_register(
     let tls_accept_all_certs =
         parse_optional_as_bool(&args.call_info.args, "tls-accept-all-certs", true)?;
     let tls_accept_all_hosts =
-        parse_optional_as_bool(&args.call_info.args, "tls-accept-all-hosts", true)?;
+        parse_optional_as_bool(&args.call_info.args, "tls-validate-hosts", true)?;
     let cert_path = match args.call_info.args.get("tls-cert-path") {
         Some(v) => match v.as_string() {
             Ok(name) => Some(name),
@@ -168,6 +174,7 @@ fn clusters_register(
         },
         None => None,
     };
+    let save = args.get_flag::<bool>("save")?.unwrap_or(false);
 
     let cluster = RemoteCluster::new(
         hostnames,
@@ -186,7 +193,38 @@ fn clusters_register(
     );
 
     let mut guard = state.lock().unwrap();
-    guard.add_cluster(identifier, cluster)?;
+    guard.add_cluster(identifier.clone(), cluster)?;
+
+    if save {
+        update_config_file(&mut guard)?;
+    }
 
     Ok(OutputStream::empty())
+}
+
+pub fn update_config_file(guard: &mut MutexGuard<State>) -> Result<(), ShellError> {
+    let path = match guard.config_path() {
+        Some(p) => p,
+        None => {
+            return Err(ShellError::unexpected(
+                "A config path must be discoverable to save config",
+            ));
+        }
+    };
+    let mut cluster_configs = Vec::new();
+    for (identifier, cluster) in guard.clusters() {
+        cluster_configs.push(ClusterConfig::from((identifier.clone(), cluster)))
+    }
+
+    let config = ShellConfig::new_from_clusters(cluster_configs);
+
+    fs::write(
+        path,
+        config
+            .to_str()
+            .map_err(|e| ShellError::unexpected(e.to_string()))?,
+    )
+    .map_err(|e| ShellError::unexpected(e.to_string()))?;
+
+    Ok(())
 }

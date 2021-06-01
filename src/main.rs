@@ -180,6 +180,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         active,
         default_scope,
         default_collection,
+        config.location().clone(),
     )));
 
     //if !opt.no_motd && opt.script.is_none() && opt.command.is_none() {
