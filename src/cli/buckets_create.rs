@@ -9,15 +9,15 @@ use nu_protocol::{Signature, SyntaxShape};
 use nu_stream::OutputStream;
 use std::convert::TryFrom;
 use std::ops::Add;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::time::{Duration, Instant};
 
 pub struct BucketsCreate {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl BucketsCreate {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -79,7 +79,7 @@ impl nu_engine::WholeStreamCommand for BucketsCreate {
     }
 }
 
-fn buckets_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
     let name = match args.call_info.args.get("name") {
@@ -193,7 +193,8 @@ fn buckets_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, 
         builder = builder.max_expiry(Duration::from_secs(e));
     }
 
-    let active_cluster = state.active_cluster();
+    let guard = state.lock().unwrap();
+    let active_cluster = guard.active_cluster();
     let cluster = active_cluster.cluster();
 
     let settings = builder.build();

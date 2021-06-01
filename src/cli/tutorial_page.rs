@@ -6,14 +6,14 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, UntaggedValue, Value};
 use nu_source::Tag;
 use nu_stream::OutputStream;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 pub struct TutorialPage {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl TutorialPage {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -41,7 +41,10 @@ impl nu_engine::WholeStreamCommand for TutorialPage {
     }
 }
 
-fn run_tutorial_page(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+fn run_tutorial_page(
+    state: Arc<Mutex<State>>,
+    args: CommandArgs,
+) -> Result<OutputStream, ShellError> {
     let args = args.evaluate_once()?;
 
     let name = match args.nth(0) {
@@ -49,7 +52,8 @@ fn run_tutorial_page(state: Arc<State>, args: CommandArgs) -> Result<OutputStrea
         None => None,
     };
 
-    let tutorial = state.tutorial();
+    let guard = state.lock().unwrap();
+    let tutorial = guard.tutorial();
     if let Some(n) = name {
         Ok(OutputStream::one(
             UntaggedValue::string(tutorial.goto_step(n)?).into_value(Tag::unknown()),

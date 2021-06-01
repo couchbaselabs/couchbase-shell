@@ -14,16 +14,16 @@ use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::collections::HashSet;
 use std::ops::Add;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 use tokio::time::Instant;
 
 pub struct DocUpsert {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl DocUpsert {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -80,7 +80,7 @@ impl nu_engine::WholeStreamCommand for DocUpsert {
     }
 }
 
-fn run_upsert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+fn run_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
@@ -100,7 +100,8 @@ fn run_upsert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shel
         .flatten()
         .unwrap_or_else(|| String::from("content"));
 
-    let active_cluster = state.active_cluster();
+    let guard = state.lock().unwrap();
+    let active_cluster = guard.active_cluster();
     let (bucket, scope, collection) = namespace_from_args(&args, active_cluster)?;
 
     let expiry_arg = args

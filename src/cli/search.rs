@@ -10,15 +10,15 @@ use nu_source::Tag;
 use nu_stream::OutputStream;
 use serde_derive::Deserialize;
 use std::ops::Add;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 pub struct Search {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl Search {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -48,7 +48,7 @@ impl nu_engine::WholeStreamCommand for Search {
     }
 }
 
-fn run(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
     let index = args.nth(0).expect("need index name").as_string()?;
@@ -56,6 +56,7 @@ fn run(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError>
 
     debug!("Running search query {} against {}", &query, &index);
 
+    let guard = state.lock().unwrap();
     let active_cluster = match args.call_info.args.get("cluster") {
         Some(c) => {
             let identifier = match c.as_string() {
@@ -67,7 +68,7 @@ fn run(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError>
                     )));
                 }
             };
-            match state.clusters().get(identifier.as_str()) {
+            match guard.clusters().get(identifier.as_str()) {
                 Some(c) => c,
                 None => {
                     return Err(ShellError::untagged_runtime_error(
@@ -76,7 +77,7 @@ fn run(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError>
                 }
             }
         }
-        None => state.active_cluster(),
+        None => guard.active_cluster(),
     };
 
     let response = active_cluster.cluster().search_query_request(

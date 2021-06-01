@@ -5,14 +5,14 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
 use nu_stream::OutputStream;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 pub struct Clusters {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl Clusters {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -40,13 +40,15 @@ impl nu_engine::WholeStreamCommand for Clusters {
     }
 }
 
-fn clusters(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellError> {
+fn clusters(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, ShellError> {
     let args = args.evaluate_once()?;
 
     let identifiers = cluster_identifiers_from(&state, &args, false)?;
 
-    let active = state.active();
+    let active = state.lock().unwrap().active();
     let clusters = state
+        .lock()
+        .unwrap()
         .clusters()
         .iter()
         .filter(|(k, _)| identifiers.contains(k))

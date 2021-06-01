@@ -5,14 +5,14 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, TaggedDictBuilder};
 use nu_source::Tag;
 use nu_stream::OutputStream;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 pub struct UseCmd {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl UseCmd {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -36,13 +36,14 @@ impl nu_engine::WholeStreamCommand for UseCmd {
     }
 }
 
-fn use_cmd(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellError> {
+fn use_cmd(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, ShellError> {
     let _args = args.evaluate_once()?;
 
-    let active = state.active_cluster();
+    let guard = state.lock().unwrap();
+    let active = guard.active_cluster();
     let mut using_now = TaggedDictBuilder::new(Tag::default());
     using_now.insert_value("username", active.username());
-    using_now.insert_value("cluster", state.active());
+    using_now.insert_value("cluster", guard.active());
     using_now.insert_value(
         "bucket",
         active

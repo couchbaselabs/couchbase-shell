@@ -8,15 +8,15 @@ use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, Value};
 use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::ops::Add;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 pub struct BucketsSample {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl BucketsSample {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -51,7 +51,10 @@ impl nu_engine::WholeStreamCommand for BucketsSample {
     }
 }
 
-fn load_sample_bucket(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+fn load_sample_bucket(
+    state: Arc<Mutex<State>>,
+    args: CommandArgs,
+) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
@@ -67,7 +70,8 @@ fn load_sample_bucket(state: Arc<State>, args: CommandArgs) -> Result<OutputStre
 
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
-        let cluster = match state.clusters().get(&identifier) {
+        let guard = state.lock().unwrap();
+        let cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
                 return Err(ShellError::untagged_runtime_error("Cluster not found"));

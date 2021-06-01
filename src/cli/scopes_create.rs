@@ -7,15 +7,15 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_stream::OutputStream;
 use std::ops::Add;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 pub struct ScopesCreate {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl ScopesCreate {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -46,9 +46,10 @@ impl nu_engine::WholeStreamCommand for ScopesCreate {
     }
 }
 
-fn scopes_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+fn scopes_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
+    let guard = state.lock().unwrap();
 
     let scope = match args.call_info.args.get("name") {
         Some(v) => match v.as_string() {
@@ -66,7 +67,7 @@ fn scopes_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, S
         .flatten()
     {
         Some(v) => v,
-        None => match state.active_cluster().active_bucket() {
+        None => match guard.active_cluster().active_bucket() {
             Some(s) => s,
             None => {
                 return Err(ShellError::untagged_runtime_error(
@@ -84,7 +85,7 @@ fn scopes_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, S
     let form = vec![("name", scope)];
     let payload = serde_urlencoded::to_string(&form).unwrap();
 
-    let active_cluster = state.active_cluster();
+    let active_cluster = guard.active_cluster();
     let response = active_cluster.cluster().management_request(
         ManagementRequest::CreateScope { payload, bucket },
         Instant::now().add(active_cluster.timeouts().query_timeout()),

@@ -1,6 +1,7 @@
 use crate::{client::Client, config::ClusterTlsConfig};
 
 use crate::tutorial::Tutorial;
+use nu_errors::ShellError;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::{collections::HashMap, time::Duration};
@@ -29,6 +30,20 @@ impl State {
         };
         state.set_active(active).unwrap();
         state
+    }
+
+    pub fn add_cluster(&mut self, alias: String, cluster: RemoteCluster) -> Result<(), ShellError> {
+        if self.clusters.contains_key(alias.as_str()) {
+            return Err(ShellError::unexpected(
+                "identifier is already registered for a cluster",
+            ));
+        }
+        self.clusters.insert(alias, cluster);
+        Ok(())
+    }
+
+    pub fn remove_cluster(&mut self, alias: String) -> Option<RemoteCluster> {
+        self.clusters.remove(alias.as_str())
     }
 
     pub fn clusters(&self) -> &HashMap<String, RemoteCluster> {

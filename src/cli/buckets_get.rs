@@ -15,15 +15,15 @@ use nu_stream::OutputStream;
 use std::convert::TryFrom;
 use std::ops::Add;
 use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 pub struct BucketsGet {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl BucketsGet {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -59,7 +59,7 @@ impl nu_engine::WholeStreamCommand for BucketsGet {
     }
 }
 
-fn buckets_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+fn buckets_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
@@ -85,14 +85,15 @@ fn buckets_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, She
 }
 
 fn buckets_get_one(
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
     cluster_identifiers: Vec<String>,
     name: String,
     ctrl_c: Arc<AtomicBool>,
 ) -> Result<OutputStream, ShellError> {
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
-        let cluster = match state.clusters().get(&identifier) {
+        let guard = state.lock().unwrap();
+        let cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
                 return Err(ShellError::untagged_runtime_error("Cluster not found"));
@@ -116,13 +117,14 @@ fn buckets_get_one(
 }
 
 fn buckets_get_all(
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
     cluster_identifiers: Vec<String>,
     ctrl_c: Arc<AtomicBool>,
 ) -> Result<OutputStream, ShellError> {
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
-        let cluster = match state.clusters().get(&identifier) {
+        let guard = state.lock().unwrap();
+        let cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
                 return Err(ShellError::untagged_runtime_error("Cluster not found"));

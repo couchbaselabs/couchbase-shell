@@ -12,16 +12,16 @@ use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::ops::Add;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 use tokio::time::Instant;
 
 pub struct Ping {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl Ping {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -57,9 +57,10 @@ impl nu_engine::WholeStreamCommand for Ping {
     }
 }
 
-fn run_ping(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+fn run_ping(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
+    let guard = state.lock().unwrap();
 
     let bucket_name = match args
         .call_info
@@ -67,7 +68,7 @@ fn run_ping(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellE
         .get("bucket")
         .map(|id| id.as_string().ok())
         .flatten()
-        .or_else(|| state.active_cluster().active_bucket())
+        .or_else(|| guard.active_cluster().active_bucket())
     {
         Some(v) => v,
         None => {
@@ -85,7 +86,7 @@ fn run_ping(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellE
     let clusters_len = cluster_identifiers.len();
     let mut results = vec![];
     for identifier in cluster_identifiers {
-        let cluster = match state.clusters().get(&identifier) {
+        let cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => continue, //This can't actually happen, we filter the clusters in cluster_identifiers_from
         };

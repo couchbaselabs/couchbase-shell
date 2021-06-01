@@ -9,15 +9,15 @@ use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::collections::HashMap;
 use std::ops::Add;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 pub struct Analytics {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl Analytics {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -54,12 +54,13 @@ impl nu_engine::WholeStreamCommand for Analytics {
     }
 }
 
-fn run(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
     let statement = args.nth(0).expect("need statement").as_string()?;
 
-    let active_cluster = state.active_cluster();
+    let guard = state.lock().unwrap();
+    let active_cluster = guard.active_cluster();
     let bucket = args
         .call_info
         .args

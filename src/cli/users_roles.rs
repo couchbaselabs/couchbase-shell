@@ -11,14 +11,14 @@ use crate::cli::user_builder::RoleAndDescription;
 use crate::client::ManagementRequest;
 use nu_source::Tag;
 use nu_stream::OutputStream;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 pub struct UsersRoles {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl UsersRoles {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -54,7 +54,7 @@ impl nu_engine::WholeStreamCommand for UsersRoles {
     }
 }
 
-fn run_async(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+fn run_async(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
@@ -69,7 +69,8 @@ fn run_async(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shell
 
     let mut entries = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = match state.clusters().get(&identifier) {
+        let guard = state.lock().unwrap();
+        let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
                 return Err(ShellError::untagged_runtime_error("Cluster not found"));

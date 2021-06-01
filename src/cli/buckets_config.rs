@@ -8,15 +8,15 @@ use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::ops::Add;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 pub struct BucketsConfig {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl BucketsConfig {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -44,7 +44,7 @@ impl nu_engine::WholeStreamCommand for BucketsConfig {
     }
 }
 
-fn buckets(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellError> {
+fn buckets(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
@@ -57,7 +57,8 @@ fn buckets(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellEr
         }
     };
 
-    let active_cluster = state.active_cluster();
+    let guard = state.lock().unwrap();
+    let active_cluster = guard.active_cluster();
     let cluster = active_cluster.cluster();
 
     let response = cluster.management_request(

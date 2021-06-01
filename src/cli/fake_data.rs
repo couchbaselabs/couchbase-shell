@@ -22,16 +22,16 @@ use nu_source::Tag;
 use serde_json::{from_value, Value};
 use std::collections::HashMap;
 use std::fs;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tera::{Context, Tera};
 use uuid::Uuid;
 
 pub struct FakeData {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl FakeData {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -72,7 +72,7 @@ impl nu_engine::WholeStreamCommand for FakeData {
     }
 }
 
-fn run_fake(_state: Arc<State>, args: CommandArgs) -> Result<ActionStream, ShellError> {
+fn run_fake(_state: Arc<Mutex<State>>, args: CommandArgs) -> Result<ActionStream, ShellError> {
     let args = args.evaluate_once()?;
 
     let list_functions = args.call_info.args.get("list-functions").is_some();

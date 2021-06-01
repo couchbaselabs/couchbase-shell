@@ -2,10 +2,12 @@ use crate::state::{RemoteCluster, State};
 use nu_cli::ToPrimitive;
 use nu_engine::EvaluatedCommandArgs;
 use nu_errors::{CoerceInto, ShellError};
-use nu_protocol::{Primitive, TaggedDictBuilder, UnspannedPathMember, UntaggedValue, Value};
+use nu_protocol::{
+    EvaluatedArgs, Primitive, TaggedDictBuilder, UnspannedPathMember, UntaggedValue, Value,
+};
 use nu_source::{Tag, TaggedItem};
 use regex::Regex;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 pub fn convert_json_value_to_nu_value(
     v: &serde_json::Value,
@@ -167,10 +169,11 @@ fn json_list(input: &[Value]) -> Result<Vec<serde_json::Value>, ShellError> {
 }
 
 pub fn cluster_identifiers_from(
-    state: &Arc<State>,
+    state: &Arc<Mutex<State>>,
     args: &EvaluatedCommandArgs,
     default_active: bool,
 ) -> Result<Vec<String>, ShellError> {
+    let state = state.lock().unwrap();
     let identifier_arg = match args
         .call_info
         .args
@@ -251,4 +254,33 @@ pub fn namespace_from_args(
     };
 
     Ok((bucket, scope, collection))
+}
+
+pub fn parse_optional_as_bool(
+    args: &EvaluatedArgs,
+    field: &str,
+    default: bool,
+) -> Result<bool, ShellError> {
+    match args.get(field) {
+        Some(v) => match v.as_string() {
+            Ok(v) => {
+                let enabled_str = match v.strip_prefix("$") {
+                    Some(v2) => v2,
+                    None => v.as_str(),
+                };
+
+                match enabled_str.parse::<bool>() {
+                    Ok(b) => Ok(b),
+                    Err(e) => {
+                        return Err(ShellError::untagged_runtime_error(format!(
+                            "Failed to parse tls-enabled {}",
+                            e
+                        )));
+                    }
+                }
+            }
+            Err(e) => return Err(e),
+        },
+        None => Ok(default),
+    }
 }

@@ -13,16 +13,16 @@ use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::collections::HashSet;
 use std::ops::Add;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 use tokio::time::Instant;
 
 pub struct DocReplace {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl DocReplace {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -79,7 +79,7 @@ impl nu_engine::WholeStreamCommand for DocReplace {
     }
 }
 
-fn run_replace(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+fn run_replace(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
@@ -107,7 +107,8 @@ fn run_replace(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, She
 
     let expiry = expiry_arg.unwrap_or(0);
 
-    let active_cluster = state.active_cluster();
+    let guard = state.lock().unwrap();
+    let active_cluster = guard.active_cluster();
 
     let (bucket, scope, collection) = namespace_from_args(&args, active_cluster)?;
 

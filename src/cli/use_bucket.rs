@@ -5,14 +5,14 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder};
 use nu_source::Tag;
 use nu_stream::OutputStream;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 pub struct UseBucket {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl UseBucket {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -38,7 +38,8 @@ impl nu_engine::WholeStreamCommand for UseBucket {
     fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
         let args = args.evaluate_once()?;
 
-        let active = self.state.active_cluster();
+        let guard = self.state.lock().unwrap();
+        let active = guard.active_cluster();
 
         if let Some(id) = args.nth(0) {
             active.set_active_bucket(id.as_string()?);

@@ -16,7 +16,7 @@ use serde::Deserialize;
 use state::State;
 use std::collections::HashMap;
 use std::error::Error;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use structopt::StructOpt;
 use temp_dir::TempDir;
@@ -175,12 +175,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         active.unwrap()
     };
 
-    let state = Arc::new(State::new(
+    let state = Arc::new(Mutex::new(State::new(
         clusters,
         active,
         default_scope,
         default_collection,
-    ));
+    )));
 
     //if !opt.no_motd && opt.script.is_none() && opt.command.is_none() {
     //    fetch_and_print_motd().await;
@@ -205,6 +205,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(BucketsUpdate::new(state.clone())),
         nu_engine::whole_stream_command(Clusters::new(state.clone())),
         nu_engine::whole_stream_command(ClustersHealth::new(state.clone())),
+        nu_engine::whole_stream_command(ClustersRegister::new(state.clone())),
+        nu_engine::whole_stream_command(ClustersUnregister::new(state.clone())),
         nu_engine::whole_stream_command(Collections {}),
         nu_engine::whole_stream_command(CollectionsCreate::new(state.clone())),
         nu_engine::whole_stream_command(CollectionsGet::new(state.clone())),

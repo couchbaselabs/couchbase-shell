@@ -5,14 +5,14 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder};
 use nu_source::Tag;
 use nu_stream::OutputStream;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 pub struct UseCollection {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl UseCollection {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -38,7 +38,8 @@ impl nu_engine::WholeStreamCommand for UseCollection {
     fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
         let args = args.evaluate_once()?;
 
-        let active = self.state.active_cluster();
+        let guard = self.state.lock().unwrap();
+        let active = guard.active_cluster();
 
         if active.active_bucket().is_none() {
             return Err(ShellError::untagged_runtime_error(

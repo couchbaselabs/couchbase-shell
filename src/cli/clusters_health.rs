@@ -9,15 +9,15 @@ use nu_stream::OutputStream;
 use serde::Deserialize;
 use std::ops::Add;
 use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 pub struct ClustersHealth {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl ClustersHealth {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -45,7 +45,7 @@ impl nu_engine::WholeStreamCommand for ClustersHealth {
     }
 }
 
-fn health(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellError> {
+fn health(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
@@ -74,11 +74,12 @@ fn health(args: CommandArgs, state: Arc<State>) -> Result<OutputStream, ShellErr
 }
 
 fn grab_bucket_names(
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
     identifier: &str,
     ctrl_c: Arc<AtomicBool>,
 ) -> Result<Vec<String>, ShellError> {
-    let cluster = match state.clusters().get(identifier) {
+    let guard = state.lock().unwrap();
+    let cluster = match guard.clusters().get(identifier) {
         Some(c) => c,
         None => {
             return Err(ShellError::untagged_runtime_error("Cluster not found"));
@@ -100,13 +101,14 @@ struct BucketInfo {
 }
 
 fn check_autofailover(
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
     identifier: &str,
     ctrl_c: Arc<AtomicBool>,
 ) -> Result<Value, ShellError> {
     let mut collected = TaggedDictBuilder::new(Tag::default());
 
-    let cluster = match state.clusters().get(identifier) {
+    let guard = state.lock().unwrap();
+    let cluster = match guard.clusters().get(identifier) {
         Some(c) => c,
         None => {
             return Err(ShellError::untagged_runtime_error("Cluster not found"));
@@ -142,14 +144,15 @@ struct AutoFailoverSettings {
 }
 
 fn check_resident_ratio(
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
     bucket_name: &str,
     identifier: &str,
     ctrl_c: Arc<AtomicBool>,
 ) -> Result<Value, ShellError> {
     let mut collected = TaggedDictBuilder::new(Tag::default());
 
-    let cluster = match state.clusters().get(identifier) {
+    let guard = state.lock().unwrap();
+    let cluster = match guard.clusters().get(identifier) {
         Some(c) => c,
         None => {
             return Err(ShellError::untagged_runtime_error("Cluster not found"));

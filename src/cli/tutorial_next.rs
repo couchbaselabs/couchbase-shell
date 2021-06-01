@@ -5,14 +5,14 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, UntaggedValue};
 use nu_source::Tag;
 use nu_stream::OutputStream;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 pub struct TutorialNext {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl TutorialNext {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -36,8 +36,9 @@ impl nu_engine::WholeStreamCommand for TutorialNext {
     }
 }
 
-fn run_tutorial_next(state: Arc<State>) -> Result<OutputStream, ShellError> {
-    let tutorial = state.tutorial();
+fn run_tutorial_next(state: Arc<Mutex<State>>) -> Result<OutputStream, ShellError> {
+    let guard = state.lock().unwrap();
+    let tutorial = guard.tutorial();
     Ok(OutputStream::one(
         UntaggedValue::string(tutorial.next_tutorial_step()).into_value(Tag::unknown()),
     ))

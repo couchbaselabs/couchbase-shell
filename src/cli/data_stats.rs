@@ -10,14 +10,14 @@ use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder};
 use nu_source::Tag;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 pub struct DataStats {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl DataStats {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -53,7 +53,10 @@ impl nu_engine::WholeStreamCommand for DataStats {
     }
 }
 
-async fn run_stats(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+async fn run_stats(
+    state: Arc<Mutex<State>>,
+    args: CommandArgs,
+) -> Result<OutputStream, ShellError> {
     let args = args.evaluate_once().await?;
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
@@ -63,7 +66,7 @@ async fn run_stats(state: Arc<State>, args: CommandArgs) -> Result<OutputStream,
     let mut stats = vec![];
 
     for identifier in cluster_identifiers {
-        let core = match state.clusters().get(&identifier) {
+        let core = match state.lock().unwrap().clusters().get(&identifier) {
             Some(c) => c.cluster().core(),
             None => {
                 return Err(ShellError::untagged_runtime_error("Cluster not found"));

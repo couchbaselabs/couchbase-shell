@@ -11,15 +11,15 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_stream::OutputStream;
 use std::ops::Add;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 pub struct BucketsDrop {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl BucketsDrop {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -50,7 +50,7 @@ impl nu_engine::WholeStreamCommand for BucketsDrop {
     }
 }
 
-fn buckets_drop(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+fn buckets_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
@@ -76,7 +76,8 @@ fn buckets_drop(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Sh
     debug!("Running buckets drop for bucket {:?}", &bucket);
 
     for identifier in cluster_identifiers {
-        let cluster = match state.clusters().get(&identifier) {
+        let guard = state.lock().unwrap();
+        let cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
                 return Err(ShellError::untagged_runtime_error("Cluster not found"));

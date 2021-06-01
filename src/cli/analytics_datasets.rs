@@ -8,15 +8,15 @@ use nu_protocol::Signature;
 use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::ops::Add;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 pub struct AnalyticsDatasets {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl AnalyticsDatasets {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -43,11 +43,12 @@ impl nu_engine::WholeStreamCommand for AnalyticsDatasets {
     }
 }
 
-fn datasets(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+fn datasets(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let statement = "SELECT d.* FROM Metadata.`Dataset` d WHERE d.DataverseName <> \"Metadata\"";
 
-    let active_cluster = state.active_cluster();
+    let guard = state.lock().unwrap();
+    let active_cluster = guard.active_cluster();
     debug!("Running analytics query {}", &statement);
 
     let response = active_cluster.cluster().analytics_query_request(

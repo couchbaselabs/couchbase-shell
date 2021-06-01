@@ -11,15 +11,15 @@ use nu_stream::OutputStream;
 use serde::Deserialize;
 use std::fmt;
 use std::ops::Add;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 pub struct Nodes {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl Nodes {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -48,7 +48,7 @@ impl nu_engine::WholeStreamCommand for Nodes {
     }
 }
 
-fn nodes(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+fn nodes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
@@ -56,7 +56,8 @@ fn nodes(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellErro
 
     let mut nodes = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = match state.clusters().get(&identifier) {
+        let guard = state.lock().unwrap();
+        let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
                 return Err(ShellError::untagged_runtime_error("Cluster not found"));

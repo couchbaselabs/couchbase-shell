@@ -9,15 +9,15 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_stream::OutputStream;
 use std::ops::Add;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 pub struct CollectionsCreate {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl CollectionsCreate {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -60,11 +60,15 @@ impl nu_engine::WholeStreamCommand for CollectionsCreate {
     }
 }
 
-fn collections_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+fn collections_create(
+    state: Arc<Mutex<State>>,
+    args: CommandArgs,
+) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
-    let active_cluster = state.active_cluster();
+    let guard = state.lock().unwrap();
+    let active_cluster = guard.active_cluster();
     let collection = match args.call_info.args.get("name") {
         Some(v) => match v.as_string() {
             Ok(uname) => uname,
@@ -81,7 +85,7 @@ fn collections_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStre
         .flatten()
     {
         Some(v) => v,
-        None => match state.active_cluster().active_bucket() {
+        None => match active_cluster.active_bucket() {
             Some(s) => s,
             None => {
                 return Err(ShellError::untagged_runtime_error(
@@ -99,7 +103,7 @@ fn collections_create(state: Arc<State>, args: CommandArgs) -> Result<OutputStre
         .flatten()
     {
         Some(name) => name,
-        None => match state.active_cluster().active_scope() {
+        None => match active_cluster.active_scope() {
             Some(s) => s,
             None => {
                 return Err(ShellError::untagged_runtime_error(

@@ -13,16 +13,16 @@ use nu_protocol::{
 use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::ops::Add;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 use tokio::time::Instant;
 
 pub struct DocGet {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl DocGet {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -80,7 +80,7 @@ impl nu_engine::WholeStreamCommand for DocGet {
     }
 }
 
-fn run_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+fn run_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let mut args = args.evaluate_once()?;
 
@@ -113,7 +113,8 @@ fn run_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellEr
         ids.push(id.as_string()?);
     }
 
-    let active_cluster = state.active_cluster();
+    let guard = state.lock().unwrap();
+    let active_cluster = guard.active_cluster();
     let bucket = match args
         .call_info
         .args

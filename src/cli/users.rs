@@ -11,15 +11,15 @@ use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::ops::Add;
 use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 pub struct Users {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl Users {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -44,9 +44,13 @@ impl nu_engine::WholeStreamCommand for Users {
     }
 }
 
-fn users_get_all(state: Arc<State>, ctrl_c: Arc<AtomicBool>) -> Result<OutputStream, ShellError> {
+fn users_get_all(
+    state: Arc<Mutex<State>>,
+    ctrl_c: Arc<AtomicBool>,
+) -> Result<OutputStream, ShellError> {
     debug!("Running users get all");
-    let active_cluster = state.active_cluster();
+    let guard = state.lock().unwrap();
+    let active_cluster = guard.active_cluster();
     let response = active_cluster.cluster().management_request(
         ManagementRequest::GetUsers,
         Instant::now().add(active_cluster.timeouts().query_timeout()),

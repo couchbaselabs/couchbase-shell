@@ -9,16 +9,16 @@ use nu_source::Tag;
 use nu_stream::OutputStream;
 use serde_derive::Deserialize;
 use std::ops::Add;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::time::Instant;
 
 pub struct CollectionsGet {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl CollectionsGet {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -49,9 +49,13 @@ impl nu_engine::WholeStreamCommand for CollectionsGet {
     }
 }
 
-fn collections_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+fn collections_get(
+    state: Arc<Mutex<State>>,
+    args: CommandArgs,
+) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
+    let guard = state.lock().unwrap();
 
     let bucket = match args
         .call_info
@@ -61,7 +65,7 @@ fn collections_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream,
         .flatten()
     {
         Some(v) => v,
-        None => match state.active_cluster().active_bucket() {
+        None => match state.lock().unwrap().active_cluster().active_bucket() {
             Some(s) => s,
             None => {
                 return Err(ShellError::untagged_runtime_error(
@@ -83,7 +87,7 @@ fn collections_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream,
         &bucket, &scope
     );
 
-    let active_cluster = state.active_cluster();
+    let active_cluster = guard.active_cluster();
 
     let response = active_cluster.cluster().management_request(
         ManagementRequest::GetCollections { bucket },

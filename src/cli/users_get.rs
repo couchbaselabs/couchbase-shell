@@ -10,15 +10,15 @@ use nu_protocol::{Signature, SyntaxShape};
 use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::ops::Add;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 pub struct UsersGet {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl UsersGet {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -46,14 +46,15 @@ impl nu_engine::WholeStreamCommand for UsersGet {
     }
 }
 
-fn users_get(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+fn users_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
     let username = args.nth(0).expect("need username").as_string()?;
 
     debug!("Running users get {}", username);
 
-    let active_cluster = state.active_cluster();
+    let guard = state.lock().unwrap();
+    let active_cluster = guard.active_cluster();
     let response = active_cluster.cluster().management_request(
         ManagementRequest::GetUser { username },
         Instant::now().add(active_cluster.timeouts().query_timeout()),

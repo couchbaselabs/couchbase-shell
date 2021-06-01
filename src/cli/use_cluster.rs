@@ -5,14 +5,14 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder};
 use nu_source::Tag;
 use nu_stream::OutputStream;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 pub struct UseCluster {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl UseCluster {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -38,8 +38,9 @@ impl nu_engine::WholeStreamCommand for UseCluster {
     fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
         let args = args.evaluate_once()?;
 
+        let guard = self.state.lock().unwrap();
         if let Some(id) = args.nth(0) {
-            match self.state.set_active(id.as_string()?) {
+            match guard.set_active(id.as_string()?) {
                 Ok(v) => v,
                 Err(_) => {
                     return Err(ShellError::untagged_runtime_error(
@@ -50,7 +51,7 @@ impl nu_engine::WholeStreamCommand for UseCluster {
         }
 
         let mut using_now = TaggedDictBuilder::new(Tag::default());
-        using_now.insert_value("cluster", self.state.active());
+        using_now.insert_value("cluster", guard.active());
         let clusters = vec![using_now.into_value()];
         Ok(clusters.into())
     }

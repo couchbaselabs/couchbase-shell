@@ -10,15 +10,15 @@ use nu_stream::OutputStream;
 use serde::Deserialize;
 use std::ops::Add;
 use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 pub struct QueryIndexes {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl QueryIndexes {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -52,10 +52,11 @@ impl nu_engine::WholeStreamCommand for QueryIndexes {
     }
 }
 
-fn indexes(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+fn indexes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
+    let guard = state.lock().unwrap();
     let active_cluster = match args.call_info.args.get("cluster") {
         Some(c) => {
             let identifier = match c.as_string() {
@@ -67,7 +68,7 @@ fn indexes(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellEr
                     )));
                 }
             };
-            match state.clusters().get(identifier.as_str()) {
+            match guard.clusters().get(identifier.as_str()) {
                 Some(c) => c,
                 None => {
                     return Err(ShellError::untagged_runtime_error(
@@ -76,7 +77,7 @@ fn indexes(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellEr
                 }
             }
         }
-        None => state.active_cluster(),
+        None => guard.active_cluster(),
     };
 
     let fetch_defs = match args.call_info.args.get("definitions") {

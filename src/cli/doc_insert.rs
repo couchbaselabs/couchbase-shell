@@ -13,16 +13,16 @@ use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::collections::HashSet;
 use std::ops::Add;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 use tokio::time::Instant;
 
 pub struct DocInsert {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl DocInsert {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -79,7 +79,7 @@ impl nu_engine::WholeStreamCommand for DocInsert {
     }
 }
 
-fn run_insert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+fn run_insert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
 
@@ -107,7 +107,8 @@ fn run_insert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Shel
 
     let expiry = expiry_arg.unwrap_or(0);
 
-    let active_cluster = state.active_cluster();
+    let guard = state.lock().unwrap();
+    let active_cluster = guard.active_cluster();
     let (bucket, scope, collection) = namespace_from_args(&args, active_cluster)?;
 
     let input_args = if let Some(id) = args.nth(0) {

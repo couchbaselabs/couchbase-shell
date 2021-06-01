@@ -7,15 +7,15 @@ use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_stream::OutputStream;
 use std::ops::Add;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 pub struct UsersUpsert {
-    state: Arc<State>,
+    state: Arc<Mutex<State>>,
 }
 
 impl UsersUpsert {
-    pub fn new(state: Arc<State>) -> Self {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
@@ -69,7 +69,7 @@ impl nu_engine::WholeStreamCommand for UsersUpsert {
     }
 }
 
-fn users_upsert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
     let username = match args.call_info.args.get("username") {
@@ -118,7 +118,8 @@ fn users_upsert(state: Arc<State>, args: CommandArgs) -> Result<OutputStream, Sh
     ];
     let payload = serde_urlencoded::to_string(form).unwrap();
 
-    let active_cluster = state.active_cluster();
+    let guard = state.lock().unwrap();
+    let active_cluster = guard.active_cluster();
 
     let response = active_cluster.cluster().management_request(
         ManagementRequest::UpsertUser { username, payload },
