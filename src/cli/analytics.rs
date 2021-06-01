@@ -42,6 +42,7 @@ impl nu_engine::WholeStreamCommand for Analytics {
                 "the scope to query against",
                 None,
             )
+            .switch("with-meta", "Includes related metadata in the result", None)
     }
 
     fn usage(&self) -> &str {
