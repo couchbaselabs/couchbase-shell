@@ -1,5 +1,5 @@
 use crate::cli::util::parse_optional_as_bool;
-use crate::config::{ClusterConfig, ClusterTlsConfig, ShellConfig};
+use crate::config::{CloudConfig, ClusterConfig, ClusterTlsConfig, ShellConfig};
 use crate::state::{ClusterTimeouts, RemoteCluster, State};
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
@@ -96,6 +96,12 @@ impl nu_engine::WholeStreamCommand for ClustersRegister {
                 "whether or not to add the cluster to the .cbsh config file, defaults to false",
                 None,
             )
+            .named(
+                "cloud",
+                SyntaxShape::String,
+                "the name of the cloud control pane to use this cluster",
+                None,
+            )
     }
 
     fn usage(&self) -> &str {
@@ -175,6 +181,13 @@ fn clusters_register(
         None => None,
     };
     let save = args.get_flag::<bool>("save")?.unwrap_or(false);
+    let cloud = match args.call_info.args.get("cloud") {
+        Some(v) => match v.as_string() {
+            Ok(name) => Some(name),
+            Err(e) => return Err(e),
+        },
+        None => None,
+    };
 
     let cluster = RemoteCluster::new(
         hostnames,
@@ -190,6 +203,7 @@ fn clusters_register(
             tls_accept_all_hosts,
         ),
         ClusterTimeouts::default(),
+        cloud,
     );
 
     let mut guard = state.lock().unwrap();
@@ -215,8 +229,16 @@ pub fn update_config_file(guard: &mut MutexGuard<State>) -> Result<(), ShellErro
     for (identifier, cluster) in guard.clusters() {
         cluster_configs.push(ClusterConfig::from((identifier.clone(), cluster)))
     }
+    let mut cloud_configs = Vec::new();
+    for (identifier, cloud) in guard.clouds() {
+        cloud_configs.push(CloudConfig::new(
+            identifier.clone(),
+            cloud.secret_key(),
+            cloud.access_key(),
+        ))
+    }
 
-    let config = ShellConfig::new_from_clusters(cluster_configs);
+    let config = ShellConfig::new_from_clusters(cluster_configs, cloud_configs);
 
     fs::write(
         path,

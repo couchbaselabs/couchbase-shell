@@ -17,6 +17,9 @@ pub struct ShellConfig {
     #[serde(alias = "clusters")]
     clusters: Vec<ClusterConfig>,
 
+    #[serde(alias = "cloud")]
+    clouds: Vec<CloudConfig>,
+
     /// Stores the path from which it got loaded, if present
     path: Option<PathBuf>,
 }
@@ -55,11 +58,12 @@ impl ShellConfig {
         config
     }
 
-    pub fn new_from_clusters(clusters: Vec<ClusterConfig>) -> Self {
+    pub fn new_from_clusters(clusters: Vec<ClusterConfig>, clouds: Vec<CloudConfig>) -> Self {
         Self {
             clusters,
             path: None,
             version: 1,
+            clouds,
         }
     }
 
@@ -92,6 +96,10 @@ impl ShellConfig {
     pub fn clusters_mut(&mut self) -> &mut Vec<ClusterConfig> {
         &mut self.clusters
     }
+
+    pub fn clouds(&self) -> &Vec<CloudConfig> {
+        &self.clouds
+    }
 }
 
 impl Default for ShellConfig {
@@ -100,6 +108,7 @@ impl Default for ShellConfig {
             clusters: vec![],
             version: 1,
             path: None,
+            clouds: vec![],
         }
     }
 }
@@ -112,7 +121,7 @@ fn try_config_from_path(mut path: PathBuf) -> Option<ShellConfig> {
     match read {
         Ok(r) => {
             let mut conf = ShellConfig::from_str(&r);
-            conf.path = Some(path.clone());
+            conf.path = Some(path);
             Some(conf)
         }
         Err(e) => {
@@ -136,6 +145,35 @@ fn try_credentials_from_path(mut path: PathBuf) -> Option<StandaloneCredentialsC
     }
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct CloudConfig {
+    identifier: String,
+
+    #[serde(flatten)]
+    credentials: CloudCredentials,
+}
+
+impl CloudConfig {
+    pub fn new(identifier: String, secret_key: String, access_key: String) -> Self {
+        Self {
+            identifier,
+            credentials: CloudCredentials {
+                access_key,
+                secret_key,
+            },
+        }
+    }
+    pub fn identifier(&self) -> String {
+        self.identifier.clone()
+    }
+    pub fn secret_key(&self) -> String {
+        self.credentials.secret_key.clone()
+    }
+    pub fn access_key(&self) -> String {
+        self.credentials.access_key.clone()
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ClusterConfig {
     identifier: String,
@@ -153,6 +191,9 @@ pub struct ClusterConfig {
     timeouts: ClusterConfigTimeouts,
     #[serde(flatten)]
     tls: ClusterTlsConfig,
+
+    #[serde(rename(deserialize = "cloud", serialize = "cloud"))]
+    cloud_control_pane: Option<String>,
 }
 
 impl ClusterConfig {
@@ -201,10 +242,15 @@ impl ClusterConfig {
     pub fn tls(&self) -> &ClusterTlsConfig {
         &self.tls
     }
+    pub fn cloud_control_pane(&self) -> Option<String> {
+        self.cloud_control_pane.as_ref().cloned()
+    }
 }
 
 impl From<(String, &RemoteCluster)> for ClusterConfig {
     fn from(cluster: (String, &RemoteCluster)) -> Self {
+        let cloud = cluster.1.cloud().map(|c| c);
+
         Self {
             identifier: cluster.0,
             hostnames: cluster.1.hostnames().clone(),
@@ -221,9 +267,20 @@ impl From<(String, &RemoteCluster)> for ClusterConfig {
                 username: Some(cluster.1.username().to_string()),
                 password: Some(cluster.1.password().to_string()),
             },
+            cloud_control_pane: cloud,
         }
     }
 }
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct CloudCredentials {
+    #[serde(rename(deserialize = "access-key", serialize = "access-key"))]
+    access_key: String,
+    #[serde(rename(deserialize = "secret-key", serialize = "secret-key"))]
+    secret_key: String,
+}
+
+impl CloudCredentials {}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ClusterCredentials {

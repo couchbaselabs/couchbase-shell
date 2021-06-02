@@ -2,9 +2,9 @@
 
 use crate::state::State;
 
-use crate::cli::buckets_builder::{BucketSettings, JSONBucketSettings};
+use crate::cli::buckets_builder::{BucketSettings, JSONBucketSettings, JSONCloudBucketSettings};
 use crate::cli::util::cluster_identifiers_from;
-use crate::client::ManagementRequest;
+use crate::client::{CloudRequest, ManagementRequest};
 use async_trait::async_trait;
 use log::debug;
 use nu_engine::CommandArgs;
@@ -100,17 +100,55 @@ fn buckets_get_one(
             }
         };
 
-        let response = cluster.cluster().management_request(
-            ManagementRequest::GetBucket { name: name.clone() },
-            Instant::now().add(cluster.timeouts().query_timeout()),
-            ctrl_c.clone(),
-        )?;
+        if let Some(c) = cluster.cloud() {
+            let cloud = guard.cloud_for_cluster(c)?.cloud();
+            let cluster_id = cloud.find_cluster(
+                identifier.clone(),
+                Instant::now().add(cluster.timeouts().query_timeout()),
+                ctrl_c.clone(),
+            )?;
+            let response = cloud.cloud_request(
+                CloudRequest::GetBuckets { cluster_id },
+                Instant::now().add(cluster.timeouts().query_timeout()),
+                ctrl_c.clone(),
+            )?;
+            if response.status() != 200 {
+                return Err(ShellError::unexpected(response.content()));
+            }
 
-        let content: JSONBucketSettings = serde_json::from_str(response.content())?;
-        results.push(bucket_to_tagged_dict(
-            BucketSettings::try_from(content)?,
-            identifier,
-        ));
+            let content: Vec<JSONCloudBucketSettings> = serde_json::from_str(response.content())?;
+            let mut bucket: Option<JSONCloudBucketSettings> = None;
+
+            for b in content.into_iter() {
+                if b.name() == name.clone() {
+                    bucket = Some(b);
+                    break;
+                }
+            }
+
+            if let Some(b) = bucket {
+                results.push(bucket_to_tagged_dict(
+                    BucketSettings::try_from(b)?,
+                    identifier,
+                    true,
+                ));
+            } else {
+                return Err(ShellError::unexpected("bucket not found"));
+            }
+        } else {
+            let response = cluster.cluster().management_request(
+                ManagementRequest::GetBucket { name: name.clone() },
+                Instant::now().add(cluster.timeouts().query_timeout()),
+                ctrl_c.clone(),
+            )?;
+
+            let content: JSONBucketSettings = serde_json::from_str(response.content())?;
+            results.push(bucket_to_tagged_dict(
+                BucketSettings::try_from(content)?,
+                identifier,
+                false,
+            ));
+        }
     }
 
     Ok(OutputStream::from(results))
@@ -131,26 +169,53 @@ fn buckets_get_all(
             }
         };
 
-        let response = cluster.cluster().management_request(
-            ManagementRequest::GetBuckets,
-            Instant::now().add(cluster.timeouts().query_timeout()),
-            ctrl_c.clone(),
-        )?;
-
-        let content: Vec<JSONBucketSettings> = serde_json::from_str(response.content())?;
-
-        for bucket in content.into_iter() {
-            results.push(bucket_to_tagged_dict(
-                BucketSettings::try_from(bucket)?,
+        if let Some(c) = cluster.cloud() {
+            let cloud = guard.cloud_for_cluster(c)?.cloud();
+            let cluster_id = cloud.find_cluster(
                 identifier.clone(),
-            ));
+                Instant::now().add(cluster.timeouts().query_timeout()),
+                ctrl_c.clone(),
+            )?;
+            let response = cloud.cloud_request(
+                CloudRequest::GetBuckets { cluster_id },
+                Instant::now().add(cluster.timeouts().query_timeout()),
+                ctrl_c.clone(),
+            )?;
+            if response.status() != 200 {
+                return Err(ShellError::unexpected(response.content()));
+            }
+
+            let content: Vec<JSONCloudBucketSettings> = serde_json::from_str(response.content())?;
+            for bucket in content.into_iter() {
+                results.push(bucket_to_tagged_dict(
+                    BucketSettings::try_from(bucket)?,
+                    identifier.clone(),
+                    true,
+                ));
+            }
+        } else {
+            let response = cluster.cluster().management_request(
+                ManagementRequest::GetBuckets,
+                Instant::now().add(cluster.timeouts().query_timeout()),
+                ctrl_c.clone(),
+            )?;
+
+            let content: Vec<JSONBucketSettings> = serde_json::from_str(response.content())?;
+
+            for bucket in content.into_iter() {
+                results.push(bucket_to_tagged_dict(
+                    BucketSettings::try_from(bucket)?,
+                    identifier.clone(),
+                    false,
+                ));
+            }
         }
     }
 
     Ok(OutputStream::from(results))
 }
 
-fn bucket_to_tagged_dict(bucket: BucketSettings, cluster_name: String) -> Value {
+fn bucket_to_tagged_dict(bucket: BucketSettings, cluster_name: String, is_cloud: bool) -> Value {
     let mut collected = TaggedDictBuilder::new(Tag::default());
     collected.insert_value("cluster", cluster_name);
     collected.insert_value("name", bucket.name());
@@ -160,7 +225,12 @@ fn bucket_to_tagged_dict(bucket: BucketSettings, cluster_name: String) -> Value 
         "min_durability_level",
         bucket.minimum_durability_level().to_string(),
     );
-    collected.insert_value("ram_quota", UntaggedValue::filesize(bucket.ram_quota_mb()));
+    collected.insert_value(
+        "ram_quota",
+        UntaggedValue::filesize(bucket.ram_quota_mb() * 1024 * 1024),
+    );
     collected.insert_value("flush_enabled", bucket.flush_enabled());
+    collected.insert_value("status", bucket.status().unwrap_or(&"".to_string()).clone());
+    collected.insert_value("cloud", is_cloud);
     collected.into_value()
 }

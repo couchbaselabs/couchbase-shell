@@ -279,7 +279,7 @@ pub fn parse_optional_as_bool(
                     }
                 }
             }
-            Err(e) => return Err(e),
+            Err(e) => Err(e),
         },
         None => Ok(default),
     }

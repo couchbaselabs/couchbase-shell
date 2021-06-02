@@ -1,5 +1,6 @@
 use crate::{client::Client, config::ClusterTlsConfig};
 
+use crate::client::CloudClient;
 use crate::tutorial::Tutorial;
 use nu_errors::ShellError;
 use std::path::PathBuf;
@@ -14,6 +15,7 @@ pub struct State {
     default_collection: Option<String>,
     tutorial: Tutorial,
     config_path: Option<PathBuf>,
+    clouds: HashMap<String, RemoteCloud>,
 }
 
 impl State {
@@ -23,6 +25,7 @@ impl State {
         default_scope: Option<String>,
         default_collection: Option<String>,
         config_path: Option<PathBuf>,
+        clouds: HashMap<String, RemoteCloud>,
     ) -> Self {
         let state = Self {
             active: Mutex::new(active.clone()),
@@ -31,6 +34,7 @@ impl State {
             default_collection,
             tutorial: Tutorial::new(),
             config_path,
+            clouds,
         };
         state.set_active(active).unwrap();
         state
@@ -105,6 +109,63 @@ impl State {
     pub fn config_path(&self) -> &Option<PathBuf> {
         &self.config_path
     }
+
+    pub fn clouds(&self) -> &HashMap<String, RemoteCloud> {
+        &self.clouds
+    }
+
+    pub fn cloud_for_cluster(&self, identifier: String) -> Result<&RemoteCloud, ShellError> {
+        let cloud = &self.clouds.get(identifier.as_str());
+        if let Some(c) = cloud {
+            Ok(c)
+        } else {
+            Err(ShellError::unexpected(format!(
+                "No cloud registered for cluster name {}",
+                identifier,
+            )))
+        }
+    }
+}
+
+pub struct RemoteCloud {
+    identifier: String,
+    secret_key: String,
+    access_key: String,
+    cloud: Mutex<Option<Arc<CloudClient>>>,
+}
+
+impl RemoteCloud {
+    pub fn new(identifier: String, secret_key: String, access_key: String) -> Self {
+        Self {
+            identifier,
+            secret_key,
+            access_key,
+            cloud: Mutex::new(None),
+        }
+    }
+
+    pub fn identifier(&self) -> String {
+        self.identifier.clone()
+    }
+
+    pub fn secret_key(&self) -> String {
+        self.secret_key.clone()
+    }
+
+    pub fn access_key(&self) -> String {
+        self.access_key.clone()
+    }
+
+    pub fn cloud(&self) -> Arc<CloudClient> {
+        let mut c = self.cloud.lock().unwrap();
+        if c.is_none() {
+            *c = Some(Arc::new(CloudClient::new(
+                self.secret_key.clone(),
+                self.access_key.clone(),
+            )));
+        }
+        c.as_ref().unwrap().clone()
+    }
 }
 
 pub struct RemoteCluster {
@@ -117,6 +178,7 @@ pub struct RemoteCluster {
     active_collection: Mutex<Option<String>>,
     tls_config: ClusterTlsConfig,
     timeouts: ClusterTimeouts,
+    cloud: Option<String>,
 }
 
 impl RemoteCluster {
@@ -129,6 +191,7 @@ impl RemoteCluster {
         active_collection: Option<String>,
         tls_config: ClusterTlsConfig,
         timeouts: ClusterTimeouts,
+        cloud: Option<String>,
     ) -> Self {
         Self {
             cluster: Mutex::new(None),
@@ -140,6 +203,7 @@ impl RemoteCluster {
             active_collection: Mutex::new(active_collection),
             tls_config,
             timeouts,
+            cloud,
         }
     }
 
@@ -208,6 +272,10 @@ impl RemoteCluster {
 
     pub fn timeouts(&self) -> &ClusterTimeouts {
         &self.timeouts
+    }
+
+    pub fn cloud(&self) -> Option<String> {
+        self.cloud.clone()
     }
 }
 

@@ -259,6 +259,7 @@ impl BucketSettingsBuilder {
             compression_mode: self.compression_mode,
             durability_level: self.durability_level,
             conflict_resolution_type: self.conflict_resolution_type,
+            status: None,
         }
     }
 }
@@ -276,6 +277,7 @@ pub struct BucketSettings {
     compression_mode: CompressionMode,
     durability_level: DurabilityLevel,
     conflict_resolution_type: Option<ConflictResolutionType>,
+    status: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -315,6 +317,24 @@ pub struct JSONBucketSettings {
     conflict_resolution_type: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct JSONCloudBucketSettings {
+    name: String,
+    #[serde(rename = "memoryQuota")]
+    memory_quota: u64,
+    #[serde(rename = "replicas")]
+    num_replicas: u32,
+    #[serde(rename = "conflictResolution")]
+    conflict_resolution_type: String,
+    status: String,
+}
+
+impl JSONCloudBucketSettings {
+    pub fn name(&self) -> String {
+        self.name.clone()
+    }
+}
+
 impl TryFrom<JSONBucketSettings> for BucketSettings {
     type Error = ShellError;
 
@@ -333,6 +353,30 @@ impl TryFrom<JSONBucketSettings> for BucketSettings {
             conflict_resolution_type: Some(ConflictResolutionType::try_from(
                 settings.conflict_resolution_type.as_str(),
             )?),
+            status: None,
+        })
+    }
+}
+
+impl TryFrom<JSONCloudBucketSettings> for BucketSettings {
+    type Error = ShellError;
+
+    fn try_from(settings: JSONCloudBucketSettings) -> Result<Self, Self::Error> {
+        Ok(BucketSettings {
+            name: settings.name,
+            ram_quota_mb: settings.memory_quota,
+            flush_enabled: false,
+            num_replicas: settings.num_replicas,
+            replica_indexes: false,
+            bucket_type: BucketType::Couchbase,
+            eviction_policy: None,
+            max_expiry: Default::default(),
+            compression_mode: CompressionMode::Off,
+            durability_level: DurabilityLevel::None,
+            conflict_resolution_type: Some(ConflictResolutionType::try_from(
+                settings.conflict_resolution_type.as_str(),
+            )?),
+            status: Some(settings.status),
         })
     }
 }
@@ -455,6 +499,10 @@ impl BucketSettings {
 
     pub fn minimum_durability_level(&self) -> DurabilityLevel {
         self.durability_level
+    }
+
+    pub fn status(&self) -> Option<&String> {
+        self.status.as_ref()
     }
 
     pub fn set_ram_quota_mb(&mut self, ram_quota_mb: u64) {

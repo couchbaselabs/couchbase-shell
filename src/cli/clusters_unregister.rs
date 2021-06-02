@@ -1,12 +1,10 @@
 use crate::cli::clusters_register::update_config_file;
-use crate::config::{ClusterConfig, ShellConfig};
 use crate::state::State;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape};
 use nu_stream::OutputStream;
-use std::fs;
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex};
 
 pub struct ClustersUnregister {
     state: Arc<Mutex<State>>,

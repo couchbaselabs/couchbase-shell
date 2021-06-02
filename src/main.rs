@@ -7,7 +7,7 @@ mod state;
 mod tutorial;
 
 use crate::config::ShellConfig;
-use crate::state::RemoteCluster;
+use crate::state::{RemoteCloud, RemoteCluster};
 use crate::{cli::*, state::ClusterTimeouts};
 use config::ClusterTlsConfig;
 use log::{debug, warn};
@@ -35,6 +35,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     warn!("Config {:?}", config);
 
     let mut clusters = HashMap::new();
+    let mut clouds = HashMap::new();
 
     let password = match opt.password {
         true => Some(rpassword::read_password_from_tty(Some("Password: ")).unwrap()),
@@ -85,6 +86,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             opt.collection,
             tls_config,
             ClusterTimeouts::default(),
+            None,
         );
         clusters.insert("default".into(), cluster);
         String::from("default")
@@ -163,6 +165,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 collection,
                 v.tls().clone(),
                 ClusterTimeouts::new(data_timeout, query_timeout),
+                v.cloud_control_pane(),
             );
             if !v.tls().clone().enabled() {
                 println!(
@@ -171,6 +174,12 @@ fn main() -> Result<(), Box<dyn Error>> {
                 );
             }
             clusters.insert(name.clone(), cluster);
+        }
+        for c in config.clouds() {
+            let name = c.identifier();
+            let cloud = RemoteCloud::new(name.clone(), c.secret_key(), c.access_key());
+
+            clouds.insert(name, cloud);
         }
         active.unwrap()
     };
@@ -181,6 +190,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         default_scope,
         default_collection,
         config.location().clone(),
+        clouds,
     )));
 
     //if !opt.no_motd && opt.script.is_none() && opt.command.is_none() {
