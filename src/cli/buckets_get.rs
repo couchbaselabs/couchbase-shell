@@ -102,7 +102,7 @@ fn buckets_get_one(
 
         if let Some(c) = cluster.cloud() {
             let cloud = guard.cloud_for_cluster(c)?.cloud();
-            let cluster_id = cloud.find_cluster(
+            let cluster_id = cloud.find_cluster_id(
                 identifier.clone(),
                 Instant::now().add(cluster.timeouts().query_timeout()),
                 ctrl_c.clone(),
@@ -171,7 +171,7 @@ fn buckets_get_all(
 
         if let Some(c) = cluster.cloud() {
             let cloud = guard.cloud_for_cluster(c)?.cloud();
-            let cluster_id = cloud.find_cluster(
+            let cluster_id = cloud.find_cluster_id(
                 identifier.clone(),
                 Instant::now().add(cluster.timeouts().query_timeout()),
                 ctrl_c.clone(),

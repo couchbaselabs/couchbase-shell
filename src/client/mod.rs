@@ -246,7 +246,7 @@ impl CloudClient {
         self.http_do(HttpVerb::Put, path, payload, deadline, ctrl_c)
     }
 
-    pub fn find_cluster(
+    pub fn find_cluster_id(
         &self,
         cluster_name: String,
         deadline: Instant,

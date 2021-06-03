@@ -1,5 +1,8 @@
-use crate::cli::buckets_builder::{BucketSettingsBuilder, BucketType, DurabilityLevel};
-use crate::client::ManagementRequest;
+use crate::cli::buckets_builder::{
+    BucketSettingsBuilder, BucketType, DurabilityLevel, JSONCloudBucketSettings,
+};
+use crate::cli::util::arg_as;
+use crate::client::{CloudRequest, HttpResponse, ManagementRequest};
 use crate::state::State;
 use async_trait::async_trait;
 use log::debug;
@@ -44,12 +47,7 @@ impl nu_engine::WholeStreamCommand for BucketsCreate {
                 "the number of replicas for the bucket",
                 None,
             )
-            .named(
-                "flush",
-                SyntaxShape::String,
-                "whether to enable flush",
-                None,
-            )
+            .switch("flush", "whether to enable flush", None)
             .named(
                 "durability",
                 SyntaxShape::String,
@@ -60,12 +58,6 @@ impl nu_engine::WholeStreamCommand for BucketsCreate {
                 "expiry",
                 SyntaxShape::Int,
                 "the maximum expiry for documents created in this bucket (seconds)",
-                None,
-            )
-            .named(
-                "cluster",
-                SyntaxShape::String,
-                "the cluster to create the bucket against",
                 None,
             )
     }
@@ -82,73 +74,24 @@ impl nu_engine::WholeStreamCommand for BucketsCreate {
 fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let args = args.evaluate_once()?;
-    let name = match args.call_info.args.get("name") {
-        Some(v) => match v.as_string() {
-            Ok(name) => name,
-            Err(e) => return Err(e),
-        },
-        None => return Err(ShellError::unexpected("name is required")),
-    };
-    let ram = match args.call_info.args.get("ram") {
-        Some(v) => match v.as_u64() {
-            Ok(ram) => ram,
-            Err(e) => return Err(e),
-        },
-        None => return Err(ShellError::unexpected("ram is required")),
-    };
-    let bucket_type = match args.call_info.args.get("type") {
-        Some(v) => match v.as_string() {
-            Ok(t) => Some(t),
-            Err(e) => return Err(e),
-        },
-        None => None,
-    };
-    let replicas = match args.call_info.args.get("replicas") {
-        Some(v) => match v.as_u64() {
-            Ok(pwd) => Some(pwd),
-            Err(e) => return Err(e),
-        },
-        None => None,
-    };
-    let flush = match args.call_info.args.get("flush") {
-        Some(v) => match v.as_string() {
-            Ok(f) => {
-                let flush_str = match f.strip_prefix("$") {
-                    Some(f2) => f2,
-                    None => f.as_str(),
-                };
+    let name = arg_as(&args, "name", |v| v.as_string())?.unwrap();
+    let ram = arg_as(&args, "ram", |v| v.as_u64())?.unwrap();
+    let bucket_type = arg_as(&args, "type", |v| v.as_string())?;
+    let replicas = arg_as(&args, "replicas", |v| v.as_u64())?;
+    let flush = args.get_flag::<bool>("flush")?.unwrap_or(false);
+    let durability = arg_as(&args, "durability", |v| v.as_string())?;
+    let expiry = arg_as(&args, "expiry", |v| v.as_u64())?;
 
-                match flush_str.parse::<bool>() {
-                    Ok(b) => Some(b),
-                    Err(e) => {
-                        return Err(ShellError::untagged_runtime_error(format!(
-                            "Failed to parse flush {}",
-                            e
-                        )));
-                    }
-                }
-            }
-            Err(_) => match v.as_bool() {
-                Ok(f) => Some(f),
-                Err(e) => return Err(e),
-            },
-        },
-        None => None,
-    };
-    let durability = match args.call_info.args.get("durability") {
-        Some(v) => match v.as_string() {
-            Ok(pwd) => Some(pwd),
-            Err(e) => return Err(e),
-        },
-        None => None,
-    };
-    let expiry = match args.call_info.args.get("expiry") {
-        Some(v) => match v.as_u64() {
-            Ok(pwd) => Some(pwd),
-            Err(e) => return Err(e),
-        },
-        None => None,
-    };
+    let guard = state.lock().unwrap();
+    let active_cluster = guard.active_cluster();
+
+    if active_cluster.cloud().is_some()
+        && (bucket_type.is_some() || flush || durability.is_some() || expiry.is_some())
+    {
+        return Err(ShellError::unexpected(
+            "Cloud flag cannot be used with type, flush, durability, or expiry",
+        ));
+    }
 
     debug!("Running buckets create for bucket {}", &name);
 
@@ -175,8 +118,8 @@ fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
             }
         });
     }
-    if let Some(f) = flush {
-        builder = builder.flush_enabled(f);
+    if flush {
+        builder = builder.flush_enabled(flush);
     }
     if let Some(d) = durability {
         builder = builder.minimum_durability_level(match DurabilityLevel::try_from(d.as_str()) {
@@ -193,22 +136,42 @@ fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
         builder = builder.max_expiry(Duration::from_secs(e));
     }
 
-    let guard = state.lock().unwrap();
-    let active_cluster = guard.active_cluster();
-    let cluster = active_cluster.cluster();
-
     let settings = builder.build();
-    let form = settings.as_form(false)?;
-    let payload = serde_urlencoded::to_string(&form).unwrap();
 
-    let response = cluster.management_request(
-        ManagementRequest::CreateBucket { payload },
-        Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c,
-    )?;
+    let response: HttpResponse;
+    if let Some(c) = active_cluster.cloud() {
+        let identifier = guard.active();
+        let cloud = guard.cloud_for_cluster(c)?.cloud();
+        let cluster_id = cloud.find_cluster_id(
+            identifier,
+            Instant::now().add(active_cluster.timeouts().query_timeout()),
+            ctrl_c.clone(),
+        )?;
+        let json_settings = JSONCloudBucketSettings::try_from(settings)?;
+        response = cloud.cloud_request(
+            CloudRequest::CreateBucket {
+                cluster_id,
+                payload: serde_json::to_string(&json_settings)?,
+            },
+            Instant::now().add(active_cluster.timeouts().query_timeout()),
+            ctrl_c.clone(),
+        )?;
+    } else {
+        let cluster = active_cluster.cluster();
+
+        let form = settings.as_form(false)?;
+        let payload = serde_urlencoded::to_string(&form).unwrap();
+
+        response = cluster.management_request(
+            ManagementRequest::CreateBucket { payload },
+            Instant::now().add(active_cluster.timeouts().query_timeout()),
+            ctrl_c,
+        )?;
+    }
 
     match response.status() {
         200 => Ok(OutputStream::empty()),
+        201 => Ok(OutputStream::empty()),
         202 => Ok(OutputStream::empty()),
         _ => Err(ShellError::untagged_runtime_error(
             response.content().to_string(),

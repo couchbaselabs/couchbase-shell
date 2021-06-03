@@ -14,6 +14,7 @@ mod buckets_flush;
 mod buckets_get;
 mod buckets_sample;
 mod buckets_update;
+mod cloud_json;
 mod clusters;
 mod clusters_health;
 mod clusters_register;

@@ -1,5 +1,5 @@
 use nu_errors::ShellError;
-use serde_derive::Deserialize;
+use serde_derive::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use std::fmt;
 use std::fmt::{Display, Formatter};
@@ -264,7 +264,6 @@ impl BucketSettingsBuilder {
     }
 }
 
-#[derive(Debug)]
 pub struct BucketSettings {
     name: String,
     ram_quota_mb: u64,
@@ -317,18 +316,39 @@ pub struct JSONBucketSettings {
     conflict_resolution_type: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct JSONCloudBucketSettings {
     name: String,
     #[serde(rename = "memoryQuota")]
     memory_quota: u64,
     #[serde(rename = "replicas")]
     num_replicas: u32,
-    #[serde(rename = "conflictResolution")]
+    #[serde(
+        rename = "conflictResolution",
+        skip_serializing_if = "String::is_empty"
+    )]
     conflict_resolution_type: String,
+    #[serde(skip_serializing)]
     status: String,
 }
 
+impl TryFrom<BucketSettings> for JSONCloudBucketSettings {
+    type Error = ShellError;
+
+    fn try_from(settings: BucketSettings) -> Result<Self, Self::Error> {
+        let mut reso_type = "".to_string();
+        if let Some(reso) = settings.conflict_resolution_type {
+            reso_type = reso.to_string();
+        }
+        Ok(JSONCloudBucketSettings {
+            name: settings.name,
+            memory_quota: settings.ram_quota_mb,
+            num_replicas: settings.num_replicas,
+            conflict_resolution_type: reso_type,
+            status: "".to_string(),
+        })
+    }
+}
 impl JSONCloudBucketSettings {
     pub fn name(&self) -> String {
         self.name.clone()

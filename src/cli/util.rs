@@ -284,3 +284,19 @@ pub fn parse_optional_as_bool(
         None => Ok(default),
     }
 }
+
+pub fn arg_as<T>(
+    args: &EvaluatedCommandArgs,
+    arg_name: &str,
+    cb: fn(&Value) -> Result<T, ShellError>,
+) -> Result<Option<T>, ShellError> {
+    let val = match args.call_info.args.get(arg_name) {
+        Some(v) => match cb(v) {
+            Ok(c) => Some(c),
+            Err(e) => return Err(e),
+        },
+        None => None,
+    };
+
+    Ok(val)
+}
