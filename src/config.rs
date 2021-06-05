@@ -18,7 +18,7 @@ pub struct ShellConfig {
     clusters: Vec<ClusterConfig>,
 
     #[serde(alias = "cloud")]
-    clouds: Vec<CloudConfig>,
+    clouds: Option<Vec<CloudConfig>>,
 
     /// Stores the path from which it got loaded, if present
     path: Option<PathBuf>,
@@ -63,7 +63,7 @@ impl ShellConfig {
             clusters,
             path: None,
             version: 1,
-            clouds,
+            clouds: Some(clouds),
         }
     }
 
@@ -97,7 +97,7 @@ impl ShellConfig {
         &mut self.clusters
     }
 
-    pub fn clouds(&self) -> &Vec<CloudConfig> {
+    pub fn clouds(&self) -> &Option<Vec<CloudConfig>> {
         &self.clouds
     }
 }
@@ -108,7 +108,7 @@ impl Default for ShellConfig {
             clusters: vec![],
             version: 1,
             path: None,
-            clouds: vec![],
+            clouds: None,
         }
     }
 }
