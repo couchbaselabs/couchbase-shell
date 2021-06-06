@@ -4,6 +4,7 @@ All user visible changes to this project will be documented in this file.
 
 ## 1.0.0-alpha.2 - Unreleased
 
+ - Nushell has been pinned to 0.32.0 for the next release.
  - fixed the history (now in the .cbsh dir as a `history.txt` file)
  - the linux builder has been switched from ubuntu 20.04 to 18.04 to be more conservative and target more linux users
  - renamed `[[clusters]]` to `[[cluster]]`, but kept the old style too for backwards compatibility
@@ -13,6 +14,10 @@ All user visible changes to this project will be documented in this file.
  - Added the `analytics links` command
  - Added the `analytics buckets` command
  - Added the `analytics pending-mutations` command
+ - Support registering / unregistering clusters on the fly
+ - Supports getting buckets from couchbase cloud
+ - Supports creating and updating buckets from couchbase cloud
+ - Added new `[[cloud]]` config to support couchbase cloud
 
 ## 1.0.0-alpha.1 - 2021-05-20
 
