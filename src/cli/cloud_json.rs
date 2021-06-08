@@ -1,4 +1,4 @@
-use serde_derive::Deserialize;
+use serde_derive::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct JSONCloudClusterSummary {
@@ -35,5 +35,16 @@ impl JSONCloudClusterSummary {
     }
     pub fn nodes(&self) -> i64 {
         self.nodes
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub(crate) struct JSONCloudDeleteBucketRequest {
+    name: String,
+}
+
+impl JSONCloudDeleteBucketRequest {
+    pub fn new(name: String) -> Self {
+        Self { name }
     }
 }

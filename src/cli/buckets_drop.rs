@@ -2,8 +2,9 @@
 
 use crate::state::State;
 
-use crate::cli::util::cluster_identifiers_from;
-use crate::client::ManagementRequest;
+use crate::cli::cloud_json::JSONCloudDeleteBucketRequest;
+use crate::cli::util::{arg_as, cluster_identifiers_from};
+use crate::client::{CloudRequest, HttpResponse, ManagementRequest};
 use async_trait::async_trait;
 use log::debug;
 use nu_engine::CommandArgs;
@@ -55,25 +56,9 @@ fn buckets_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
     let args = args.evaluate_once()?;
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
-    let name = match args.call_info.args.get("name") {
-        Some(v) => match v.as_string() {
-            Ok(name) => name,
-            Err(e) => return Err(e),
-        },
-        None => return Err(ShellError::unexpected("name is required")),
-    };
-    let bucket = match args
-        .call_info
-        .args
-        .get("bucket")
-        .map(|bucket| bucket.as_string().ok())
-        .flatten()
-    {
-        Some(v) => v,
-        None => "".into(),
-    };
+    let name = arg_as(&args, "name", |v| v.as_string())?.unwrap();
 
-    debug!("Running buckets drop for bucket {:?}", &bucket);
+    debug!("Running buckets drop for bucket {:?}", &name);
 
     for identifier in cluster_identifiers {
         let guard = state.lock().unwrap();
@@ -84,14 +69,36 @@ fn buckets_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
             }
         };
 
-        let result = cluster.cluster().management_request(
-            ManagementRequest::DropBucket { name: name.clone() },
-            Instant::now().add(cluster.timeouts().query_timeout()),
-            ctrl_c.clone(),
-        )?;
+        let result: HttpResponse;
+        if let Some(c) = cluster.cloud() {
+            let identifier = guard.active();
+            let cloud = guard.cloud_for_cluster(c)?.cloud();
+            let cluster_id = cloud.find_cluster_id(
+                identifier,
+                Instant::now().add(cluster.timeouts().query_timeout()),
+                ctrl_c.clone(),
+            )?;
+            let req = JSONCloudDeleteBucketRequest::new(name.clone());
+            let payload = serde_json::to_string(&req)?;
+            result = cloud.cloud_request(
+                CloudRequest::DeleteBucket {
+                    cluster_id,
+                    payload,
+                },
+                Instant::now().add(cluster.timeouts().query_timeout()),
+                ctrl_c.clone(),
+            )?;
+        } else {
+            result = cluster.cluster().management_request(
+                ManagementRequest::DropBucket { name: name.clone() },
+                Instant::now().add(cluster.timeouts().query_timeout()),
+                ctrl_c.clone(),
+            )?;
+        }
 
         match result.status() {
             200 => {}
+            202 => {}
             _ => {
                 return Err(ShellError::untagged_runtime_error(
                     result.content().to_string(),

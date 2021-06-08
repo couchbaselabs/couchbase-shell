@@ -220,10 +220,11 @@ impl CloudClient {
     fn http_delete(
         &self,
         path: &str,
+        payload: Option<Vec<u8>>,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(String, u16), ClientError> {
-        self.http_do(HttpVerb::Delete, path, None, deadline, ctrl_c)
+        self.http_do(HttpVerb::Delete, path, payload, deadline, ctrl_c)
     }
 
     fn http_post(
@@ -285,7 +286,9 @@ impl CloudClient {
             HttpVerb::Post => {
                 self.http_post(request.path().as_str(), request.payload(), deadline, ctrl_c)?
             }
-            HttpVerb::Delete => self.http_delete(request.path().as_str(), deadline, ctrl_c)?,
+            HttpVerb::Delete => {
+                self.http_delete(request.path().as_str(), request.payload(), deadline, ctrl_c)?
+            }
             HttpVerb::Put => {
                 self.http_put(request.path().as_str(), request.payload(), deadline, ctrl_c)?
             }
@@ -1182,6 +1185,8 @@ impl CloudRequest {
             Self::CreateCluster { payload, .. } => Some(payload.as_bytes().into()),
             Self::CreateProject { payload, .. } => Some(payload.as_bytes().into()),
             Self::CreateUser { payload, .. } => Some(payload.as_bytes().into()),
+            Self::DeleteAllowListEntry { payload, .. } => Some(payload.as_bytes().into()),
+            Self::DeleteBucket { payload, .. } => Some(payload.as_bytes().into()),
             Self::UpdateAllowList { payload, .. } => Some(payload.as_bytes().into()),
             Self::UpdateBucket { payload, .. } => Some(payload.as_bytes().into()),
             Self::UpdateUser { payload, .. } => Some(payload.as_bytes().into()),
@@ -1212,6 +1217,16 @@ impl CloudRequest {
                 h
             }
             Self::CreateUser { .. } => {
+                let mut h = HashMap::new();
+                h.insert("Content-Type", "application/json");
+                h
+            }
+            Self::DeleteAllowListEntry { .. } => {
+                let mut h = HashMap::new();
+                h.insert("Content-Type", "application/json");
+                h
+            }
+            Self::DeleteBucket { .. } => {
                 let mut h = HashMap::new();
                 h.insert("Content-Type", "application/json");
                 h
