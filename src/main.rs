@@ -270,7 +270,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let mut p = p.clone();
         p.pop();
         p.push("history.txt");
-        format!("history-path = \"{}\"", p.to_str().unwrap())
+        format!("history-path = '{}'", p.to_str().unwrap())
     } else {
         "".into()
     };
