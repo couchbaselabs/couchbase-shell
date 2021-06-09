@@ -2,18 +2,18 @@
 
 === Installation
 
-The current latest version is *1.0.0-alpha.1*.
+The current latest version is *1.0.0-alpha.2*.
 
 There are a couple ways you can get access to `cbsh`, the easiest one is to download our pre-built binaries for your platform of choice:
 
- - Linux: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-alpha.1/cbsh-1.0.0-alpha.1-linux.zip[cbsh-1.0.0-alpha.1-linux.zip]
- - macOS: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-alpha.1/cbsh-1.0.0-alpha.1-mac.zip[cbsh-1.0.0-alpha.1-mac.zip]
- - Windows: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-alpha.1/cbsh-1.0.0-alpha.1-windows.zip[cbsh-1.0.0-alpha.1-windows.zip]
+ - Linux: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-alpha.2/cbsh-1.0.0-alpha.2-linux.zip[cbsh-1.0.0-alpha.2-linux.zip]
+ - macOS: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-alpha.2/cbsh-1.0.0-alpha.2-mac.zip[cbsh-1.0.0-alpha.2-mac.zip]
+ - Windows: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-alpha.2/cbsh-1.0.0-alpha.2-windows.zip[cbsh-1.0.0-alpha.2-windows.zip]
 
 Once you've downloaded the `zip` file, extract it and switch into the just created directory. The following example shows it for mac, but it works very similar if you are on linux (just align the commands with the file you just downloaded):
 
 ```
-$ unzip cbsh-1.0.0-alpha.1-osx.zip
+$ unzip cbsh-1.0.0-alpha.2-osx.zip
 $ cd cbsh-mac-x86_64
 $ ls
 cbsh  examples  LICENSE  README.md
@@ -27,7 +27,7 @@ $ ./cbsh
 ───┬───────────────
  # │    version    
 ───┼───────────────
- 0 │ 1.0.0-alpha.1 
+ 0 │ 1.0.0-alpha.2
 ───┴───────────────
 ```
 

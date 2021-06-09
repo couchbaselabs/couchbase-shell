@@ -2,7 +2,7 @@
 
 All user visible changes to this project will be documented in this file.
 
-## 1.0.0-alpha.2 - Unreleased
+## 1.0.0-alpha.2 - 2021-06-09
 
  - Nushell has been pinned to 0.32.0 for the next release.
  - fixed the history (now in the .cbsh dir as a `history.txt` file)

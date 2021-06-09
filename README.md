@@ -27,7 +27,7 @@ Next, clone the repository and then run `cargo run`. The first time it will take
 
 ```
 $ ./cbsh -h
-The Couchbase Shell 1.0.0-alpha.1
+The Couchbase Shell 1.0.0-alpha.2
 Alternative Shell and UI for Couchbase Server and Cloud
 
 USAGE:
@@ -64,6 +64,9 @@ These couchbase-specific commands are added on top of the regular nushell comman
  - `analytics dataverses` - List all dataverses
  - `analytics datasets` - List all datasets
  - `analytics indexes` - List all analytics indexes
+ - `analytics links` - List all analytics links
+ - `analytics buckets` - List all analytics buckets
+ - `analytics pending-mutations` - List pending mutations
  - `buckets config` - Shows the bucket config (low level)
  - `buckets create` - Creates a bucket
  - `buckets drop` - Drops buckets through the HTTP API
