@@ -89,7 +89,7 @@ fn buckets_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
                 ctrl_c.clone(),
             )?;
         } else {
-            result = cluster.cluster().management_request(
+            result = cluster.cluster().http_client().management_request(
                 ManagementRequest::DropBucket { name: name.clone() },
                 Instant::now().add(cluster.timeouts().query_timeout()),
                 ctrl_c.clone(),

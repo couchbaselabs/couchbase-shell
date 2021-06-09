@@ -80,11 +80,14 @@ fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Shel
         None => guard.active_cluster(),
     };
 
-    let response = active_cluster.cluster().search_query_request(
-        SearchQueryRequest::Execute { query, index },
-        Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c,
-    )?;
+    let response = active_cluster
+        .cluster()
+        .http_client()
+        .search_query_request(
+            SearchQueryRequest::Execute { query, index },
+            Instant::now().add(active_cluster.timeouts().query_timeout()),
+            ctrl_c,
+        )?;
 
     let rows: SearchResultData = match response.status() {
         200 => match serde_json::from_str(response.content()) {

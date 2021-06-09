@@ -77,7 +77,7 @@ fn run_async(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream
             }
         };
 
-        let response = active_cluster.cluster().management_request(
+        let response = active_cluster.cluster().http_client().management_request(
             ManagementRequest::GetRoles {
                 permission: permission.clone(),
             },

@@ -83,14 +83,17 @@ fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Shel
 
     debug!("Running analytics query {}", &statement);
 
-    let response = active_cluster.cluster().analytics_query_request(
-        AnalyticsQueryRequest::Execute {
-            statement,
-            scope: maybe_scope,
-        },
-        Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c,
-    )?;
+    let response = active_cluster
+        .cluster()
+        .http_client()
+        .analytics_query_request(
+            AnalyticsQueryRequest::Execute {
+                statement,
+                scope: maybe_scope,
+            },
+            Instant::now().add(active_cluster.timeouts().query_timeout()),
+            ctrl_c,
+        )?;
 
     if with_meta {
         let content: serde_json::Value = serde_json::from_str(response.content())?;

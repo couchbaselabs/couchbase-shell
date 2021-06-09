@@ -162,7 +162,7 @@ fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
         let form = settings.as_form(false)?;
         let payload = serde_urlencoded::to_string(&form).unwrap();
 
-        response = cluster.management_request(
+        response = cluster.http_client().management_request(
             ManagementRequest::CreateBucket { payload },
             Instant::now().add(active_cluster.timeouts().query_timeout()),
             ctrl_c,

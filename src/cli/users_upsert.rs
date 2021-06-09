@@ -121,7 +121,7 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
     let guard = state.lock().unwrap();
     let active_cluster = guard.active_cluster();
 
-    let response = active_cluster.cluster().management_request(
+    let response = active_cluster.cluster().http_client().management_request(
         ManagementRequest::UpsertUser { username, payload },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
         ctrl_c,

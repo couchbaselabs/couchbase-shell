@@ -86,7 +86,7 @@ fn scopes_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
     let payload = serde_urlencoded::to_string(&form).unwrap();
 
     let active_cluster = guard.active_cluster();
-    let response = active_cluster.cluster().management_request(
+    let response = active_cluster.cluster().http_client().management_request(
         ManagementRequest::CreateScope { payload, bucket },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
         ctrl_c,

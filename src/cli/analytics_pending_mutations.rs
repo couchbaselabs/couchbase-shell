@@ -46,11 +46,14 @@ fn dataverses(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
     let guard = state.lock().unwrap();
     let active_cluster = guard.active_cluster();
 
-    let response = active_cluster.cluster().analytics_query_request(
-        AnalyticsQueryRequest::PendingMutations,
-        Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c,
-    )?;
+    let response = active_cluster
+        .cluster()
+        .http_client()
+        .analytics_query_request(
+            AnalyticsQueryRequest::PendingMutations,
+            Instant::now().add(active_cluster.timeouts().query_timeout()),
+            ctrl_c,
+        )?;
 
     let content: serde_json::Value = serde_json::from_str(response.content())?;
     let converted = convert_json_value_to_nu_value(&content, Tag::default())?;

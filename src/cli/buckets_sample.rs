@@ -78,7 +78,7 @@ fn load_sample_bucket(
             }
         };
 
-        let response = cluster.cluster().management_request(
+        let response = cluster.cluster().http_client().management_request(
             ManagementRequest::LoadSampleBucket {
                 name: format!("[\"{}\"]", bucket_name),
             },

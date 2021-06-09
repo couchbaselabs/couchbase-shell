@@ -110,7 +110,7 @@ fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Shel
 
     debug!("Running n1ql query {}", &statement);
 
-    let response = active_cluster.cluster().query_request(
+    let response = active_cluster.cluster().http_client().query_request(
         QueryRequest::Execute {
             statement,
             scope: maybe_scope,

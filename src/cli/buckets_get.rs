@@ -136,7 +136,7 @@ fn buckets_get_one(
                 return Err(ShellError::unexpected("bucket not found"));
             }
         } else {
-            let response = cluster.cluster().management_request(
+            let response = cluster.cluster().http_client().management_request(
                 ManagementRequest::GetBucket { name: name.clone() },
                 Instant::now().add(cluster.timeouts().query_timeout()),
                 ctrl_c.clone(),
@@ -194,7 +194,7 @@ fn buckets_get_all(
                 ));
             }
         } else {
-            let response = cluster.cluster().management_request(
+            let response = cluster.cluster().http_client().management_request(
                 ManagementRequest::GetBuckets,
                 Instant::now().add(cluster.timeouts().query_timeout()),
                 ctrl_c.clone(),

@@ -86,7 +86,7 @@ fn grab_bucket_names(
         }
     };
 
-    let response = cluster.cluster().management_request(
+    let response = cluster.cluster().http_client().management_request(
         ManagementRequest::GetBuckets,
         Instant::now().add(cluster.timeouts().query_timeout()),
         ctrl_c,
@@ -115,7 +115,7 @@ fn check_autofailover(
         }
     };
 
-    let response = cluster.cluster().management_request(
+    let response = cluster.cluster().http_client().management_request(
         ManagementRequest::SettingsAutoFailover,
         Instant::now().add(cluster.timeouts().query_timeout()),
         ctrl_c,
@@ -159,7 +159,7 @@ fn check_resident_ratio(
         }
     };
 
-    let response = cluster.cluster().management_request(
+    let response = cluster.cluster().http_client().management_request(
         ManagementRequest::BucketStats {
             name: bucket_name.to_string(),
         },

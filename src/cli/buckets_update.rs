@@ -168,7 +168,7 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
             ctrl_c.clone(),
         )?;
     } else {
-        let get_response = active_cluster.cluster().management_request(
+        let get_response = active_cluster.cluster().http_client().management_request(
             ManagementRequest::GetBucket { name: name.clone() },
             Instant::now().add(active_cluster.timeouts().query_timeout()),
             ctrl_c.clone(),
@@ -182,7 +182,7 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
         let form = settings.as_form(true)?;
         let payload = serde_urlencoded::to_string(&form).unwrap();
 
-        response = active_cluster.cluster().management_request(
+        response = active_cluster.cluster().http_client().management_request(
             ManagementRequest::UpdateBucket { name, payload },
             Instant::now().add(active_cluster.timeouts().query_timeout()),
             ctrl_c,

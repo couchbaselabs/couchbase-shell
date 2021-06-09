@@ -132,7 +132,7 @@ fn collections_create(
 
     let form_encoded = serde_urlencoded::to_string(&form).unwrap();
 
-    let response = active_cluster.cluster().management_request(
+    let response = active_cluster.cluster().http_client().management_request(
         CreateCollection {
             scope: scope_name,
             bucket,

@@ -53,14 +53,17 @@ fn dataverses(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
     let active_cluster = guard.active_cluster();
     debug!("Running analytics query {}", &statement);
 
-    let response = active_cluster.cluster().analytics_query_request(
-        AnalyticsQueryRequest::Execute {
-            statement: statement.into(),
-            scope: None,
-        },
-        Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c,
-    )?;
+    let response = active_cluster
+        .cluster()
+        .http_client()
+        .analytics_query_request(
+            AnalyticsQueryRequest::Execute {
+                statement: statement.into(),
+                scope: None,
+            },
+            Instant::now().add(active_cluster.timeouts().query_timeout()),
+            ctrl_c,
+        )?;
 
     let with_meta = args.call_info().switch_present("with-meta");
     let content: serde_json::Value = serde_json::from_str(response.content())?;

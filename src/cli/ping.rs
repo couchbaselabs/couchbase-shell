@@ -3,7 +3,6 @@
 use crate::cli::util::cluster_identifiers_from;
 use crate::state::State;
 
-use crate::client::ServiceType;
 use async_trait::async_trait;
 use log::debug;
 use nu_engine::CommandArgs;
@@ -93,7 +92,8 @@ fn run_ping(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream,
         let deadline = Instant::now().add(cluster.timeouts().query_timeout());
         let result = cluster
             .cluster()
-            .ping_all_http_request(deadline, ctrl_c.clone());
+            .http_client()
+            .ping_all_request(deadline, ctrl_c.clone());
         match result {
             Ok(res) => {
                 for ping in res {
@@ -124,34 +124,10 @@ fn run_ping(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream,
 
         // TODO: do this in parallel to http ops.
         let kv_deadline = Instant::now().add(cluster.timeouts().data_timeout());
-        let mut client = match cluster.cluster().key_value_client(
-            cluster.username().to_string(),
-            cluster.password().to_string(),
-            bucket_name.clone(),
-            "".into(),
-            "".into(),
-            kv_deadline,
-            ctrl_c.clone(),
-        ) {
-            Ok(c) => c,
-            Err(e) => {
-                let tag = Tag::default();
-                let mut collected = TaggedDictBuilder::new(&tag);
-                if clusters_len > 1 {
-                    collected.insert_value("cluster", identifier.clone());
-                }
-                collected.insert_value("service", ServiceType::KeyValue.as_string());
-                collected.insert_value("remote", "".to_string());
-                collected.insert_value("latency", "".to_string());
-                collected.insert_value("state", "error".to_string());
+        let mut client = cluster.cluster().key_value_client();
 
-                collected.insert_value("error", e.to_string());
-                results.push(collected.into_value());
-                continue;
-            }
-        };
-
-        let kv_result = rt.block_on(client.ping_all(kv_deadline, ctrl_c.clone()));
+        let kv_result =
+            rt.block_on(client.ping_all(bucket_name.clone(), kv_deadline, ctrl_c.clone()));
         match kv_result {
             Ok(res) => {
                 for ping in res {

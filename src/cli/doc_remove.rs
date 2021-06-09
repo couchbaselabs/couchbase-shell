@@ -13,7 +13,6 @@ use nu_stream::OutputStream;
 use std::collections::HashSet;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
-use tokio::runtime::Runtime;
 use tokio::time::Instant;
 
 pub struct DocRemove {
@@ -100,28 +99,22 @@ fn run_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, 
 
     let cluster = active_cluster.cluster();
 
-    let mut client = cluster.key_value_client(
-        active_cluster.username().into(),
-        active_cluster.password().into(),
-        bucket,
-        scope,
-        collection,
-        Instant::now().add(active_cluster.timeouts().data_timeout()),
-        ctrl_c.clone(),
-    )?;
+    let mut client = cluster.key_value_client();
 
-    let rt = Runtime::new().unwrap();
     let mut success = 0;
     let mut failed = 0;
     let mut fail_reasons: HashSet<String> = HashSet::new();
     for item in filtered.chain(input_args).into_iter() {
         let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
-        let result = rt
-            .block_on(client.request(
+        let result = client
+            .request(
                 KeyValueRequest::Remove { key: item },
+                bucket.clone(),
+                scope.clone(),
+                collection.clone(),
                 deadline,
                 ctrl_c.clone(),
-            ))
+            )
             .map_err(|e| ShellError::untagged_runtime_error(e.to_string()));
 
         match result {

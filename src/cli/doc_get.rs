@@ -14,7 +14,6 @@ use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
-use tokio::runtime::Runtime;
 use tokio::time::Instant;
 
 pub struct DocGet {
@@ -162,23 +161,17 @@ fn run_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, 
     let cluster = active_cluster.cluster();
 
     let mut results: Vec<Value> = vec![];
-    let rt = Runtime::new().unwrap();
-    let mut client = cluster.key_value_client(
-        active_cluster.username().into(),
-        active_cluster.password().into(),
-        bucket,
-        scope,
-        collection,
-        Instant::now().add(active_cluster.timeouts().data_timeout()),
-        ctrl_c.clone(),
-    )?;
+    let mut client = cluster.key_value_client();
     for id in ids {
         let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
-        let response = rt.block_on(client.request(
+        let response = client.request(
             KeyValueRequest::Get { key: id.clone() },
+            bucket.clone(),
+            scope.clone(),
+            collection.clone(),
             deadline,
             ctrl_c.clone(),
-        ));
+        );
 
         match response {
             Ok(mut res) => {

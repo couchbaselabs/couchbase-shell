@@ -1,6 +1,5 @@
-use crate::{client::Client, config::ClusterTlsConfig};
-
-use crate::client::CloudClient;
+use crate::client::{Client, CloudClient};
+use crate::config::ClusterTlsConfig;
 use crate::tutorial::Tutorial;
 use nu_errors::ShellError;
 use std::path::PathBuf;

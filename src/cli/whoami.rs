@@ -61,7 +61,7 @@ fn whoami(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, S
             }
         };
 
-        let response = cluster.cluster().management_request(
+        let response = cluster.cluster().http_client().management_request(
             ManagementRequest::Whoami,
             Instant::now().add(cluster.timeouts().query_timeout()),
             ctrl_c.clone(),
