@@ -194,83 +194,93 @@ impl KvClient {
         Err(ClientError::CollectionManifestLoadFailed { reason })
     }
 
-    pub async fn ping_all(
+    pub fn ping_all(
         &mut self,
         bucket: String,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<Vec<PingResponse>, ClientError> {
-        let now = Instant::now();
-        if now >= deadline {
-            return Err(ClientError::Timeout);
-        }
-        let deadline_sleep = sleep(deadline.sub(now));
-        tokio::pin!(deadline_sleep);
+        let rt = Runtime::new().unwrap();
+        rt.block_on(async {
+            let now = Instant::now();
+            if now >= deadline {
+                return Err(ClientError::Timeout);
+            }
+            let deadline_sleep = sleep(deadline.sub(now));
+            tokio::pin!(deadline_sleep);
 
-        let ctrl_c_fut = CtrlcFuture::new(ctrl_c);
-        tokio::pin!(ctrl_c_fut);
+            let ctrl_c_fut = CtrlcFuture::new(ctrl_c.clone());
+            tokio::pin!(ctrl_c_fut);
 
-        let mut results: Vec<PingResponse> = Vec::new();
-        for seed in self
-            .config
-            .as_ref()
-            .unwrap()
-            .key_value_seeds(self.tls_config.enabled())
-        {
-            let addr = seed.0.clone();
-            let port = seed.1;
-            let mut ep = self.endpoints.get(addr.clone().as_str());
-            if ep.is_none() {
-                let connect = KvEndpoint::connect(
-                    addr.clone(),
-                    port,
-                    self.username.clone(),
-                    self.password.clone(),
-                    bucket.clone(),
-                    self.tls_config.clone(),
+            if self.config.is_none() {
+                self.config = Some(
+                    self.get_bucket_config(bucket.clone(), deadline, ctrl_c.clone())
+                        .await?,
                 );
-
-                let endpoint = select! {
-                    res = connect => res,
-                    () = &mut deadline_sleep => Err(ClientError::Timeout),
-                    () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
-                }?;
-
-                // Got to be a better way...
-                self.endpoints.insert(addr.clone(), endpoint);
-                ep = self.endpoints.get(addr.clone().as_str());
-            };
-
-            let op = ep.unwrap().noop();
-
-            let start = Instant::now();
-            let result = select! {
-                res = op => res,
-                () = &mut deadline_sleep => Err(ClientError::Timeout),
-                () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
-            };
-            let end = Instant::now();
-
-            let error = match result {
-                Ok(_) => None,
-                Err(e) => Some(e),
-            };
-
-            let mut state = "OK".into();
-            if error.is_some() {
-                state = "Error".into();
             }
 
-            results.push(PingResponse::new(
-                state,
-                format!("{}:{}", addr.clone(), port.clone()),
-                ServiceType::KeyValue,
-                end.sub(start),
-                error,
-            ));
-        }
+            let mut results: Vec<PingResponse> = Vec::new();
+            for seed in self
+                .config
+                .as_ref()
+                .unwrap()
+                .key_value_seeds(self.tls_config.enabled())
+            {
+                let addr = seed.0.clone();
+                let port = seed.1;
+                let mut ep = self.endpoints.get(addr.clone().as_str());
+                if ep.is_none() {
+                    let connect = KvEndpoint::connect(
+                        addr.clone(),
+                        port,
+                        self.username.clone(),
+                        self.password.clone(),
+                        bucket.clone(),
+                        self.tls_config.clone(),
+                    );
 
-        Ok(results)
+                    let endpoint = select! {
+                        res = connect => res,
+                        () = &mut deadline_sleep => Err(ClientError::Timeout),
+                        () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
+                    }?;
+
+                    // Got to be a better way...
+                    self.endpoints.insert(addr.clone(), endpoint);
+                    ep = self.endpoints.get(addr.clone().as_str());
+                };
+
+                let op = ep.unwrap().noop();
+
+                let start = Instant::now();
+                let result = select! {
+                    res = op => res,
+                    () = &mut deadline_sleep => Err(ClientError::Timeout),
+                    () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
+                };
+                let end = Instant::now();
+
+                let error = match result {
+                    Ok(_) => None,
+                    Err(e) => Some(e),
+                };
+
+                let mut state = "OK".into();
+                if error.is_some() {
+                    state = "Error".into();
+                }
+
+                results.push(PingResponse::new(
+                    state,
+                    format!("{}:{}", addr.clone(), port.clone()),
+                    ServiceType::KeyValue,
+                    end.sub(start),
+                    error,
+                ));
+            }
+
+            Ok(results)
+        })
     }
 
     pub fn request(
