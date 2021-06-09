@@ -15,9 +15,8 @@ All user visible changes to this project will be documented in this file.
  - Added the `analytics buckets` command
  - Added the `analytics pending-mutations` command
  - Support registering / unregistering clusters on the fly
- - Supports getting buckets from couchbase cloud
- - Supports creating and updating buckets from couchbase cloud
  - Added new `[[cloud]]` config to support couchbase cloud
+ - Supports getting, creating, updating and dropping buckets from couchbase cloud
 
 ## 1.0.0-alpha.1 - 2021-05-20
 
