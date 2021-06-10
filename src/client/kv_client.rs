@@ -10,7 +10,6 @@ use serde::Deserialize;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::{collections::HashMap, ops::Sub};
-use tokio::runtime::Runtime;
 use tokio::time::sleep;
 use tokio::{select, time::Instant};
 
@@ -194,152 +193,38 @@ impl KvClient {
         Err(ClientError::CollectionManifestLoadFailed { reason })
     }
 
-    pub fn ping_all(
+    pub async fn ping_all(
         &mut self,
         bucket: String,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<Vec<PingResponse>, ClientError> {
-        let rt = Runtime::new().unwrap();
-        rt.block_on(async {
-            let now = Instant::now();
-            if now >= deadline {
-                return Err(ClientError::Timeout);
-            }
-            let deadline_sleep = sleep(deadline.sub(now));
-            tokio::pin!(deadline_sleep);
+        let now = Instant::now();
+        if now >= deadline {
+            return Err(ClientError::Timeout);
+        }
+        let deadline_sleep = sleep(deadline.sub(now));
+        tokio::pin!(deadline_sleep);
 
-            let ctrl_c_fut = CtrlcFuture::new(ctrl_c.clone());
-            tokio::pin!(ctrl_c_fut);
+        let ctrl_c_fut = CtrlcFuture::new(ctrl_c.clone());
+        tokio::pin!(ctrl_c_fut);
 
-            if self.config.is_none() {
-                self.config = Some(
-                    self.get_bucket_config(bucket.clone(), deadline, ctrl_c.clone())
-                        .await?,
-                );
-            }
+        if self.config.is_none() {
+            self.config = Some(
+                self.get_bucket_config(bucket.clone(), deadline, ctrl_c.clone())
+                    .await?,
+            );
+        }
 
-            let mut results: Vec<PingResponse> = Vec::new();
-            for seed in self
-                .config
-                .as_ref()
-                .unwrap()
-                .key_value_seeds(self.tls_config.enabled())
-            {
-                let addr = seed.0.clone();
-                let port = seed.1;
-                let mut ep = self.endpoints.get(addr.clone().as_str());
-                if ep.is_none() {
-                    let connect = KvEndpoint::connect(
-                        addr.clone(),
-                        port,
-                        self.username.clone(),
-                        self.password.clone(),
-                        bucket.clone(),
-                        self.tls_config.clone(),
-                    );
-
-                    let endpoint = select! {
-                        res = connect => res,
-                        () = &mut deadline_sleep => Err(ClientError::Timeout),
-                        () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
-                    }?;
-
-                    // Got to be a better way...
-                    self.endpoints.insert(addr.clone(), endpoint);
-                    ep = self.endpoints.get(addr.clone().as_str());
-                };
-
-                let op = ep.unwrap().noop();
-
-                let start = Instant::now();
-                let result = select! {
-                    res = op => res,
-                    () = &mut deadline_sleep => Err(ClientError::Timeout),
-                    () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
-                };
-                let end = Instant::now();
-
-                let error = match result {
-                    Ok(_) => None,
-                    Err(e) => Some(e),
-                };
-
-                let mut state = "OK".into();
-                if error.is_some() {
-                    state = "Error".into();
-                }
-
-                results.push(PingResponse::new(
-                    state,
-                    format!("{}:{}", addr.clone(), port.clone()),
-                    ServiceType::KeyValue,
-                    end.sub(start),
-                    error,
-                ));
-            }
-
-            Ok(results)
-        })
-    }
-
-    pub fn request(
-        &mut self,
-        request: KeyValueRequest,
-        bucket: String,
-        scope: String,
-        collection: String,
-        deadline: Instant,
-        ctrl_c: Arc<AtomicBool>,
-    ) -> Result<KvResponse, ClientError> {
-        let rt = Runtime::new().unwrap();
-        rt.block_on(async {
-            let now = Instant::now();
-            if now >= deadline {
-                return Err(ClientError::Timeout);
-            }
-            let deadline_sleep = sleep(deadline.sub(now));
-            tokio::pin!(deadline_sleep);
-
-            let ctrl_c_fut = CtrlcFuture::new(ctrl_c.clone());
-            tokio::pin!(ctrl_c_fut);
-
-            if self.config.is_none() {
-                self.config = Some(
-                    self.get_bucket_config(bucket.clone(), deadline, ctrl_c.clone())
-                        .await?,
-                );
-            }
-
-            let cid = if (!scope.is_empty() && scope != "_default")
-                || (!collection.is_empty() && collection != "_default")
-            {
-                if self.manifest.is_none() {
-                    // If we've been specifically asked to use a scope or collection and fetching the manifest
-                    // fails then we need to report that.
-                    self.manifest = Some(
-                        self.get_collection_manifest(bucket.clone(), deadline, ctrl_c.clone())
-                            .await?,
-                    );
-                }
-
-                self.search_manifest(scope.clone(), collection.clone())?
-            } else {
-                0
-            };
-
-            let key = match request {
-                KeyValueRequest::Get { ref key } => key.clone(),
-                KeyValueRequest::Set { ref key, .. } => key.clone(),
-                KeyValueRequest::Insert { ref key, .. } => key.clone(),
-                KeyValueRequest::Replace { ref key, .. } => key.clone(),
-                KeyValueRequest::Remove { ref key, .. } => key.clone(),
-            };
-
-            let config = self.config.as_ref().unwrap();
-            let partition = self.partition_for_key(key.clone(), config);
-            let (addr, port) = self.node_for_partition(partition, config);
-
+        let mut results: Vec<PingResponse> = Vec::new();
+        for seed in self
+            .config
+            .as_ref()
+            .unwrap()
+            .key_value_seeds(self.tls_config.enabled())
+        {
+            let addr = seed.0.clone();
+            let port = seed.1;
             let mut ep = self.endpoints.get(addr.clone().as_str());
             if ep.is_none() {
                 let connect = KvEndpoint::connect(
@@ -347,7 +232,7 @@ impl KvClient {
                     port,
                     self.username.clone(),
                     self.password.clone(),
-                    bucket,
+                    bucket.clone(),
                     self.tls_config.clone(),
                 );
 
@@ -360,89 +245,197 @@ impl KvClient {
                 // Got to be a better way...
                 self.endpoints.insert(addr.clone(), endpoint);
                 ep = self.endpoints.get(addr.clone().as_str());
-            }
-
-            let result = match request {
-                KeyValueRequest::Get { key } => {
-                    // ep cannot be None so unwrap is safe to do.
-                    let op = ep.unwrap().get(key.clone(), partition as u16, cid);
-
-                    select! {
-                        res = op => res,
-                        () = &mut deadline_sleep => Err(ClientError::Timeout),
-                        () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
-                    }
-                }
-                KeyValueRequest::Set { key, value, expiry } => {
-                    // ep cannot be None so unwrap is safe to do.
-                    let op = ep
-                        .unwrap()
-                        .set(key.clone(), value, expiry, partition as u16, cid);
-
-                    select! {
-                        res = op => res,
-                        () = &mut deadline_sleep => Err(ClientError::Timeout),
-                        () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
-                    }
-                }
-                KeyValueRequest::Insert { key, value, expiry } => {
-                    // ep cannot be None so unwrap is safe to do.
-                    let op = ep
-                        .unwrap()
-                        .add(key.clone(), value, expiry, partition as u16, cid);
-
-                    select! {
-                        res = op => res,
-                        () = &mut deadline_sleep => Err(ClientError::Timeout),
-                        () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
-                    }
-                }
-                KeyValueRequest::Replace { key, value, expiry } => {
-                    // ep cannot be None so unwrap is safe to do.
-                    let op = ep
-                        .unwrap()
-                        .replace(key.clone(), value, expiry, partition as u16, cid);
-
-                    select! {
-                        res = op => res,
-                        () = &mut deadline_sleep => Err(ClientError::Timeout),
-                        () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
-                    }
-                }
-                KeyValueRequest::Remove { key } => {
-                    // ep cannot be None so unwrap is safe to do.
-                    let op = ep.unwrap().remove(key.clone(), partition as u16, cid);
-
-                    select! {
-                        res = op => res,
-                        () = &mut deadline_sleep => Err(ClientError::Timeout),
-                        () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
-                    }
-                }
             };
 
-            match result {
-                Ok(mut r) => {
-                    let content = if let Some(body) = r.body() {
-                        match serde_json::from_slice(body.as_ref()) {
-                            Ok(v) => Some(v),
-                            Err(e) => {
-                                return Err(ClientError::RequestFailed {
-                                    reason: Some(e.to_string()),
-                                });
-                            }
-                        }
-                    } else {
-                        None
-                    };
-                    Ok(KvResponse {
-                        content,
-                        cas: r.cas(),
-                    })
-                }
-                Err(e) => Err(e),
+            let op = ep.unwrap().noop();
+
+            let start = Instant::now();
+            let result = select! {
+                res = op => res,
+                () = &mut deadline_sleep => Err(ClientError::Timeout),
+                () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
+            };
+            let end = Instant::now();
+
+            let error = match result {
+                Ok(_) => None,
+                Err(e) => Some(e),
+            };
+
+            let mut state = "OK".into();
+            if error.is_some() {
+                state = "Error".into();
             }
-        })
+
+            results.push(PingResponse::new(
+                state,
+                format!("{}:{}", addr.clone(), port.clone()),
+                ServiceType::KeyValue,
+                end.sub(start),
+                error,
+            ));
+        }
+
+        Ok(results)
+    }
+
+    pub async fn request(
+        &mut self,
+        request: KeyValueRequest,
+        bucket: String,
+        scope: String,
+        collection: String,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<KvResponse, ClientError> {
+        let now = Instant::now();
+        if now >= deadline {
+            return Err(ClientError::Timeout);
+        }
+        let deadline_sleep = sleep(deadline.sub(now));
+        tokio::pin!(deadline_sleep);
+
+        let ctrl_c_fut = CtrlcFuture::new(ctrl_c.clone());
+        tokio::pin!(ctrl_c_fut);
+
+        if self.config.is_none() {
+            self.config = Some(
+                self.get_bucket_config(bucket.clone(), deadline, ctrl_c.clone())
+                    .await?,
+            );
+        }
+
+        let cid = if (!scope.is_empty() && scope != "_default")
+            || (!collection.is_empty() && collection != "_default")
+        {
+            if self.manifest.is_none() {
+                // If we've been specifically asked to use a scope or collection and fetching the manifest
+                // fails then we need to report that.
+                self.manifest = Some(
+                    self.get_collection_manifest(bucket.clone(), deadline, ctrl_c.clone())
+                        .await?,
+                );
+            }
+
+            self.search_manifest(scope.clone(), collection.clone())?
+        } else {
+            0
+        };
+
+        let key = match request {
+            KeyValueRequest::Get { ref key } => key.clone(),
+            KeyValueRequest::Set { ref key, .. } => key.clone(),
+            KeyValueRequest::Insert { ref key, .. } => key.clone(),
+            KeyValueRequest::Replace { ref key, .. } => key.clone(),
+            KeyValueRequest::Remove { ref key, .. } => key.clone(),
+        };
+
+        let config = self.config.as_ref().unwrap();
+        let partition = self.partition_for_key(key.clone(), config);
+        let (addr, port) = self.node_for_partition(partition, config);
+
+        let mut ep = self.endpoints.get(addr.clone().as_str());
+        if ep.is_none() {
+            let connect = KvEndpoint::connect(
+                addr.clone(),
+                port,
+                self.username.clone(),
+                self.password.clone(),
+                bucket,
+                self.tls_config.clone(),
+            );
+
+            let endpoint = select! {
+                res = connect => res,
+                () = &mut deadline_sleep => Err(ClientError::Timeout),
+                () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
+            }?;
+
+            // Got to be a better way...
+            self.endpoints.insert(addr.clone(), endpoint);
+            ep = self.endpoints.get(addr.clone().as_str());
+        }
+
+        let result = match request {
+            KeyValueRequest::Get { key } => {
+                // ep cannot be None so unwrap is safe to do.
+                let op = ep.unwrap().get(key.clone(), partition as u16, cid);
+
+                select! {
+                    res = op => res,
+                    () = &mut deadline_sleep => Err(ClientError::Timeout),
+                    () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
+                }
+            }
+            KeyValueRequest::Set { key, value, expiry } => {
+                // ep cannot be None so unwrap is safe to do.
+                let op = ep
+                    .unwrap()
+                    .set(key.clone(), value, expiry, partition as u16, cid);
+
+                select! {
+                    res = op => res,
+                    () = &mut deadline_sleep => Err(ClientError::Timeout),
+                    () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
+                }
+            }
+            KeyValueRequest::Insert { key, value, expiry } => {
+                // ep cannot be None so unwrap is safe to do.
+                let op = ep
+                    .unwrap()
+                    .add(key.clone(), value, expiry, partition as u16, cid);
+
+                select! {
+                    res = op => res,
+                    () = &mut deadline_sleep => Err(ClientError::Timeout),
+                    () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
+                }
+            }
+            KeyValueRequest::Replace { key, value, expiry } => {
+                // ep cannot be None so unwrap is safe to do.
+                let op = ep
+                    .unwrap()
+                    .replace(key.clone(), value, expiry, partition as u16, cid);
+
+                select! {
+                    res = op => res,
+                    () = &mut deadline_sleep => Err(ClientError::Timeout),
+                    () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
+                }
+            }
+            KeyValueRequest::Remove { key } => {
+                // ep cannot be None so unwrap is safe to do.
+                let op = ep.unwrap().remove(key.clone(), partition as u16, cid);
+
+                select! {
+                    res = op => res,
+                    () = &mut deadline_sleep => Err(ClientError::Timeout),
+                    () = &mut ctrl_c_fut => Err(ClientError::Cancelled),
+                }
+            }
+        };
+
+        match result {
+            Ok(mut r) => {
+                let content = if let Some(body) = r.body() {
+                    match serde_json::from_slice(body.as_ref()) {
+                        Ok(v) => Some(v),
+                        Err(e) => {
+                            return Err(ClientError::RequestFailed {
+                                reason: Some(e.to_string()),
+                            });
+                        }
+                    }
+                } else {
+                    None
+                };
+                Ok(KvResponse {
+                    content,
+                    cas: r.cas(),
+                })
+            }
+            Err(e) => Err(e),
+        }
     }
 }
 

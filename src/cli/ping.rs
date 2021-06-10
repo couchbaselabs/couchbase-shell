@@ -12,6 +12,7 @@ use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
+use tokio::runtime::Runtime;
 use tokio::time::Instant;
 
 pub struct Ping {
@@ -81,6 +82,7 @@ fn run_ping(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream,
 
     debug!("Running ping");
 
+    let rt = Runtime::new().unwrap();
     let clusters_len = cluster_identifiers.len();
     let mut results = vec![];
     for identifier in cluster_identifiers {
@@ -124,7 +126,8 @@ fn run_ping(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream,
         let kv_deadline = Instant::now().add(cluster.timeouts().data_timeout());
         let mut client = cluster.cluster().key_value_client();
 
-        let kv_result = client.ping_all(bucket_name.clone(), kv_deadline, ctrl_c.clone());
+        let kv_result =
+            rt.block_on(client.ping_all(bucket_name.clone(), kv_deadline, ctrl_c.clone()));
         match kv_result {
             Ok(res) => {
                 for ping in res {

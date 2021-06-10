@@ -14,6 +14,7 @@ use nu_stream::OutputStream;
 use std::collections::HashSet;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
+use tokio::runtime::Runtime;
 use tokio::time::Instant;
 
 pub struct DocReplace {
@@ -144,6 +145,7 @@ fn run_replace(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStre
         }
         None
     });
+    let rt = Runtime::new().unwrap();
     let mut client = active_cluster.cluster().key_value_client();
 
     let mut success = 0;
@@ -158,8 +160,8 @@ fn run_replace(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStre
         };
 
         let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
-        let result = client
-            .request(
+        let result = rt
+            .block_on(client.request(
                 KeyValueRequest::Replace {
                     key: item.0,
                     value,
@@ -170,7 +172,7 @@ fn run_replace(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStre
                 collection.clone(),
                 deadline,
                 ctrl_c.clone(),
-            )
+            ))
             .map_err(|e| ShellError::untagged_runtime_error(e.to_string()));
 
         match result {
