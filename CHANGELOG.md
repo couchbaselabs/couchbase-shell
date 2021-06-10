@@ -2,6 +2,11 @@
 
 All user visible changes to this project will be documented in this file.
 
+## 1.0.0-alpha.3 - Unreleased
+
+ - Added support for alternate addresses (enables all data commands for Couchbase Cloud)
+ - Add `--with-meta` to `query indexes` and `query advise`
+
 ## 1.0.0-alpha.2 - 2021-06-09
 
  - Nushell has been pinned to 0.32.0 for the next release.
