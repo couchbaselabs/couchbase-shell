@@ -113,7 +113,7 @@
 <div class="sect2">
 <h3 id="_installation">1.1. Installation</h3>
 <div class="paragraph">
-<p>The current latest version is <strong>1.0.0-alpha.1</strong>.</p>
+<p>The current latest version is <strong>1.0.0-alpha.2</strong>.</p>
 </div>
 <div class="paragraph">
 <p>There are a couple ways you can get access to <code>cbsh</code>, the easiest one is to download our pre-built binaries for your platform of choice:</p>
@@ -121,13 +121,13 @@
 <div class="ulist">
 <ul>
 <li>
-<p>Linux: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-alpha.1/cbsh-1.0.0-alpha.1-linux.zip">cbsh-1.0.0-alpha.1-linux.zip</a></p>
+<p>Linux: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-alpha.2/cbsh-1.0.0-alpha.2-linux.zip">cbsh-1.0.0-alpha.2-linux.zip</a></p>
 </li>
 <li>
-<p>macOS: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-alpha.1/cbsh-1.0.0-alpha.1-mac.zip">cbsh-1.0.0-alpha.1-mac.zip</a></p>
+<p>macOS: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-alpha.2/cbsh-1.0.0-alpha.2-mac.zip">cbsh-1.0.0-alpha.2-mac.zip</a></p>
 </li>
 <li>
-<p>Windows: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-alpha.1/cbsh-1.0.0-alpha.1-windows.zip">cbsh-1.0.0-alpha.1-windows.zip</a></p>
+<p>Windows: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-alpha.2/cbsh-1.0.0-alpha.2-windows.zip">cbsh-1.0.0-alpha.2-windows.zip</a></p>
 </li>
 </ul>
 </div>
@@ -136,7 +136,7 @@
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>$ unzip cbsh-1.0.0-alpha.1-osx.zip
+<pre class="CodeRay highlight"><code>$ unzip cbsh-1.0.0-alpha.2-osx.zip
 $ cd cbsh-mac-x86_64
 $ ls
 cbsh  examples  LICENSE  README.md</code></pre>
@@ -152,7 +152,7 @@ cbsh  examples  LICENSE  README.md</code></pre>
 ───┬───────────────
  # │    version
 ───┼───────────────
- 0 │ 1.0.0-alpha.1
+ 0 │ 1.0.0-alpha.2
 ───┴───────────────</code></pre>
 </div>
 </div>
@@ -234,14 +234,14 @@ Thanks for trying CBSH!
 <div class="content">
 <pre class="CodeRay highlight"><code>version = 1
 
-[[clusters]]
+[[cluster]]
 identifier = &quot;local&quot;
 hostnames = [&quot;127.0.0.1&quot;]
 default-bucket = &quot;travel-sample&quot;
 username = &quot;Administrator&quot;
 password = &quot;password&quot;
 
-# [[clusters]]
+# [[cluster]]
 # identifier = &quot;remote&quot;
 # hostnames = [&quot;10.143.200.101&quot;]
 # default-bucket = &quot;myapp&quot;
@@ -918,7 +918,7 @@ If you have pivot mode (detailed above) turned off then this command can produce
 <pre class="CodeRay highlight"><code data-lang="toml"># Allows us to evolve in the future without breaking old config files
 version = 1
 
-[[clusters]]
+[[cluster]]
 identifier = &quot;default&quot;
 hostnames = [&quot;127.0.0.1&quot;]
 default-bucket = &quot;travel-sample&quot;
@@ -949,7 +949,7 @@ query-timeout = &quot;75s&quot;</code></pre>
 <pre class="CodeRay highlight"><code data-lang="toml"># Allows us to evolve in the future without breaking old config files
 version = 1
 
-[[clusters]]
+[[cluster]]
 identifier = &quot;default&quot;
 username = &quot;Administrator&quot;
 password = &quot;password&quot;
@@ -1382,7 +1382,7 @@ There are two ways that we can do this.</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2021-05-20 18:00:46 UTC
+Last updated 2021-06-10 13:29:49 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
