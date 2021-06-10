@@ -1,5 +1,5 @@
 use crate::cli::util::convert_json_value_to_nu_value;
-use crate::client::AnalyticsQueryRequest;
+use crate::client::{AnalyticsQueryRequest, Client};
 use crate::state::State;
 use log::debug;
 use nu_engine::CommandArgs;
@@ -82,18 +82,19 @@ fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Shel
     let with_meta = args.get_flag::<bool>("with-meta").unwrap().is_some();
 
     debug!("Running analytics query {}", &statement);
+    let mut client = match Client::try_lookup_srv(active_cluster.hostnames()[0].clone()) {
+        Ok(seeds) => active_cluster.cluster().http_client_with_seeds(seeds),
+        Err(_) => active_cluster.cluster().http_client(),
+    };
 
-    let response = active_cluster
-        .cluster()
-        .http_client()
-        .analytics_query_request(
-            AnalyticsQueryRequest::Execute {
-                statement,
-                scope: maybe_scope,
-            },
-            Instant::now().add(active_cluster.timeouts().query_timeout()),
-            ctrl_c,
-        )?;
+    let response = client.analytics_query_request(
+        AnalyticsQueryRequest::Execute {
+            statement,
+            scope: maybe_scope,
+        },
+        Instant::now().add(active_cluster.timeouts().query_timeout()),
+        ctrl_c,
+    )?;
 
     if with_meta {
         let content: serde_json::Value = serde_json::from_str(response.content())?;

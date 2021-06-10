@@ -3,6 +3,7 @@
 use crate::cli::util::cluster_identifiers_from;
 use crate::state::State;
 
+use crate::client::Client;
 use async_trait::async_trait;
 use log::debug;
 use nu_engine::CommandArgs;
@@ -89,10 +90,12 @@ fn run_ping(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream,
             None => continue, //This can't actually happen, we filter the clusters in cluster_identifiers_from
         };
         let deadline = Instant::now().add(cluster.timeouts().query_timeout());
-        let result = cluster
-            .cluster()
-            .http_client()
-            .ping_all_request(deadline, ctrl_c.clone());
+
+        let mut client = match Client::try_lookup_srv(cluster.hostnames()[0].clone()) {
+            Ok(seeds) => cluster.cluster().http_client_with_seeds(seeds),
+            Err(_) => cluster.cluster().http_client(),
+        };
+        let result = client.ping_all_request(deadline, ctrl_c.clone());
         match result {
             Ok(res) => {
                 for ping in res {
@@ -123,7 +126,10 @@ fn run_ping(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream,
 
         // TODO: do this in parallel to http ops.
         let kv_deadline = Instant::now().add(cluster.timeouts().data_timeout());
-        let mut client = cluster.cluster().key_value_client();
+        let mut client = match Client::try_lookup_srv(cluster.hostnames()[0].clone()) {
+            Ok(seeds) => cluster.cluster().key_value_client_with_seeds(seeds),
+            Err(_) => cluster.cluster().key_value_client(),
+        };
 
         let kv_result = client.ping_all(bucket_name.clone(), kv_deadline, ctrl_c.clone());
         match kv_result {

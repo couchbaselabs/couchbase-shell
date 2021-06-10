@@ -9,7 +9,6 @@ use serde_derive::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::fs;
-use std::net::SocketAddr;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use tokio::io::{AsyncRead, AsyncWrite};
@@ -36,10 +35,15 @@ impl KvEndpoint {
         bucket: String,
         tls_config: ClusterTlsConfig,
     ) -> Result<KvEndpoint, ClientError> {
-        let remote_addr: SocketAddr = format!("{}:{}", hostname, port).parse().unwrap();
+        let remote_addr = format!("{}:{}", hostname, port);
 
         if tls_config.enabled() {
-            let tcp_socket = TcpStream::connect(remote_addr).await.unwrap();
+            let tcp_socket =
+                TcpStream::connect(remote_addr)
+                    .await
+                    .map_err(|e| ClientError::RequestFailed {
+                        reason: Some(e.to_string()),
+                    })?;
 
             let mut builder = tokio_native_tls::native_tls::TlsConnector::builder();
             if tls_config.accept_all_certs() {

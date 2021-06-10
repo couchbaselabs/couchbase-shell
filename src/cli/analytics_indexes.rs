@@ -1,5 +1,5 @@
 use crate::cli::util::convert_json_value_to_nu_value;
-use crate::client::AnalyticsQueryRequest;
+use crate::client::{AnalyticsQueryRequest, Client};
 use crate::state::State;
 use async_trait::async_trait;
 use log::debug;
@@ -53,17 +53,19 @@ fn indexes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, 
     let active_cluster = guard.active_cluster();
     debug!("Running analytics query {}", &statement);
 
-    let response = active_cluster
-        .cluster()
-        .http_client()
-        .analytics_query_request(
-            AnalyticsQueryRequest::Execute {
-                statement: statement.into(),
-                scope: None,
-            },
-            Instant::now().add(active_cluster.timeouts().query_timeout()),
-            ctrl_c,
-        )?;
+    let mut client = match Client::try_lookup_srv(active_cluster.hostnames()[0].clone()) {
+        Ok(seeds) => active_cluster.cluster().http_client_with_seeds(seeds),
+        Err(_) => active_cluster.cluster().http_client(),
+    };
+
+    let response = client.analytics_query_request(
+        AnalyticsQueryRequest::Execute {
+            statement: statement.into(),
+            scope: None,
+        },
+        Instant::now().add(active_cluster.timeouts().query_timeout()),
+        ctrl_c,
+    )?;
 
     let with_meta = args.call_info().switch_present("with-meta");
     let content: serde_json::Value = serde_json::from_str(response.content())?;

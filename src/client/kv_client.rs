@@ -489,7 +489,8 @@ impl BucketConfig {
     }
 
     fn seeds(&self, key: &str) -> Vec<(String, u32)> {
-        self.nodes_ext
+        let default: Vec<(String, u32)> = self
+            .nodes_ext
             .iter()
             .filter(|node| node.services.contains_key(key))
             .map(|node| {
@@ -500,8 +501,49 @@ impl BucketConfig {
                 };
                 (hostname, *node.services.get(key).unwrap())
             })
-            .collect()
+            .collect();
+
+        for seed in &default {
+            if seed.0 == self.loaded_from.as_ref().unwrap().clone() {
+                return default;
+            }
+        }
+
+        let external: Vec<(String, u32)> = self
+            .nodes_ext
+            .iter()
+            .filter(|node| {
+                if let Some(external_addresses) = node.alternate_addresses.get("external") {
+                    return external_addresses.ports.contains_key(key);
+                }
+
+                false
+            })
+            .map(|node| {
+                let address = node.alternate_addresses.get("external").unwrap();
+                let hostname = if address.hostname.is_some() {
+                    address.hostname.as_ref().unwrap().clone()
+                } else {
+                    self.loaded_from.as_ref().unwrap().clone()
+                };
+                (hostname, *address.ports.get(key).unwrap())
+            })
+            .collect();
+
+        for seed in &external {
+            if seed.0 == self.loaded_from.as_ref().unwrap().clone() {
+                return external;
+            }
+        }
+
+        default
     }
+}
+
+#[derive(Deserialize, Debug)]
+pub(crate) struct AlternateAddress {
+    pub(crate) hostname: Option<String>,
+    pub(crate) ports: HashMap<String, u32>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -510,6 +552,8 @@ pub(crate) struct NodeConfig {
     #[serde(alias = "thisNode")]
     pub(crate) this_node: Option<bool>,
     pub(crate) hostname: Option<String>,
+    #[serde(alias = "alternateAddresses", default)]
+    pub(crate) alternate_addresses: HashMap<String, AlternateAddress>,
 }
 
 #[derive(Deserialize, Debug)]
