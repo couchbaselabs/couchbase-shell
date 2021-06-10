@@ -1,5 +1,5 @@
 use crate::cli::util::convert_json_value_to_nu_value;
-use crate::client::{Client, ManagementRequest, QueryRequest};
+use crate::client::{ManagementRequest, QueryRequest};
 use crate::state::{RemoteCluster, State};
 use log::debug;
 use nu_engine::CommandArgs;
@@ -95,12 +95,7 @@ fn indexes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, 
 
     debug!("Running n1ql query {}", &statement);
 
-    let client = match Client::try_lookup_srv(active_cluster.hostnames()[0].clone()) {
-        Ok(seeds) => active_cluster.cluster().http_client_with_seeds(seeds),
-        Err(_) => active_cluster.cluster().http_client(),
-    };
-
-    let response = client.query_request(
+    let response = active_cluster.cluster().http_client().query_request(
         QueryRequest::Execute {
             statement: statement.into(),
             scope: None,

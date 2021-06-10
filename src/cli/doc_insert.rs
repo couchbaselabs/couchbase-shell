@@ -3,7 +3,7 @@
 use super::util::convert_nu_value_to_json_value;
 
 use crate::cli::util::namespace_from_args;
-use crate::client::{Client, KeyValueRequest};
+use crate::client::KeyValueRequest;
 use crate::state::State;
 use async_trait::async_trait;
 use nu_engine::CommandArgs;
@@ -143,12 +143,8 @@ fn run_insert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
         }
         None
     });
-    let cluster = active_cluster.cluster();
 
-    let mut client = match Client::try_lookup_srv(active_cluster.hostnames()[0].clone()) {
-        Ok(seeds) => cluster.key_value_client_with_seeds(seeds),
-        Err(_) => cluster.key_value_client(),
-    };
+    let mut client = active_cluster.cluster().key_value_client();
 
     let mut success = 0;
     let mut failed = 0;

@@ -1,4 +1,4 @@
-use crate::client::{Client, SearchQueryRequest};
+use crate::client::SearchQueryRequest;
 use crate::state::State;
 use async_trait::async_trait;
 use log::debug;
@@ -80,16 +80,14 @@ fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Shel
         None => guard.active_cluster(),
     };
 
-    let mut client = match Client::try_lookup_srv(active_cluster.hostnames()[0].clone()) {
-        Ok(seeds) => active_cluster.cluster().http_client_with_seeds(seeds),
-        Err(_) => active_cluster.cluster().http_client(),
-    };
-
-    let response = client.search_query_request(
-        SearchQueryRequest::Execute { query, index },
-        Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c,
-    )?;
+    let response = active_cluster
+        .cluster()
+        .http_client()
+        .search_query_request(
+            SearchQueryRequest::Execute { query, index },
+            Instant::now().add(active_cluster.timeouts().query_timeout()),
+            ctrl_c,
+        )?;
 
     let rows: SearchResultData = match response.status() {
         200 => match serde_json::from_str(response.content()) {

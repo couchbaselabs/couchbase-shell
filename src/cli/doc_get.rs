@@ -3,7 +3,7 @@
 use super::util::convert_json_value_to_nu_value;
 use crate::state::State;
 
-use crate::client::{Client, KeyValueRequest};
+use crate::client::KeyValueRequest;
 use log::debug;
 use nu_engine::{CommandArgs, Example};
 use nu_errors::ShellError;
@@ -158,13 +158,8 @@ fn run_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, 
 
     debug!("Running kv get for docs {:?}", &ids);
 
-    let cluster = active_cluster.cluster();
-
     let mut results: Vec<Value> = vec![];
-    let mut client = match Client::try_lookup_srv(active_cluster.hostnames()[0].clone()) {
-        Ok(seeds) => cluster.key_value_client_with_seeds(seeds),
-        Err(_) => cluster.key_value_client(),
-    };
+    let mut client = active_cluster.cluster().key_value_client();
     for id in ids {
         let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
         let response = client.request(

@@ -43,15 +43,13 @@ impl Client {
     }
 
     pub fn http_client(&self) -> HTTPClient {
-        HTTPClient::new(
-            self.seeds.clone(),
-            self.username.clone(),
-            self.password.clone(),
-            self.tls_config.clone(),
-        )
-    }
+        let mut seeds = self.seeds.clone();
+        if seeds.len() == 1 {
+            if let Ok(s) = Client::try_lookup_srv(seeds[0].clone()) {
+                seeds = s
+            }
+        }
 
-    pub fn http_client_with_seeds(&self, seeds: Vec<String>) -> HTTPClient {
         HTTPClient::new(
             seeds,
             self.username.clone(),
@@ -61,15 +59,13 @@ impl Client {
     }
 
     pub fn key_value_client(&self) -> KvClient {
-        KvClient::new(
-            self.seeds.clone(),
-            self.username.clone(),
-            self.password.clone(),
-            self.tls_config.clone(),
-        )
-    }
+        let mut seeds = self.seeds.clone();
+        if seeds.len() == 1 {
+            if let Ok(s) = Client::try_lookup_srv(seeds[0].clone()) {
+                seeds = s
+            }
+        }
 
-    pub fn key_value_client_with_seeds(&self, seeds: Vec<String>) -> KvClient {
         KvClient::new(
             seeds,
             self.username.clone(),
@@ -78,7 +74,7 @@ impl Client {
         )
     }
 
-    pub fn try_lookup_srv(addr: String) -> Result<Vec<String>, ClientError> {
+    fn try_lookup_srv(addr: String) -> Result<Vec<String>, ClientError> {
         let resolver =
             Resolver::new(ResolverConfig::default(), ResolverOpts::default()).map_err(|e| {
                 ClientError::RequestFailed {
