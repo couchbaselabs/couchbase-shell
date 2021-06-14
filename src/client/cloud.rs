@@ -278,6 +278,7 @@ pub enum CloudRequest {
     },
     UpdateUser {
         cluster_id: String,
+        username: String,
         payload: String,
     },
 }
@@ -352,8 +353,12 @@ impl CloudRequest {
             Self::UpdateBucket { cluster_id, .. } => {
                 format!("/v2/clusters/{}/buckets", cluster_id)
             }
-            Self::UpdateUser { cluster_id, .. } => {
-                format!("/v2/clusters/{}/users", cluster_id)
+            Self::UpdateUser {
+                cluster_id,
+                username,
+                ..
+            } => {
+                format!("/v2/clusters/{}/users/{}", cluster_id, username)
             }
         }
     }
