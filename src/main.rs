@@ -245,6 +245,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(TutorialPage::new(state.clone())),
         nu_engine::whole_stream_command(TutorialPrev::new(state.clone())),
         nu_engine::whole_stream_command(Users::new(state.clone())),
+        nu_engine::whole_stream_command(UsersDrop::new(state.clone())),
         nu_engine::whole_stream_command(UsersGet::new(state.clone())),
         nu_engine::whole_stream_command(UsersRoles::new(state.clone())),
         nu_engine::whole_stream_command(UsersUpsert::new(state.clone())),

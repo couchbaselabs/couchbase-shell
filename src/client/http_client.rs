@@ -381,6 +381,9 @@ pub enum ManagementRequest {
     DropBucket {
         name: String,
     },
+    DropUser {
+        username: String,
+    },
     FlushBucket {
         name: String,
     },
@@ -429,6 +432,7 @@ impl ManagementRequest {
             Self::BucketStats { name } => format!("/pools/default/buckets/{}/stats", name),
             Self::CreateBucket { .. } => "/pools/default/buckets".into(),
             Self::DropBucket { name } => format!("/pools/default/buckets/{}", name),
+            Self::DropUser { username } => format!("/settings/rbac/users/local/{}", username),
             Self::FlushBucket { name } => {
                 format!("/pools/default/buckets/{}/controller/doFlush", name)
             }
@@ -466,6 +470,7 @@ impl ManagementRequest {
             Self::BucketStats { .. } => HttpVerb::Get,
             Self::CreateBucket { .. } => HttpVerb::Post,
             Self::DropBucket { .. } => HttpVerb::Delete,
+            Self::DropUser { .. } => HttpVerb::Delete,
             Self::FlushBucket { .. } => HttpVerb::Post,
             Self::LoadSampleBucket { .. } => HttpVerb::Post,
             Self::UpdateBucket { .. } => HttpVerb::Post,
