@@ -1,6 +1,7 @@
+use crate::cli::cloud_json::JSONCloudClusterHealthResponse;
 use crate::cli::util::cluster_identifiers_from;
-use crate::client::ManagementRequest;
-use crate::state::State;
+use crate::client::{CloudRequest, ManagementRequest};
+use crate::state::{ClusterTimeouts, RemoteCloud, RemoteCluster, State};
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Value};
@@ -53,20 +54,33 @@ fn health(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, S
 
     let mut converted = vec![];
     for identifier in cluster_identifiers {
-        converted.push(check_autofailover(
-            state.clone(),
-            &identifier,
-            ctrl_c.clone(),
-        )?);
+        let guard = state.lock().unwrap();
+        let cluster = match guard.clusters().get(&identifier) {
+            Some(c) => c,
+            None => {
+                return Err(ShellError::untagged_runtime_error("Cluster not found"));
+            }
+        };
 
-        let bucket_names = grab_bucket_names(state.clone(), &identifier, ctrl_c.clone())?;
-        for bucket_name in bucket_names {
-            converted.push(check_resident_ratio(
-                state.clone(),
-                &bucket_name,
-                &identifier,
-                ctrl_c.clone(),
-            )?);
+        if let Some(c) = cluster.cloud() {
+            let cloud = guard.cloud_for_cluster(c)?;
+            let values =
+                check_cloud_health(&identifier, cloud, cluster.timeouts(), ctrl_c.clone())?;
+            for value in values {
+                converted.push(value);
+            }
+        } else {
+            converted.push(check_autofailover(&identifier, cluster, ctrl_c.clone())?);
+
+            let bucket_names = grab_bucket_names(cluster, ctrl_c.clone())?;
+            for bucket_name in bucket_names {
+                converted.push(check_resident_ratio(
+                    &identifier,
+                    &bucket_name,
+                    cluster,
+                    ctrl_c.clone(),
+                )?);
+            }
         }
     }
 
@@ -74,18 +88,9 @@ fn health(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, S
 }
 
 fn grab_bucket_names(
-    state: Arc<Mutex<State>>,
-    identifier: &str,
+    cluster: &RemoteCluster,
     ctrl_c: Arc<AtomicBool>,
 ) -> Result<Vec<String>, ShellError> {
-    let guard = state.lock().unwrap();
-    let cluster = match guard.clusters().get(identifier) {
-        Some(c) => c,
-        None => {
-            return Err(ShellError::untagged_runtime_error("Cluster not found"));
-        }
-    };
-
     let response = cluster.cluster().http_client().management_request(
         ManagementRequest::GetBuckets,
         Instant::now().add(cluster.timeouts().query_timeout()),
@@ -101,19 +106,11 @@ struct BucketInfo {
 }
 
 fn check_autofailover(
-    state: Arc<Mutex<State>>,
     identifier: &str,
+    cluster: &RemoteCluster,
     ctrl_c: Arc<AtomicBool>,
 ) -> Result<Value, ShellError> {
     let mut collected = TaggedDictBuilder::new(Tag::default());
-
-    let guard = state.lock().unwrap();
-    let cluster = match guard.clusters().get(identifier) {
-        Some(c) => c,
-        None => {
-            return Err(ShellError::untagged_runtime_error("Cluster not found"));
-        }
-    };
 
     let response = cluster.cluster().http_client().management_request(
         ManagementRequest::SettingsAutoFailover,
@@ -144,20 +141,12 @@ struct AutoFailoverSettings {
 }
 
 fn check_resident_ratio(
-    state: Arc<Mutex<State>>,
     bucket_name: &str,
     identifier: &str,
+    cluster: &RemoteCluster,
     ctrl_c: Arc<AtomicBool>,
 ) -> Result<Value, ShellError> {
     let mut collected = TaggedDictBuilder::new(Tag::default());
-
-    let guard = state.lock().unwrap();
-    let cluster = match guard.clusters().get(identifier) {
-        Some(c) => c,
-        None => {
-            return Err(ShellError::untagged_runtime_error("Cluster not found"));
-        }
-    };
 
     let response = cluster.cluster().http_client().management_request(
         ManagementRequest::BucketStats {
@@ -189,6 +178,65 @@ fn check_resident_ratio(
     collected.insert_value("remedy", remedy.to_string());
 
     Ok(collected.into_value())
+}
+
+fn check_cloud_health(
+    identifier: &str,
+    cloud: &RemoteCloud,
+    timeouts: &ClusterTimeouts,
+    ctrl_c: Arc<AtomicBool>,
+) -> Result<Vec<Value>, ShellError> {
+    let mut results = Vec::new();
+
+    let cluster_id = cloud.cloud().find_cluster_id(
+        identifier.to_string(),
+        Instant::now().add(timeouts.query_timeout()),
+        ctrl_c.clone(),
+    )?;
+    let response = cloud.cloud().cloud_request(
+        CloudRequest::GetClusterHealth { cluster_id },
+        Instant::now().add(timeouts.query_timeout()),
+        ctrl_c,
+    )?;
+    let resp: JSONCloudClusterHealthResponse = serde_json::from_str(response.content())?;
+
+    let status = resp.status();
+
+    let mut status_collected = TaggedDictBuilder::new(Tag::default());
+    status_collected.insert_value("cluster", identifier.to_string());
+    status_collected.insert_value("check", "status".to_string());
+    status_collected.insert_value("bucket", "-".to_string());
+    status_collected.insert_value("expected", "ready".to_string());
+    status_collected.insert_value("actual", status.clone());
+
+    let remedy = if status == *"ready" {
+        "Not needed"
+    } else {
+        "Should be ready"
+    };
+    status_collected.insert_value("remedy", remedy.to_string());
+
+    results.push(status_collected.into_value());
+
+    let health = resp.health();
+
+    let mut health_collected = TaggedDictBuilder::new(Tag::default());
+    health_collected.insert_value("cluster", identifier.to_string());
+    health_collected.insert_value("check", "health".to_string());
+    health_collected.insert_value("bucket", "-".to_string());
+    health_collected.insert_value("expected", "healthy".to_string());
+    health_collected.insert_value("actual", health.clone());
+
+    let remedy = if health == *"healthy" {
+        "Not needed"
+    } else {
+        "Should be healthy"
+    };
+    health_collected.insert_value("remedy", remedy.to_string());
+
+    results.push(health_collected.into_value());
+
+    Ok(results)
 }
 
 #[derive(Debug, Deserialize)]

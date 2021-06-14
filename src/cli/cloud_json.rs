@@ -121,3 +121,18 @@ impl JSONCloudCreateUserRequest {
         }
     }
 }
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct JSONCloudClusterHealthResponse {
+    status: String,
+    health: String,
+}
+
+impl JSONCloudClusterHealthResponse {
+    pub fn status(&self) -> String {
+        self.status.clone()
+    }
+    pub fn health(&self) -> String {
+        self.health.clone()
+    }
+}
