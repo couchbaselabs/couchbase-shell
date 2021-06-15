@@ -75,8 +75,8 @@ fn health(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, S
             let bucket_names = grab_bucket_names(cluster, ctrl_c.clone())?;
             for bucket_name in bucket_names {
                 converted.push(check_resident_ratio(
-                    &identifier,
                     &bucket_name,
+                    &identifier,
                     cluster,
                     ctrl_c.clone(),
                 )?);
