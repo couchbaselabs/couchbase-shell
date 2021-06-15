@@ -1,3 +1,6 @@
+mod addresses;
+mod addresses_add;
+mod addresses_drop;
 mod analytics;
 mod analytics_buckets;
 mod analytics_datasets;
@@ -59,6 +62,9 @@ mod util;
 mod version;
 mod whoami;
 
+pub use addresses::Addresses;
+pub use addresses_add::AddressesAdd;
+pub use addresses_drop::AddressesDrop;
 pub use analytics::Analytics;
 pub use analytics_buckets::AnalyticsBuckets;
 pub use analytics_datasets::AnalyticsDatasets;

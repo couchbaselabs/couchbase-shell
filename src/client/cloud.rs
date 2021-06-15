@@ -298,13 +298,13 @@ impl CloudRequest {
                 format!("/v2/clusters/{}/users", cluster_id)
             }
             Self::DeleteAllowListEntry { cluster_id, .. } => {
-                format!("/v2/clouds/{}/allowlist", cluster_id)
+                format!("/v2/clusters/{}/allowlist", cluster_id)
             }
             Self::DeleteBucket { cluster_id, .. } => {
                 format!("/v2/clusters/{}/buckets", cluster_id)
             }
             Self::DeleteCluster { cluster_id, .. } => {
-                format!("/v2/clouds/{}", cluster_id)
+                format!("/v2/clusters/{}", cluster_id)
             }
             Self::DeleteProject { project_id } => {
                 format!("/v2/projects/{}", project_id)

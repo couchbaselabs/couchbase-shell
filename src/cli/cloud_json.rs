@@ -136,3 +136,71 @@ impl JSONCloudClusterHealthResponse {
         self.health.clone()
     }
 }
+
+#[derive(Debug, Serialize)]
+pub struct JSONCloudAppendAllowListRequest {
+    #[serde(rename = "cidrBlock")]
+    cidr_block: String,
+    #[serde(rename = "ruleType")]
+    rule_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    duration: Option<String>,
+}
+
+impl JSONCloudAppendAllowListRequest {
+    pub fn new(cidr_block: String, rule_type: String, duration: Option<String>) -> Self {
+        Self {
+            cidr_block,
+            rule_type,
+            duration,
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct JSONCloudDeleteAllowListRequest {
+    #[serde(rename = "cidrBlock")]
+    cidr_block: String,
+}
+
+impl JSONCloudDeleteAllowListRequest {
+    pub fn new(cidr_block: String) -> Self {
+        Self { cidr_block }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct JSONCloudGetAllowListResponse {
+    #[serde(rename = "cidrBlock")]
+    cidr_block: String,
+    #[serde(rename = "ruleType")]
+    rule_type: String,
+    state: String,
+    #[serde(rename = "createdAt")]
+    created_at: String,
+    #[serde(rename = "updatedAt")]
+    updated_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    duration: Option<String>,
+}
+
+impl JSONCloudGetAllowListResponse {
+    pub fn address(&self) -> String {
+        self.cidr_block.clone()
+    }
+    pub fn rule_type(&self) -> String {
+        self.rule_type.clone()
+    }
+    pub fn state(&self) -> String {
+        self.state.clone()
+    }
+    pub fn created_at(&self) -> String {
+        self.created_at.clone()
+    }
+    pub fn updated_at(&self) -> String {
+        self.updated_at.clone()
+    }
+    pub fn duration(&self) -> Option<String> {
+        self.duration.clone()
+    }
+}
