@@ -48,16 +48,8 @@ fn clusters_unregister(
     args: CommandArgs,
     state: Arc<Mutex<State>>,
 ) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once()?;
-
-    let identifier = match args.nth(0) {
-        Some(v) => match v.as_string() {
-            Ok(name) => name,
-            Err(e) => return Err(e),
-        },
-        None => return Err(ShellError::unexpected("identifier is required")),
-    };
-    let save = args.get_flag::<bool>("save")?.unwrap_or(false);
+    let identifier: String = args.req(0)?;
+    let save = args.get_flag("save")?.unwrap_or(false);
 
     let mut guard = state.lock().unwrap();
     if guard.remove_cluster(identifier).is_none() {

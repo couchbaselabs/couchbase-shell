@@ -1,6 +1,6 @@
 use crate::state::{RemoteCluster, State};
 use nu_cli::ToPrimitive;
-use nu_engine::EvaluatedCommandArgs;
+use nu_engine::CommandArgs;
 use nu_errors::{CoerceInto, ShellError};
 use nu_protocol::{
     EvaluatedArgs, Primitive, TaggedDictBuilder, UnspannedPathMember, UntaggedValue, Value,
@@ -130,8 +130,7 @@ pub fn convert_nu_value_to_json_value(v: &Value) -> Result<serde_json::Value, Sh
         UntaggedValue::Block(_) | UntaggedValue::Primitive(Primitive::Range(_)) => {
             serde_json::Value::Null
         }
-        #[cfg(feature = "dataframe")]
-        UntaggedValue::Dataframe(_) => serde_json::Value::Null,
+        UntaggedValue::DataFrame(_) => serde_json::Value::Null,
         UntaggedValue::Primitive(Primitive::Binary(b)) => serde_json::Value::Array(
             b.iter()
                 .map(|x| {
@@ -170,17 +169,11 @@ fn json_list(input: &[Value]) -> Result<Vec<serde_json::Value>, ShellError> {
 
 pub fn cluster_identifiers_from(
     state: &Arc<Mutex<State>>,
-    args: &EvaluatedCommandArgs,
+    args: &CommandArgs,
     default_active: bool,
 ) -> Result<Vec<String>, ShellError> {
     let state = state.lock().unwrap();
-    let identifier_arg = match args
-        .call_info
-        .args
-        .get("clusters")
-        .map(|id| id.as_string().ok())
-        .flatten()
-    {
+    let identifier_arg: String = match args.get_flag("clusters")? {
         Some(arg) => arg,
         None => {
             if default_active {
@@ -208,15 +201,11 @@ pub fn cluster_identifiers_from(
 }
 
 pub fn namespace_from_args(
-    args: &EvaluatedCommandArgs,
+    args: &CommandArgs,
     active_cluster: &RemoteCluster,
 ) -> Result<(String, String, String), ShellError> {
     let bucket = match args
-        .call_info
-        .args
-        .get("bucket")
-        .map(|bucket| bucket.as_string().ok())
-        .flatten()
+        .get_flag("bucket")?
         .or_else(|| active_cluster.active_bucket())
     {
         Some(v) => Ok(v),
@@ -225,13 +214,7 @@ pub fn namespace_from_args(
         )),
     }?;
 
-    let scope = match args
-        .call_info
-        .args
-        .get("scope")
-        .map(|c| c.as_string().ok())
-        .flatten()
-    {
+    let scope = match args.get_flag("scope")? {
         Some(s) => s,
         None => match active_cluster.active_scope() {
             Some(s) => s,
@@ -239,13 +222,7 @@ pub fn namespace_from_args(
         },
     };
 
-    let collection = match args
-        .call_info
-        .args
-        .get("collection")
-        .map(|c| c.as_string().ok())
-        .flatten()
-    {
+    let collection = match args.get_flag("collection")? {
         Some(c) => c,
         None => match active_cluster.active_collection() {
             Some(c) => c,
@@ -283,20 +260,4 @@ pub fn parse_optional_as_bool(
         },
         None => Ok(default),
     }
-}
-
-pub fn arg_as<T>(
-    args: &EvaluatedCommandArgs,
-    arg_name: &str,
-    cb: fn(&Value) -> Result<T, ShellError>,
-) -> Result<Option<T>, ShellError> {
-    let val = match args.call_info.args.get(arg_name) {
-        Some(v) => match cb(v) {
-            Ok(c) => Some(c),
-            Err(e) => return Err(e),
-        },
-        None => None,
-    };
-
-    Ok(val)
 }

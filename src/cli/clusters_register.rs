@@ -1,4 +1,3 @@
-use crate::cli::util::parse_optional_as_bool;
 use crate::config::{CloudConfig, ClusterConfig, ClusterTlsConfig, ShellConfig};
 use crate::state::{ClusterTimeouts, RemoteCluster, State};
 use nu_engine::CommandArgs;
@@ -117,77 +116,24 @@ fn clusters_register(
     args: CommandArgs,
     state: Arc<Mutex<State>>,
 ) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once()?;
+    let identifier: String = args.req_named("identifier")?;
 
-    let identifier = match args.call_info.args.get("identifier") {
-        Some(v) => match v.as_string() {
-            Ok(name) => name,
-            Err(e) => return Err(e),
-        },
-        None => return Err(ShellError::unexpected("identifier is required")),
-    };
-    let hostnames = match args.call_info.args.get("hostnames") {
-        Some(v) => match v.as_string() {
-            Ok(name) => name.split(',').map(|v| v.to_owned()).collect(),
-            Err(e) => return Err(e),
-        },
-        None => return Err(ShellError::unexpected("hostnames is required")),
-    };
-    let username = match args.call_info.args.get("username") {
-        Some(v) => match v.as_string() {
-            Ok(name) => name,
-            Err(e) => return Err(e),
-        },
-        None => return Err(ShellError::unexpected("username is required")),
-    };
-    let password = match args.call_info.args.get("password") {
-        Some(v) => match v.as_string() {
-            Ok(name) => name,
-            Err(e) => return Err(e),
-        },
-        None => return Err(ShellError::unexpected("password is required")),
-    };
-    let bucket = match args.call_info.args.get("default-bucket") {
-        Some(v) => match v.as_string() {
-            Ok(name) => Some(name),
-            Err(e) => return Err(e),
-        },
-        None => None,
-    };
-    let scope = match args.call_info.args.get("default-scope") {
-        Some(v) => match v.as_string() {
-            Ok(name) => Some(name),
-            Err(e) => return Err(e),
-        },
-        None => None,
-    };
-    let collection = match args.call_info.args.get("default-collection") {
-        Some(v) => match v.as_string() {
-            Ok(name) => Some(name),
-            Err(e) => return Err(e),
-        },
-        None => None,
-    };
-    let tls_enabled = parse_optional_as_bool(&args.call_info.args, "tls-enabled", true)?;
-    let tls_accept_all_certs =
-        parse_optional_as_bool(&args.call_info.args, "tls-accept-all-certs", true)?;
-    let tls_accept_all_hosts =
-        parse_optional_as_bool(&args.call_info.args, "tls-validate-hosts", true)?;
-    let cert_path = match args.call_info.args.get("tls-cert-path") {
-        Some(v) => match v.as_string() {
-            Ok(name) => Some(name),
-            Err(e) => return Err(e),
-        },
-        None => None,
-    };
-    let save = args.get_flag::<bool>("save")?.unwrap_or(false);
-    let cloud = match args.call_info.args.get("cloud") {
-        Some(v) => match v.as_string() {
-            Ok(name) => Some(name),
-            Err(e) => return Err(e),
-        },
-        None => None,
-    };
+    let hostnames = args
+        .req_named::<String>("hostnames")?
+        .split(',')
+        .map(|v| v.to_owned())
+        .collect();
+    let username = args.req_named("username")?;
+    let password = args.req_named("password")?;
+    let bucket = args.get_flag("default-bucket")?;
+    let scope = args.get_flag("default-scope")?;
+    let collection = args.get_flag("default-collection")?;
+    let tls_enabled = args.get_flag("tls-enabled")?.unwrap_or(true);
+    let tls_accept_all_certs = args.get_flag("tls-accept-all-certs")?.unwrap_or(true);
+    let tls_accept_all_hosts = args.get_flag("tls-validate-hosts")?.unwrap_or(true);
+    let cert_path = args.get_flag("tls-cert-path")?;
+    let save = args.get_flag("save")?.unwrap_or(false);
+    let cloud = args.get_flag("cloud")?;
 
     let cluster = RemoteCluster::new(
         hostnames,

@@ -48,15 +48,8 @@ impl nu_engine::WholeStreamCommand for ScopesGet {
 
 fn scopes_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let args = args.evaluate_once()?;
 
-    let bucket = match args
-        .call_info
-        .args
-        .get("bucket")
-        .map(|bucket| bucket.as_string().ok())
-        .flatten()
-    {
+    let bucket = match args.get_flag("bucket")? {
         Some(v) => v,
         None => match state.lock().unwrap().active_cluster().active_bucket() {
             Some(s) => s,

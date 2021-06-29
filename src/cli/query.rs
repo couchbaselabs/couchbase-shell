@@ -62,47 +62,26 @@ impl nu_engine::WholeStreamCommand for Query {
 
 fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let args = args.evaluate_once()?;
 
     let guard = state.lock().unwrap();
-    let statement = args.nth(0).expect("need statement").as_string()?;
-    let active_cluster = match args.call_info.args.get("cluster") {
-        Some(c) => {
-            let identifier = match c.as_string() {
-                Ok(s) => s,
-                Err(e) => {
-                    return Err(ShellError::untagged_runtime_error(format!(
-                        "Could not convert cluster name to string: {}",
-                        e
-                    )));
-                }
-            };
-            match guard.clusters().get(identifier.as_str()) {
-                Some(c) => c,
-                None => {
-                    return Err(ShellError::untagged_runtime_error(
-                        "Could not get cluster from available clusters".to_string(),
-                    ));
-                }
+    let statement: String = args.req(0)?;
+    let cluster: Option<String> = args.get_flag("cluster")?;
+    let active_cluster = match cluster {
+        Some(identifier) => match guard.clusters().get(identifier.as_str()) {
+            Some(c) => c,
+            None => {
+                return Err(ShellError::untagged_runtime_error(
+                    "Could not get cluster from available clusters".to_string(),
+                ));
             }
-        }
+        },
         None => guard.active_cluster(),
     };
     let bucket = args
-        .call_info
-        .args
-        .get("bucket")
-        .map(|bucket| bucket.as_string().ok())
-        .flatten()
+        .get_flag("bucket")?
         .or_else(|| active_cluster.active_bucket());
 
-    let scope = match args.call_info.args.get("scope") {
-        Some(v) => match v.as_string() {
-            Ok(name) => Some(name),
-            Err(e) => return Err(e),
-        },
-        None => None,
-    };
+    let scope = args.get_flag("scope")?;
 
     let maybe_scope = bucket.map(|b| scope.map(|s| (b, s))).flatten();
 

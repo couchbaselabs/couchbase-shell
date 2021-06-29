@@ -67,22 +67,17 @@ impl nu_engine::WholeStreamCommand for DocRemove {
 
 fn run_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let args = args.evaluate_once()?;
 
     let id_column = args
-        .call_info
-        .args
-        .get("id-column")
-        .map(|id| id.as_string().ok())
-        .flatten()
+        .get_flag("id-column")?
         .unwrap_or_else(|| String::from("id"));
 
     let guard = state.lock().unwrap();
     let active_cluster = guard.active_cluster();
     let (bucket, scope, collection) = namespace_from_args(&args, active_cluster)?;
 
-    let input_args = if let Some(id) = args.nth(0) {
-        vec![id.as_string()?]
+    let input_args = if let Some(id) = args.opt::<String>(0)? {
+        vec![id]
     } else {
         vec![]
     };

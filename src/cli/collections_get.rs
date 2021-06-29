@@ -54,16 +54,9 @@ fn collections_get(
     args: CommandArgs,
 ) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let args = args.evaluate_once()?;
     let guard = state.lock().unwrap();
 
-    let bucket = match args
-        .call_info
-        .args
-        .get("bucket")
-        .map(|bucket| bucket.as_string().ok())
-        .flatten()
-    {
+    let bucket = match args.get_flag("bucket")? {
         Some(v) => v,
         None => match state.lock().unwrap().active_cluster().active_bucket() {
             Some(s) => s,
@@ -75,12 +68,7 @@ fn collections_get(
         },
     };
 
-    let scope = args
-        .call_info
-        .args
-        .get("scope")
-        .map(|c| c.as_string().ok())
-        .flatten();
+    let scope: Option<String> = args.get_flag("scope")?;
 
     debug!(
         "Running collections get for bucket {:?}, scope {:?}",

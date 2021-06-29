@@ -41,8 +41,6 @@ impl nu_engine::WholeStreamCommand for Clusters {
 }
 
 fn clusters(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once()?;
-
     let identifiers = cluster_identifiers_from(&state, &args, false)?;
 
     let active = state.lock().unwrap().active();

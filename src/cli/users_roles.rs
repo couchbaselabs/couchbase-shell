@@ -56,16 +56,10 @@ impl nu_engine::WholeStreamCommand for UsersRoles {
 
 fn run_async(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let args = args.evaluate_once()?;
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
 
-    let permission = args
-        .call_info
-        .args
-        .get("permission")
-        .map(|id| id.as_string().ok())
-        .flatten();
+    let permission = args.get_flag("permission")?;
 
     let mut entries = vec![];
     for identifier in cluster_identifiers {

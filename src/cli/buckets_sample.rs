@@ -56,17 +56,9 @@ fn load_sample_bucket(
     args: CommandArgs,
 ) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let args = args.evaluate_once()?;
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
-    let bucket_name = match args.nth(0) {
-        Some(n) => n.as_string()?,
-        None => {
-            return Err(ShellError::untagged_runtime_error(
-                "No bucket name was specified".to_string(),
-            ))
-        }
-    };
+    let bucket_name: String = args.req(0)?;
 
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {

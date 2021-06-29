@@ -1,5 +1,4 @@
 use crate::cli::cloud_json::{JSONCloudCreateUserRequest, JSONCloudUser, JSONCloudUserRoles};
-use crate::cli::util::arg_as;
 use crate::client::{CloudRequest, ManagementRequest};
 use crate::state::State;
 use async_trait::async_trait;
@@ -74,12 +73,11 @@ impl nu_engine::WholeStreamCommand for UsersUpsert {
 
 fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let args = args.evaluate_once()?;
-    let username = arg_as(&args, "username", |v| v.as_string())?.unwrap();
-    let roles = arg_as(&args, "roles", |v| v.as_string())?.unwrap();
-    let password = arg_as(&args, "password", |v| v.as_string())?;
-    let display_name = arg_as(&args, "display_name", |v| v.as_string())?;
-    let groups = arg_as(&args, "groups", |v| v.as_string())?;
+    let username: String = args.req_named("username")?;
+    let roles: String = args.req_named("roles")?;
+    let password = args.get_flag("password")?;
+    let display_name = args.get_flag("display_name")?;
+    let groups = args.get_flag("groups")?;
 
     debug!("Running users upsert for user {}", &username);
 

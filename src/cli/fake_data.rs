@@ -73,9 +73,7 @@ impl nu_engine::WholeStreamCommand for FakeData {
 }
 
 fn run_fake(_state: Arc<Mutex<State>>, args: CommandArgs) -> Result<ActionStream, ShellError> {
-    let args = args.evaluate_once()?;
-
-    let list_functions = args.call_info.args.get("list-functions").is_some();
+    let list_functions = args.has_flag("list-functions");
 
     let ctx = Context::new();
     let mut tera = Tera::default();
@@ -101,23 +99,10 @@ fn run_fake(_state: Arc<Mutex<State>>, args: CommandArgs) -> Result<ActionStream
             _ => unimplemented!(),
         }
     } else {
-        let path = args.call_info.args.get("template").ok_or_else(|| {
-            ShellError::labeled_error(
-                "No file or directory specified",
-                "for command",
-                Tag::default(),
-            )
-        })?;
+        let path: String = args.req_named("template")?;
 
-        let num_rows = args
-            .call_info
-            .args
-            .get("num-rows")
-            .map(|v| v.as_u64().ok())
-            .flatten()
-            .unwrap_or(1);
+        let num_rows = args.get_flag("num-rows")?.unwrap_or(1);
 
-        let path = path.as_path()?;
         let template = fs::read_to_string(path)
             .map_err(|e| ShellError::untagged_runtime_error(format!("{}", e)))?;
 

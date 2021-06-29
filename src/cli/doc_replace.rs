@@ -81,41 +81,25 @@ impl nu_engine::WholeStreamCommand for DocReplace {
 
 fn run_replace(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let args = args.evaluate_once()?;
 
     let id_column = args
-        .call_info
-        .args
-        .get("id-column")
-        .map(|id| id.as_string().ok())
-        .flatten()
+        .get_flag("id-column")?
         .unwrap_or_else(|| String::from("id"));
 
     let content_column = args
-        .call_info
-        .args
-        .get("content-column")
-        .map(|content| content.as_string().ok())
-        .flatten()
+        .get_flag("content-column")?
         .unwrap_or_else(|| String::from("content"));
 
-    let expiry_arg = args
-        .call_info
-        .args
-        .get("expiry")
-        .map(|e| e.as_u32().unwrap_or(0));
-
-    let expiry = expiry_arg.unwrap_or(0);
+    let expiry: i32 = args.get_flag("expiry")?.unwrap_or(0);
 
     let guard = state.lock().unwrap();
     let active_cluster = guard.active_cluster();
 
     let (bucket, scope, collection) = namespace_from_args(&args, active_cluster)?;
 
-    let input_args = if let Some(id) = args.nth(0) {
-        if let Some(content) = args.nth(1) {
-            let id = id.as_string()?;
-            let content = serde_json::from_str(&content.as_string()?)?;
+    let input_args = if let Some(id) = args.opt::<String>(0)? {
+        if let Some(content) = args.opt::<String>(1)? {
+            let content = serde_json::from_str(&content)?;
             vec![(id, content)]
         } else {
             vec![]
@@ -165,7 +149,7 @@ fn run_replace(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStre
                 KeyValueRequest::Replace {
                     key: item.0,
                     value,
-                    expiry,
+                    expiry: expiry as u32,
                 },
                 bucket.clone(),
                 scope.clone(),

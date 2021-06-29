@@ -36,19 +36,8 @@ impl nu_engine::WholeStreamCommand for UseCluster {
     }
 
     fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        let args = args.evaluate_once()?;
-
         let guard = self.state.lock().unwrap();
-        if let Some(id) = args.nth(0) {
-            match guard.set_active(id.as_string()?) {
-                Ok(v) => v,
-                Err(_) => {
-                    return Err(ShellError::untagged_runtime_error(
-                        "Could not set active cluster",
-                    ));
-                }
-            }
-        }
+        guard.set_active(args.req(0)?);
 
         let mut using_now = TaggedDictBuilder::new(Tag::default());
         using_now.insert_value("cluster", guard.active());

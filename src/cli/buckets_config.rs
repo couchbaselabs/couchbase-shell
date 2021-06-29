@@ -46,16 +46,8 @@ impl nu_engine::WholeStreamCommand for BucketsConfig {
 
 fn buckets(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let args = args.evaluate_once()?;
 
-    let bucket_name = match args.nth(0) {
-        Some(n) => n.as_string()?,
-        None => {
-            return Err(ShellError::untagged_runtime_error(
-                "No bucket name was specified".to_string(),
-            ))
-        }
-    };
+    let bucket_name = args.req(0)?;
 
     let guard = state.lock().unwrap();
     let active_cluster = guard.active_cluster();

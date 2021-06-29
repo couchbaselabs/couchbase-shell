@@ -58,18 +58,13 @@ impl nu_engine::WholeStreamCommand for Ping {
 
 fn run_ping(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let args = args.evaluate_once()?;
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
 
     let guard = state.lock().unwrap();
 
     let bucket_name = match args
-        .call_info
-        .args
-        .get("bucket")
-        .map(|id| id.as_string().ok())
-        .flatten()
+        .get_flag("bucket")?
         .or_else(|| guard.active_cluster().active_bucket())
     {
         Some(v) => v,

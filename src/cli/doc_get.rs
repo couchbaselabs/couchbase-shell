@@ -80,18 +80,10 @@ impl nu_engine::WholeStreamCommand for DocGet {
     }
 }
 
-fn run_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+fn run_get(state: Arc<Mutex<State>>, mut args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let mut args = args.evaluate_once()?;
 
-    let id_column = args
-        .call_info
-        .args
-        .get("id-column")
-        .map(|id| id.as_string().ok())
-        .flatten()
-        .unwrap_or_else(|| String::from("id"));
-
+    let id_column: String = args.get_flag("id-column")?.unwrap_or("id".into());
     let mut ids = vec![];
     while let Some(item) = args.input.next() {
         let untagged = item.into();
@@ -108,19 +100,14 @@ fn run_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, 
             _ => {}
         }
     }
-
-    if let Some(id) = args.nth(0) {
-        ids.push(id.as_string()?);
+    if let Some(id) = args.opt(0)? {
+        ids.push(id);
     }
 
     let guard = state.lock().unwrap();
     let active_cluster = guard.active_cluster();
     let bucket = match args
-        .call_info
-        .args
-        .get("bucket")
-        .map(|bucket| bucket.as_string().ok())
-        .flatten()
+        .get_flag("bucket")?
         .or_else(|| active_cluster.active_bucket())
     {
         Some(v) => Ok(v),
@@ -129,13 +116,7 @@ fn run_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, 
         )),
     }?;
 
-    let scope = match args
-        .call_info
-        .args
-        .get("scope")
-        .map(|c| c.as_string().ok())
-        .flatten()
-    {
+    let scope = match args.get_flag("scope")? {
         Some(s) => s,
         None => match active_cluster.active_scope() {
             Some(s) => s,
@@ -143,13 +124,7 @@ fn run_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, 
         },
     };
 
-    let collection = match args
-        .call_info
-        .args
-        .get("collection")
-        .map(|c| c.as_string().ok())
-        .flatten()
-    {
+    let collection = match args.get_flag("collection")? {
         Some(c) => c,
         None => match active_cluster.active_collection() {
             Some(c) => c,

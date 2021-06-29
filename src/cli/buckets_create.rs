@@ -1,7 +1,6 @@
 use crate::cli::buckets_builder::{
     BucketSettingsBuilder, BucketType, DurabilityLevel, JSONCloudBucketSettings,
 };
-use crate::cli::util::arg_as;
 use crate::client::{CloudRequest, HttpResponse, ManagementRequest};
 use crate::state::State;
 use async_trait::async_trait;
@@ -73,14 +72,14 @@ impl nu_engine::WholeStreamCommand for BucketsCreate {
 
 fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let args = args.evaluate_once()?;
-    let name = arg_as(&args, "name", |v| v.as_string())?.unwrap();
-    let ram = arg_as(&args, "ram", |v| v.as_u64())?.unwrap();
-    let bucket_type = arg_as(&args, "type", |v| v.as_string())?;
-    let replicas = arg_as(&args, "replicas", |v| v.as_u64())?;
-    let flush = args.get_flag::<bool>("flush")?.unwrap_or(false);
-    let durability = arg_as(&args, "durability", |v| v.as_string())?;
-    let expiry = arg_as(&args, "expiry", |v| v.as_u64())?;
+    let name: String = args.req_named("name")?;
+    let ram = args.req_named("ram")?;
+
+    let bucket_type: Option<String> = args.get_flag("type")?;
+    let replicas: Option<i32> = args.get_flag("replicas")?;
+    let flush = args.get_flag("flush")?.unwrap_or(false);
+    let durability: Option<String> = args.get_flag("durability")?;
+    let expiry = args.get_flag("expiry")?;
 
     let guard = state.lock().unwrap();
     let active_cluster = guard.active_cluster();

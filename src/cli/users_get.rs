@@ -49,8 +49,7 @@ impl nu_engine::WholeStreamCommand for UsersGet {
 
 fn users_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let args = args.evaluate_once()?;
-    let username = args.nth(0).expect("need username").as_string()?;
+    let username: String = args.req(0)?;
 
     debug!("Running users get {}", username);
 

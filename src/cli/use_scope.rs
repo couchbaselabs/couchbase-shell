@@ -36,8 +36,6 @@ impl nu_engine::WholeStreamCommand for UseScope {
     }
 
     fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        let args = args.evaluate_once()?;
-
         let guard = self.state.lock().unwrap();
         let active = guard.active_cluster();
 
@@ -47,9 +45,7 @@ impl nu_engine::WholeStreamCommand for UseScope {
             ));
         }
 
-        if let Some(id) = args.nth(0) {
-            active.set_active_scope(id.as_string()?);
-        }
+        active.set_active_scope(args.req(0)?);
 
         let mut using_now = TaggedDictBuilder::new(Tag::default());
         using_now.insert_value(

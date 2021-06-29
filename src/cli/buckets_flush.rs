@@ -52,26 +52,10 @@ impl nu_engine::WholeStreamCommand for BucketsFlush {
 
 fn buckets_flush(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let args = args.evaluate_once()?;
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
-    let name = match args.call_info.args.get("name") {
-        Some(v) => match v.as_string() {
-            Ok(name) => name,
-            Err(e) => return Err(e),
-        },
-        None => return Err(ShellError::unexpected("name is required")),
-    };
-    let bucket = match args
-        .call_info
-        .args
-        .get("bucket")
-        .map(|bucket| bucket.as_string().ok())
-        .flatten()
-    {
-        Some(v) => v,
-        None => "".into(),
-    };
+    let name: String = args.req_named("name")?;
+    let bucket: String = args.get_flag("bucket")?.unwrap_or("".into());
 
     debug!("Running buckets flush for bucket {:?}", &bucket);
 

@@ -45,12 +45,7 @@ fn run_tutorial_page(
     state: Arc<Mutex<State>>,
     args: CommandArgs,
 ) -> Result<OutputStream, ShellError> {
-    let args = args.evaluate_once()?;
-
-    let name = match args.nth(0) {
-        Some(a) => Some(a.as_string()?),
-        None => None,
-    };
+    let name = args.opt(0)?;
 
     let guard = state.lock().unwrap();
     let tutorial = guard.tutorial();

@@ -48,7 +48,6 @@ impl nu_engine::WholeStreamCommand for ClustersHealth {
 
 fn health(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let args = args.evaluate_once()?;
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
 

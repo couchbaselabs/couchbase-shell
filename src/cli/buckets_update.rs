@@ -2,7 +2,6 @@ use crate::cli::buckets_builder::{
     BucketSettings, DurabilityLevel, JSONBucketSettings, JSONCloudBucketSettings,
 };
 use crate::cli::cloud_json::JSONCloudClusterSummary;
-use crate::cli::util::arg_as;
 use crate::client::{CloudRequest, HttpResponse, ManagementRequest};
 use crate::state::State;
 use async_trait::async_trait;
@@ -79,14 +78,13 @@ impl nu_engine::WholeStreamCommand for BucketsUpdate {
 
 fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let args = args.evaluate_once()?;
 
-    let name = arg_as(&args, "name", |v| v.as_string())?.unwrap();
-    let ram = arg_as(&args, "ram", |v| v.as_u64())?;
-    let replicas = arg_as(&args, "replicas", |v| v.as_u64())?;
-    let flush = args.get_flag::<bool>("flush")?.unwrap_or(false);
-    let durability = arg_as(&args, "durability", |v| v.as_string())?;
-    let expiry = arg_as(&args, "expiry", |v| v.as_u64())?;
+    let name: String = args.req_named("name")?;
+    let ram = args.get_flag("ram")?;
+    let replicas = args.get_flag("replicas")?;
+    let flush = args.get_flag("flush")?.unwrap_or(false);
+    let durability = args.get_flag("durability")?;
+    let expiry = args.get_flag("expiry")?;
 
     let guard = state.lock().unwrap();
     let active_cluster = guard.active_cluster();

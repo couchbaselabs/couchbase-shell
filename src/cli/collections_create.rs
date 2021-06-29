@@ -65,25 +65,12 @@ fn collections_create(
     args: CommandArgs,
 ) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let args = args.evaluate_once()?;
 
     let guard = state.lock().unwrap();
     let active_cluster = guard.active_cluster();
-    let collection = match args.call_info.args.get("name") {
-        Some(v) => match v.as_string() {
-            Ok(uname) => uname,
-            Err(e) => return Err(e),
-        },
-        None => return Err(ShellError::unexpected("name is required")),
-    };
+    let collection: String = args.req_named("name")?;
 
-    let bucket = match args
-        .call_info
-        .args
-        .get("bucket")
-        .map(|bucket| bucket.as_string().ok())
-        .flatten()
-    {
+    let bucket = match args.get_flag("bucket")? {
         Some(v) => v,
         None => match active_cluster.active_bucket() {
             Some(s) => s,
@@ -95,13 +82,7 @@ fn collections_create(
         },
     };
 
-    let scope_name = match args
-        .call_info
-        .args
-        .get("scope")
-        .map(|c| c.as_string().ok())
-        .flatten()
-    {
+    let scope_name = match args.get_flag("scope")? {
         Some(name) => name,
         None => match active_cluster.active_scope() {
             Some(s) => s,
@@ -112,13 +93,7 @@ fn collections_create(
             }
         },
     };
-    let expiry = match args.call_info.args.get("max-expiry") {
-        Some(v) => match v.as_u64() {
-            Ok(e) => e,
-            Err(e) => return Err(e),
-        },
-        None => 0,
-    };
+    let expiry = args.get_flag("max-expiry")?.unwrap_or(0);
 
     debug!(
         "Running collections create for {:?} on bucket {:?}, scope {:?}",

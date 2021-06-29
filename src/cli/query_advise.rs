@@ -45,32 +45,20 @@ impl nu_engine::WholeStreamCommand for QueryAdvise {
 fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let with_meta = args.call_info().switch_present("with-meta");
-    let args = args.evaluate_once()?;
 
-    let statement = args.nth(0).expect("need statement").as_string()?;
+    let statement: String = args.req(0)?;
     let statement = format!("ADVISE {}", statement);
 
     let guard = state.lock().unwrap();
-    let active_cluster = match args.call_info.args.get("cluster") {
-        Some(c) => {
-            let identifier = match c.as_string() {
-                Ok(s) => s,
-                Err(e) => {
-                    return Err(ShellError::untagged_runtime_error(format!(
-                        "Could not convert cluster name to string: {}",
-                        e
-                    )));
-                }
-            };
-            match guard.clusters().get(identifier.as_str()) {
-                Some(c) => c,
-                None => {
-                    return Err(ShellError::untagged_runtime_error(
-                        "Could not get cluster from available clusters".to_string(),
-                    ));
-                }
+    let active_cluster = match args.get_flag::<String>("cluster")? {
+        Some(identifier) => match guard.clusters().get(identifier.as_str()) {
+            Some(c) => c,
+            None => {
+                return Err(ShellError::untagged_runtime_error(
+                    "Could not get cluster from available clusters".to_string(),
+                ));
             }
-        }
+        },
         None => guard.active_cluster(),
     };
 

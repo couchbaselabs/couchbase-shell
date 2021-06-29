@@ -11,7 +11,7 @@ use crate::state::{RemoteCloud, RemoteCluster};
 use crate::{cli::*, state::ClusterTimeouts};
 use config::ClusterTlsConfig;
 use log::{debug, warn};
-use nu_cli::{NuScript, Options};
+use nu_cli::app::NuScript;
 use serde::Deserialize;
 use state::State;
 use std::collections::HashMap;
@@ -265,7 +265,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         */
     ]);
 
-    let mut options = Options::new();
+    let mut options = nu_cli::app::CliOptions::new();
 
     let d = TempDir::new().unwrap();
     let f = d.child("config.toml");
@@ -292,7 +292,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     options.config = Some(std::ffi::OsString::from(f));
 
     if let Some(c) = opt.command {
-        options.scripts = vec![NuScript::code(std::iter::once(c.as_str()))?];
+        options.scripts = vec![NuScript::code(c.as_str())?];
         nu_cli::run_script_file(context, options)?;
         return Ok(());
     }

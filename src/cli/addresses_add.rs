@@ -1,5 +1,4 @@
 use crate::cli::cloud_json::JSONCloudAppendAllowListRequest;
-use crate::cli::util::arg_as;
 use crate::client::CloudRequest;
 use crate::state::State;
 use async_trait::async_trait;
@@ -50,9 +49,8 @@ impl nu_engine::WholeStreamCommand for AddressesAdd {
 
 fn addresses_add(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let args = args.evaluate_once()?;
-    let address = arg_as(&args, "address", |v| v.as_string())?.expect("address is required");
-    let duration = arg_as(&args, "durability", |v| v.as_string())?;
+    let address = args.req_named("address")?;
+    let duration = args.get_flag("duration")?;
 
     debug!("Running address add for {}", &address);
 

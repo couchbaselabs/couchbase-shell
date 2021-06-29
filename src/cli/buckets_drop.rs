@@ -3,7 +3,7 @@
 use crate::state::State;
 
 use crate::cli::cloud_json::JSONCloudDeleteBucketRequest;
-use crate::cli::util::{arg_as, cluster_identifiers_from};
+use crate::cli::util::cluster_identifiers_from;
 use crate::client::{CloudRequest, HttpResponse, ManagementRequest};
 use async_trait::async_trait;
 use log::debug;
@@ -53,10 +53,9 @@ impl nu_engine::WholeStreamCommand for BucketsDrop {
 
 fn buckets_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let args = args.evaluate_once()?;
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
-    let name = arg_as(&args, "name", |v| v.as_string())?.unwrap();
+    let name: String = args.req_named("name")?;
 
     debug!("Running buckets drop for bucket {:?}", &name);
 

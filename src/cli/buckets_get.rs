@@ -61,19 +61,9 @@ impl nu_engine::WholeStreamCommand for BucketsGet {
 
 fn buckets_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let args = args.evaluate_once()?;
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
-    let bucket = match args
-        .call_info
-        .args
-        .get("bucket")
-        .map(|bucket| bucket.as_string().ok())
-        .flatten()
-    {
-        Some(v) => v,
-        None => "".into(),
-    };
+    let bucket: String = args.get_flag("bucket")?.unwrap_or("".into());
 
     debug!("Running buckets get for bucket {:?}", &bucket);
 

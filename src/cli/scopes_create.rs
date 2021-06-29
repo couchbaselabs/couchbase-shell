@@ -48,24 +48,11 @@ impl nu_engine::WholeStreamCommand for ScopesCreate {
 
 fn scopes_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let args = args.evaluate_once()?;
     let guard = state.lock().unwrap();
 
-    let scope = match args.call_info.args.get("name") {
-        Some(v) => match v.as_string() {
-            Ok(uname) => uname,
-            Err(e) => return Err(e),
-        },
-        None => return Err(ShellError::unexpected("name is required")),
-    };
+    let scope: String = args.req_named("name")?;
 
-    let bucket = match args
-        .call_info
-        .args
-        .get("bucket")
-        .map(|bucket| bucket.as_string().ok())
-        .flatten()
-    {
+    let bucket = match args.get_flag("bucket")? {
         Some(v) => v,
         None => match guard.active_cluster().active_bucket() {
             Some(s) => s,

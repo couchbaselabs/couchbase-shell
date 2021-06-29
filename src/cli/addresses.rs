@@ -1,5 +1,4 @@
-use crate::cli::cloud_json::{JSONCloudAppendAllowListRequest, JSONCloudGetAllowListResponse};
-use crate::cli::util::arg_as;
+use crate::cli::cloud_json::JSONCloudGetAllowListResponse;
 use crate::client::CloudRequest;
 use crate::state::State;
 use async_trait::async_trait;
@@ -7,7 +6,7 @@ use log::debug;
 use nu_cli::TaggedDictBuilder;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, Value};
+use nu_protocol::{Signature, Value};
 use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::ops::Add;

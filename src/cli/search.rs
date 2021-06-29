@@ -50,35 +50,13 @@ impl nu_engine::WholeStreamCommand for Search {
 
 fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let args = args.evaluate_once()?;
-    let index = args.nth(0).expect("need index name").as_string()?;
-    let query = args.nth(1).expect("need query text").as_string()?;
+    let index = args.req(0)?;
+    let query = args.req(1)?;
 
     debug!("Running search query {} against {}", &query, &index);
 
     let guard = state.lock().unwrap();
-    let active_cluster = match args.call_info.args.get("cluster") {
-        Some(c) => {
-            let identifier = match c.as_string() {
-                Ok(s) => s,
-                Err(e) => {
-                    return Err(ShellError::untagged_runtime_error(format!(
-                        "Could not convert cluster name to string: {}",
-                        e
-                    )));
-                }
-            };
-            match guard.clusters().get(identifier.as_str()) {
-                Some(c) => c,
-                None => {
-                    return Err(ShellError::untagged_runtime_error(
-                        "Could not get cluster from available clusters".to_string(),
-                    ));
-                }
-            }
-        }
-        None => guard.active_cluster(),
-    };
+    let active_cluster = guard.active_cluster();
 
     let response = active_cluster
         .cluster()

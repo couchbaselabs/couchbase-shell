@@ -1,5 +1,4 @@
-use crate::cli::cloud_json::{JSONCloudAppendAllowListRequest, JSONCloudDeleteAllowListRequest};
-use crate::cli::util::arg_as;
+use crate::cli::cloud_json::JSONCloudDeleteAllowListRequest;
 use crate::client::CloudRequest;
 use crate::state::State;
 use async_trait::async_trait;
@@ -48,8 +47,7 @@ impl nu_engine::WholeStreamCommand for AddressesDrop {
 
 fn addresses_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let args = args.evaluate_once()?;
-    let address = arg_as(&args, "address", |v| v.as_string())?.expect("address is required");
+    let address = args.req_named("address")?;
 
     debug!("Running address drop for {}", &address);
 

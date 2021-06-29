@@ -10,7 +10,7 @@ use nu_protocol::{
 };
 use nu_source::Tag;
 use nu_source::{SpannedItem, Tagged};
-use nu_stream::ToActionStream;
+use nu_stream::IntoActionStream;
 use serde::Deserialize;
 
 pub struct Help;
@@ -41,7 +41,7 @@ impl WholeStreamCommand for Help {
 fn help(args: CommandArgs) -> Result<ActionStream, ShellError> {
     let name = args.call_info.name_tag.clone();
     let scope = args.scope().clone();
-    let (HelpArgs { rest }, ..) = args.process()?;
+    let rest: Vec<Tagged<String>> = args.rest(0)?;
 
     if !rest.is_empty() {
         if rest[0].item == "commands" {
@@ -156,7 +156,7 @@ fn help(args: CommandArgs) -> Result<ActionStream, ShellError> {
                         ReturnSuccess::value(short_desc.into_value())
                     });
 
-            Ok(iterator.to_action_stream())
+            Ok(iterator.into_action_stream())
         } else if rest[0].item == "generate_docs" {
             Ok(ActionStream::one(ReturnSuccess::value(generate_docs(
                 &scope,
