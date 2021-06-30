@@ -6,7 +6,9 @@ All user visible changes to this project will be documented in this file.
 
  - Added support for alternate addresses (enables all data commands for Couchbase Cloud)
  - Add `--with-meta` to `query indexes` and `query advise`
-
+ - Added super simple `transactions list-atrs` support. needs a covered index for now to work.
+ - Added support to configure cloud allow lists.
+ 
 ## 1.0.0-alpha.2 - 2021-06-09
 
  - Nushell has been pinned to 0.32.0 for the next release.
