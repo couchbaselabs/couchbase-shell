@@ -10,29 +10,48 @@ use crate::config::ShellConfig;
 use crate::state::{RemoteCloud, RemoteCluster};
 use crate::{cli::*, state::ClusterTimeouts};
 use config::ClusterTlsConfig;
-use log::{debug, warn};
+use env_logger::Env;
+use log::{debug, warn, LevelFilter};
 use nu_cli::app::NuScript;
 use serde::Deserialize;
 use state::State;
 use std::collections::HashMap;
 use std::error::Error;
+use std::io::Write;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use structopt::StructOpt;
 use temp_dir::TempDir;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    env_logger::init();
+    let mut logger_builder =
+        env_logger::Builder::from_env(Env::default().default_filter_or("warn"));
+    logger_builder.format(|buf, record| {
+        let mut style = buf.style();
+        style.set_intense(true);
+        style.set_bold(true);
+        writeln!(
+            buf,
+            "{}: {}",
+            buf.default_styled_level(record.level()),
+            style.value(record.args())
+        )
+    });
 
     const DEFAULT_PASSWORD: &str = "password";
     const DEFAULT_HOSTNAME: &str = "localhost";
     const DEFAULT_USERNAME: &str = "Administrator";
 
     let opt = CliOptions::from_args();
+    if opt.silent {
+        logger_builder.filter_level(LevelFilter::Error);
+    }
+    logger_builder.init();
+
     debug!("Effective {:?}", opt);
 
     let config = ShellConfig::new();
-    warn!("Config {:?}", config);
+    debug!("Config {:?}", config);
 
     let mut clusters = HashMap::new();
     let mut clouds = HashMap::new();
@@ -73,7 +92,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             opt.tls_cert_path.is_none(),
         );
         if !tls_config.enabled() {
-            println!(
+            warn!(
                 "Using PLAIN authentication for cluster default, credentials will sent in plaintext - configure tls to disable this warning"
             );
         }
@@ -168,7 +187,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 v.cloud_control_pane(),
             );
             if !v.tls().clone().enabled() {
-                println!(
+                warn!(
                     "Using PLAIN authentication for cluster {}, credentials will sent in plaintext - configure tls to disable this warning",
                     name.clone()
                 );
@@ -354,7 +373,7 @@ async fn _fetch_and_print_motd() {
         return;
     }
     let data = data.unwrap();
-    println!("{}", data.msg);
+    warn!("{}", data.msg);
 }
 
 #[derive(Debug, Deserialize)]
@@ -396,4 +415,6 @@ struct CliOptions {
     dont_validate_hostnames: bool,
     #[structopt(long = "tls-cert-path")]
     tls_cert_path: Option<String>,
+    #[structopt(short = "s", long = "silent")]
+    silent: bool,
 }

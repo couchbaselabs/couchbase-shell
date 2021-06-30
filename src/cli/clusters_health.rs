@@ -2,6 +2,7 @@ use crate::cli::cloud_json::JSONCloudClusterHealthResponse;
 use crate::cli::util::cluster_identifiers_from;
 use crate::client::{CloudRequest, ManagementRequest};
 use crate::state::{ClusterTimeouts, RemoteCloud, RemoteCluster, State};
+use log::warn;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Value};
@@ -158,7 +159,7 @@ fn check_resident_ratio(
     let ratio = match resp.op.samples.active_resident_ratios.last() {
         Some(r) => *r,
         None => {
-            println!("Failed to get resident ratios");
+            warn!("Failed to get resident ratios");
             0
         }
     };
