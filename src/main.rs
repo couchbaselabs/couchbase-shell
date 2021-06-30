@@ -243,6 +243,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(ScopesCreate::new(state.clone())),
         nu_engine::whole_stream_command(ScopesGet::new(state.clone())),
         nu_engine::whole_stream_command(Search::new(state.clone())),
+        nu_engine::whole_stream_command(Transactions {}),
+        nu_engine::whole_stream_command(TransactionsListAtrs::new(state.clone())),
         nu_engine::whole_stream_command(Tutorial::new(state.clone())),
         nu_engine::whole_stream_command(TutorialNext::new(state.clone())),
         nu_engine::whole_stream_command(TutorialPage::new(state.clone())),
