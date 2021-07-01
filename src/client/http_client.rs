@@ -255,6 +255,7 @@ impl HTTPClient {
                     seed.1,
                     &path
                 );
+                dbg!(&uri);
                 let (content, status) = match request.verb() {
                     HttpVerb::Get => self.http_client.http_get(&uri, deadline, ctrl_c).await?,
                     HttpVerb::Post => {
@@ -268,6 +269,7 @@ impl HTTPClient {
                         });
                     }
                 };
+                dbg!(&status);
 
                 return Ok(HttpResponse::new(content, status));
             }

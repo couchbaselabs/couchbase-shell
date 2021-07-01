@@ -157,18 +157,32 @@ impl KvClient {
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<CollectionManifest, ClientError> {
         let path = format!("/pools/default/buckets/{}/scopes/", bucket);
-        let port = if self.tls_config.enabled() {
-            18091
-        } else {
-            8091
-        };
         let mut final_error_content = None;
         let mut final_error_status = 0;
         for seed in &self.seeds {
+            let host_split: Vec<String> = seed.split(':').map(|v| v.to_owned()).collect();
+
+            let host: String;
+            let port: i32;
+            if host_split.len() == 1 {
+                host = seed.clone();
+                port = if self.tls_config.enabled() {
+                    18091
+                } else {
+                    8091
+                };
+            } else {
+                host = host_split[0].clone();
+                port = host_split[1]
+                    .parse::<i32>()
+                    .map_err(|e| ClientError::RequestFailed {
+                        reason: Some(e.to_string()),
+                    })?;
+            }
             let uri = format!(
                 "{}://{}:{}{}",
                 http_prefix(&self.tls_config),
-                seed,
+                host,
                 port,
                 &path
             );
