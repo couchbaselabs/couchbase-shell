@@ -1,10 +1,12 @@
-use crate::cli::util::convert_json_value_to_nu_value;
+use crate::cli::util::{
+    cluster_identifiers_from, convert_json_value_to_nu_value, convert_row_to_nu_value,
+};
 use crate::client::AnalyticsQueryRequest;
 use crate::state::State;
 use log::debug;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape};
+use nu_protocol::{Signature, SyntaxShape, Value};
 use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::collections::HashMap;
@@ -43,6 +45,12 @@ impl nu_engine::WholeStreamCommand for Analytics {
                 None,
             )
             .switch("with-meta", "Includes related metadata in the result", None)
+            .named(
+                "clusters",
+                SyntaxShape::String,
+                "the clusters which should be contacted",
+                None,
+            )
     }
 
     fn usage(&self) -> &str {
@@ -56,55 +64,83 @@ impl nu_engine::WholeStreamCommand for Analytics {
 
 fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let statement = args.req(0)?;
+    let statement: String = args.req(0)?;
+
+    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
 
     let guard = state.lock().unwrap();
-    let active_cluster = guard.active_cluster();
-    let bucket = args
-        .get_flag("bucket")?
-        .or_else(|| active_cluster.active_bucket());
 
     let scope = args.get_flag("scope")?;
 
-    let maybe_scope = bucket.map(|b| scope.map(|s| (b, s))).flatten();
-
-    let with_meta = args.get_flag::<bool>("with-meta").unwrap().is_some();
+    let with_meta = args.has_flag("with-meta");
 
     debug!("Running analytics query {}", &statement);
 
-    let response = active_cluster
-        .cluster()
-        .http_client()
-        .analytics_query_request(
-            AnalyticsQueryRequest::Execute {
-                statement,
-                scope: maybe_scope,
-            },
-            Instant::now().add(active_cluster.timeouts().query_timeout()),
-            ctrl_c,
-        )?;
-
-    if with_meta {
-        let content: serde_json::Value = serde_json::from_str(response.content())?;
-        Ok(OutputStream::one(convert_json_value_to_nu_value(
-            &content,
-            Tag::default(),
-        )?))
-    } else {
-        let mut content: HashMap<String, serde_json::Value> =
-            serde_json::from_str(response.content())?;
-        let removed = if content.contains_key("errors") {
-            content.remove("errors").unwrap()
-        } else {
-            content.remove("results").unwrap()
+    let mut results: Vec<Value> = vec![];
+    for identifier in cluster_identifiers {
+        let active_cluster = match guard.clusters().get(&identifier) {
+            Some(c) => c,
+            None => {
+                return Err(ShellError::untagged_runtime_error("Cluster not found"));
+            }
         };
+        let bucket = args
+            .get_flag("bucket")?
+            .or_else(|| active_cluster.active_bucket());
+        let maybe_scope = bucket.map(|b| scope.clone().map(|s| (b, s))).flatten();
 
-        let values = removed
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|a| convert_json_value_to_nu_value(a, Tag::default()).unwrap())
-            .collect::<Vec<_>>();
-        Ok(OutputStream::from(values))
+        let response = active_cluster
+            .cluster()
+            .http_client()
+            .analytics_query_request(
+                AnalyticsQueryRequest::Execute {
+                    statement: statement.clone(),
+                    scope: maybe_scope,
+                },
+                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                ctrl_c.clone(),
+            )?;
+
+        if with_meta {
+            let content: serde_json::Value = serde_json::from_str(response.content())?;
+            results.push(convert_row_to_nu_value(
+                &content,
+                Tag::default(),
+                identifier.clone(),
+            )?);
+        } else {
+            let mut content: HashMap<String, serde_json::Value> =
+                serde_json::from_str(response.content())?;
+            if let Some(content_errors) = content.get("errors") {
+                if let Some(arr) = content_errors.as_array() {
+                    for result in arr {
+                        results.push(convert_row_to_nu_value(
+                            result,
+                            Tag::default(),
+                            identifier.clone(),
+                        )?);
+                    }
+                } else {
+                    return Err(ShellError::untagged_runtime_error(
+                        "Analytics errors not an array - malformed response",
+                    ));
+                }
+            } else if let Some(content_results) = content.get("results") {
+                if let Some(arr) = content_results.as_array() {
+                    for result in arr {
+                        results
+                            .push(convert_json_value_to_nu_value(result, Tag::default()).unwrap());
+                    }
+                } else {
+                    return Err(ShellError::untagged_runtime_error(
+                        "Analytics results not an array - malformed response",
+                    ));
+                }
+            } else {
+                // Queries like "create dataset" can end up here.
+                continue;
+            };
+        }
     }
+    Ok(OutputStream::from(results))
 }

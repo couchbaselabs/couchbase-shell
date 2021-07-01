@@ -9,6 +9,29 @@ use nu_source::{Tag, TaggedItem};
 use regex::Regex;
 use std::sync::{Arc, Mutex};
 
+pub fn convert_row_to_nu_value(
+    v: &serde_json::Value,
+    tag: impl Into<Tag>,
+    cluster_identifier: String,
+) -> Result<Value, ShellError> {
+    let tag = tag.into();
+
+    match v {
+        serde_json::Value::Object(o) => {
+            let mut collected = TaggedDictBuilder::new(&tag);
+            for (k, v) in o.iter() {
+                collected.insert_value(k.clone(), convert_json_value_to_nu_value(v, &tag)?);
+            }
+            collected.insert_value("cluster", cluster_identifier);
+
+            Ok(collected.into_value())
+        }
+        _ => Err(ShellError::unexpected(
+            "row not an object - malformed response",
+        )),
+    }
+}
+
 pub fn convert_json_value_to_nu_value(
     v: &serde_json::Value,
     tag: impl Into<Tag>,
