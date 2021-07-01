@@ -1,10 +1,12 @@
-use crate::cli::util::convert_json_value_to_nu_value;
+use crate::cli::util::{
+    cluster_identifiers_from, convert_json_value_to_nu_value, convert_row_to_nu_value,
+};
 use crate::client::QueryRequest;
 use crate::state::State;
 use log::debug;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape};
+use nu_protocol::{Signature, SyntaxShape, Value};
 use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::collections::HashMap;
@@ -31,9 +33,9 @@ impl nu_engine::WholeStreamCommand for Query {
         Signature::build("query")
             .required("statement", SyntaxShape::String, "the query statement")
             .named(
-                "cluster",
+                "clusters",
                 SyntaxShape::String,
-                "the cluster to query against",
+                "the clusters to query against",
                 None,
             )
             .named(
@@ -63,62 +65,79 @@ impl nu_engine::WholeStreamCommand for Query {
 fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
 
+    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
     let guard = state.lock().unwrap();
     let statement: String = args.req(0)?;
-    let cluster: Option<String> = args.get_flag("cluster")?;
-    let active_cluster = match cluster {
-        Some(identifier) => match guard.clusters().get(identifier.as_str()) {
+
+    let mut results: Vec<Value> = vec![];
+    for identifier in cluster_identifiers {
+        let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::untagged_runtime_error(
-                    "Could not get cluster from available clusters".to_string(),
-                ));
+                return Err(ShellError::untagged_runtime_error("Cluster not found"));
             }
-        },
-        None => guard.active_cluster(),
-    };
-    let bucket = args
-        .get_flag("bucket")?
-        .or_else(|| active_cluster.active_bucket());
-
-    let scope = args.get_flag("scope")?;
-
-    let maybe_scope = bucket.map(|b| scope.map(|s| (b, s))).flatten();
-
-    let with_meta = args.get_flag::<bool>("with-meta").unwrap().is_some();
-
-    debug!("Running n1ql query {}", &statement);
-
-    let response = active_cluster.cluster().http_client().query_request(
-        QueryRequest::Execute {
-            statement,
-            scope: maybe_scope,
-        },
-        Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c,
-    )?;
-
-    if with_meta {
-        let content: serde_json::Value = serde_json::from_str(response.content())?;
-        Ok(OutputStream::one(convert_json_value_to_nu_value(
-            &content,
-            Tag::default(),
-        )?))
-    } else {
-        let mut content: HashMap<String, serde_json::Value> =
-            serde_json::from_str(response.content())?;
-        let removed = if content.contains_key("errors") {
-            content.remove("errors").unwrap()
-        } else {
-            content.remove("results").unwrap()
         };
+        let bucket = args
+            .get_flag("bucket")?
+            .or_else(|| active_cluster.active_bucket());
 
-        let values = removed
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|a| convert_json_value_to_nu_value(a, Tag::default()).unwrap())
-            .collect::<Vec<_>>();
-        Ok(OutputStream::from(values))
+        let scope = args.get_flag("scope")?;
+
+        let maybe_scope = bucket.map(|b| scope.map(|s| (b, s))).flatten();
+
+        let with_meta = args.has_flag("with-meta");
+
+        debug!("Running n1ql query {}", &statement);
+
+        let response = active_cluster.cluster().http_client().query_request(
+            QueryRequest::Execute {
+                statement: statement.clone(),
+                scope: maybe_scope,
+            },
+            Instant::now().add(active_cluster.timeouts().query_timeout()),
+            ctrl_c.clone(),
+        )?;
+
+        if with_meta {
+            let content: serde_json::Value = serde_json::from_str(response.content())?;
+            results.push(convert_row_to_nu_value(
+                &content,
+                Tag::default(),
+                identifier.clone(),
+            )?);
+        } else {
+            let content: HashMap<String, serde_json::Value> =
+                serde_json::from_str(response.content())?;
+            if let Some(content_errors) = content.get("errors") {
+                if let Some(arr) = content_errors.as_array() {
+                    for result in arr {
+                        results.push(convert_row_to_nu_value(
+                            result,
+                            Tag::default(),
+                            identifier.clone(),
+                        )?);
+                    }
+                } else {
+                    return Err(ShellError::untagged_runtime_error(
+                        "Query errors not an array - malformed response",
+                    ));
+                }
+            } else if let Some(content_results) = content.get("results") {
+                if let Some(arr) = content_results.as_array() {
+                    for result in arr {
+                        results
+                            .push(convert_json_value_to_nu_value(result, Tag::default()).unwrap());
+                    }
+                } else {
+                    return Err(ShellError::untagged_runtime_error(
+                        "Query results not an array - malformed response",
+                    ));
+                }
+            } else {
+                // Queries like "create index" can end up here.
+                continue;
+            };
+        }
     }
+    Ok(OutputStream::from(results))
 }
