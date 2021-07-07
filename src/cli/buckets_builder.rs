@@ -332,16 +332,16 @@ pub struct JSONCloudBucketSettings {
     status: String,
 }
 
-impl TryFrom<BucketSettings> for JSONCloudBucketSettings {
+impl TryFrom<&BucketSettings> for JSONCloudBucketSettings {
     type Error = ShellError;
 
-    fn try_from(settings: BucketSettings) -> Result<Self, Self::Error> {
+    fn try_from(settings: &BucketSettings) -> Result<Self, Self::Error> {
         let mut reso_type = "".to_string();
         if let Some(reso) = settings.conflict_resolution_type {
             reso_type = reso.to_string();
         }
         Ok(JSONCloudBucketSettings {
-            name: settings.name,
+            name: settings.name.clone(),
             memory_quota: settings.ram_quota_mb,
             num_replicas: settings.num_replicas,
             conflict_resolution_type: reso_type,

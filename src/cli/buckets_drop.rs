@@ -2,6 +2,7 @@
 
 use crate::state::State;
 
+use crate::cli::buckets_create::collected_value_from_error_string;
 use crate::cli::cloud_json::JSONCloudDeleteBucketRequest;
 use crate::cli::util::cluster_identifiers_from;
 use crate::client::{CloudRequest, HttpResponse, ManagementRequest};
@@ -9,7 +10,8 @@ use async_trait::async_trait;
 use log::debug;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape};
+use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, Value};
+use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
@@ -56,15 +58,20 @@ fn buckets_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
     let name: String = args.req_named("name")?;
+    let guard = state.lock().unwrap();
 
     debug!("Running buckets drop for bucket {:?}", &name);
 
+    let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
-        let guard = state.lock().unwrap();
         let cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::untagged_runtime_error("Cluster not found"));
+                results.push(collected_value_from_error_string(
+                    identifier.clone(),
+                    "Cluster not found",
+                ));
+                continue;
             }
         };
 
@@ -99,12 +106,13 @@ fn buckets_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
             200 => {}
             202 => {}
             _ => {
-                return Err(ShellError::untagged_runtime_error(
-                    result.content().to_string(),
-                ))
+                results.push(collected_value_from_error_string(
+                    identifier.clone(),
+                    result.content(),
+                ));
             }
         }
     }
 
-    Ok(OutputStream::empty())
+    Ok(OutputStream::from(results))
 }

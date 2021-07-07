@@ -1,16 +1,18 @@
 use crate::cli::buckets_builder::{
     BucketSettings, DurabilityLevel, JSONBucketSettings, JSONCloudBucketSettings,
 };
+use crate::cli::buckets_create::collected_value_from_error_string;
 use crate::cli::cloud_json::JSONCloudClusterSummary;
+use crate::cli::util::cluster_identifiers_from;
 use crate::client::{CloudRequest, HttpResponse, ManagementRequest};
 use crate::state::State;
 use async_trait::async_trait;
 use log::debug;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape};
+use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, Value};
+use nu_source::Tag;
 use nu_stream::OutputStream;
-use serde_json::Value;
 use std::convert::TryFrom;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
@@ -65,6 +67,12 @@ impl nu_engine::WholeStreamCommand for BucketsUpdate {
                 "the maximum expiry for documents created in this bucket (seconds)",
                 None,
             )
+            .named(
+                "clusters",
+                SyntaxShape::String,
+                "the clusters which should be contacted",
+                None,
+            )
     }
 
     fn usage(&self) -> &str {
@@ -86,115 +94,169 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
     let durability = args.get_flag("durability")?;
     let expiry = args.get_flag("expiry")?;
 
-    let guard = state.lock().unwrap();
-    let active_cluster = guard.active_cluster();
-
-    if active_cluster.cloud().is_some() && (flush || durability.is_some() || expiry.is_some()) {
-        return Err(ShellError::unexpected(
-            "Cloud flag cannot be used with flush, durability, or expiry",
-        ));
-    }
-
     debug!("Running buckets update for bucket {}", &name);
 
-    let response: HttpResponse;
-    if let Some(c) = active_cluster.cloud() {
-        let identifier = guard.active();
-        let cloud = guard.cloud_for_cluster(c)?.cloud();
+    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
+    let guard = state.lock().unwrap();
 
-        let cluster_response = cloud.cloud_request(
-            CloudRequest::GetClusters {},
-            Instant::now().add(active_cluster.timeouts().query_timeout()),
-            ctrl_c.clone(),
-        )?;
-
-        if cluster_response.status() != 200 {
-            return Err(ShellError::unexpected(cluster_response.content()));
-        }
-
-        let data: Value = serde_json::from_str(cluster_response.content())?;
-        let v = data.get("data").unwrap().to_string();
-
-        let clusters: Vec<JSONCloudClusterSummary> = serde_json::from_str(v.as_str())?;
-
-        let mut cluster_id: Option<String> = None;
-        for c in clusters {
-            if c.name() == identifier.clone() {
-                cluster_id = Some(c.id());
+    let mut results: Vec<Value> = vec![];
+    for identifier in cluster_identifiers {
+        let active_cluster = match guard.clusters().get(&identifier) {
+            Some(c) => c,
+            None => {
+                results.push(collected_value_from_error_string(
+                    identifier.clone(),
+                    "Cluster not found",
+                ));
+                continue;
             }
-        }
-
-        if cluster_id.is_none() {
-            return Err(ShellError::unexpected(
-                "Could not find active cluster in cloud control pane",
-            ));
-        }
-
-        let buckets_response = cloud.cloud_request(
-            CloudRequest::GetBuckets {
-                cluster_id: cluster_id.clone().unwrap(),
-            },
-            Instant::now().add(active_cluster.timeouts().query_timeout()),
-            ctrl_c.clone(),
-        )?;
-        if buckets_response.status() != 200 {
-            return Err(ShellError::unexpected(buckets_response.content()));
-        }
-
-        let mut buckets: Vec<JSONCloudBucketSettings> =
-            serde_json::from_str(buckets_response.content())?;
-
-        // Cloud requires that updates are performed on an array of buckets, and we have to include all
-        // of the buckets that we want to keep so we need to pull out, change and reinsert the bucket that
-        // we want to change.
-        let idx = match buckets.iter().position(|b| b.name() == name.clone()) {
-            Some(i) => i,
-            None => return Err(ShellError::unexpected("Bucket not found")),
         };
 
-        let mut settings = BucketSettings::try_from(buckets.swap_remove(idx))?;
-        update_bucket_settings(&mut settings, ram, replicas, flush, durability, expiry)?;
+        if active_cluster.cloud().is_some() && (flush || durability.is_some() || expiry.is_some()) {
+            results.push(collected_value_from_error_string(
+                identifier.clone(),
+                "Cloud flag cannot be used with type, flush, durability, or expiry",
+            ));
+            continue;
+        }
 
-        buckets.push(JSONCloudBucketSettings::try_from(settings)?);
+        let response: HttpResponse;
+        if let Some(c) = active_cluster.cloud() {
+            let identifier = guard.active();
+            let cloud = guard.cloud_for_cluster(c)?.cloud();
 
-        response = cloud.cloud_request(
-            CloudRequest::UpdateBucket {
-                cluster_id: cluster_id.unwrap(),
-                payload: serde_json::to_string(&buckets)?,
-            },
-            Instant::now().add(active_cluster.timeouts().query_timeout()),
-            ctrl_c.clone(),
-        )?;
-    } else {
-        let get_response = active_cluster.cluster().http_client().management_request(
-            ManagementRequest::GetBucket { name: name.clone() },
-            Instant::now().add(active_cluster.timeouts().query_timeout()),
-            ctrl_c.clone(),
-        )?;
+            let cluster_response = cloud.cloud_request(
+                CloudRequest::GetClusters {},
+                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                ctrl_c.clone(),
+            )?;
 
-        let content: JSONBucketSettings = serde_json::from_str(get_response.content())?;
-        let mut settings = BucketSettings::try_from(content)?;
+            if cluster_response.status() != 200 {
+                results.push(collected_value_from_error_string(
+                    identifier.clone(),
+                    cluster_response.content(),
+                ));
+                continue;
+            }
 
-        update_bucket_settings(&mut settings, ram, replicas, flush, durability, expiry)?;
+            let data: serde_json::Value = serde_json::from_str(cluster_response.content())?;
+            let v = data.get("data").unwrap().to_string();
 
-        let form = settings.as_form(true)?;
-        let payload = serde_urlencoded::to_string(&form).unwrap();
+            let clusters: Vec<JSONCloudClusterSummary> = serde_json::from_str(v.as_str())?;
 
-        response = active_cluster.cluster().http_client().management_request(
-            ManagementRequest::UpdateBucket { name, payload },
-            Instant::now().add(active_cluster.timeouts().query_timeout()),
-            ctrl_c,
-        )?;
+            let mut cluster_id: Option<String> = None;
+            for c in clusters {
+                if c.name() == identifier.clone() {
+                    cluster_id = Some(c.id());
+                }
+            }
+
+            if cluster_id.is_none() {
+                results.push(collected_value_from_error_string(
+                    identifier.clone(),
+                    "Could not find active cluster in cloud control pane",
+                ));
+                continue;
+            }
+
+            let buckets_response = cloud.cloud_request(
+                CloudRequest::GetBuckets {
+                    cluster_id: cluster_id.clone().unwrap(),
+                },
+                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                ctrl_c.clone(),
+            )?;
+            if buckets_response.status() != 200 {
+                results.push(collected_value_from_error_string(
+                    identifier.clone(),
+                    buckets_response.content(),
+                ));
+                continue;
+            }
+
+            let mut buckets: Vec<JSONCloudBucketSettings> =
+                serde_json::from_str(buckets_response.content())?;
+
+            // Cloud requires that updates are performed on an array of buckets, and we have to include all
+            // of the buckets that we want to keep so we need to pull out, change and reinsert the bucket that
+            // we want to change.
+            let idx = match buckets.iter().position(|b| b.name() == name.clone()) {
+                Some(i) => i,
+                None => {
+                    results.push(collected_value_from_error_string(
+                        identifier.clone(),
+                        "Bucket not found",
+                    ));
+                    continue;
+                }
+            };
+
+            let mut settings = BucketSettings::try_from(buckets.swap_remove(idx))?;
+            update_bucket_settings(
+                &mut settings,
+                ram,
+                replicas,
+                flush,
+                durability.clone(),
+                expiry,
+            )?;
+
+            buckets.push(JSONCloudBucketSettings::try_from(&settings)?);
+
+            response = cloud.cloud_request(
+                CloudRequest::UpdateBucket {
+                    cluster_id: cluster_id.unwrap(),
+                    payload: serde_json::to_string(&buckets)?,
+                },
+                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                ctrl_c.clone(),
+            )?;
+        } else {
+            let get_response = active_cluster.cluster().http_client().management_request(
+                ManagementRequest::GetBucket { name: name.clone() },
+                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                ctrl_c.clone(),
+            )?;
+
+            let content: JSONBucketSettings = serde_json::from_str(get_response.content())?;
+            let mut settings = BucketSettings::try_from(content)?;
+
+            update_bucket_settings(
+                &mut settings,
+                ram,
+                replicas,
+                flush,
+                durability.clone(),
+                expiry,
+            )?;
+
+            let form = settings.as_form(true)?;
+            let payload = serde_urlencoded::to_string(&form).unwrap();
+
+            response = active_cluster.cluster().http_client().management_request(
+                ManagementRequest::UpdateBucket {
+                    name: name.clone(),
+                    payload,
+                },
+                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                ctrl_c.clone(),
+            )?;
+        }
+
+        match response.status() {
+            200 => {}
+            201 => {}
+            202 => {}
+            _ => {
+                results.push(collected_value_from_error_string(
+                    identifier.clone(),
+                    response.content(),
+                ));
+            }
+        }
     }
 
-    match response.status() {
-        200 => Ok(OutputStream::empty()),
-        201 => Ok(OutputStream::empty()),
-        202 => Ok(OutputStream::empty()),
-        _ => Err(ShellError::untagged_runtime_error(
-            response.content().to_string(),
-        )),
-    }
+    Ok(OutputStream::from(results))
 }
 
 fn update_bucket_settings(
