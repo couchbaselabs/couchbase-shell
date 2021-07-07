@@ -11,6 +11,7 @@ use crate::state::{RemoteCloud, RemoteCluster};
 use crate::{cli::*, state::ClusterTimeouts};
 use config::ClusterTlsConfig;
 use env_logger::Env;
+use log::error;
 use log::{debug, warn, LevelFilter};
 use nu_cli::app::NuScript;
 use serde::Deserialize;
@@ -97,7 +98,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             );
         }
         let cluster = RemoteCluster::new(
-            hostnames.split(',').map(|v| v.to_owned()).collect(),
+            validate_hostnames(hostnames.split(',').map(|v| v.to_owned()).collect()),
             username,
             rpassword,
             opt.bucket,
@@ -176,7 +177,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             };
 
             let cluster = RemoteCluster::new(
-                v.hostnames().clone(),
+                validate_hostnames(v.hostnames().clone()),
                 username,
                 cpassword,
                 default_bucket,
@@ -417,4 +418,45 @@ struct CliOptions {
     tls_cert_path: Option<String>,
     #[structopt(short = "s", long = "silent")]
     silent: bool,
+}
+
+fn validate_hostnames(hostnames: Vec<String>) -> Vec<String> {
+    let mut validated = vec![];
+    for hostname in hostnames {
+        let host = if let Some(stripped_couchbase) = hostname.strip_prefix("couchbase://") {
+            if let Some(stripped_port) = stripped_couchbase.strip_suffix(":11210") {
+                stripped_port.to_string()
+            } else if stripped_couchbase.contains(':') {
+                error!("Couchbase scheme and non-default port detected, http scheme must be used with custom port (management port)");
+                std::process::exit(1);
+            } else {
+                stripped_couchbase.to_string()
+            }
+        } else if let Some(stripped_couchbase) = hostname.strip_prefix("couchbases://") {
+            if let Some(stripped_port) = stripped_couchbase.strip_suffix(":11211") {
+                stripped_port.to_string()
+            } else if stripped_couchbase.contains(':') {
+                error!("Couchbases scheme and non-default port detected, http scheme must be used with custom port (management port)");
+                std::process::exit(1);
+            } else {
+                stripped_couchbase.to_string()
+            }
+        } else if hostname.strip_suffix(":11210").is_some() {
+            error!("Memcached port detected, http scheme must be used with custom port (management port)");
+            std::process::exit(1);
+        } else if hostname.strip_suffix(":11211").is_some() {
+            error!("Memcached port detected, http scheme must be used with custom port (management port)");
+            std::process::exit(1);
+        } else if let Some(stripped_http) = hostname.strip_prefix("http://") {
+            stripped_http.to_string()
+        } else if let Some(stripped_http) = hostname.strip_prefix("https://") {
+            stripped_http.to_string()
+        } else {
+            hostname
+        };
+
+        validated.push(host);
+    }
+
+    validated
 }
