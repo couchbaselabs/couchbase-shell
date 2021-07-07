@@ -61,9 +61,12 @@ impl State {
         self.active.lock().unwrap().clone()
     }
 
-    pub fn set_active(&self, active: String) -> Result<(), u32> {
+    pub fn set_active(&self, active: String) -> Result<(), ShellError> {
         if !self.clusters.contains_key(&active) {
-            return Err(1); // make me proper!
+            return Err(ShellError::unexpected(format!(
+                "Cluster not known: {}",
+                active.clone()
+            )));
         }
 
         {
@@ -127,24 +130,18 @@ impl State {
 }
 
 pub struct RemoteCloud {
-    identifier: String,
     secret_key: String,
     access_key: String,
     cloud: Mutex<Option<Arc<CloudClient>>>,
 }
 
 impl RemoteCloud {
-    pub fn new(identifier: String, secret_key: String, access_key: String) -> Self {
+    pub fn new(secret_key: String, access_key: String) -> Self {
         Self {
-            identifier,
             secret_key,
             access_key,
             cloud: Mutex::new(None),
         }
-    }
-
-    pub fn identifier(&self) -> String {
-        self.identifier.clone()
     }
 
     pub fn secret_key(&self) -> String {

@@ -7,7 +7,6 @@ use isahc::ResponseFuture;
 use serde::Deserialize;
 use serde_json::Value;
 use sha2::Sha256;
-use std::collections::HashMap;
 use std::ops::Sub;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
@@ -208,12 +207,12 @@ pub enum CloudRequest {
         cluster_id: String,
         payload: String,
     },
-    CreateCluster {
-        payload: String,
-    },
-    CreateProject {
-        payload: String,
-    },
+    // CreateCluster {
+    //     payload: String,
+    // },
+    // CreateProject {
+    //     payload: String,
+    // },
     CreateUser {
         cluster_id: String,
         payload: String,
@@ -226,52 +225,52 @@ pub enum CloudRequest {
         cluster_id: String,
         payload: String,
     },
-    DeleteCluster {
-        cluster_id: String,
-    },
-    DeleteProject {
-        project_id: String,
-    },
+    // DeleteCluster {
+    //     cluster_id: String,
+    // },
+    // DeleteProject {
+    //     project_id: String,
+    // },
     DeleteUser {
         cluster_id: String,
         username: String,
     },
-    GetAPIStatus,
+    // GetAPIStatus,
     GetAllowList {
         cluster_id: String,
     },
     GetBuckets {
         cluster_id: String,
     },
-    GetCertificate {
-        cluster_id: String,
-    },
-    GetCloud {
-        cloud_id: String,
-    },
-    GetClouds,
-    GetCluster {
-        cluster_id: String,
-    },
+    // GetCertificate {
+    //     cluster_id: String,
+    // },
+    // GetCloud {
+    //     cloud_id: String,
+    // },
+    // GetClouds,
+    // GetCluster {
+    //     cluster_id: String,
+    // },
     GetClusterHealth {
         cluster_id: String,
     },
     GetClusters,
-    GetClusterStatus {
-        cluster_id: String,
-    },
-    GetProject {
-        project_id: String,
-    },
-    GetProjects,
+    // GetClusterStatus {
+    //     cluster_id: String,
+    // },
+    // GetProject {
+    //     project_id: String,
+    // },
+    // GetProjects,
     GetUsers {
         cluster_id: String,
     },
-    GetOrgUsers,
-    UpdateAllowList {
-        cluster_id: String,
-        payload: String,
-    },
+    // GetOrgUsers,
+    // UpdateAllowList {
+    //     cluster_id: String,
+    //     payload: String,
+    // },
     UpdateBucket {
         cluster_id: String,
         payload: String,
@@ -292,8 +291,8 @@ impl CloudRequest {
             Self::CreateBucket { cluster_id, .. } => {
                 format!("/v2/clusters/{}/buckets", cluster_id)
             }
-            Self::CreateCluster { .. } => "/v2/clusters".into(),
-            Self::CreateProject { .. } => "/v2/projects".into(),
+            // Self::CreateCluster { .. } => "/v2/clusters".into(),
+            // Self::CreateProject { .. } => "/v2/projects".into(),
             Self::CreateUser { cluster_id, .. } => {
                 format!("/v2/clusters/{}/users", cluster_id)
             }
@@ -303,53 +302,53 @@ impl CloudRequest {
             Self::DeleteBucket { cluster_id, .. } => {
                 format!("/v2/clusters/{}/buckets", cluster_id)
             }
-            Self::DeleteCluster { cluster_id, .. } => {
-                format!("/v2/clusters/{}", cluster_id)
-            }
-            Self::DeleteProject { project_id } => {
-                format!("/v2/projects/{}", project_id)
-            }
+            // Self::DeleteCluster { cluster_id, .. } => {
+            //     format!("/v2/clusters/{}", cluster_id)
+            // }
+            // Self::DeleteProject { project_id } => {
+            //     format!("/v2/projects/{}", project_id)
+            // }
             Self::DeleteUser {
                 cluster_id,
                 username,
             } => {
                 format!("/v2/clusters/{}/users/{}", cluster_id, username)
             }
-            Self::GetAPIStatus => "/v2/status".into(),
+            // Self::GetAPIStatus => "/v2/status".into(),
             Self::GetAllowList { cluster_id } => {
                 format!("/v2/clusters/{}/allowlist", cluster_id)
             }
             Self::GetBuckets { cluster_id } => {
                 format!("/v2/clusters/{}/buckets", cluster_id)
             }
-            Self::GetCertificate { cluster_id } => {
-                format!("/v2/clusters/{}/certificate", cluster_id)
-            }
-            Self::GetCloud { cloud_id } => {
-                format!("/v2/clouds/{}", cloud_id)
-            }
-            Self::GetClouds => "/v2/clouds".into(),
+            // Self::GetCertificate { cluster_id } => {
+            //     format!("/v2/clusters/{}/certificate", cluster_id)
+            // }
+            // Self::GetCloud { cloud_id } => {
+            //     format!("/v2/clouds/{}", cloud_id)
+            // }
+            // Self::GetClouds => "/v2/clouds".into(),
             Self::GetClusterHealth { cluster_id } => {
                 format!("/v2/clusters/{}/health", cluster_id)
             }
-            Self::GetCluster { cluster_id } => {
-                format!("/v2/clusters/{}", cluster_id)
-            }
+            // Self::GetCluster { cluster_id } => {
+            //     format!("/v2/clusters/{}", cluster_id)
+            // }
             Self::GetClusters => "/v2/clusters".into(),
-            Self::GetClusterStatus { cluster_id } => {
-                format!("/v2/clusters/{}/status", cluster_id)
-            }
-            Self::GetOrgUsers => "/v2/users".into(),
-            Self::GetProject { project_id } => {
-                format!("/v2/projects/{}", project_id)
-            }
-            Self::GetProjects => "/v2/projects".into(),
+            // Self::GetClusterStatus { cluster_id } => {
+            //     format!("/v2/clusters/{}/status", cluster_id)
+            // }
+            // Self::GetOrgUsers => "/v2/users".into(),
+            // Self::GetProject { project_id } => {
+            //     format!("/v2/projects/{}", project_id)
+            // }
+            // Self::GetProjects => "/v2/projects".into(),
             Self::GetUsers { cluster_id } => {
                 format!("/v2/clusters/{}/users", cluster_id)
             }
-            Self::UpdateAllowList { cluster_id, .. } => {
-                format!("/v2/clusters/{}/allowlist", cluster_id)
-            }
+            // Self::UpdateAllowList { cluster_id, .. } => {
+            //     format!("/v2/clusters/{}/allowlist", cluster_id)
+            // }
             Self::UpdateBucket { cluster_id, .. } => {
                 format!("/v2/clusters/{}/buckets", cluster_id)
             }
@@ -367,29 +366,29 @@ impl CloudRequest {
         match self {
             Self::CreateAllowListEntry { .. } => HttpVerb::Post,
             Self::CreateBucket { .. } => HttpVerb::Post,
-            Self::CreateCluster { .. } => HttpVerb::Post,
-            Self::CreateProject { .. } => HttpVerb::Post,
+            // Self::CreateCluster { .. } => HttpVerb::Post,
+            // Self::CreateProject { .. } => HttpVerb::Post,
             Self::CreateUser { .. } => HttpVerb::Post,
             Self::DeleteAllowListEntry { .. } => HttpVerb::Delete,
             Self::DeleteBucket { .. } => HttpVerb::Delete,
-            Self::DeleteCluster { .. } => HttpVerb::Delete,
-            Self::DeleteProject { .. } => HttpVerb::Delete,
+            // Self::DeleteCluster { .. } => HttpVerb::Delete,
+            // Self::DeleteProject { .. } => HttpVerb::Delete,
             Self::DeleteUser { .. } => HttpVerb::Delete,
-            Self::GetAPIStatus => HttpVerb::Get,
+            // Self::GetAPIStatus => HttpVerb::Get,
             Self::GetAllowList { .. } => HttpVerb::Get,
             Self::GetBuckets { .. } => HttpVerb::Get,
-            Self::GetCertificate { .. } => HttpVerb::Get,
-            Self::GetCloud { .. } => HttpVerb::Get,
-            Self::GetClouds => HttpVerb::Get,
+            // Self::GetCertificate { .. } => HttpVerb::Get,
+            // Self::GetCloud { .. } => HttpVerb::Get,
+            // Self::GetClouds => HttpVerb::Get,
             Self::GetClusterHealth { .. } => HttpVerb::Get,
-            Self::GetCluster { .. } => HttpVerb::Get,
+            // Self::GetCluster { .. } => HttpVerb::Get,
             Self::GetClusters => HttpVerb::Get,
-            Self::GetClusterStatus { .. } => HttpVerb::Get,
-            Self::GetOrgUsers => HttpVerb::Get,
-            Self::GetProject { .. } => HttpVerb::Get,
-            Self::GetProjects => HttpVerb::Get,
+            // Self::GetClusterStatus { .. } => HttpVerb::Get,
+            // Self::GetOrgUsers => HttpVerb::Get,
+            // Self::GetProject { .. } => HttpVerb::Get,
+            // Self::GetProjects => HttpVerb::Get,
             Self::GetUsers { .. } => HttpVerb::Get,
-            Self::UpdateAllowList { .. } => HttpVerb::Put,
+            // Self::UpdateAllowList { .. } => HttpVerb::Put,
             Self::UpdateBucket { .. } => HttpVerb::Put,
             Self::UpdateUser { .. } => HttpVerb::Put,
         }
@@ -399,71 +398,15 @@ impl CloudRequest {
         match self {
             Self::CreateAllowListEntry { payload, .. } => Some(payload.as_bytes().into()),
             Self::CreateBucket { payload, .. } => Some(payload.as_bytes().into()),
-            Self::CreateCluster { payload, .. } => Some(payload.as_bytes().into()),
-            Self::CreateProject { payload, .. } => Some(payload.as_bytes().into()),
+            // Self::CreateCluster { payload, .. } => Some(payload.as_bytes().into()),
+            // Self::CreateProject { payload, .. } => Some(payload.as_bytes().into()),
             Self::CreateUser { payload, .. } => Some(payload.as_bytes().into()),
             Self::DeleteAllowListEntry { payload, .. } => Some(payload.as_bytes().into()),
             Self::DeleteBucket { payload, .. } => Some(payload.as_bytes().into()),
-            Self::UpdateAllowList { payload, .. } => Some(payload.as_bytes().into()),
+            // Self::UpdateAllowList { payload, .. } => Some(payload.as_bytes().into()),
             Self::UpdateBucket { payload, .. } => Some(payload.as_bytes().into()),
             Self::UpdateUser { payload, .. } => Some(payload.as_bytes().into()),
             _ => None,
-        }
-    }
-
-    pub fn headers(&self) -> HashMap<&str, &str> {
-        match self {
-            Self::CreateAllowListEntry { .. } => {
-                let mut h = HashMap::new();
-                h.insert("Content-Type", "application/json");
-                h
-            }
-            Self::CreateBucket { .. } => {
-                let mut h = HashMap::new();
-                h.insert("Content-Type", "application/json");
-                h
-            }
-            Self::CreateCluster { .. } => {
-                let mut h = HashMap::new();
-                h.insert("Content-Type", "application/json");
-                h
-            }
-            Self::CreateProject { .. } => {
-                let mut h = HashMap::new();
-                h.insert("Content-Type", "application/json");
-                h
-            }
-            Self::CreateUser { .. } => {
-                let mut h = HashMap::new();
-                h.insert("Content-Type", "application/json");
-                h
-            }
-            Self::DeleteAllowListEntry { .. } => {
-                let mut h = HashMap::new();
-                h.insert("Content-Type", "application/json");
-                h
-            }
-            Self::DeleteBucket { .. } => {
-                let mut h = HashMap::new();
-                h.insert("Content-Type", "application/json");
-                h
-            }
-            Self::UpdateAllowList { .. } => {
-                let mut h = HashMap::new();
-                h.insert("Content-Type", "application/json");
-                h
-            }
-            Self::UpdateBucket { .. } => {
-                let mut h = HashMap::new();
-                h.insert("Content-Type", "application/json");
-                h
-            }
-            Self::UpdateUser { .. } => {
-                let mut h = HashMap::new();
-                h.insert("Content-Type", "application/json");
-                h
-            }
-            _ => HashMap::new(),
         }
     }
 }

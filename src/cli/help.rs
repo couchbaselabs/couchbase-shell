@@ -16,9 +16,7 @@ use serde::Deserialize;
 pub struct Help;
 
 #[derive(Deserialize)]
-pub struct HelpArgs {
-    rest: Vec<Tagged<String>>,
-}
+pub struct HelpArgs {}
 
 impl WholeStreamCommand for Help {
     fn name(&self) -> &str {

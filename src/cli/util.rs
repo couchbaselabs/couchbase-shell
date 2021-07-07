@@ -2,9 +2,7 @@ use crate::state::{RemoteCluster, State};
 use nu_cli::ToPrimitive;
 use nu_engine::CommandArgs;
 use nu_errors::{CoerceInto, ShellError};
-use nu_protocol::{
-    EvaluatedArgs, Primitive, TaggedDictBuilder, UnspannedPathMember, UntaggedValue, Value,
-};
+use nu_protocol::{Primitive, TaggedDictBuilder, UnspannedPathMember, UntaggedValue, Value};
 use nu_source::{Tag, TaggedItem};
 use regex::Regex;
 use std::sync::{Arc, Mutex};
@@ -254,33 +252,4 @@ pub fn namespace_from_args(
     };
 
     Ok((bucket, scope, collection))
-}
-
-pub fn parse_optional_as_bool(
-    args: &EvaluatedArgs,
-    field: &str,
-    default: bool,
-) -> Result<bool, ShellError> {
-    match args.get(field) {
-        Some(v) => match v.as_string() {
-            Ok(v) => {
-                let enabled_str = match v.strip_prefix("$") {
-                    Some(v2) => v2,
-                    None => v.as_str(),
-                };
-
-                match enabled_str.parse::<bool>() {
-                    Ok(b) => Ok(b),
-                    Err(e) => {
-                        return Err(ShellError::untagged_runtime_error(format!(
-                            "Failed to parse tls-enabled {}",
-                            e
-                        )));
-                    }
-                }
-            }
-            Err(e) => Err(e),
-        },
-        None => Ok(default),
-    }
 }

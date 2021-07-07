@@ -197,7 +197,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         if let Some(user_clouds) = config.clouds() {
             for c in user_clouds {
                 let name = c.identifier();
-                let cloud = RemoteCloud::new(name.clone(), c.secret_key(), c.access_key());
+                let cloud = RemoteCloud::new(c.secret_key(), c.access_key());
 
                 clouds.insert(name, cloud);
             }

@@ -36,7 +36,7 @@ impl nu_engine::WholeStreamCommand for UseCmd {
     }
 }
 
-fn use_cmd(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, ShellError> {
+fn use_cmd(_args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, ShellError> {
     let guard = state.lock().unwrap();
     let active = guard.active_cluster();
     let mut using_now = TaggedDictBuilder::new(Tag::default());

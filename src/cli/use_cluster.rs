@@ -37,7 +37,7 @@ impl nu_engine::WholeStreamCommand for UseCluster {
 
     fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
         let guard = self.state.lock().unwrap();
-        guard.set_active(args.req(0)?);
+        guard.set_active(args.req(0)?)?;
 
         let mut using_now = TaggedDictBuilder::new(Tag::default());
         using_now.insert_value("cluster", guard.active());

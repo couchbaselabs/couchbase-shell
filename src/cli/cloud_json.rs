@@ -21,21 +21,21 @@ impl JSONCloudClusterSummary {
     pub fn name(&self) -> String {
         self.name.clone()
     }
-    pub fn tenant_id(&self) -> String {
-        self.tenant_id.clone()
-    }
-    pub fn cloud_id(&self) -> String {
-        self.cloud_id.clone()
-    }
-    pub fn project_id(&self) -> String {
-        self.project_id.clone()
-    }
-    pub fn services(&self) -> &Vec<String> {
-        &self.services
-    }
-    pub fn nodes(&self) -> i64 {
-        self.nodes
-    }
+    // pub fn tenant_id(&self) -> String {
+    //     self.tenant_id.clone()
+    // }
+    // pub fn cloud_id(&self) -> String {
+    //     self.cloud_id.clone()
+    // }
+    // pub fn project_id(&self) -> String {
+    //     self.project_id.clone()
+    // }
+    // pub fn services(&self) -> &Vec<String> {
+    //     &self.services
+    // }
+    // pub fn nodes(&self) -> i64 {
+    //     self.nodes
+    // }
 }
 
 #[derive(Debug, Serialize)]

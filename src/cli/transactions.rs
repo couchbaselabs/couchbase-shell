@@ -27,6 +27,8 @@ impl nu_engine::WholeStreamCommand for Transactions {
     }
 }
 
+// We want to keep these around even though they aren't used yet.
+#[allow(dead_code)]
 pub static ATR_IDS: &[&str; 20480] = &[
     "_txn:atr-0-#14",
     "_txn:atr-1-#10b6",

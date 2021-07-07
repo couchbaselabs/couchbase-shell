@@ -109,7 +109,7 @@ fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Shel
                 identifier.clone(),
             )?);
         } else {
-            let mut content: HashMap<String, serde_json::Value> =
+            let content: HashMap<String, serde_json::Value> =
                 serde_json::from_str(response.content())?;
             if let Some(content_errors) = content.get("errors") {
                 if let Some(arr) = content_errors.as_array() {
