@@ -222,20 +222,19 @@ pub fn cluster_identifiers_from(
 }
 
 pub fn namespace_from_args(
-    args: &CommandArgs,
+    bucket_flag: Option<String>,
+    scope_flag: Option<String>,
+    collection_flag: Option<String>,
     active_cluster: &RemoteCluster,
 ) -> Result<(String, String, String), ShellError> {
-    let bucket = match args
-        .get_flag("bucket")?
-        .or_else(|| active_cluster.active_bucket())
-    {
+    let bucket = match bucket_flag.or_else(|| active_cluster.active_bucket()) {
         Some(v) => Ok(v),
         None => Err(ShellError::untagged_runtime_error(
             "Could not auto-select a bucket - please use --bucket instead".to_string(),
         )),
     }?;
 
-    let scope = match args.get_flag("scope")? {
+    let scope = match scope_flag {
         Some(s) => s,
         None => match active_cluster.active_scope() {
             Some(s) => s,
@@ -243,7 +242,7 @@ pub fn namespace_from_args(
         },
     };
 
-    let collection = match args.get_flag("collection")? {
+    let collection = match collection_flag {
         Some(c) => c,
         None => match active_cluster.active_collection() {
             Some(c) => c,

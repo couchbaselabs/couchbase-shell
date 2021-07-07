@@ -3,12 +3,13 @@
 use super::util::convert_json_value_to_nu_value;
 use crate::state::State;
 
+use crate::cli::util::cluster_identifiers_from;
 use crate::client::KeyValueRequest;
 use log::debug;
 use nu_engine::{CommandArgs, Example};
 use nu_errors::ShellError;
 use nu_protocol::{
-    MaybeOwned, Primitive, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Value,
+    MaybeOwned, Primitive, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue,
 };
 use nu_source::Tag;
 use nu_stream::OutputStream;
@@ -54,6 +55,12 @@ impl nu_engine::WholeStreamCommand for DocGet {
                 "the name of the collection",
                 None,
             )
+            .named(
+                "clusters",
+                SyntaxShape::String,
+                "the clusters which should be contacted",
+                None,
+            )
     }
 
     fn usage(&self) -> &str {
@@ -83,6 +90,7 @@ impl nu_engine::WholeStreamCommand for DocGet {
 fn run_get(state: Arc<Mutex<State>>, mut args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
 
+    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
     let id_column: String = args.get_flag("id-column")?.unwrap_or_else(|| "id".into());
     let mut ids = vec![];
     while let Some(item) = args.input.next() {
@@ -105,72 +113,84 @@ fn run_get(state: Arc<Mutex<State>>, mut args: CommandArgs) -> Result<OutputStre
     }
 
     let guard = state.lock().unwrap();
-    let active_cluster = guard.active_cluster();
-    let bucket = match args
-        .get_flag("bucket")?
-        .or_else(|| active_cluster.active_bucket())
-    {
-        Some(v) => Ok(v),
-        None => Err(ShellError::untagged_runtime_error(
-            "Could not auto-select a bucket - please use --bucket instead".to_string(),
-        )),
-    }?;
 
-    let scope = match args.get_flag("scope")? {
-        Some(s) => s,
-        None => match active_cluster.active_scope() {
-            Some(s) => s,
-            None => "".into(),
-        },
-    };
-
-    let collection = match args.get_flag("collection")? {
-        Some(c) => c,
-        None => match active_cluster.active_collection() {
+    let mut results = vec![];
+    for identifier in cluster_identifiers {
+        let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
-            None => "".into(),
-        },
-    };
-
-    debug!("Running kv get for docs {:?}", &ids);
-
-    let rt = Runtime::new().unwrap();
-    let mut results: Vec<Value> = vec![];
-    let mut client = active_cluster.cluster().key_value_client();
-    for id in ids {
-        let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
-        let response = rt.block_on(client.request(
-            KeyValueRequest::Get { key: id.clone() },
-            bucket.clone(),
-            scope.clone(),
-            collection.clone(),
-            deadline,
-            ctrl_c.clone(),
-        ));
-
-        match response {
-            Ok(mut res) => {
-                let tag = Tag::default();
-                let mut collected = TaggedDictBuilder::new(&tag);
-                collected.insert_value(&id_column, id.clone());
-                collected.insert_value(
-                    "cas",
-                    UntaggedValue::int(res.cas() as i64).into_untagged_value(),
-                );
-                let content = res.content().unwrap();
-                let content_converted = convert_json_value_to_nu_value(&content, Tag::default())?;
-                collected.insert_value("content", content_converted);
-                collected.insert_value("error", "".to_string());
-                results.push(collected.into_value());
+            None => {
+                return Err(ShellError::untagged_runtime_error("Cluster not found"));
             }
-            Err(e) => {
-                let tag = Tag::default();
-                let mut collected = TaggedDictBuilder::new(&tag);
-                collected.insert_value(&id_column, id.clone());
-                collected.insert_value("cas", "".to_string());
-                collected.insert_value("content", "".to_string());
-                collected.insert_value("error", e.to_string());
-                results.push(collected.into_value());
+        };
+
+        let bucket = match args
+            .get_flag("bucket")?
+            .or_else(|| active_cluster.active_bucket())
+        {
+            Some(v) => Ok(v),
+            None => Err(ShellError::untagged_runtime_error(
+                "Could not auto-select a bucket - please use --bucket instead".to_string(),
+            )),
+        }?;
+
+        let scope = match args.get_flag("scope")? {
+            Some(s) => s,
+            None => match active_cluster.active_scope() {
+                Some(s) => s,
+                None => "".into(),
+            },
+        };
+
+        let collection = match args.get_flag("collection")? {
+            Some(c) => c,
+            None => match active_cluster.active_collection() {
+                Some(c) => c,
+                None => "".into(),
+            },
+        };
+
+        debug!("Running kv get for docs {:?}", &ids);
+
+        let rt = Runtime::new().unwrap();
+        let mut client = active_cluster.cluster().key_value_client();
+        for id in ids.clone() {
+            let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
+            let response = rt.block_on(client.request(
+                KeyValueRequest::Get { key: id.clone() },
+                bucket.clone(),
+                scope.clone(),
+                collection.clone(),
+                deadline,
+                ctrl_c.clone(),
+            ));
+
+            match response {
+                Ok(mut res) => {
+                    let tag = Tag::default();
+                    let mut collected = TaggedDictBuilder::new(&tag);
+                    collected.insert_value(&id_column, id.clone());
+                    collected.insert_value(
+                        "cas",
+                        UntaggedValue::int(res.cas() as i64).into_untagged_value(),
+                    );
+                    let content = res.content().unwrap();
+                    let content_converted =
+                        convert_json_value_to_nu_value(&content, Tag::default())?;
+                    collected.insert_value("content", content_converted);
+                    collected.insert_value("error", "".to_string());
+                    collected.insert_value("cluster", identifier.clone());
+                    results.push(collected.into_value());
+                }
+                Err(e) => {
+                    let tag = Tag::default();
+                    let mut collected = TaggedDictBuilder::new(&tag);
+                    collected.insert_value(&id_column, id.clone());
+                    collected.insert_value("cas", "".to_string());
+                    collected.insert_value("content", "".to_string());
+                    collected.insert_value("error", e.to_string());
+                    collected.insert_value("cluster", identifier.clone());
+                    results.push(collected.into_value());
+                }
             }
         }
     }

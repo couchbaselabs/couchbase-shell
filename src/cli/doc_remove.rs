@@ -2,7 +2,7 @@
 
 use crate::state::State;
 
-use crate::cli::util::namespace_from_args;
+use crate::cli::util::{cluster_identifiers_from, namespace_from_args};
 use crate::client::KeyValueRequest;
 use async_trait::async_trait;
 use nu_engine::CommandArgs;
@@ -54,6 +54,12 @@ impl nu_engine::WholeStreamCommand for DocRemove {
                 "the name of the collection",
                 None,
             )
+            .named(
+                "clusters",
+                SyntaxShape::String,
+                "the clusters which should be contacted",
+                None,
+            )
     }
 
     fn usage(&self) -> &str {
@@ -72,9 +78,13 @@ fn run_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, 
         .get_flag("id-column")?
         .unwrap_or_else(|| String::from("id"));
 
+    let bucket_flag = args.get_flag("bucket")?;
+    let scope_flag = args.get_flag("scope")?;
+    let collection_flag = args.get_flag("collection")?;
+
+    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
+
     let guard = state.lock().unwrap();
-    let active_cluster = guard.active_cluster();
-    let (bucket, scope, collection) = namespace_from_args(&args, active_cluster)?;
 
     let input_args = if let Some(id) = args.opt::<String>(0)? {
         vec![id]
@@ -92,50 +102,72 @@ fn run_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, 
         }
         None
     });
-
-    let rt = Runtime::new().unwrap();
-    let mut client = active_cluster.cluster().key_value_client();
-
-    let mut success = 0;
-    let mut failed = 0;
-    let mut fail_reasons: HashSet<String> = HashSet::new();
+    let mut all_items = vec![];
     for item in filtered.chain(input_args).into_iter() {
-        let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
-        let result = rt
-            .block_on(client.request(
-                KeyValueRequest::Remove { key: item },
-                bucket.clone(),
-                scope.clone(),
-                collection.clone(),
-                deadline,
-                ctrl_c.clone(),
-            ))
-            .map_err(|e| ShellError::untagged_runtime_error(e.to_string()));
-
-        match result {
-            Ok(_) => success += 1,
-            Err(e) => {
-                failed += 1;
-                fail_reasons.insert(e.to_string());
-            }
-        };
+        all_items.push(item);
     }
 
-    let tag = Tag::default();
-    let mut collected = TaggedDictBuilder::new(&tag);
-    collected.insert_untagged("processed", UntaggedValue::int(success + failed));
-    collected.insert_untagged("success", UntaggedValue::int(success));
-    collected.insert_untagged("failed", UntaggedValue::int(failed));
+    let mut results = vec![];
+    for identifier in cluster_identifiers {
+        let active_cluster = match guard.clusters().get(&identifier) {
+            Some(c) => c,
+            None => {
+                return Err(ShellError::untagged_runtime_error("Cluster not found"));
+            }
+        };
 
-    let reasons = fail_reasons
-        .iter()
-        .map(|v| {
-            let mut collected_fails = TaggedDictBuilder::new(&tag);
-            collected_fails.insert_untagged("fail reason", UntaggedValue::string(v));
-            collected_fails.into()
-        })
-        .collect();
-    collected.insert_untagged("failures", UntaggedValue::Table(reasons));
+        let (bucket, scope, collection) = namespace_from_args(
+            bucket_flag.clone(),
+            scope_flag.clone(),
+            collection_flag.clone(),
+            active_cluster,
+        )?;
 
-    Ok(vec![collected.into_value()].into())
+        let rt = Runtime::new().unwrap();
+        let mut client = active_cluster.cluster().key_value_client();
+
+        let mut success = 0;
+        let mut failed = 0;
+        let mut fail_reasons: HashSet<String> = HashSet::new();
+        for item in all_items.clone() {
+            let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
+            let result = rt
+                .block_on(client.request(
+                    KeyValueRequest::Remove { key: item },
+                    bucket.clone(),
+                    scope.clone(),
+                    collection.clone(),
+                    deadline,
+                    ctrl_c.clone(),
+                ))
+                .map_err(|e| ShellError::untagged_runtime_error(e.to_string()));
+
+            match result {
+                Ok(_) => success += 1,
+                Err(e) => {
+                    failed += 1;
+                    fail_reasons.insert(e.to_string());
+                }
+            };
+        }
+
+        let tag = Tag::default();
+        let mut collected = TaggedDictBuilder::new(&tag);
+        collected.insert_untagged("processed", UntaggedValue::int(success + failed));
+        collected.insert_untagged("success", UntaggedValue::int(success));
+        collected.insert_untagged("failed", UntaggedValue::int(failed));
+
+        let reasons = fail_reasons
+            .iter()
+            .map(|v| {
+                let mut collected_fails = TaggedDictBuilder::new(&tag);
+                collected_fails.insert_untagged("fail reason", UntaggedValue::string(v));
+                collected_fails.into()
+            })
+            .collect();
+        collected.insert_untagged("failures", UntaggedValue::Table(reasons));
+        collected.insert_value("cluster", identifier.clone());
+        results.push(collected.into_value());
+    }
+    Ok(OutputStream::from(results))
 }
