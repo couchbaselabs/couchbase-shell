@@ -86,7 +86,7 @@ fn addresses_add(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
             payload: serde_json::to_string(&entry)?,
         },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c.clone(),
+        ctrl_c,
     )?;
 
     match response.status() {

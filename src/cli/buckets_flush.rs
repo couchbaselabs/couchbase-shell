@@ -56,7 +56,7 @@ fn buckets_flush(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
     let name: String = args.req_named("name")?;
-    let bucket: String = args.get_flag("bucket")?.unwrap_or("".into());
+    let bucket: String = args.get_flag("bucket")?.unwrap_or_else(|| "".into());
 
     debug!("Running buckets flush for bucket {:?}", &bucket);
 

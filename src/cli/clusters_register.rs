@@ -153,7 +153,7 @@ fn clusters_register(
     );
 
     let mut guard = state.lock().unwrap();
-    guard.add_cluster(identifier.clone(), cluster)?;
+    guard.add_cluster(identifier, cluster)?;
 
     if save {
         update_config_file(&mut guard)?;

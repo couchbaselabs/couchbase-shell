@@ -60,14 +60,14 @@ fn users_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream
         let identifier = guard.active();
         let cloud = guard.cloud_for_cluster(c)?.cloud();
         let cluster_id = cloud.find_cluster_id(
-            identifier.clone(),
+            identifier,
             Instant::now().add(active_cluster.timeouts().query_timeout()),
             ctrl_c.clone(),
         )?;
         let response = cloud.cloud_request(
             CloudRequest::GetUsers { cluster_id },
             Instant::now().add(active_cluster.timeouts().query_timeout()),
-            ctrl_c.clone(),
+            ctrl_c,
         )?;
         if response.status() != 200 {
             return Err(ShellError::unexpected(response.content()));

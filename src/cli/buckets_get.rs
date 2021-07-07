@@ -63,7 +63,7 @@ fn buckets_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStre
     let ctrl_c = args.ctrl_c();
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
-    let bucket: String = args.get_flag("bucket")?.unwrap_or("".into());
+    let bucket: String = args.get_flag("bucket")?.unwrap_or_else(|| "".into());
 
     debug!("Running buckets get for bucket {:?}", &bucket);
 

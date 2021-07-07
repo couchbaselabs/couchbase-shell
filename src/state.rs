@@ -65,7 +65,7 @@ impl State {
         if !self.clusters.contains_key(&active) {
             return Err(ShellError::unexpected(format!(
                 "Cluster not known: {}",
-                active.clone()
+                active
             )));
         }
 

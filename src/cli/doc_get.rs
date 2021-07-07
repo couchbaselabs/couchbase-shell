@@ -83,7 +83,7 @@ impl nu_engine::WholeStreamCommand for DocGet {
 fn run_get(state: Arc<Mutex<State>>, mut args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
 
-    let id_column: String = args.get_flag("id-column")?.unwrap_or("id".into());
+    let id_column: String = args.get_flag("id-column")?.unwrap_or_else(|| "id".into());
     let mut ids = vec![];
     while let Some(item) = args.input.next() {
         let untagged = item.into();

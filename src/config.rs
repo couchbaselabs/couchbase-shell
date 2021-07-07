@@ -249,7 +249,7 @@ impl ClusterConfig {
 
 impl From<(String, &RemoteCluster)> for ClusterConfig {
     fn from(cluster: (String, &RemoteCluster)) -> Self {
-        let cloud = cluster.1.cloud().map(|c| c);
+        let cloud = cluster.1.cloud();
 
         Self {
             identifier: cluster.0,

@@ -69,7 +69,7 @@ fn addresses(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream
     let response = cloud.cloud_request(
         CloudRequest::GetAllowList { cluster_id },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c.clone(),
+        ctrl_c,
     )?;
     if response.status() != 200 {
         return Err(ShellError::untagged_runtime_error(

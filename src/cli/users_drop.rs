@@ -56,7 +56,7 @@ fn users_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
         let identifier = guard.active();
         let cloud = guard.cloud_for_cluster(c)?.cloud();
         let cluster_id = cloud.find_cluster_id(
-            identifier.clone(),
+            identifier,
             Instant::now().add(active_cluster.timeouts().query_timeout()),
             ctrl_c.clone(),
         )?;
@@ -66,7 +66,7 @@ fn users_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
                 username,
             },
             Instant::now().add(active_cluster.timeouts().query_timeout()),
-            ctrl_c.clone(),
+            ctrl_c,
         )?
     } else {
         active_cluster.cluster().http_client().management_request(

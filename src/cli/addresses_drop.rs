@@ -78,7 +78,7 @@ fn addresses_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
             payload: serde_json::to_string(&entry)?,
         },
         Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c.clone(),
+        ctrl_c,
     )?;
 
     match response.status() {
