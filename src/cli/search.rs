@@ -1,3 +1,4 @@
+use crate::cli::util::cluster_identifiers_from;
 use crate::client::SearchQueryRequest;
 use crate::state::State;
 use async_trait::async_trait;
@@ -37,6 +38,12 @@ impl nu_engine::WholeStreamCommand for Search {
                 SyntaxShape::String,
                 "the text to query for using a query string query",
             )
+            .named(
+                "clusters",
+                SyntaxShape::String,
+                "the clusters which should be contacted",
+                None,
+            )
     }
 
     fn usage(&self) -> &str {
@@ -50,52 +57,63 @@ impl nu_engine::WholeStreamCommand for Search {
 
 fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let index = args.req(0)?;
-    let query = args.req(1)?;
+    let index: String = args.req(0)?;
+    let query: String = args.req(1)?;
 
     debug!("Running search query {} against {}", &query, &index);
 
+    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
     let guard = state.lock().unwrap();
-    let active_cluster = guard.active_cluster();
 
-    let response = active_cluster
-        .cluster()
-        .http_client()
-        .search_query_request(
-            SearchQueryRequest::Execute { query, index },
-            Instant::now().add(active_cluster.timeouts().query_timeout()),
-            ctrl_c,
-        )?;
+    let mut results = vec![];
+    for identifier in cluster_identifiers {
+        let active_cluster = match guard.clusters().get(&identifier) {
+            Some(c) => c,
+            None => {
+                return Err(ShellError::untagged_runtime_error("Cluster not found"));
+            }
+        };
+        let response = active_cluster
+            .cluster()
+            .http_client()
+            .search_query_request(
+                SearchQueryRequest::Execute {
+                    query: query.clone(),
+                    index: index.clone(),
+                },
+                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                ctrl_c.clone(),
+            )?;
 
-    let rows: SearchResultData = match response.status() {
-        200 => match serde_json::from_str(response.content()) {
-            Ok(m) => m,
-            Err(e) => {
+        let rows: SearchResultData = match response.status() {
+            200 => match serde_json::from_str(response.content()) {
+                Ok(m) => m,
+                Err(e) => {
+                    return Err(ShellError::untagged_runtime_error(format!(
+                        "Failed to decode response body {}",
+                        e,
+                    )));
+                }
+            },
+            _ => {
                 return Err(ShellError::untagged_runtime_error(format!(
-                    "Failed to decode response body {}",
-                    e,
+                    "Request failed {}",
+                    response.content(),
                 )));
             }
-        },
-        _ => {
-            return Err(ShellError::untagged_runtime_error(format!(
-                "Request failed {}",
-                response.content(),
-            )));
+        };
+
+        for row in rows.hits {
+            let mut collected = TaggedDictBuilder::new(Tag::default());
+            collected.insert_value("id", row.id);
+            collected.insert_value("score", format!("{}", row.score));
+            collected.insert_value("index", row.index);
+            collected.insert_value("cluster", identifier.clone());
+
+            results.push(collected.into_value());
         }
-    };
-
-    let mut entries = vec![];
-    for row in rows.hits {
-        let mut collected = TaggedDictBuilder::new(Tag::default());
-        collected.insert_value("id", row.id);
-        collected.insert_value("score", format!("{}", row.score));
-        collected.insert_value("index", row.index);
-
-        entries.push(collected.into_value());
     }
-
-    Ok(entries.into())
+    Ok(OutputStream::from(results))
 }
 
 #[derive(Debug, Deserialize)]
