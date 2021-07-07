@@ -121,7 +121,6 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
 
         let response: HttpResponse;
         if let Some(c) = active_cluster.cloud() {
-            let identifier = guard.active();
             let cloud = guard.cloud_for_cluster(c)?.cloud();
 
             let cluster_response = cloud.cloud_request(

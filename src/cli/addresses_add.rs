@@ -1,4 +1,6 @@
+use crate::cli::buckets_create::collected_value_from_error_string;
 use crate::cli::cloud_json::JSONCloudAppendAllowListRequest;
+use crate::cli::util::cluster_identifiers_from;
 use crate::client::CloudRequest;
 use crate::state::State;
 use async_trait::async_trait;
@@ -36,6 +38,12 @@ impl nu_engine::WholeStreamCommand for AddressesAdd {
                 "the duration (hours) to allow access from this address, if not set then address is added for permanent access",
                 None,
             )
+            .named(
+                "clusters",
+                SyntaxShape::String,
+                "the clusters which should be contacted",
+                None,
+            )
     }
 
     fn usage(&self) -> &str {
@@ -49,50 +57,66 @@ impl nu_engine::WholeStreamCommand for AddressesAdd {
 
 fn addresses_add(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let address = args.req_named("address")?;
+    let address: String = args.req_named("address")?;
     let duration = args.get_flag("duration")?;
 
     debug!("Running address add for {}", &address);
 
+    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
     let guard = state.lock().unwrap();
-    let active_cluster = guard.active_cluster();
 
-    if active_cluster.cloud().is_none() {
-        return Err(ShellError::unexpected(
-            "addresses add can only be used with clusters registered to a cloud control pane",
-        ));
+    let mut results = vec![];
+    for identifier in cluster_identifiers {
+        let active_cluster = match guard.clusters().get(&identifier) {
+            Some(c) => c,
+            None => {
+                return Err(ShellError::untagged_runtime_error("Cluster not found"));
+            }
+        };
+        if active_cluster.cloud().is_none() {
+            return Err(ShellError::unexpected(
+                "addresses add can only be used with clusters registered to a cloud control pane",
+            ));
+        }
+
+        let cloud = guard
+            .cloud_for_cluster(active_cluster.cloud().unwrap())?
+            .cloud();
+        let cluster_id = cloud.find_cluster_id(
+            identifier.clone(),
+            Instant::now().add(active_cluster.timeouts().query_timeout()),
+            ctrl_c.clone(),
+        )?;
+
+        let rule_type = if duration.is_some() {
+            "temporary"
+        } else {
+            "permanent"
+        };
+
+        let entry = JSONCloudAppendAllowListRequest::new(
+            address.clone(),
+            rule_type.to_string(),
+            duration.clone(),
+        );
+        let response = cloud.cloud_request(
+            CloudRequest::CreateAllowListEntry {
+                cluster_id,
+                payload: serde_json::to_string(&entry)?,
+            },
+            Instant::now().add(active_cluster.timeouts().query_timeout()),
+            ctrl_c.clone(),
+        )?;
+
+        match response.status() {
+            202 => {}
+            _ => {
+                results.push(collected_value_from_error_string(
+                    identifier.clone(),
+                    response.content(),
+                ));
+            }
+        };
     }
-
-    let identifier = guard.active();
-    let cloud = guard
-        .cloud_for_cluster(active_cluster.cloud().unwrap())?
-        .cloud();
-    let cluster_id = cloud.find_cluster_id(
-        identifier,
-        Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c.clone(),
-    )?;
-
-    let rule_type = if duration.is_some() {
-        "temporary"
-    } else {
-        "permanent"
-    };
-
-    let entry = JSONCloudAppendAllowListRequest::new(address, rule_type.to_string(), duration);
-    let response = cloud.cloud_request(
-        CloudRequest::CreateAllowListEntry {
-            cluster_id,
-            payload: serde_json::to_string(&entry)?,
-        },
-        Instant::now().add(active_cluster.timeouts().query_timeout()),
-        ctrl_c,
-    )?;
-
-    match response.status() {
-        202 => Ok(OutputStream::empty()),
-        _ => Err(ShellError::untagged_runtime_error(
-            response.content().to_string(),
-        )),
-    }
+    Ok(OutputStream::from(results))
 }

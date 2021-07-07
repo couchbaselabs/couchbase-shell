@@ -165,10 +165,9 @@ fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
 
         let response: HttpResponse;
         if let Some(c) = active_cluster.cloud() {
-            let identifier = guard.active();
             let cloud = guard.cloud_for_cluster(c)?.cloud();
             let cluster_id = cloud.find_cluster_id(
-                identifier,
+                identifier.clone(),
                 Instant::now().add(active_cluster.timeouts().query_timeout()),
                 ctrl_c.clone(),
             )?;
