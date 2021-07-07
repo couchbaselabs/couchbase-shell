@@ -1,4 +1,6 @@
+use crate::cli::buckets_create::collected_value_from_error_string;
 use crate::cli::cloud_json::{JSONCloudCreateUserRequest, JSONCloudUser, JSONCloudUserRoles};
+use crate::cli::util::cluster_identifiers_from;
 use crate::client::{CloudRequest, ManagementRequest};
 use crate::state::State;
 use async_trait::async_trait;
@@ -60,6 +62,12 @@ impl nu_engine::WholeStreamCommand for UsersUpsert {
                 "the group names for the user",
                 None,
             )
+            .named(
+                "clusters",
+                SyntaxShape::String,
+                "the clusters which should be contacted",
+                None,
+            )
     }
 
     fn usage(&self) -> &str {
@@ -81,128 +89,159 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
 
     debug!("Running users upsert for user {}", &username);
 
+    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
     let guard = state.lock().unwrap();
-    let active_cluster = guard.active_cluster();
 
-    let response = if let Some(c) = active_cluster.cloud() {
-        let mut bucket_roles_map: HashMap<&str, Vec<&str>> = HashMap::new();
-        for role in roles.split(',') {
-            let split_role = role.split_once("[");
-            let bucket_role = if let Some(mut split) = split_role {
-                split.1 = split.1.strip_suffix("]").unwrap_or(split.1);
-                (split.0, split.1)
-            } else {
-                (role, "*")
-            };
-            if let Some(br) = bucket_roles_map.get_mut(bucket_role.1) {
-                br.push(bucket_role.0);
-            } else {
-                bucket_roles_map.insert(bucket_role.1, vec![bucket_role.0]);
+    let mut results = vec![];
+    for identifier in cluster_identifiers {
+        let active_cluster = match guard.clusters().get(&identifier) {
+            Some(c) => c,
+            None => {
+                results.push(collected_value_from_error_string(
+                    identifier.clone(),
+                    "Cluster not found",
+                ));
+                continue;
             }
-        }
+        };
+        let response = if let Some(c) = active_cluster.cloud() {
+            let mut bucket_roles_map: HashMap<&str, Vec<&str>> = HashMap::new();
+            for role in roles.split(',') {
+                let split_role = role.split_once("[");
+                let bucket_role = if let Some(mut split) = split_role {
+                    split.1 = split.1.strip_suffix("]").unwrap_or(split.1);
+                    (split.0, split.1)
+                } else {
+                    (role, "*")
+                };
+                if let Some(br) = bucket_roles_map.get_mut(bucket_role.1) {
+                    br.push(bucket_role.0);
+                } else {
+                    bucket_roles_map.insert(bucket_role.1, vec![bucket_role.0]);
+                }
+            }
 
-        let mut bucket_roles = Vec::new();
-        let mut all_access_roles = Vec::new();
-        for (bucket, roles) in bucket_roles_map {
-            if bucket == "*" {
-                all_access_roles.push(roles.iter().map(|r| r.to_string()).collect());
+            let mut bucket_roles = Vec::new();
+            let mut all_access_roles = Vec::new();
+            for (bucket, roles) in bucket_roles_map {
+                if bucket == "*" {
+                    all_access_roles.push(roles.iter().map(|r| r.to_string()).collect());
+                } else {
+                    bucket_roles.push(JSONCloudUserRoles::new(
+                        bucket.to_string(),
+                        roles.iter().map(|r| r.to_string()).collect(),
+                    ));
+                }
+            }
+
+            let identifier = guard.active();
+            let cloud = guard.cloud_for_cluster(c)?.cloud();
+            let cluster_id = cloud.find_cluster_id(
+                identifier.clone(),
+                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                ctrl_c.clone(),
+            )?;
+            let response = cloud.cloud_request(
+                CloudRequest::GetUsers {
+                    cluster_id: cluster_id.clone(),
+                },
+                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                ctrl_c.clone(),
+            )?;
+            if response.status() != 200 {
+                results.push(collected_value_from_error_string(
+                    identifier.clone(),
+                    response.content(),
+                ));
+                continue;
+            }
+
+            let users: Vec<JSONCloudUser> = serde_json::from_str(response.content())?;
+
+            let mut user_exists = false;
+            for u in users {
+                if u.username() == username.clone() {
+                    user_exists = true;
+                }
+            }
+
+            if user_exists {
+                // Update
+                let user = JSONCloudCreateUserRequest::new(
+                    username.clone(),
+                    password.clone().unwrap_or_default(),
+                    bucket_roles,
+                    all_access_roles,
+                );
+                cloud.cloud_request(
+                    CloudRequest::UpdateUser {
+                        cluster_id,
+                        payload: serde_json::to_string(&user)?,
+                        username: username.clone(),
+                    },
+                    Instant::now().add(active_cluster.timeouts().query_timeout()),
+                    ctrl_c.clone(),
+                )?
             } else {
-                bucket_roles.push(JSONCloudUserRoles::new(
-                    bucket.to_string(),
-                    roles.iter().map(|r| r.to_string()).collect(),
+                // Create
+                let pass = match password.clone() {
+                    Some(p) => p,
+                    None => {
+                        results.push(collected_value_from_error_string(
+                            identifier.clone(),
+                            "Cloud database user does not exist, password must be set",
+                        ));
+                        continue;
+                    }
+                };
+
+                let user = JSONCloudCreateUserRequest::new(
+                    username.clone(),
+                    pass,
+                    bucket_roles,
+                    all_access_roles,
+                );
+                cloud.cloud_request(
+                    CloudRequest::CreateUser {
+                        cluster_id,
+                        payload: serde_json::to_string(&user)?,
+                    },
+                    Instant::now().add(active_cluster.timeouts().query_timeout()),
+                    ctrl_c.clone(),
+                )?
+            }
+        } else {
+            let form = &[
+                ("name", display_name.clone()),
+                ("groups", groups.clone()),
+                ("roles", Some(roles.clone())),
+                ("password", password.clone()),
+            ];
+            let payload = serde_urlencoded::to_string(form).unwrap();
+
+            active_cluster.cluster().http_client().management_request(
+                ManagementRequest::UpsertUser {
+                    username: username.clone(),
+                    payload,
+                },
+                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                ctrl_c.clone(),
+            )?
+        };
+
+        match response.status() {
+            200 => {}
+            201 => {}
+            202 => {}
+            204 => {}
+            _ => {
+                results.push(collected_value_from_error_string(
+                    identifier.clone(),
+                    response.content(),
                 ));
             }
         }
-
-        let identifier = guard.active();
-        let cloud = guard.cloud_for_cluster(c)?.cloud();
-        let cluster_id = cloud.find_cluster_id(
-            identifier,
-            Instant::now().add(active_cluster.timeouts().query_timeout()),
-            ctrl_c.clone(),
-        )?;
-        let response = cloud.cloud_request(
-            CloudRequest::GetUsers {
-                cluster_id: cluster_id.clone(),
-            },
-            Instant::now().add(active_cluster.timeouts().query_timeout()),
-            ctrl_c.clone(),
-        )?;
-        if response.status() != 200 {
-            return Err(ShellError::unexpected(response.content()));
-        }
-
-        let users: Vec<JSONCloudUser> = serde_json::from_str(response.content())?;
-
-        let mut user_exists = false;
-        for u in users {
-            if u.username() == username.clone() {
-                user_exists = true;
-            }
-        }
-
-        if user_exists {
-            // Update
-            let user = JSONCloudCreateUserRequest::new(
-                username.clone(),
-                password.unwrap_or_default(),
-                bucket_roles,
-                all_access_roles,
-            );
-            cloud.cloud_request(
-                CloudRequest::UpdateUser {
-                    cluster_id,
-                    payload: serde_json::to_string(&user)?,
-                    username,
-                },
-                Instant::now().add(active_cluster.timeouts().query_timeout()),
-                ctrl_c,
-            )?
-        } else {
-            // Create
-            let pass = match password {
-                Some(p) => p,
-                None => {
-                    return Err(ShellError::unexpected(
-                        "Cloud database user does not exist, password must be set",
-                    ));
-                }
-            };
-
-            let user =
-                JSONCloudCreateUserRequest::new(username, pass, bucket_roles, all_access_roles);
-            cloud.cloud_request(
-                CloudRequest::CreateUser {
-                    cluster_id,
-                    payload: serde_json::to_string(&user)?,
-                },
-                Instant::now().add(active_cluster.timeouts().query_timeout()),
-                ctrl_c,
-            )?
-        }
-    } else {
-        let form = &[
-            ("name", display_name),
-            ("groups", groups),
-            ("roles", Some(roles)),
-            ("password", password),
-        ];
-        let payload = serde_urlencoded::to_string(form).unwrap();
-
-        active_cluster.cluster().http_client().management_request(
-            ManagementRequest::UpsertUser { username, payload },
-            Instant::now().add(active_cluster.timeouts().query_timeout()),
-            ctrl_c,
-        )?
-    };
-
-    match response.status() {
-        200 => Ok(OutputStream::empty()),
-        201 => Ok(OutputStream::empty()),
-        202 => Ok(OutputStream::empty()),
-        204 => Ok(OutputStream::empty()),
-        _ => Err(ShellError::untagged_runtime_error(
-            response.content().to_string(),
-        )),
     }
+
+    Ok(OutputStream::from(results))
 }

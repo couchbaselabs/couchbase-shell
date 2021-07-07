@@ -149,9 +149,9 @@ fn buckets_get_all(
     cluster_identifiers: Vec<String>,
     ctrl_c: Arc<AtomicBool>,
 ) -> Result<OutputStream, ShellError> {
+    let guard = state.lock().unwrap();
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
-        let guard = state.lock().unwrap();
         let cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
