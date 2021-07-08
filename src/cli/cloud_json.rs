@@ -1,3 +1,4 @@
+use crate::cli::nodes::NodeService;
 use serde_derive::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
@@ -123,9 +124,43 @@ impl JSONCloudCreateUserRequest {
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct JSONCloudClusterHealthResponse {
+pub(crate) struct JSONCloudClusterHealthResponseNodeServices {
+    #[serde(rename = "nodeName")]
+    node_name: String,
+    services: Vec<NodeService>,
+    status: String,
+}
+
+impl JSONCloudClusterHealthResponseNodeServices {
+    pub fn name(&self) -> String {
+        self.node_name.clone()
+    }
+    pub fn status(&self) -> String {
+        self.status.clone()
+    }
+    pub fn services(&self) -> &Vec<NodeService> {
+        self.services.as_ref()
+    }
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub(crate) struct JSONCloudClusterHealthResponseNodes {
+    #[serde(rename = "serviceStats")]
+    service_stats: Vec<JSONCloudClusterHealthResponseNodeServices>,
+}
+
+impl JSONCloudClusterHealthResponseNodes {
+    pub fn nodes(&self) -> &Vec<JSONCloudClusterHealthResponseNodeServices> {
+        self.service_stats.as_ref()
+    }
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub(crate) struct JSONCloudClusterHealthResponse {
     status: String,
     health: String,
+    #[serde(rename = "nodeStats")]
+    nodes: JSONCloudClusterHealthResponseNodes,
 }
 
 impl JSONCloudClusterHealthResponse {
@@ -134,6 +169,9 @@ impl JSONCloudClusterHealthResponse {
     }
     pub fn health(&self) -> String {
         self.health.clone()
+    }
+    pub fn nodes(&self) -> &JSONCloudClusterHealthResponseNodes {
+        &self.nodes
     }
 }
 
