@@ -33,12 +33,7 @@ impl nu_engine::WholeStreamCommand for CollectionsCreate {
 
     fn signature(&self) -> Signature {
         Signature::build("collections create")
-            .required_named(
-                "name",
-                SyntaxShape::String,
-                "the name of the collection",
-                None,
-            )
+            .required("name", SyntaxShape::String, "the name of the collection")
             .named(
                 "bucket",
                 SyntaxShape::String,
@@ -77,7 +72,7 @@ fn collections_create(
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
     let guard = state.lock().unwrap();
-    let collection: String = args.req_named("name")?;
+    let collection: String = args.req(0)?;
     let expiry = args.get_flag("max-expiry")?.unwrap_or(0);
 
     let mut results: Vec<Value> = vec![];

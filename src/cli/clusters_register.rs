@@ -24,29 +24,25 @@ impl nu_engine::WholeStreamCommand for ClustersRegister {
 
     fn signature(&self) -> Signature {
         Signature::build("clusters register")
-            .required_named(
+            .required(
                 "identifier",
                 SyntaxShape::String,
                 "the identifier to use for this cluster",
-                None,
             )
-            .required_named(
+            .required(
                 "hostnames",
                 SyntaxShape::String,
                 "the comma separated list of hosts to use for this cluster",
-                None,
             )
-            .required_named(
+            .required(
                 "username",
                 SyntaxShape::String,
                 "the username use for this cluster",
-                None,
             )
-            .required_named(
+            .required(
                 "password",
                 SyntaxShape::String,
                 "the password to use for this cluster",
-                None,
             )
             .named(
                 "default-bucket",
@@ -116,15 +112,15 @@ fn clusters_register(
     args: CommandArgs,
     state: Arc<Mutex<State>>,
 ) -> Result<OutputStream, ShellError> {
-    let identifier: String = args.req_named("identifier")?;
+    let identifier: String = args.req(0)?;
 
     let hostnames = args
-        .req_named::<String>("hostnames")?
+        .req::<String>(1)?
         .split(',')
         .map(|v| v.to_owned())
         .collect();
-    let username = args.req_named("username")?;
-    let password = args.req_named("password")?;
+    let username = args.req(2)?;
+    let password = args.req(3)?;
     let bucket = args.get_flag("default-bucket")?;
     let scope = args.get_flag("default-scope")?;
     let collection = args.get_flag("default-collection")?;

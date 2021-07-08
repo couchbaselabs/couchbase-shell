@@ -33,7 +33,7 @@ impl nu_engine::WholeStreamCommand for BucketsFlush {
 
     fn signature(&self) -> Signature {
         Signature::build("buckets flush")
-            .required_named("name", SyntaxShape::String, "the name of the bucket", None)
+            .required("name", SyntaxShape::String, "the name of the bucket")
             .named(
                 "clusters",
                 SyntaxShape::String,
@@ -55,7 +55,7 @@ fn buckets_flush(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
     let ctrl_c = args.ctrl_c();
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
-    let name: String = args.req_named("name")?;
+    let name: String = args.req(0)?;
     let bucket: String = args.get_flag("bucket")?.unwrap_or_else(|| "".into());
 
     debug!("Running buckets flush for bucket {:?}", &bucket);

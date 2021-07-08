@@ -32,17 +32,11 @@ impl nu_engine::WholeStreamCommand for UsersUpsert {
 
     fn signature(&self) -> Signature {
         Signature::build("users upsert")
-            .required_named(
-                "username",
-                SyntaxShape::String,
-                "the username of the user",
-                None,
-            )
-            .required_named(
+            .required("username", SyntaxShape::String, "the username of the user")
+            .required(
                 "roles",
                 SyntaxShape::String,
                 "the roles for the user <role_name[bucket_name]>",
-                None,
             )
             .named(
                 "password",
@@ -81,8 +75,8 @@ impl nu_engine::WholeStreamCommand for UsersUpsert {
 
 fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let username: String = args.req_named("username")?;
-    let roles: String = args.req_named("roles")?;
+    let username: String = args.req(0)?;
+    let roles: String = args.req(1)?;
     let password = args.get_flag("password")?;
     let display_name = args.get_flag("display_name")?;
     let groups = args.get_flag("groups")?;

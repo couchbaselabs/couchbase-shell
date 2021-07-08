@@ -30,7 +30,7 @@ impl nu_engine::WholeStreamCommand for ScopesCreate {
 
     fn signature(&self) -> Signature {
         Signature::build("scopes create")
-            .required_named("name", SyntaxShape::String, "the name of the scope", None)
+            .required("name", SyntaxShape::String, "the name of the scope")
             .named(
                 "bucket",
                 SyntaxShape::String,
@@ -59,7 +59,7 @@ fn scopes_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
     let guard = state.lock().unwrap();
 
-    let scope: String = args.req_named("name")?;
+    let scope: String = args.req(0)?;
 
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {

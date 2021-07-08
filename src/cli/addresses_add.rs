@@ -31,7 +31,7 @@ impl nu_engine::WholeStreamCommand for AddressesAdd {
 
     fn signature(&self) -> Signature {
         Signature::build("addresses add")
-            .required_named("address", SyntaxShape::String, "the address to add to allow access", None)
+            .required("address", SyntaxShape::String, "the address to add to allow access")
             .named(
                 "duration",
                 SyntaxShape::String,
@@ -57,7 +57,7 @@ impl nu_engine::WholeStreamCommand for AddressesAdd {
 
 fn addresses_add(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let address: String = args.req_named("address")?;
+    let address: String = args.req(0)?;
     let duration = args.get_flag("duration")?;
 
     debug!("Running address add for {}", &address);

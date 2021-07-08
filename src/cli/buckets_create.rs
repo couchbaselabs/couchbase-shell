@@ -34,12 +34,11 @@ impl nu_engine::WholeStreamCommand for BucketsCreate {
 
     fn signature(&self) -> Signature {
         Signature::build("buckets create")
-            .required_named("name", SyntaxShape::String, "the name of the bucket", None)
-            .required_named(
+            .required("name", SyntaxShape::String, "the name of the bucket")
+            .required(
                 "ram",
                 SyntaxShape::Int,
                 "the amount of ram to allocate (mb)",
-                None,
             )
             .named("type", SyntaxShape::String, "the type of bucket", None)
             .named(
@@ -80,8 +79,8 @@ impl nu_engine::WholeStreamCommand for BucketsCreate {
 
 fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let name: String = args.req_named("name")?;
-    let ram = args.req_named("ram")?;
+    let name: String = args.req(0)?;
+    let ram = args.req(1)?;
 
     let bucket_type: Option<String> = args.get_flag("type")?;
     let replicas: Option<i32> = args.get_flag("replicas")?;

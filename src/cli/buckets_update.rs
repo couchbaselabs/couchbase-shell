@@ -35,7 +35,7 @@ impl nu_engine::WholeStreamCommand for BucketsUpdate {
 
     fn signature(&self) -> Signature {
         Signature::build("buckets update")
-            .required_named("name", SyntaxShape::String, "the name of the bucket", None)
+            .required("name", SyntaxShape::String, "the name of the bucket")
             .named(
                 "ram",
                 SyntaxShape::Int,
@@ -86,7 +86,7 @@ impl nu_engine::WholeStreamCommand for BucketsUpdate {
 fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
 
-    let name: String = args.req_named("name")?;
+    let name: String = args.req(0)?;
     let ram = args.get_flag("ram")?;
     let replicas = args.get_flag("replicas")?;
     let flush = args.get_flag("flush")?.unwrap_or(false);

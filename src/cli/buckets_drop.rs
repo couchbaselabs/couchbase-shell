@@ -34,7 +34,7 @@ impl nu_engine::WholeStreamCommand for BucketsDrop {
 
     fn signature(&self) -> Signature {
         Signature::build("buckets drop")
-            .required_named("name", SyntaxShape::String, "the name of the bucket", None)
+            .required("name", SyntaxShape::String, "the name of the bucket")
             .named(
                 "clusters",
                 SyntaxShape::String,
@@ -56,7 +56,7 @@ fn buckets_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
     let ctrl_c = args.ctrl_c();
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
-    let name: String = args.req_named("name")?;
+    let name: String = args.req(0)?;
     let guard = state.lock().unwrap();
 
     debug!("Running buckets drop for bucket {:?}", &name);

@@ -31,11 +31,10 @@ impl nu_engine::WholeStreamCommand for AddressesDrop {
 
     fn signature(&self) -> Signature {
         Signature::build("addresses drop")
-            .required_named(
+            .required(
                 "address",
                 SyntaxShape::String,
                 "the address to add to allow access",
-                None,
             )
             .named(
                 "clusters",
@@ -56,7 +55,7 @@ impl nu_engine::WholeStreamCommand for AddressesDrop {
 
 fn addresses_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
-    let address: String = args.req_named("address")?;
+    let address: String = args.req(0)?;
 
     debug!("Running address drop for {}", &address);
 
