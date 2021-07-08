@@ -143,6 +143,16 @@ impl JSONCloudClusterHealthResponseNodeServices {
     }
 }
 
+impl Default for JSONCloudClusterHealthResponseNodeServices {
+    fn default() -> Self {
+        Self {
+            node_name: "".to_string(),
+            status: "".to_string(),
+            services: vec![],
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Clone)]
 pub(crate) struct JSONCloudClusterHealthResponseNodes {
     #[serde(rename = "serviceStats")]
@@ -155,10 +165,19 @@ impl JSONCloudClusterHealthResponseNodes {
     }
 }
 
+impl Default for JSONCloudClusterHealthResponseNodes {
+    fn default() -> Self {
+        Self {
+            service_stats: vec![],
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Clone)]
 pub(crate) struct JSONCloudClusterHealthResponse {
     status: String,
     health: String,
+    #[serde(default)]
     #[serde(rename = "nodeStats")]
     nodes: JSONCloudClusterHealthResponseNodes,
 }
