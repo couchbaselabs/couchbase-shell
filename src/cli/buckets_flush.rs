@@ -3,7 +3,7 @@
 use crate::state::State;
 
 use crate::cli::buckets_create::collected_value_from_error_string;
-use crate::cli::util::cluster_identifiers_from;
+use crate::cli::util::{cluster_identifiers_from, validate_is_not_cloud};
 use crate::client::ManagementRequest;
 use async_trait::async_trait;
 use log::debug;
@@ -73,6 +73,10 @@ fn buckets_flush(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
                 continue;
             }
         };
+        validate_is_not_cloud(
+            cluster,
+            "buckets flush cannot be run against cloud clusters",
+        )?;
 
         let result = cluster.cluster().http_client().management_request(
             ManagementRequest::FlushBucket { name: name.clone() },

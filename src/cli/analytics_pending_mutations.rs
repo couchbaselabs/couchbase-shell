@@ -1,4 +1,4 @@
-use crate::cli::util::{cluster_identifiers_from, convert_row_to_nu_value};
+use crate::cli::util::{cluster_identifiers_from, convert_row_to_nu_value, validate_is_not_cloud};
 use crate::client::AnalyticsQueryRequest;
 use crate::state::State;
 use async_trait::async_trait;
@@ -41,11 +41,14 @@ impl nu_engine::WholeStreamCommand for AnalyticsPendingMutations {
     }
 
     fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        dataverses(self.state.clone(), args)
+        pending_mutations(self.state.clone(), args)
     }
 }
 
-fn dataverses(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+fn pending_mutations(
+    state: Arc<Mutex<State>>,
+    args: CommandArgs,
+) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
@@ -59,6 +62,11 @@ fn dataverses(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
                 return Err(ShellError::untagged_runtime_error("Cluster not found"));
             }
         };
+        validate_is_not_cloud(
+            active_cluster,
+            "pending mutations cannot be run against cloud clusters",
+        )?;
+
         let response = active_cluster
             .cluster()
             .http_client()

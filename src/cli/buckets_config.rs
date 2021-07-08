@@ -1,4 +1,4 @@
-use crate::cli::util::convert_json_value_to_nu_value;
+use crate::cli::util::{convert_json_value_to_nu_value, validate_is_not_cloud};
 use crate::client::ManagementRequest;
 use crate::state::State;
 use async_trait::async_trait;
@@ -52,6 +52,11 @@ fn buckets(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, 
     let guard = state.lock().unwrap();
     let active_cluster = guard.active_cluster();
     let cluster = active_cluster.cluster();
+
+    validate_is_not_cloud(
+        active_cluster,
+        "buckets config cannot be run against cloud clusters",
+    )?;
 
     let response = cluster.http_client().management_request(
         ManagementRequest::GetBucket { name: bucket_name },

@@ -1,5 +1,5 @@
 use super::util::convert_json_value_to_nu_value;
-use crate::cli::util::cluster_identifiers_from;
+use crate::cli::util::{cluster_identifiers_from, validate_is_not_cloud};
 use crate::client::ManagementRequest;
 use crate::state::State;
 use nu_engine::CommandArgs;
@@ -59,6 +59,7 @@ fn whoami(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, S
                 return Err(ShellError::untagged_runtime_error("Cluster not found"));
             }
         };
+        validate_is_not_cloud(cluster, "whoami cannot be run against cloud clusters")?;
 
         let response = cluster.cluster().http_client().management_request(
             ManagementRequest::Whoami,

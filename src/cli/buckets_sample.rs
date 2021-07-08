@@ -1,4 +1,4 @@
-use crate::cli::util::cluster_identifiers_from;
+use crate::cli::util::{cluster_identifiers_from, validate_is_not_cloud};
 use crate::client::ManagementRequest;
 use crate::state::State;
 use async_trait::async_trait;
@@ -69,6 +69,11 @@ fn load_sample_bucket(
                 return Err(ShellError::untagged_runtime_error("Cluster not found"));
             }
         };
+
+        validate_is_not_cloud(
+            cluster,
+            "buckets sample cannot be run against cloud clusters",
+        )?;
 
         let response = cluster.cluster().http_client().management_request(
             ManagementRequest::LoadSampleBucket {

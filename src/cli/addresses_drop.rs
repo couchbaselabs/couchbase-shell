@@ -1,6 +1,6 @@
 use crate::cli::buckets_create::collected_value_from_error_string;
 use crate::cli::cloud_json::JSONCloudDeleteAllowListRequest;
-use crate::cli::util::cluster_identifiers_from;
+use crate::cli::util::{cluster_identifiers_from, validate_is_cloud};
 use crate::client::CloudRequest;
 use crate::state::State;
 use async_trait::async_trait;
@@ -70,11 +70,10 @@ fn addresses_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
                 return Err(ShellError::untagged_runtime_error("Cluster not found"));
             }
         };
-        if active_cluster.cloud().is_none() {
-            return Err(ShellError::unexpected(
-                "addresses add can only be used with clusters registered to a cloud control pane",
-            ));
-        }
+        validate_is_cloud(
+            active_cluster,
+            "addresses can only be used with clusters registered to a cloud control pane",
+        )?;
 
         let cloud = guard
             .cloud_for_cluster(active_cluster.cloud().unwrap())?

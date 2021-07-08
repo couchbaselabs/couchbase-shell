@@ -1,4 +1,4 @@
-use crate::cli::util::cluster_identifiers_from;
+use crate::cli::util::{cluster_identifiers_from, validate_is_not_cloud};
 use crate::state::State;
 use async_trait::async_trait;
 use nu_engine::CommandArgs;
@@ -70,6 +70,10 @@ fn run_async(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream
                 return Err(ShellError::untagged_runtime_error("Cluster not found"));
             }
         };
+        validate_is_not_cloud(
+            active_cluster,
+            "user roles cannot be run against cloud clusters",
+        )?;
 
         let response = active_cluster.cluster().http_client().management_request(
             ManagementRequest::GetRoles {

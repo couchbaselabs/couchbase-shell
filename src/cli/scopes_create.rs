@@ -1,4 +1,4 @@
-use crate::cli::util::cluster_identifiers_from;
+use crate::cli::util::{cluster_identifiers_from, validate_is_not_cloud};
 use crate::client::ManagementRequest;
 use crate::state::State;
 use async_trait::async_trait;
@@ -69,6 +69,11 @@ fn scopes_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
                 return Err(ShellError::untagged_runtime_error("Cluster not found"));
             }
         };
+        validate_is_not_cloud(
+            active_cluster,
+            "scopes create cannot be run against cloud clusters",
+        )?;
+
         let bucket = match args.get_flag("bucket")? {
             Some(v) => v,
             None => match active_cluster.active_bucket() {
