@@ -130,7 +130,7 @@ fn collections_create(
                 bucket,
                 payload: form_encoded,
             },
-            Instant::now().add(active_cluster.timeouts().query_timeout()),
+            Instant::now().add(active_cluster.timeouts().management_timeout()),
             ctrl_c.clone(),
         )?;
 

@@ -65,7 +65,7 @@ fn nodes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Sh
 
         let response = active_cluster.cluster().http_client().management_request(
             ManagementRequest::GetNodes,
-            Instant::now().add(active_cluster.timeouts().query_timeout()),
+            Instant::now().add(active_cluster.timeouts().management_timeout()),
             ctrl_c.clone(),
         )?;
 

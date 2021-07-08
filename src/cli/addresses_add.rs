@@ -79,14 +79,12 @@ fn addresses_add(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
             ));
         }
 
+        let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
         let cloud = guard
             .cloud_for_cluster(active_cluster.cloud().unwrap())?
             .cloud();
-        let cluster_id = cloud.find_cluster_id(
-            identifier.clone(),
-            Instant::now().add(active_cluster.timeouts().query_timeout()),
-            ctrl_c.clone(),
-        )?;
+        let cluster_id =
+            cloud.find_cluster_id(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
 
         let rule_type = if duration.is_some() {
             "temporary"
@@ -104,7 +102,7 @@ fn addresses_add(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
                 cluster_id,
                 payload: serde_json::to_string(&entry)?,
             },
-            Instant::now().add(active_cluster.timeouts().query_timeout()),
+            deadline,
             ctrl_c.clone(),
         )?;
 

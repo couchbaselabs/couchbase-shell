@@ -83,9 +83,9 @@ fn run_ping(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream,
     for identifier in cluster_identifiers {
         let cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
-            None => continue, //This can't actually happen, we filter the clusters in cluster_identifiers_from
+            None => continue, // This can't actually happen, we filter the clusters in cluster_identifiers_from
         };
-        let deadline = Instant::now().add(cluster.timeouts().query_timeout());
+        let deadline = Instant::now().add(cluster.timeouts().management_timeout());
 
         let client = cluster.cluster().http_client();
         let result = client.ping_all_request(deadline, ctrl_c.clone());

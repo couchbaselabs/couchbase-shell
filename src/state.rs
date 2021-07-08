@@ -279,6 +279,9 @@ impl RemoteCluster {
 pub struct ClusterTimeouts {
     data_timeout: Duration,
     query_timeout: Duration,
+    analytics_timeout: Duration,
+    search_timeout: Duration,
+    management_timeout: Duration,
 }
 
 impl Default for ClusterTimeouts {
@@ -286,15 +289,27 @@ impl Default for ClusterTimeouts {
         ClusterTimeouts {
             data_timeout: Duration::from_millis(30000),
             query_timeout: Duration::from_millis(75000),
+            analytics_timeout: Duration::from_millis(75000),
+            search_timeout: Duration::from_millis(75000),
+            management_timeout: Duration::from_millis(75000),
         }
     }
 }
 
 impl ClusterTimeouts {
-    pub fn new(data_timeout: Duration, query_timeout: Duration) -> Self {
+    pub fn new(
+        data_timeout: Duration,
+        query_timeout: Duration,
+        analytics_timeout: Duration,
+        search_timeout: Duration,
+        management_timeout: Duration,
+    ) -> Self {
         ClusterTimeouts {
             data_timeout,
             query_timeout,
+            analytics_timeout,
+            search_timeout,
+            management_timeout,
         }
     }
 
@@ -304,5 +319,17 @@ impl ClusterTimeouts {
 
     pub fn query_timeout(&self) -> Duration {
         self.query_timeout
+    }
+
+    pub fn analytics_timeout(&self) -> Duration {
+        self.analytics_timeout
+    }
+
+    pub fn search_timeout(&self) -> Duration {
+        self.search_timeout
+    }
+
+    pub fn management_timeout(&self) -> Duration {
+        self.management_timeout
     }
 }

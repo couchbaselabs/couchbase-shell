@@ -71,18 +71,16 @@ fn users_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
         };
 
         let response = if let Some(c) = active_cluster.cloud() {
+            let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
             let cloud = guard.cloud_for_cluster(c)?.cloud();
-            let cluster_id = cloud.find_cluster_id(
-                identifier.clone(),
-                Instant::now().add(active_cluster.timeouts().query_timeout()),
-                ctrl_c.clone(),
-            )?;
+            let cluster_id =
+                cloud.find_cluster_id(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
             cloud.cloud_request(
                 CloudRequest::DeleteUser {
                     cluster_id,
                     username: username.clone(),
                 },
-                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                deadline,
                 ctrl_c.clone(),
             )?
         } else {
@@ -90,7 +88,7 @@ fn users_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
                 ManagementRequest::DropUser {
                     username: username.clone(),
                 },
-                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                Instant::now().add(active_cluster.timeouts().management_timeout()),
                 ctrl_c.clone(),
             )?
         };

@@ -93,7 +93,7 @@ fn grab_bucket_names(
 ) -> Result<Vec<String>, ShellError> {
     let response = cluster.cluster().http_client().management_request(
         ManagementRequest::GetBuckets,
-        Instant::now().add(cluster.timeouts().query_timeout()),
+        Instant::now().add(cluster.timeouts().management_timeout()),
         ctrl_c,
     )?;
     let resp: Vec<BucketInfo> = serde_json::from_str(response.content())?;
@@ -114,7 +114,7 @@ fn check_autofailover(
 
     let response = cluster.cluster().http_client().management_request(
         ManagementRequest::SettingsAutoFailover,
-        Instant::now().add(cluster.timeouts().query_timeout()),
+        Instant::now().add(cluster.timeouts().management_timeout()),
         ctrl_c,
     )?;
     let resp: AutoFailoverSettings = serde_json::from_str(response.content())?;
@@ -152,7 +152,7 @@ fn check_resident_ratio(
         ManagementRequest::BucketStats {
             name: bucket_name.to_string(),
         },
-        Instant::now().add(cluster.timeouts().query_timeout()),
+        Instant::now().add(cluster.timeouts().management_timeout()),
         ctrl_c,
     )?;
     let resp: BucketStats = serde_json::from_str(response.content())?;
@@ -188,14 +188,14 @@ fn check_cloud_health(
 ) -> Result<Vec<Value>, ShellError> {
     let mut results = Vec::new();
 
-    let cluster_id = cloud.cloud().find_cluster_id(
-        identifier.to_string(),
-        Instant::now().add(timeouts.query_timeout()),
-        ctrl_c.clone(),
-    )?;
+    let deadline = Instant::now().add(timeouts.management_timeout());
+    let cluster_id =
+        cloud
+            .cloud()
+            .find_cluster_id(identifier.to_string(), deadline.clone(), ctrl_c.clone())?;
     let response = cloud.cloud().cloud_request(
         CloudRequest::GetClusterHealth { cluster_id },
-        Instant::now().add(timeouts.query_timeout()),
+        deadline,
         ctrl_c,
     )?;
     let resp: JSONCloudClusterHealthResponse = serde_json::from_str(response.content())?;

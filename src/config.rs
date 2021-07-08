@@ -7,6 +7,12 @@ use std::path::PathBuf;
 use std::time::Duration;
 use toml::ser::Error;
 
+pub(crate) const DEFAULT_DATA_TIMEOUT: Duration = Duration::from_millis(5000);
+pub(crate) const DEFAULT_QUERY_TIMEOUT: Duration = Duration::from_millis(75000);
+pub(crate) const DEFAULT_ANALYTICS_TIMEOUT: Duration = Duration::from_millis(75000);
+pub(crate) const DEFAULT_SEARCH_TIMEOUT: Duration = Duration::from_millis(75000);
+pub(crate) const DEFAULT_MANAGEMENT_TIMEOUT: Duration = Duration::from_millis(75000);
+
 /// Holds the complete config in an aggregated manner.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ShellConfig {
@@ -258,9 +264,11 @@ impl From<(String, &RemoteCluster)> for ClusterConfig {
             default_scope: cluster.1.active_scope(),
             default_bucket: cluster.1.active_bucket(),
             timeouts: ClusterConfigTimeouts {
-                connect_timeout: None,
                 data_timeout: Some(cluster.1.timeouts().data_timeout()),
                 query_timeout: Some(cluster.1.timeouts().query_timeout()),
+                analytics_timeout: Some(cluster.1.timeouts().analytics_timeout()),
+                search_timeout: Some(cluster.1.timeouts().search_timeout()),
+                management_timeout: Some(cluster.1.timeouts().management_timeout()),
             },
             tls: cluster.1.tls_config().clone(),
             credentials: ClusterCredentials {
@@ -303,21 +311,35 @@ pub struct ClusterConfigTimeouts {
         rename(deserialize = "connect-timeout", serialize = "connect-timeout"),
         with = "humantime_serde"
     )]
-    connect_timeout: Option<Duration>,
+    query_timeout: Option<Duration>,
     #[serde(default)]
     #[serde(
-        rename(deserialize = "query-timeout", serialize = "query-timeout"),
+        rename(deserialize = "search-timeout", serialize = "search-timeout"),
         with = "humantime_serde"
     )]
-    query_timeout: Option<Duration>,
+    search_timeout: Option<Duration>,
+    #[serde(default)]
+    #[serde(
+        rename(deserialize = "analytics-timeout", serialize = "analytics-timeout"),
+        with = "humantime_serde"
+    )]
+    analytics_timeout: Option<Duration>,
+    #[serde(default)]
+    #[serde(
+        rename(deserialize = "management-timeout", serialize = "management-timeout"),
+        with = "humantime_serde"
+    )]
+    management_timeout: Option<Duration>,
 }
 
 impl Default for ClusterConfigTimeouts {
     fn default() -> Self {
         ClusterConfigTimeouts {
-            data_timeout: Some(Duration::from_millis(2500)),
-            connect_timeout: Some(Duration::from_millis(7000)),
-            query_timeout: Some(Duration::from_millis(75000)),
+            data_timeout: Some(DEFAULT_DATA_TIMEOUT),
+            query_timeout: Some(DEFAULT_QUERY_TIMEOUT),
+            analytics_timeout: Some(DEFAULT_ANALYTICS_TIMEOUT),
+            search_timeout: Some(DEFAULT_SEARCH_TIMEOUT),
+            management_timeout: Some(DEFAULT_MANAGEMENT_TIMEOUT),
         }
     }
 }
@@ -329,6 +351,18 @@ impl ClusterConfigTimeouts {
 
     pub fn query_timeout(&self) -> Option<&Duration> {
         self.query_timeout.as_ref()
+    }
+
+    pub fn search_timeout(&self) -> Option<&Duration> {
+        self.search_timeout.as_ref()
+    }
+
+    pub fn analytics_timeout(&self) -> Option<&Duration> {
+        self.analytics_timeout.as_ref()
+    }
+
+    pub fn management_timeout(&self) -> Option<&Duration> {
+        self.management_timeout.as_ref()
     }
 }
 

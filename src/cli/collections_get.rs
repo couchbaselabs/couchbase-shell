@@ -94,7 +94,7 @@ fn collections_get(
 
         let response = active_cluster.cluster().http_client().management_request(
             ManagementRequest::GetCollections { bucket },
-            Instant::now().add(active_cluster.timeouts().query_timeout()),
+            Instant::now().add(active_cluster.timeouts().management_timeout()),
             ctrl_c.clone(),
         )?;
 

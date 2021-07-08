@@ -62,7 +62,7 @@ fn whoami(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, S
 
         let response = cluster.cluster().http_client().management_request(
             ManagementRequest::Whoami,
-            Instant::now().add(cluster.timeouts().query_timeout()),
+            Instant::now().add(cluster.timeouts().management_timeout()),
             ctrl_c.clone(),
         )?;
         let mut content: Map<String, Value> = serde_json::from_str(response.content())?;

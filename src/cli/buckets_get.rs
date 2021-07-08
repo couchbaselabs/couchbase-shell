@@ -161,14 +161,12 @@ fn buckets_get_all(
 
         if let Some(c) = cluster.cloud() {
             let cloud = guard.cloud_for_cluster(c)?.cloud();
-            let cluster_id = cloud.find_cluster_id(
-                identifier.clone(),
-                Instant::now().add(cluster.timeouts().query_timeout()),
-                ctrl_c.clone(),
-            )?;
+            let deadline = Instant::now().add(cluster.timeouts().management_timeout());
+            let cluster_id =
+                cloud.find_cluster_id(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
             let response = cloud.cloud_request(
                 CloudRequest::GetBuckets { cluster_id },
-                Instant::now().add(cluster.timeouts().query_timeout()),
+                deadline,
                 ctrl_c.clone(),
             )?;
             if response.status() != 200 {
@@ -186,7 +184,7 @@ fn buckets_get_all(
         } else {
             let response = cluster.cluster().http_client().management_request(
                 ManagementRequest::GetBuckets,
-                Instant::now().add(cluster.timeouts().query_timeout()),
+                Instant::now().add(cluster.timeouts().management_timeout()),
                 ctrl_c.clone(),
             )?;
 

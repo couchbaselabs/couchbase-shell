@@ -135,16 +135,14 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
             }
 
             let cloud = guard.cloud_for_cluster(c)?.cloud();
-            let cluster_id = cloud.find_cluster_id(
-                identifier.clone(),
-                Instant::now().add(active_cluster.timeouts().query_timeout()),
-                ctrl_c.clone(),
-            )?;
+            let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
+            let cluster_id =
+                cloud.find_cluster_id(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
             let response = cloud.cloud_request(
                 CloudRequest::GetUsers {
                     cluster_id: cluster_id.clone(),
                 },
-                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                deadline.clone(),
                 ctrl_c.clone(),
             )?;
             if response.status() != 200 {
@@ -178,7 +176,7 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
                         payload: serde_json::to_string(&user)?,
                         username: username.clone(),
                     },
-                    Instant::now().add(active_cluster.timeouts().query_timeout()),
+                    deadline,
                     ctrl_c.clone(),
                 )?
             } else {
@@ -205,7 +203,7 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
                         cluster_id,
                         payload: serde_json::to_string(&user)?,
                     },
-                    Instant::now().add(active_cluster.timeouts().query_timeout()),
+                    deadline,
                     ctrl_c.clone(),
                 )?
             }
@@ -223,7 +221,7 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
                     username: username.clone(),
                     payload,
                 },
-                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                Instant::now().add(active_cluster.timeouts().management_timeout()),
                 ctrl_c.clone(),
             )?
         };

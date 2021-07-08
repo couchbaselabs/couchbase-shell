@@ -81,7 +81,7 @@ fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Shel
                     query: query.clone(),
                     index: index.clone(),
                 },
-                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                Instant::now().add(active_cluster.timeouts().search_timeout()),
                 ctrl_c.clone(),
             )?;
 

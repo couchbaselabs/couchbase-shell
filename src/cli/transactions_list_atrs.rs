@@ -89,7 +89,7 @@ impl nu_engine::WholeStreamCommand for TransactionsListAtrs {
                 statement,
                 scope: None,
             },
-            Instant::now().add(active_cluster.timeouts().query_timeout()),
+            Instant::now().add(active_cluster.timeouts().management_timeout()),
             ctrl_c,
         )?;
         let mut content: HashMap<String, serde_json::Value> =

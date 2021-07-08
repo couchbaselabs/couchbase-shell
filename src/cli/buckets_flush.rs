@@ -76,7 +76,7 @@ fn buckets_flush(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
 
         let result = cluster.cluster().http_client().management_request(
             ManagementRequest::FlushBucket { name: name.clone() },
-            Instant::now().add(cluster.timeouts().query_timeout()),
+            Instant::now().add(cluster.timeouts().management_timeout()),
             ctrl_c.clone(),
         )?;
 

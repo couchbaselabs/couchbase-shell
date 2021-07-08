@@ -166,18 +166,16 @@ fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
         let response: HttpResponse;
         if let Some(c) = active_cluster.cloud() {
             let cloud = guard.cloud_for_cluster(c)?.cloud();
-            let cluster_id = cloud.find_cluster_id(
-                identifier.clone(),
-                Instant::now().add(active_cluster.timeouts().query_timeout()),
-                ctrl_c.clone(),
-            )?;
+            let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
+            let cluster_id =
+                cloud.find_cluster_id(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
             let json_settings = JSONCloudBucketSettings::try_from(&settings)?;
             response = cloud.cloud_request(
                 CloudRequest::CreateBucket {
                     cluster_id,
                     payload: serde_json::to_string(&json_settings)?,
                 },
-                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                deadline,
                 ctrl_c.clone(),
             )?;
         } else {
@@ -188,7 +186,7 @@ fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
 
             response = cluster.http_client().management_request(
                 ManagementRequest::CreateBucket { payload },
-                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                Instant::now().add(active_cluster.timeouts().management_timeout()),
                 ctrl_c.clone(),
             )?;
         }

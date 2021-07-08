@@ -123,9 +123,10 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
         if let Some(c) = active_cluster.cloud() {
             let cloud = guard.cloud_for_cluster(c)?.cloud();
 
+            let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
             let cluster_response = cloud.cloud_request(
                 CloudRequest::GetClusters {},
-                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                deadline.clone(),
                 ctrl_c.clone(),
             )?;
 
@@ -161,7 +162,7 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
                 CloudRequest::GetBuckets {
                     cluster_id: cluster_id.clone().unwrap(),
                 },
-                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                deadline.clone(),
                 ctrl_c.clone(),
             )?;
             if buckets_response.status() != 200 {
@@ -206,13 +207,14 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
                     cluster_id: cluster_id.unwrap(),
                     payload: serde_json::to_string(&buckets)?,
                 },
-                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                deadline.clone(),
                 ctrl_c.clone(),
             )?;
         } else {
+            let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
             let get_response = active_cluster.cluster().http_client().management_request(
                 ManagementRequest::GetBucket { name: name.clone() },
-                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                deadline.clone(),
                 ctrl_c.clone(),
             )?;
 
@@ -236,7 +238,7 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
                     name: name.clone(),
                     payload,
                 },
-                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                deadline,
                 ctrl_c.clone(),
             )?;
         }

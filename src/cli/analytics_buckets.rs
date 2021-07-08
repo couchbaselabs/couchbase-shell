@@ -74,7 +74,7 @@ fn dataverses(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
                     statement: statement.into(),
                     scope: None,
                 },
-                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                Instant::now().add(active_cluster.timeouts().analytics_timeout()),
                 ctrl_c.clone(),
             )?;
 

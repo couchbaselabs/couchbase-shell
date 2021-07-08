@@ -64,7 +64,7 @@ fn dataverses(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
             .http_client()
             .analytics_query_request(
                 AnalyticsQueryRequest::PendingMutations,
-                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                Instant::now().add(active_cluster.timeouts().analytics_timeout()),
                 ctrl_c.clone(),
             )?;
 

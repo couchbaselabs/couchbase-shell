@@ -55,7 +55,7 @@ fn buckets(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, 
 
     let response = cluster.http_client().management_request(
         ManagementRequest::GetBucket { name: bucket_name },
-        Instant::now().add(active_cluster.timeouts().query_timeout()),
+        Instant::now().add(active_cluster.timeouts().management_timeout()),
         ctrl_c,
     )?;
 

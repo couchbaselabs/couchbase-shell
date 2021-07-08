@@ -6,7 +6,10 @@ mod config;
 mod state;
 mod tutorial;
 
-use crate::config::ShellConfig;
+use crate::config::{
+    ShellConfig, DEFAULT_ANALYTICS_TIMEOUT, DEFAULT_DATA_TIMEOUT, DEFAULT_MANAGEMENT_TIMEOUT,
+    DEFAULT_QUERY_TIMEOUT, DEFAULT_SEARCH_TIMEOUT,
+};
 use crate::state::{RemoteCloud, RemoteCluster};
 use crate::{cli::*, state::ClusterTimeouts};
 use config::ClusterTlsConfig;
@@ -169,11 +172,23 @@ fn main() -> Result<(), Box<dyn Error>> {
             let timeouts = v.timeouts();
             let data_timeout = match timeouts.data_timeout() {
                 Some(t) => t.to_owned(),
-                None => Duration::from_millis(30000),
+                None => DEFAULT_DATA_TIMEOUT,
             };
             let query_timeout = match timeouts.query_timeout() {
                 Some(t) => t.to_owned(),
-                None => Duration::from_millis(75000),
+                None => DEFAULT_QUERY_TIMEOUT,
+            };
+            let analytics_timeout = match timeouts.analytics_timeout() {
+                Some(t) => t.to_owned(),
+                None => DEFAULT_ANALYTICS_TIMEOUT,
+            };
+            let search_timeout = match timeouts.search_timeout() {
+                Some(t) => t.to_owned(),
+                None => DEFAULT_SEARCH_TIMEOUT,
+            };
+            let management_timeout = match timeouts.management_timeout() {
+                Some(t) => t.to_owned(),
+                None => DEFAULT_MANAGEMENT_TIMEOUT,
             };
 
             let cluster = RemoteCluster::new(
@@ -184,7 +199,13 @@ fn main() -> Result<(), Box<dyn Error>> {
                 scope,
                 collection,
                 v.tls().clone(),
-                ClusterTimeouts::new(data_timeout, query_timeout),
+                ClusterTimeouts::new(
+                    data_timeout,
+                    query_timeout,
+                    analytics_timeout,
+                    search_timeout,
+                    management_timeout,
+                ),
                 v.cloud_control_pane(),
             );
             if !v.tls().clone().enabled() {

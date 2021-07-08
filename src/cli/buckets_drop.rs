@@ -77,11 +77,9 @@ fn buckets_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
         let result: HttpResponse;
         if let Some(c) = cluster.cloud() {
             let cloud = guard.cloud_for_cluster(c)?.cloud();
-            let cluster_id = cloud.find_cluster_id(
-                identifier.clone(),
-                Instant::now().add(cluster.timeouts().query_timeout()),
-                ctrl_c.clone(),
-            )?;
+            let deadline = Instant::now().add(cluster.timeouts().management_timeout());
+            let cluster_id =
+                cloud.find_cluster_id(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
             let req = JSONCloudDeleteBucketRequest::new(name.clone());
             let payload = serde_json::to_string(&req)?;
             result = cloud.cloud_request(
@@ -89,13 +87,13 @@ fn buckets_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
                     cluster_id,
                     payload,
                 },
-                Instant::now().add(cluster.timeouts().query_timeout()),
+                deadline,
                 ctrl_c.clone(),
             )?;
         } else {
             result = cluster.cluster().http_client().management_request(
                 ManagementRequest::DropBucket { name: name.clone() },
-                Instant::now().add(cluster.timeouts().query_timeout()),
+                Instant::now().add(cluster.timeouts().management_timeout()),
                 ctrl_c.clone(),
             )?;
         }

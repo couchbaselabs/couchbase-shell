@@ -65,16 +65,13 @@ fn users_get_all(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
             }
         };
         let mut stream: Vec<Value> = if let Some(c) = active_cluster.cloud() {
-            let identifier = guard.active();
             let cloud = guard.cloud_for_cluster(c)?.cloud();
-            let cluster_id = cloud.find_cluster_id(
-                identifier.clone(),
-                Instant::now().add(active_cluster.timeouts().query_timeout()),
-                ctrl_c.clone(),
-            )?;
+            let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
+            let cluster_id =
+                cloud.find_cluster_id(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
             let response = cloud.cloud_request(
                 CloudRequest::GetUsers { cluster_id },
-                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                deadline,
                 ctrl_c.clone(),
             )?;
             if response.status() != 200 {
@@ -106,7 +103,7 @@ fn users_get_all(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
         } else {
             let response = active_cluster.cluster().http_client().management_request(
                 ManagementRequest::GetUsers,
-                Instant::now().add(active_cluster.timeouts().query_timeout()),
+                Instant::now().add(active_cluster.timeouts().management_timeout()),
                 ctrl_c.clone(),
             )?;
 

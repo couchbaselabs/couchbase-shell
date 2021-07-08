@@ -74,7 +74,7 @@ fn load_sample_bucket(
             ManagementRequest::LoadSampleBucket {
                 name: format!("[\"{}\"]", bucket_name),
             },
-            Instant::now().add(cluster.timeouts().query_timeout()),
+            Instant::now().add(cluster.timeouts().management_timeout()),
             ctrl_c.clone(),
         )?;
 
