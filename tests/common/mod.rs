@@ -44,6 +44,7 @@ pub fn execute_command(cwd: &PathBuf, command: &str) -> Outcome {
     };
 
     let mut process = match Command::new(fs::executable_path())
+        .arg("--silent")
         .current_dir(&cwd)
         .env("PATH", paths_joined)
         .stdout(Stdio::piped())
@@ -66,8 +67,6 @@ pub fn execute_command(cwd: &PathBuf, command: &str) -> Outcome {
 
     let mut out = read_std(&output.stdout);
     let err = String::from_utf8_lossy(&output.stderr);
-
-    out = out.strip_prefix("Using PLAIN authentication for cluster local, credentials will sent in plaintext - configure tls to disable this warning").unwrap_or_else(|| out.as_str()).to_string();
 
     Outcome::new(out, err.into_owned())
 }
