@@ -213,12 +213,17 @@ pub fn cluster_identifiers_from(
             )))
         }
     };
-    Ok(state
+    let clusters: Vec<String> = state
         .clusters()
         .keys()
         .filter(|k| re.is_match(k))
         .cloned()
-        .collect())
+        .collect();
+    if clusters.len() == 0 {
+        return Err(ShellError::untagged_runtime_error("Cluster not found"));
+    }
+
+    Ok(clusters)
 }
 
 pub fn namespace_from_args(
