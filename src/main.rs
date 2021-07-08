@@ -216,13 +216,11 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
             clusters.insert(name.clone(), cluster);
         }
-        if let Some(user_clouds) = config.clouds() {
-            for c in user_clouds {
-                let name = c.identifier();
-                let cloud = RemoteCloud::new(c.secret_key(), c.access_key());
+        for c in config.clouds() {
+            let name = c.identifier();
+            let cloud = RemoteCloud::new(c.secret_key(), c.access_key());
 
-                clouds.insert(name, cloud);
-            }
+            clouds.insert(name, cloud);
         }
         active.unwrap()
     };

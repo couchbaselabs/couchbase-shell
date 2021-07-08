@@ -23,8 +23,8 @@ pub struct ShellConfig {
     #[serde(alias = "clusters")]
     clusters: Vec<ClusterConfig>,
 
-    #[serde(alias = "cloud")]
-    clouds: Option<Vec<CloudConfig>>,
+    #[serde(alias = "cloud", default)]
+    clouds: Vec<CloudConfig>,
 
     /// Stores the path from which it got loaded, if present
     path: Option<PathBuf>,
@@ -59,6 +59,24 @@ impl ShellConfig {
                     }
                 }
             }
+
+            for value in config.clouds_mut() {
+                let identifier = value.identifier().to_owned();
+                let config_credentials = value.credentials_mut();
+
+                for cred in &standalone.clouds {
+                    if cred.identifier() == identifier {
+                        if config_credentials.secret_key.is_empty() && !cred.secret_key().is_empty()
+                        {
+                            config_credentials.secret_key = cred.secret_key()
+                        }
+                        if config_credentials.access_key.is_empty() && !cred.access_key().is_empty()
+                        {
+                            config_credentials.access_key = cred.access_key()
+                        }
+                    }
+                }
+            }
         }
 
         config
@@ -69,7 +87,7 @@ impl ShellConfig {
             clusters,
             path: None,
             version: 1,
-            clouds: Some(clouds),
+            clouds,
         }
     }
 
@@ -103,8 +121,12 @@ impl ShellConfig {
         &mut self.clusters
     }
 
-    pub fn clouds(&self) -> &Option<Vec<CloudConfig>> {
+    pub fn clouds(&self) -> &Vec<CloudConfig> {
         &self.clouds
+    }
+
+    pub fn clouds_mut(&mut self) -> &mut Vec<CloudConfig> {
+        &mut self.clouds
     }
 }
 
@@ -114,7 +136,7 @@ impl Default for ShellConfig {
             clusters: vec![],
             version: 1,
             path: None,
-            clouds: None,
+            clouds: vec![],
         }
     }
 }
@@ -177,6 +199,10 @@ impl CloudConfig {
     }
     pub fn access_key(&self) -> String {
         self.credentials.access_key.clone()
+    }
+
+    pub fn credentials_mut(&mut self) -> &mut CloudCredentials {
+        &mut self.credentials
     }
 }
 
@@ -282,8 +308,10 @@ impl From<(String, &RemoteCluster)> for ClusterConfig {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct CloudCredentials {
+    #[serde(default)]
     #[serde(rename(deserialize = "access-key", serialize = "access-key"))]
     access_key: String,
+    #[serde(default)]
     #[serde(rename(deserialize = "secret-key", serialize = "secret-key"))]
     secret_key: String,
 }
@@ -435,8 +463,11 @@ pub struct StandaloneCredentialsConfig {
     /// Note: clusters is kept for backwards compatibility and
     /// convenience, docs should only mention cluster
     #[serde(alias = "cluster")]
-    #[serde(alias = "clusters")]
+    #[serde(alias = "clusters", default)]
     clusters: Vec<StandaloneClusterCredentials>,
+
+    #[serde(alias = "cloud", default)]
+    clouds: Vec<CloudConfig>,
 }
 
 impl StandaloneCredentialsConfig {
@@ -459,6 +490,7 @@ impl Default for StandaloneCredentialsConfig {
         Self {
             clusters: vec![],
             version: 1,
+            clouds: vec![],
         }
     }
 }

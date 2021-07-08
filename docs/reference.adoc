@@ -24,9 +24,25 @@ password = "password"
 # tls-accept-all-certs = true
 # tls-validate-hostnames = false
 
-data-timeout = "25s"
-connect-timeout = "7500ms"
+# Timeouts broadly apply to the operations that you would expect them to.
+# That is:
+# * data: commands using the kv service such as `doc`
+# * query: `query` commands
+# * analytics: `analytics` commands
+# * search: `search` commands
+# * management: commands that perform management level operations, such as `users`, `bucket`, `health` etc...
+data-timeout = "10s"
 query-timeout = "75s"
+analytics-timeout = "75s"
+search-timeout = "1m 15s"
+management-timeout = "75s"
+# cloud corresponds to the identifier of the relevant cloud api plane section
+# cloud = "cloud"
+
+# [[cloud]]
+# identifier = "cloud"
+# access-key = "x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG"
+# secret-key = "T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY"
 ----
 
 === Credentials File Format
@@ -47,4 +63,11 @@ password = "password"
 # tls-cert-path = "/path/to/cert" # either accept all certs or provide a cert path
 # tls-accept-all-certs = true
 # tls-validate-hostnames = false
+
+# Note that the config file must have a corresponding [[cloud]] section containing the same idenfier
+# to allow us to match these credentials to a cloud control pane.
+# [[cloud]]
+# identifier = "cloud"
+# access-key = "x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG"
+# secret-key = "T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY"
 ----
