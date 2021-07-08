@@ -122,7 +122,7 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
             }
 
             let mut bucket_roles = Vec::new();
-            let mut all_access_roles = Vec::new();
+            let mut all_access_roles: Vec<String> = Vec::new();
             for (bucket, roles) in bucket_roles_map {
                 if bucket == "*" {
                     all_access_roles.push(roles.iter().map(|r| r.to_string()).collect());
@@ -134,15 +134,24 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
                 }
             }
 
+            let all_access_role = if all_access_roles.len() == 0 {
+                "".to_string()
+            } else if all_access_roles.len() == 1 {
+                all_access_roles[0].clone()
+            } else {
+                return Err(ShellError::unexpected(
+                    "Users with cluster scoped permissions can only be assigned one role",
+                ));
+            };
+
             let cloud = guard.cloud_for_cluster(c)?.cloud();
             let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
-            let cluster_id =
-                cloud.find_cluster_id(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
+            let cluster_id = cloud.find_cluster_id(identifier.clone(), deadline, ctrl_c.clone())?;
             let response = cloud.cloud_request(
                 CloudRequest::GetUsers {
                     cluster_id: cluster_id.clone(),
                 },
-                deadline.clone(),
+                deadline,
                 ctrl_c.clone(),
             )?;
             if response.status() != 200 {
@@ -168,7 +177,7 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
                     username.clone(),
                     password.clone().unwrap_or_default(),
                     bucket_roles,
-                    all_access_roles,
+                    all_access_role,
                 );
                 cloud.cloud_request(
                     CloudRequest::UpdateUser {
@@ -196,7 +205,7 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
                     username.clone(),
                     pass,
                     bucket_roles,
-                    all_access_roles,
+                    all_access_role,
                 );
                 cloud.cloud_request(
                     CloudRequest::CreateUser {

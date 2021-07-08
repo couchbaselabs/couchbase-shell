@@ -101,8 +101,8 @@ pub struct JSONCloudCreateUserRequest {
     password: String,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     buckets: Vec<JSONCloudUserRoles>,
-    #[serde(rename = "allBucketsAccess", skip_serializing_if = "Vec::is_empty")]
-    all_buckets_access: Vec<String>,
+    #[serde(rename = "allBucketsAccess", skip_serializing_if = "String::is_empty")]
+    all_buckets_access: String,
 }
 
 impl JSONCloudCreateUserRequest {
@@ -110,7 +110,7 @@ impl JSONCloudCreateUserRequest {
         username: String,
         password: String,
         buckets: Vec<JSONCloudUserRoles>,
-        all_buckets_access: Vec<String>,
+        all_buckets_access: String,
     ) -> Self {
         Self {
             user_id: None,
