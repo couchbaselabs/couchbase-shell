@@ -124,6 +124,7 @@ fn check_autofailover(
     collected.insert_value("bucket", "-".to_string());
     collected.insert_value("expected", UntaggedValue::boolean(true));
     collected.insert_value("actual", UntaggedValue::boolean(resp.enabled));
+    collected.insert_value("cloud", false);
 
     let remedy = if resp.enabled {
         "Not needed"
@@ -169,6 +170,7 @@ fn check_resident_ratio(
     collected.insert_value("bucket", bucket_name.to_string());
     collected.insert_value("expected", ">= 10%");
     collected.insert_value("actual", format!("{}%", &ratio));
+    collected.insert_value("cloud", false);
 
     let remedy = if ratio >= 10 {
         "Not needed"
@@ -204,10 +206,11 @@ fn check_cloud_health(
 
     let mut status_collected = TaggedDictBuilder::new(Tag::default());
     status_collected.insert_value("cluster", identifier.to_string());
-    status_collected.insert_value("check", "status".to_string());
+    status_collected.insert_value("check", "Status".to_string());
     status_collected.insert_value("bucket", "-".to_string());
     status_collected.insert_value("expected", "ready".to_string());
     status_collected.insert_value("actual", status.clone());
+    status_collected.insert_value("cloud", true);
 
     let remedy = if status == *"ready" {
         "Not needed"
@@ -222,10 +225,11 @@ fn check_cloud_health(
 
     let mut health_collected = TaggedDictBuilder::new(Tag::default());
     health_collected.insert_value("cluster", identifier.to_string());
-    health_collected.insert_value("check", "health".to_string());
+    health_collected.insert_value("check", "Health".to_string());
     health_collected.insert_value("bucket", "-".to_string());
     health_collected.insert_value("expected", "healthy".to_string());
     health_collected.insert_value("actual", health.clone());
+    health_collected.insert_value("cloud", true);
 
     let remedy = if health == *"healthy" {
         "Not needed"
