@@ -14,8 +14,9 @@ use crate::state::{RemoteCloud, RemoteCluster};
 use crate::{cli::*, state::ClusterTimeouts};
 use config::ClusterTlsConfig;
 use env_logger::Env;
-use log::error;
+use isahc::{prelude::*, Request};
 use log::{debug, warn, LevelFilter};
+use log::{error, info};
 use nu_cli::app::NuScript;
 use serde::Deserialize;
 use state::State;
@@ -29,7 +30,7 @@ use temp_dir::TempDir;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut logger_builder =
-        env_logger::Builder::from_env(Env::default().default_filter_or("warn"));
+        env_logger::Builder::from_env(Env::default().default_filter_or("info"));
     logger_builder.format(|buf, record| {
         let mut style = buf.style();
         style.set_intense(true);
@@ -234,9 +235,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         clouds,
     )));
 
-    //if !opt.no_motd && opt.script.is_none() && opt.command.is_none() {
-    //    fetch_and_print_motd().await;
-    //}
+    if !opt.silent && !opt.no_motd && opt.script.is_none() && opt.command.is_none() {
+        fetch_and_print_motd();
+    }
 
     let context = nu_cli::create_default_context(true)?;
     context.add_commands(vec![
@@ -350,7 +351,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 /// Fetches a helpful MOTD from couchbase.sh
 ///
 /// Note that this can be disabled with the --no-motd cli flag if needed.
-async fn _fetch_and_print_motd() {
+fn fetch_and_print_motd() {
     let agent = format!(
         "cbsh {} {}/{}",
         option_env!("CARGO_PKG_VERSION").unwrap_or("0.0.0"),
@@ -358,40 +359,37 @@ async fn _fetch_and_print_motd() {
         std::env::consts::ARCH
     );
 
-    let client = reqwest::Client::builder()
+    let mut response = match Request::get("http://motd.couchbase.sh/motd")
         .timeout(Duration::from_millis(500))
-        .user_agent(agent)
-        .build();
-    if client.is_err() {
-        debug!(
-            "Could not request MOTD because building the client failed: {}",
-            client.err().unwrap()
-        );
-        return;
-    }
-    let client = client.unwrap();
+        .header("User-Agent", agent)
+        .body(())
+        .expect("An empty body should not cause a panic - ignoring.")
+        .send()
+    {
+        Ok(r) => r,
+        Err(_e) => {
+            debug!("Failed to load MOTD, ignoring.");
+            return;
+        }
+    };
 
-    let resp = client.get("http://couchbase.sh/motd").send().await;
+    let encoded = match response.text() {
+        Ok(v) => v,
+        Err(_e) => {
+            debug!("Could not decode MOTD, ignoring.");
+            return;
+        }
+    };
 
-    if resp.is_err() {
-        debug!(
-            "Could not request MOTD because fetching the response failed: {}",
-            resp.err().unwrap()
-        );
-        return;
-    }
-    let resp = resp.unwrap();
+    let motd: Motd = match serde_json::from_str(encoded.as_str()) {
+        Ok(v) => v,
+        Err(_e) => {
+            debug!("Failed to turn MOTD into JSON, ignoring.");
+            return;
+        }
+    };
 
-    let data = resp.json::<Motd>().await;
-    if data.is_err() {
-        debug!(
-            "Could not request MOTD because converting the response data failed: {}",
-            data.err().unwrap()
-        );
-        return;
-    }
-    let data = data.unwrap();
-    warn!("{}", data.msg);
+    info!("{}", motd.msg);
 }
 
 #[derive(Debug, Deserialize)]
