@@ -8,6 +8,15 @@ All user visible changes to this project will be documented in this file.
  - Add `--with-meta` to `query indexes` and `query advise`
  - Added super simple `transactions list-atrs` support. needs a covered index for now to work.
  - Added support to configure cloud allow lists.
+ - Added a `--silent` mode flag.
+ - The `--clusters` option has been added to many more commands.
+ - Custom port usage is now possible for bootstrap.
+ - Hostnames are validated and parsed at startup.
+ - Cloud secrets can now also be put in the credentials file.
+ - Return an error if the `--clusters` flag does not return a single cluster.
+ - Cloud support to the `nodes` command has been added.‚‚
+ - The Message of the Day has been brought back.
+ - Commands have been reordered so the `get` subcommands are now at the toplevel.
  
 ## 1.0.0-alpha.2 - 2021-06-09
 
