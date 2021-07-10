@@ -30,7 +30,7 @@ use temp_dir::TempDir;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut logger_builder =
-        env_logger::Builder::from_env(Env::default().default_filter_or("info"));
+        env_logger::Builder::from_env(Env::default().default_filter_or("info,isahc=error"));
     logger_builder.format(|buf, record| {
         let mut style = buf.style();
         style.set_intense(true);
