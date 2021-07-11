@@ -29,8 +29,9 @@ use structopt::StructOpt;
 use temp_dir::TempDir;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut logger_builder =
-        env_logger::Builder::from_env(Env::default().default_filter_or("info,isahc=error"));
+    let mut logger_builder = env_logger::Builder::from_env(
+        Env::default().default_filter_or("info,isahc=error,surf=error"),
+    );
     logger_builder.format(|buf, record| {
         let mut style = buf.style();
         style.set_intense(true);
@@ -275,6 +276,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(Help {}),
         nu_engine::whole_stream_command(Nodes::new(state.clone())),
         nu_engine::whole_stream_command(Ping::new(state.clone())),
+        nu_engine::whole_stream_command(PluginFetch::new()),
         nu_engine::whole_stream_command(Query::new(state.clone())),
         nu_engine::whole_stream_command(QueryAdvise::new(state.clone())),
         nu_engine::whole_stream_command(QueryIndexes::new(state.clone())),

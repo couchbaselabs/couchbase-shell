@@ -35,6 +35,7 @@ mod fake_data;
 mod help;
 mod nodes;
 mod ping;
+mod plugin_fetch;
 mod query;
 mod query_advise;
 mod query_indexes;
@@ -97,6 +98,7 @@ pub use fake_data::FakeData;
 pub use help::Help;
 pub use nodes::Nodes;
 pub use ping::Ping;
+pub use plugin_fetch::PluginFetch;
 pub use query::Query;
 pub use query_advise::QueryAdvise;
 pub use query_indexes::QueryIndexes;
@@ -120,7 +122,6 @@ pub use users_drop::UsersDrop;
 pub use users_get::UsersGet;
 pub use users_roles::UsersRoles;
 pub use users_upsert::UsersUpsert;
-
 pub use version::Version;
 pub use whoami::Whoami;
 

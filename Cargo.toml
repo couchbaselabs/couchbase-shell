@@ -32,6 +32,8 @@ nu-stream = { branch = "main", git = "https://github.com/nushell/nushell.git"  }
 nu-source = { branch = "main", git = "https://github.com/nushell/nushell.git" }
 nu-cli = { branch = "main", git = "https://github.com/nushell/nushell.git" }
 nu-engine = { branch = "main", git = "https://github.com/nushell/nushell.git" }
+nu-plugin = { branch = "main", git = "https://github.com/nushell/nushell.git" } 
+nu_plugin_fetch = { branch = "main", git = "https://github.com/nushell/nushell.git" } 
 num-bigint = "0.4"
 pretty_env_logger = "0.3"
 rand = "0.8.3"
