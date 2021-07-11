@@ -17,6 +17,7 @@ All user visible changes to this project will be documented in this file.
  - Cloud support to the `nodes` command has been added.‚‚
  - The Message of the Day has been brought back.
  - Commands have been reordered so the `get` subcommands are now at the toplevel.
+ - Bundling the `fetch` plugin so now you can load any site/data you want.
  
 ## 1.0.0-alpha.2 - 2021-06-09
 
