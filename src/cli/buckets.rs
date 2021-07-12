@@ -66,8 +66,8 @@ fn buckets_get_all(
             }
         };
 
-        if let Some(c) = cluster.cloud() {
-            let cloud = guard.cloud_for_cluster(c)?.cloud();
+        if cluster.cloud() {
+            let cloud = guard.cloud_control_pane()?.client();
             let deadline = Instant::now().add(cluster.timeouts().management_timeout());
             let cluster_id = cloud.find_cluster_id(identifier.clone(), deadline, ctrl_c.clone())?;
             let response = cloud.cloud_request(

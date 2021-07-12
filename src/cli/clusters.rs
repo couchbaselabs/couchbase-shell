@@ -56,7 +56,7 @@ fn clusters(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream,
             collected.insert_value("tls", UntaggedValue::boolean(v.tls_config().enabled()));
             collected.insert_value("identifier", k.clone());
             collected.insert_value("username", String::from(v.username()));
-            collected.insert_value("cloud", UntaggedValue::boolean(v.cloud().is_some()));
+            collected.insert_value("cloud", UntaggedValue::boolean(v.cloud()));
             collected.into_value()
         })
         .collect::<Vec<_>>();

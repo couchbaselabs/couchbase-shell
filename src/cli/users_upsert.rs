@@ -98,7 +98,7 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
                 continue;
             }
         };
-        let response = if let Some(c) = active_cluster.cloud() {
+        let response = if active_cluster.cloud() {
             let mut bucket_roles_map: HashMap<&str, Vec<&str>> = HashMap::new();
             for role in roles.split(',') {
                 let split_role = role.split_once("[");
@@ -138,7 +138,7 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
                 ));
             };
 
-            let cloud = guard.cloud_for_cluster(c)?.cloud();
+            let cloud = guard.cloud_control_pane()?.client();
             let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
             let cluster_id = cloud.find_cluster_id(identifier.clone(), deadline, ctrl_c.clone())?;
             let response = cloud.cloud_request(

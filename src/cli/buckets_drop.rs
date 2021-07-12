@@ -75,8 +75,8 @@ fn buckets_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
         };
 
         let result: HttpResponse;
-        if let Some(c) = cluster.cloud() {
-            let cloud = guard.cloud_for_cluster(c)?.cloud();
+        if cluster.cloud() {
+            let cloud = guard.cloud_control_pane()?.client();
             let deadline = Instant::now().add(cluster.timeouts().management_timeout());
             let cluster_id =
                 cloud.find_cluster_id(identifier.clone(), deadline.clone(), ctrl_c.clone())?;

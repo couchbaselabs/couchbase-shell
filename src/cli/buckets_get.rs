@@ -71,8 +71,8 @@ fn buckets_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStre
             }
         };
 
-        if let Some(c) = cluster.cloud() {
-            let cloud = guard.cloud_for_cluster(c)?.cloud();
+        if cluster.cloud() {
+            let cloud = guard.cloud_control_pane()?.client();
             let cluster_id = cloud.find_cluster_id(
                 identifier.clone(),
                 Instant::now().add(cluster.timeouts().query_timeout()),

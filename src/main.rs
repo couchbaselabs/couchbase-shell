@@ -10,7 +10,7 @@ use crate::config::{
     ShellConfig, DEFAULT_ANALYTICS_TIMEOUT, DEFAULT_DATA_TIMEOUT, DEFAULT_MANAGEMENT_TIMEOUT,
     DEFAULT_QUERY_TIMEOUT, DEFAULT_SEARCH_TIMEOUT,
 };
-use crate::state::{RemoteCloud, RemoteCluster};
+use crate::state::{RemoteCloud, RemoteCloudControlPane, RemoteCluster};
 use crate::{cli::*, state::ClusterTimeouts};
 use config::ClusterTlsConfig;
 use env_logger::Env;
@@ -61,6 +61,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut clusters = HashMap::new();
     let mut clouds = HashMap::new();
+    let mut control_pane = None;
 
     let password = match opt.password {
         true => Some(rpassword::read_password_from_tty(Some("Password: ")).unwrap()),
@@ -111,7 +112,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             opt.collection,
             tls_config,
             ClusterTimeouts::default(),
-            None,
+            false,
         );
         clusters.insert("default".into(), cluster);
         String::from("default")
@@ -208,7 +209,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     search_timeout,
                     management_timeout,
                 ),
-                v.cloud_control_pane(),
+                v.cloud(),
             );
             if !v.tls().clone().enabled() {
                 warn!(
@@ -218,11 +219,13 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
             clusters.insert(name.clone(), cluster);
         }
+        if let Some(c) = config.control_pane() {
+            control_pane = Some(RemoteCloudControlPane::new(c.secret_key(), c.access_key()));
+        }
         for c in config.clouds() {
             let name = c.identifier();
-            let cloud = RemoteCloud::new(c.secret_key(), c.access_key());
 
-            clouds.insert(name, cloud);
+            clouds.insert(name, RemoteCloud::new());
         }
         active.unwrap()
     };
@@ -234,6 +237,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         default_collection,
         config.location().clone(),
         clouds,
+        control_pane,
     )));
 
     if !opt.silent && !opt.no_motd && opt.script.is_none() && opt.command.is_none() {

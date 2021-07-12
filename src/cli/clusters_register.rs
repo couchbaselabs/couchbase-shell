@@ -1,4 +1,6 @@
-use crate::config::{CloudConfig, ClusterConfig, ClusterTlsConfig, ShellConfig};
+use crate::config::{
+    CloudConfig, CloudControlPaneConfig, ClusterConfig, ClusterTlsConfig, ShellConfig,
+};
 use crate::state::{ClusterTimeouts, RemoteCluster, State};
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
@@ -91,12 +93,7 @@ impl nu_engine::WholeStreamCommand for ClustersRegister {
                 "whether or not to add the cluster to the .cbsh config file, defaults to false",
                 None,
             )
-            .named(
-                "cloud",
-                SyntaxShape::String,
-                "the name of the cloud control pane to use this cluster",
-                None,
-            )
+            .switch("cloud", "whether or not this is a cloud cluster", None)
     }
 
     fn usage(&self) -> &str {
@@ -129,7 +126,7 @@ fn clusters_register(
     let tls_accept_all_hosts = args.get_flag("tls-validate-hosts")?.unwrap_or(true);
     let cert_path = args.get_flag("tls-cert-path")?;
     let save = args.get_flag("save")?.unwrap_or(false);
-    let cloud = args.get_flag("cloud")?;
+    let cloud = args.get_flag("cloud")?.unwrap_or(false);
 
     let cluster = RemoteCluster::new(
         hostnames,
@@ -172,15 +169,15 @@ pub fn update_config_file(guard: &mut MutexGuard<State>) -> Result<(), ShellErro
         cluster_configs.push(ClusterConfig::from((identifier.clone(), cluster)))
     }
     let mut cloud_configs = Vec::new();
-    for (identifier, cloud) in guard.clouds() {
-        cloud_configs.push(CloudConfig::new(
-            identifier.clone(),
-            cloud.secret_key(),
-            cloud.access_key(),
-        ))
+    for (identifier, _cloud) in guard.clouds() {
+        cloud_configs.push(CloudConfig::new(identifier.clone()))
     }
+    let control_pane = match guard.cloud_control_pane() {
+        Ok(c) => Some(CloudControlPaneConfig::new(c.secret_key(), c.access_key())),
+        Err(_e) => None,
+    };
 
-    let config = ShellConfig::new_from_clusters(cluster_configs, cloud_configs);
+    let config = ShellConfig::new_from_clusters(cluster_configs, cloud_configs, control_pane);
 
     fs::write(
         path,

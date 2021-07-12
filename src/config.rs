@@ -23,6 +23,9 @@ pub struct ShellConfig {
     #[serde(alias = "clusters")]
     clusters: Vec<ClusterConfig>,
 
+    #[serde(alias = "cloud-control-plane", default)]
+    control_pane: Option<CloudControlPaneConfig>,
+
     #[serde(alias = "cloud", default)]
     clouds: Vec<CloudConfig>,
 
@@ -60,20 +63,15 @@ impl ShellConfig {
                 }
             }
 
-            for value in config.clouds_mut() {
-                let identifier = value.identifier().to_owned();
+            if let Some(value) = config.control_pane_mut() {
                 let config_credentials = value.credentials_mut();
 
-                for cred in &standalone.clouds {
-                    if cred.identifier() == identifier {
-                        if config_credentials.secret_key.is_empty() && !cred.secret_key().is_empty()
-                        {
-                            config_credentials.secret_key = cred.secret_key()
-                        }
-                        if config_credentials.access_key.is_empty() && !cred.access_key().is_empty()
-                        {
-                            config_credentials.access_key = cred.access_key()
-                        }
+                if let Some(cred) = &standalone.control_pane {
+                    if config_credentials.secret_key.is_empty() && !cred.secret_key.is_empty() {
+                        config_credentials.secret_key = cred.secret_key.clone()
+                    }
+                    if config_credentials.access_key.is_empty() && !cred.access_key.is_empty() {
+                        config_credentials.access_key = cred.access_key.clone()
                     }
                 }
             }
@@ -82,12 +80,17 @@ impl ShellConfig {
         config
     }
 
-    pub fn new_from_clusters(clusters: Vec<ClusterConfig>, clouds: Vec<CloudConfig>) -> Self {
+    pub fn new_from_clusters(
+        clusters: Vec<ClusterConfig>,
+        clouds: Vec<CloudConfig>,
+        control_pane: Option<CloudControlPaneConfig>,
+    ) -> Self {
         Self {
             clusters,
             path: None,
             version: 1,
             clouds,
+            control_pane,
         }
     }
 
@@ -121,12 +124,16 @@ impl ShellConfig {
         &mut self.clusters
     }
 
-    pub fn clouds(&self) -> &Vec<CloudConfig> {
-        &self.clouds
+    pub fn control_pane(&self) -> Option<&CloudControlPaneConfig> {
+        self.control_pane.as_ref()
     }
 
-    pub fn clouds_mut(&mut self) -> &mut Vec<CloudConfig> {
-        &mut self.clouds
+    pub fn control_pane_mut(&mut self) -> &mut Option<CloudControlPaneConfig> {
+        &mut self.control_pane
+    }
+
+    pub fn clouds(&self) -> &Vec<CloudConfig> {
+        &self.clouds
     }
 }
 
@@ -137,6 +144,7 @@ impl Default for ShellConfig {
             version: 1,
             path: None,
             clouds: vec![],
+            control_pane: None,
         }
     }
 }
@@ -174,25 +182,19 @@ fn try_credentials_from_path(mut path: PathBuf) -> Option<StandaloneCredentialsC
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct CloudConfig {
-    identifier: String,
-
+pub struct CloudControlPaneConfig {
     #[serde(flatten)]
-    credentials: CloudCredentials,
+    credentials: CloudControlPaneCredentials,
 }
 
-impl CloudConfig {
-    pub fn new(identifier: String, secret_key: String, access_key: String) -> Self {
+impl CloudControlPaneConfig {
+    pub fn new(secret_key: String, access_key: String) -> Self {
         Self {
-            identifier,
-            credentials: CloudCredentials {
+            credentials: CloudControlPaneCredentials {
                 access_key,
                 secret_key,
             },
         }
-    }
-    pub fn identifier(&self) -> String {
-        self.identifier.clone()
     }
     pub fn secret_key(&self) -> String {
         self.credentials.secret_key.clone()
@@ -201,7 +203,7 @@ impl CloudConfig {
         self.credentials.access_key.clone()
     }
 
-    pub fn credentials_mut(&mut self) -> &mut CloudCredentials {
+    pub fn credentials_mut(&mut self) -> &mut CloudControlPaneCredentials {
         &mut self.credentials
     }
 }
@@ -224,8 +226,9 @@ pub struct ClusterConfig {
     #[serde(flatten)]
     tls: ClusterTlsConfig,
 
+    #[serde(default)]
     #[serde(rename(deserialize = "cloud", serialize = "cloud"))]
-    cloud_control_pane: Option<String>,
+    cloud: bool,
 }
 
 impl ClusterConfig {
@@ -274,8 +277,8 @@ impl ClusterConfig {
     pub fn tls(&self) -> &ClusterTlsConfig {
         &self.tls
     }
-    pub fn cloud_control_pane(&self) -> Option<String> {
-        self.cloud_control_pane.as_ref().cloned()
+    pub fn cloud(&self) -> bool {
+        self.cloud
     }
 }
 
@@ -301,13 +304,13 @@ impl From<(String, &RemoteCluster)> for ClusterConfig {
                 username: Some(cluster.1.username().to_string()),
                 password: Some(cluster.1.password().to_string()),
             },
-            cloud_control_pane: cloud,
+            cloud,
         }
     }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct CloudCredentials {
+pub struct CloudControlPaneCredentials {
     #[serde(default)]
     #[serde(rename(deserialize = "access-key", serialize = "access-key"))]
     access_key: String,
@@ -316,7 +319,21 @@ pub struct CloudCredentials {
     secret_key: String,
 }
 
-impl CloudCredentials {}
+impl CloudControlPaneCredentials {}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct CloudConfig {
+    identifier: String,
+}
+
+impl CloudConfig {
+    pub fn new(identifier: String) -> Self {
+        Self { identifier }
+    }
+    pub fn identifier(&self) -> String {
+        self.identifier.clone()
+    }
+}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ClusterCredentials {
@@ -466,8 +483,8 @@ pub struct StandaloneCredentialsConfig {
     #[serde(alias = "clusters", default)]
     clusters: Vec<StandaloneClusterCredentials>,
 
-    #[serde(alias = "cloud", default)]
-    clouds: Vec<CloudConfig>,
+    #[serde(alias = "cloud-control-pane", default)]
+    control_pane: Option<CloudControlPaneCredentials>,
 }
 
 impl StandaloneCredentialsConfig {
@@ -490,7 +507,7 @@ impl Default for StandaloneCredentialsConfig {
         Self {
             clusters: vec![],
             version: 1,
-            clouds: vec![],
+            control_pane: None,
         }
     }
 }

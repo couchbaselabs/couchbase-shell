@@ -219,7 +219,7 @@ pub fn cluster_identifiers_from(
         .filter(|k| re.is_match(k))
         .cloned()
         .collect();
-    if clusters.len() == 0 {
+    if clusters.is_empty() {
         return Err(ShellError::untagged_runtime_error("Cluster not found"));
     }
 
@@ -259,7 +259,7 @@ pub fn namespace_from_args(
 }
 
 pub fn validate_is_cloud(cluster: &RemoteCluster, err_msg: &str) -> Result<(), ShellError> {
-    if cluster.cloud().is_none() {
+    if !cluster.cloud() {
         return Err(ShellError::unexpected(err_msg));
     }
 
@@ -267,7 +267,7 @@ pub fn validate_is_cloud(cluster: &RemoteCluster, err_msg: &str) -> Result<(), S
 }
 
 pub fn validate_is_not_cloud(cluster: &RemoteCluster, err_msg: &str) -> Result<(), ShellError> {
-    if cluster.cloud().is_some() {
+    if cluster.cloud() {
         return Err(ShellError::unexpected(err_msg));
     }
 

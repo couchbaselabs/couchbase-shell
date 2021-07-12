@@ -79,9 +79,7 @@ fn addresses_add(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
         )?;
 
         let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
-        let cloud = guard
-            .cloud_for_cluster(active_cluster.cloud().unwrap())?
-            .cloud();
+        let cloud = guard.cloud_control_pane()?.client();
         let cluster_id =
             cloud.find_cluster_id(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
 

@@ -48,7 +48,7 @@ fn run_tutorial(
     let guard = state.lock().unwrap();
     let tutorial = guard.tutorial();
     let active_cluster = guard.active_cluster();
-    let exists = if active_cluster.cloud().is_none() {
+    let exists = if active_cluster.cloud() {
         let resp = active_cluster.cluster().http_client().management_request(
             ManagementRequest::GetBucket {
                 name: "travel-sample".into(),

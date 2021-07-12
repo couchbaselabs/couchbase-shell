@@ -15,6 +15,7 @@ pub struct State {
     tutorial: Tutorial,
     config_path: Option<PathBuf>,
     clouds: HashMap<String, RemoteCloud>,
+    control_pane: Option<RemoteCloudControlPane>,
 }
 
 impl State {
@@ -25,6 +26,7 @@ impl State {
         default_collection: Option<String>,
         config_path: Option<PathBuf>,
         clouds: HashMap<String, RemoteCloud>,
+        control_pane: Option<RemoteCloudControlPane>,
     ) -> Self {
         let state = Self {
             active: Mutex::new(active.clone()),
@@ -34,6 +36,7 @@ impl State {
             tutorial: Tutorial::new(),
             config_path,
             clouds,
+            control_pane,
         };
         state.set_active(active).unwrap();
         state
@@ -116,31 +119,37 @@ impl State {
         &self.clouds
     }
 
-    pub fn cloud_for_cluster(&self, identifier: String) -> Result<&RemoteCloud, ShellError> {
-        let cloud = &self.clouds.get(identifier.as_str());
-        if let Some(c) = cloud {
+    pub fn cloud_control_pane(&self) -> Result<&RemoteCloudControlPane, ShellError> {
+        if let Some(c) = &self.control_pane {
             Ok(c)
         } else {
             Err(ShellError::unexpected(format!(
-                "No cloud registered for cluster name {}",
-                identifier,
+                "No cloud control pane registered",
             )))
         }
     }
 }
 
-pub struct RemoteCloud {
-    secret_key: String,
-    access_key: String,
-    cloud: Mutex<Option<Arc<CloudClient>>>,
-}
+pub struct RemoteCloud {}
 
 impl RemoteCloud {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+pub struct RemoteCloudControlPane {
+    secret_key: String,
+    access_key: String,
+    client: Mutex<Option<Arc<CloudClient>>>,
+}
+
+impl RemoteCloudControlPane {
     pub fn new(secret_key: String, access_key: String) -> Self {
         Self {
             secret_key,
             access_key,
-            cloud: Mutex::new(None),
+            client: Mutex::new(None),
         }
     }
 
@@ -152,8 +161,8 @@ impl RemoteCloud {
         self.access_key.clone()
     }
 
-    pub fn cloud(&self) -> Arc<CloudClient> {
-        let mut c = self.cloud.lock().unwrap();
+    pub fn client(&self) -> Arc<CloudClient> {
+        let mut c = self.client.lock().unwrap();
         if c.is_none() {
             *c = Some(Arc::new(CloudClient::new(
                 self.secret_key.clone(),
@@ -174,7 +183,7 @@ pub struct RemoteCluster {
     active_collection: Mutex<Option<String>>,
     tls_config: ClusterTlsConfig,
     timeouts: ClusterTimeouts,
-    cloud: Option<String>,
+    cloud: bool,
 }
 
 impl RemoteCluster {
@@ -187,7 +196,7 @@ impl RemoteCluster {
         active_collection: Option<String>,
         tls_config: ClusterTlsConfig,
         timeouts: ClusterTimeouts,
-        cloud: Option<String>,
+        cloud: bool,
     ) -> Self {
         Self {
             cluster: Mutex::new(None),
@@ -270,8 +279,8 @@ impl RemoteCluster {
         &self.timeouts
     }
 
-    pub fn cloud(&self) -> Option<String> {
-        self.cloud.clone()
+    pub fn cloud(&self) -> bool {
+        self.cloud
     }
 }
 

@@ -65,7 +65,7 @@ pub fn execute_command(cwd: &PathBuf, command: &str) -> Outcome {
         .wait_with_output()
         .expect("couldn't read from stdout/stderr");
 
-    let mut out = read_std(&output.stdout);
+    let out = read_std(&output.stdout);
     let err = String::from_utf8_lossy(&output.stderr);
 
     Outcome::new(out, err.into_owned())

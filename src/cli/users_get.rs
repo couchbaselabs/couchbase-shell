@@ -69,8 +69,8 @@ fn users_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream
             }
         };
 
-        let mut stream: Vec<Value> = if let Some(c) = active_cluster.cloud() {
-            let cloud = guard.cloud_for_cluster(c)?.cloud();
+        let mut stream: Vec<Value> = if active_cluster.cloud() {
+            let cloud = guard.cloud_control_pane()?.client();
             let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
             let cluster_id =
                 cloud.find_cluster_id(identifier.clone(), deadline.clone(), ctrl_c.clone())?;

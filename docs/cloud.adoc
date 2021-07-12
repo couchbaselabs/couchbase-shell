@@ -1,8 +1,8 @@
 == Couchbase Cloud
 
-=== Document Level Operations
+=== Document Level Commands
 
-Document level operations like those under `doc`, `analytics`, `query`, and `search` (with a couple of exceptions) do not require any special changes to the `config` config file.
+Document level commands like those under `doc`, `analytics`, `query`, and `search` (with a couple of exceptions) do not require any special changes to the `config` config file.
 
 You need to:
 
@@ -11,12 +11,19 @@ You need to:
     - ensure that you have a https://docs.couchbase.com/cloud/security/manage-database-users.html[database user]
     - Populate the relevant cluster section in the `config` file with the public address and database user credentials.
 
-=== Other Operations
+=== Management Commands
 
-Other operations (broadly referred to as "management operations") require a specific section to be added to the `config` file as well as an extra entry in the relevant cluster section.
+Non-cloud specific (i.e. commands not prefixed with `clouds`) commands (broadly referred to as "management operations") require a specific section to be added to the `config` file as well as an extra entry in the relevant cluster section.
 Before being able to perform management operations against Couchbase Cloud you must https://docs.couchbase.com/cloud/public-api-guide/using-cloud-public-api.html#access-and-secret-keys[generate access and secret keys] to enable Couchbase Shell to interact with your cloud.
 
-The `cloud` section in the `config` file is used as follows:
+//=== Cloud Commands
+//
+//Some of the commands that have the `clouds` prefix require an extra section to be added to the `config` file.
+//The commands that this apply to are any that perform an operation directly against a specific cloud instance.
+
+=== Config file format
+
+The `cloud-control-pane` section in the `config` file is used as follows:
 
 [source,toml]
 ----
@@ -31,7 +38,7 @@ default-bucket = "travel-sample"
 username = "Administrator"
 password = "password"
 
-[[clusters]]
+[[cluster]]
 # identifier *must* match the name of the cluster as provided in Couchbase Cloud
 identifier = "cloud"
 hostnames = ["xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.dp.cloud.couchbase.com"]
@@ -43,11 +50,9 @@ query-timeout = "1m 15s"
 tls-enabled = true
 tls-validate-hostnames = false
 tls-accept-all-certs = true
-# cloud corresponds to the identifier of the relevant cloud api plane section
-cloud = "cloud"
+cloud = true
 
-[[cloud]]
-identifier = "cloud"
+[[cloud-control-pane]]
 access-key = "x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG"
 secret-key = "T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY"
 

@@ -64,10 +64,8 @@ password = "password"
 # tls-accept-all-certs = true
 # tls-validate-hostnames = false
 
-# Note that the config file must have a corresponding [[cloud]] section containing the same idenfier
-# to allow us to match these credentials to a cloud control pane.
-# [[cloud]]
-# identifier = "cloud"
+
+# [[cloud-control-pane]]
 # access-key = "x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG"
 # secret-key = "T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY"
 ----
