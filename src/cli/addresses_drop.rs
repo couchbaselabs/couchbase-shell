@@ -75,7 +75,9 @@ fn addresses_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
             "addresses can only be used with clusters registered to a cloud control pane",
         )?;
 
-        let cloud = guard.cloud_control_pane()?.client();
+        let cloud = guard
+            .control_plane_for_cluster(active_cluster.cloud_control_plane().unwrap())?
+            .client();
         let cluster_id = cloud.find_cluster_id(
             identifier.clone(),
             Instant::now().add(active_cluster.timeouts().query_timeout()),

@@ -10,7 +10,7 @@ use crate::config::{
     ShellConfig, DEFAULT_ANALYTICS_TIMEOUT, DEFAULT_DATA_TIMEOUT, DEFAULT_MANAGEMENT_TIMEOUT,
     DEFAULT_QUERY_TIMEOUT, DEFAULT_SEARCH_TIMEOUT,
 };
-use crate::state::{RemoteCloud, RemoteCloudControlPane, RemoteCluster};
+use crate::state::{RemoteCloud, RemoteCloudControlPlane, RemoteCluster};
 use crate::{cli::*, state::ClusterTimeouts};
 use config::ClusterTlsConfig;
 use env_logger::Env;
@@ -61,7 +61,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut clusters = HashMap::new();
     let mut clouds = HashMap::new();
-    let mut control_pane = None;
+    let mut control_planes = HashMap::new();
 
     let password = match opt.password {
         true => Some(rpassword::read_password_from_tty(Some("Password: ")).unwrap()),
@@ -72,6 +72,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut default_collection: Option<String> = None;
     let mut default_project: Option<String> = None;
     let mut active_cloud = None;
+    let mut active_control_plane = None;
     let active = if config.clusters().is_empty() {
         let hostnames = if let Some(hosts) = opt.hostnames {
             hosts
@@ -114,7 +115,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             opt.collection,
             tls_config,
             ClusterTimeouts::default(),
-            false,
+            None,
         );
         clusters.insert("default".into(), cluster);
         String::from("default")
@@ -211,7 +212,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     search_timeout,
                     management_timeout,
                 ),
-                v.cloud(),
+                v.cloud_control_plane(),
             );
             if !v.tls().clone().enabled() {
                 warn!(
@@ -221,16 +222,21 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
             clusters.insert(name.clone(), cluster);
         }
-        if let Some(c) = config.control_pane() {
+        for c in config.control_planes() {
             let management_timeout = match c.management_timeout() {
                 Some(t) => t.to_owned(),
                 None => DEFAULT_MANAGEMENT_TIMEOUT,
             };
-            control_pane = Some(RemoteCloudControlPane::new(
-                c.secret_key(),
-                c.access_key(),
-                management_timeout,
-            ));
+            let name = c.identifier();
+
+            let plane =
+                RemoteCloudControlPlane::new(c.secret_key(), c.access_key(), management_timeout);
+
+            if active_control_plane.is_none() {
+                active_control_plane = Some(name.clone());
+            }
+
+            control_planes.insert(name, plane);
         }
 
         for c in config.clouds() {
@@ -255,8 +261,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         default_collection,
         config.location().clone(),
         clouds,
-        control_pane,
+        control_planes,
         active_cloud,
+        active_control_plane,
         default_project,
     )));
 

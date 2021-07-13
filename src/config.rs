@@ -23,8 +23,8 @@ pub struct ShellConfig {
     #[serde(alias = "clusters")]
     clusters: Vec<ClusterConfig>,
 
-    #[serde(alias = "cloud-control-pane", default)]
-    control_pane: Option<CloudControlPaneConfig>,
+    #[serde(alias = "cloud-control-plane", default)]
+    control_planes: Vec<CloudControlPlaneConfig>,
 
     #[serde(alias = "cloud", default)]
     clouds: Vec<CloudConfig>,
@@ -63,10 +63,10 @@ impl ShellConfig {
                 }
             }
 
-            if let Some(value) = config.control_pane_mut() {
+            for value in config.control_planes_mut() {
                 let config_credentials = value.credentials_mut();
 
-                if let Some(cred) = &standalone.control_pane {
+                for cred in &standalone.control_planes {
                     if config_credentials.secret_key.is_empty() && !cred.secret_key.is_empty() {
                         config_credentials.secret_key = cred.secret_key.clone()
                     }
@@ -83,14 +83,14 @@ impl ShellConfig {
     pub fn new_from_clusters(
         clusters: Vec<ClusterConfig>,
         clouds: Vec<CloudConfig>,
-        control_pane: Option<CloudControlPaneConfig>,
+        control_planes: Vec<CloudControlPlaneConfig>,
     ) -> Self {
         Self {
             clusters,
             path: None,
             version: 1,
             clouds,
-            control_pane,
+            control_planes,
         }
     }
 
@@ -124,12 +124,12 @@ impl ShellConfig {
         &mut self.clusters
     }
 
-    pub fn control_pane(&self) -> Option<&CloudControlPaneConfig> {
-        self.control_pane.as_ref()
+    pub fn control_planes(&self) -> &Vec<CloudControlPlaneConfig> {
+        &self.control_planes
     }
 
-    pub fn control_pane_mut(&mut self) -> &mut Option<CloudControlPaneConfig> {
-        &mut self.control_pane
+    pub fn control_planes_mut(&mut self) -> &mut Vec<CloudControlPlaneConfig> {
+        &mut self.control_planes
     }
 
     pub fn clouds(&self) -> &Vec<CloudConfig> {
@@ -144,7 +144,7 @@ impl Default for ShellConfig {
             version: 1,
             path: None,
             clouds: vec![],
-            control_pane: None,
+            control_planes: vec![],
         }
     }
 }
@@ -182,9 +182,10 @@ fn try_credentials_from_path(mut path: PathBuf) -> Option<StandaloneCredentialsC
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct CloudControlPaneConfig {
+pub struct CloudControlPlaneConfig {
+    identifier: String,
     #[serde(flatten)]
-    credentials: CloudControlPaneCredentials,
+    credentials: CloudControlPlaneCredentials,
     #[serde(default)]
     #[serde(
         rename(deserialize = "management-timeout", serialize = "management-timeout"),
@@ -193,19 +194,24 @@ pub struct CloudControlPaneConfig {
     management_timeout: Option<Duration>,
 }
 
-impl CloudControlPaneConfig {
+impl CloudControlPlaneConfig {
     pub fn new(
+        identifier: String,
         secret_key: String,
         access_key: String,
         management_timeout: Option<Duration>,
     ) -> Self {
         Self {
-            credentials: CloudControlPaneCredentials {
+            identifier,
+            credentials: CloudControlPlaneCredentials {
                 access_key,
                 secret_key,
             },
             management_timeout,
         }
+    }
+    pub fn identifier(&self) -> String {
+        self.identifier.clone()
     }
     pub fn secret_key(&self) -> String {
         self.credentials.secret_key.clone()
@@ -217,7 +223,7 @@ impl CloudControlPaneConfig {
         self.management_timeout.as_ref()
     }
 
-    pub fn credentials_mut(&mut self) -> &mut CloudControlPaneCredentials {
+    pub fn credentials_mut(&mut self) -> &mut CloudControlPlaneCredentials {
         &mut self.credentials
     }
 }
@@ -241,8 +247,8 @@ pub struct ClusterConfig {
     tls: ClusterTlsConfig,
 
     #[serde(default)]
-    #[serde(rename(deserialize = "cloud", serialize = "cloud"))]
-    cloud: bool,
+    #[serde(rename(deserialize = "cloud-control-plane", serialize = "cloud-control-plane"))]
+    cloud_control_plane: Option<String>,
 }
 
 impl ClusterConfig {
@@ -291,14 +297,14 @@ impl ClusterConfig {
     pub fn tls(&self) -> &ClusterTlsConfig {
         &self.tls
     }
-    pub fn cloud(&self) -> bool {
-        self.cloud
+    pub fn cloud_control_plane(&self) -> Option<String> {
+        self.cloud_control_plane.clone()
     }
 }
 
 impl From<(String, &RemoteCluster)> for ClusterConfig {
     fn from(cluster: (String, &RemoteCluster)) -> Self {
-        let cloud = cluster.1.cloud();
+        let cloud = cluster.1.cloud_control_plane();
 
         Self {
             identifier: cluster.0,
@@ -318,13 +324,13 @@ impl From<(String, &RemoteCluster)> for ClusterConfig {
                 username: Some(cluster.1.username().to_string()),
                 password: Some(cluster.1.password().to_string()),
             },
-            cloud,
+            cloud_control_plane: cloud,
         }
     }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct CloudControlPaneCredentials {
+pub struct CloudControlPlaneCredentials {
     #[serde(default)]
     #[serde(rename(deserialize = "access-key", serialize = "access-key"))]
     access_key: String,
@@ -333,7 +339,7 @@ pub struct CloudControlPaneCredentials {
     secret_key: String,
 }
 
-impl CloudControlPaneCredentials {}
+impl CloudControlPlaneCredentials {}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CloudConfig {
@@ -505,8 +511,8 @@ pub struct StandaloneCredentialsConfig {
     #[serde(alias = "clusters", default)]
     clusters: Vec<StandaloneClusterCredentials>,
 
-    #[serde(alias = "cloud-control-pane", default)]
-    control_pane: Option<CloudControlPaneCredentials>,
+    #[serde(alias = "cloud-control-plane", default)]
+    control_planes: Vec<CloudControlPlaneCredentials>,
 }
 
 impl StandaloneCredentialsConfig {
@@ -529,7 +535,7 @@ impl Default for StandaloneCredentialsConfig {
         Self {
             clusters: vec![],
             version: 1,
-            control_pane: None,
+            control_planes: vec![],
         }
     }
 }

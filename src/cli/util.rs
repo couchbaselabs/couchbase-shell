@@ -259,7 +259,7 @@ pub fn namespace_from_args(
 }
 
 pub fn validate_is_cloud(cluster: &RemoteCluster, err_msg: &str) -> Result<(), ShellError> {
-    if !cluster.cloud() {
+    if cluster.cloud_control_plane().is_none() {
         return Err(ShellError::unexpected(err_msg));
     }
 
@@ -267,7 +267,7 @@ pub fn validate_is_cloud(cluster: &RemoteCluster, err_msg: &str) -> Result<(), S
 }
 
 pub fn validate_is_not_cloud(cluster: &RemoteCluster, err_msg: &str) -> Result<(), ShellError> {
-    if cluster.cloud() {
+    if cluster.cloud_control_plane().is_some() {
         return Err(ShellError::unexpected(err_msg));
     }
 

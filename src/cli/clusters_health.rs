@@ -1,7 +1,7 @@
 use crate::cli::cloud_json::JSONCloudClusterHealthResponse;
 use crate::cli::util::cluster_identifiers_from;
 use crate::client::{CloudRequest, ManagementRequest};
-use crate::state::{ClusterTimeouts, RemoteCloudControlPane, RemoteCluster, State};
+use crate::state::{ClusterTimeouts, RemoteCloudControlPlane, RemoteCluster, State};
 use log::warn;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
@@ -62,8 +62,8 @@ fn health(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, S
             }
         };
 
-        if cluster.cloud() {
-            let cloud = guard.cloud_control_pane()?;
+        if let Some(plane) = cluster.cloud_control_plane() {
+            let cloud = guard.control_plane_for_cluster(plane)?;
             let values =
                 check_cloud_health(&identifier, cloud, cluster.timeouts(), ctrl_c.clone())?;
             for value in values {
@@ -184,7 +184,7 @@ fn check_resident_ratio(
 
 fn check_cloud_health(
     identifier: &str,
-    cloud: &RemoteCloudControlPane,
+    cloud: &RemoteCloudControlPlane,
     timeouts: &ClusterTimeouts,
     ctrl_c: Arc<AtomicBool>,
 ) -> Result<Vec<Value>, ShellError> {

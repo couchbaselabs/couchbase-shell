@@ -63,8 +63,8 @@ fn nodes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Sh
                 return Err(ShellError::untagged_runtime_error("Cluster not found"));
             }
         };
-        if active_cluster.cloud() {
-            let cloud = guard.cloud_control_pane()?.client();
+        if let Some(plane) = active_cluster.cloud_control_plane() {
+            let cloud = guard.control_plane_for_cluster(plane)?.client();
             let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
             let cluster_id =
                 cloud.find_cluster_id(identifier.clone(), deadline.clone(), ctrl_c.clone())?;

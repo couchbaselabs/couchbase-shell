@@ -111,7 +111,9 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
             }
         };
 
-        if active_cluster.cloud() && (flush || durability.is_some() || expiry.is_some()) {
+        if active_cluster.cloud_control_plane().is_some()
+            && (flush || durability.is_some() || expiry.is_some())
+        {
             results.push(collected_value_from_error_string(
                 identifier.clone(),
                 "Cloud flag cannot be used with type, flush, durability, or expiry",
@@ -120,8 +122,8 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
         }
 
         let response: HttpResponse;
-        if active_cluster.cloud() {
-            let cloud = guard.cloud_control_pane()?.client();
+        if let Some(plane) = active_cluster.cloud_control_plane() {
+            let cloud = guard.control_plane_for_cluster(plane)?.client();
 
             let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
             let cluster_response = cloud.cloud_request(

@@ -16,8 +16,9 @@ pub struct State {
     tutorial: Tutorial,
     config_path: Option<PathBuf>,
     clouds: HashMap<String, RemoteCloud>,
-    control_pane: Option<RemoteCloudControlPane>,
+    control_planes: HashMap<String, RemoteCloudControlPlane>,
     active_cloud: Mutex<Option<String>>,
+    active_cloud_control_plane: Mutex<Option<String>>,
     default_project: Option<String>,
 }
 
@@ -29,8 +30,9 @@ impl State {
         default_collection: Option<String>,
         config_path: Option<PathBuf>,
         clouds: HashMap<String, RemoteCloud>,
-        control_pane: Option<RemoteCloudControlPane>,
+        control_planes: HashMap<String, RemoteCloudControlPlane>,
         active_cloud: Option<String>,
+        active_cloud_control_pane: Option<String>,
         default_project: Option<String>,
     ) -> Self {
         let state = Self {
@@ -41,8 +43,9 @@ impl State {
             tutorial: Tutorial::new(),
             config_path,
             clouds,
-            control_pane,
+            control_planes,
             active_cloud: Mutex::new(active_cloud),
+            active_cloud_control_plane: Mutex::new(active_cloud_control_pane),
             default_project,
         };
         state.set_active(active).unwrap();
@@ -126,12 +129,37 @@ impl State {
         &self.clouds
     }
 
-    pub fn cloud_control_pane(&self) -> Result<&RemoteCloudControlPane, ShellError> {
-        if let Some(c) = &self.control_pane {
-            Ok(c)
-        } else {
-            Err(ShellError::unexpected("No cloud control pane registered"))
+    pub fn cloud_control_planes(&self) -> &HashMap<String, RemoteCloudControlPlane> {
+        &self.control_planes
+    }
+
+    pub fn active_cloud_control_plane(&self) -> Result<&RemoteCloudControlPlane, ShellError> {
+        let guard = self.active_cloud_control_plane.lock().unwrap();
+
+        let active = match guard.deref() {
+            Some(a) => a,
+            None => return Err(ShellError::unexpected("No active cloud control plane set")),
+        };
+
+        self.control_planes
+            .get(&*active)
+            .ok_or_else(|| ShellError::unexpected("Active control plane not known"))
+    }
+
+    pub fn set_active_cloud_control_plane(&self, active: String) -> Result<(), ShellError> {
+        if !self.control_planes.contains_key(&active) {
+            return Err(ShellError::unexpected(format!(
+                "Cloud control plane not known: {}",
+                active
+            )));
         }
+
+        {
+            let mut guard = self.active_cloud_control_plane.lock().unwrap();
+            *guard = Some(active.clone());
+        }
+
+        Ok(())
     }
 
     pub fn set_active_cloud(&self, active: String) -> Result<(), ShellError> {
@@ -143,8 +171,8 @@ impl State {
         }
 
         {
-            let mut guard = self.active.lock().unwrap();
-            *guard = active.clone();
+            let mut guard = self.active_cloud.lock().unwrap();
+            *guard = Some(active.clone());
         }
 
         match self.active_cloud() {
@@ -175,6 +203,21 @@ impl State {
             .get(&*active)
             .ok_or_else(|| ShellError::unexpected("Active cloud name not known"))
     }
+
+    pub fn control_plane_for_cluster(
+        &self,
+        identifier: String,
+    ) -> Result<&RemoteCloudControlPlane, ShellError> {
+        let plane = &self.control_planes.get(identifier.as_str());
+        if let Some(c) = plane {
+            Ok(c)
+        } else {
+            Err(ShellError::unexpected(format!(
+                "No cloud control plane registered for cluster name {}",
+                identifier,
+            )))
+        }
+    }
 }
 
 pub struct RemoteCloud {
@@ -197,14 +240,14 @@ impl RemoteCloud {
     }
 }
 
-pub struct RemoteCloudControlPane {
+pub struct RemoteCloudControlPlane {
     secret_key: String,
     access_key: String,
     client: Mutex<Option<Arc<CloudClient>>>,
     timeout: Duration,
 }
 
-impl RemoteCloudControlPane {
+impl RemoteCloudControlPlane {
     pub fn new(secret_key: String, access_key: String, timeout: Duration) -> Self {
         Self {
             secret_key,
@@ -248,7 +291,7 @@ pub struct RemoteCluster {
     active_collection: Mutex<Option<String>>,
     tls_config: ClusterTlsConfig,
     timeouts: ClusterTimeouts,
-    cloud: bool,
+    cloud_control_plane: Option<String>,
 }
 
 impl RemoteCluster {
@@ -261,7 +304,7 @@ impl RemoteCluster {
         active_collection: Option<String>,
         tls_config: ClusterTlsConfig,
         timeouts: ClusterTimeouts,
-        cloud: bool,
+        cloud: Option<String>,
     ) -> Self {
         Self {
             cluster: Mutex::new(None),
@@ -273,7 +316,7 @@ impl RemoteCluster {
             active_collection: Mutex::new(active_collection),
             tls_config,
             timeouts,
-            cloud,
+            cloud_control_plane: cloud,
         }
     }
 
@@ -344,8 +387,8 @@ impl RemoteCluster {
         &self.timeouts
     }
 
-    pub fn cloud(&self) -> bool {
-        self.cloud
+    pub fn cloud_control_plane(&self) -> Option<String> {
+        self.cloud_control_plane.clone()
     }
 }
 
