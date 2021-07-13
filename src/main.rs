@@ -10,7 +10,7 @@ use crate::config::{
     ShellConfig, DEFAULT_ANALYTICS_TIMEOUT, DEFAULT_DATA_TIMEOUT, DEFAULT_MANAGEMENT_TIMEOUT,
     DEFAULT_QUERY_TIMEOUT, DEFAULT_SEARCH_TIMEOUT,
 };
-use crate::state::{RemoteCloud, RemoteCloudControlPlane, RemoteCluster};
+use crate::state::{RemoteCloud, RemoteCloudOrganization, RemoteCluster};
 use crate::{cli::*, state::ClusterTimeouts};
 use config::ClusterTlsConfig;
 use env_logger::Env;
@@ -212,7 +212,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     search_timeout,
                     management_timeout,
                 ),
-                v.cloud_control_plane(),
+                v.cloud_org(),
             );
             if !v.tls().clone().enabled() {
                 warn!(
@@ -222,7 +222,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
             clusters.insert(name.clone(), cluster);
         }
-        for c in config.control_planes() {
+        for c in config.cloud_orgs() {
             let management_timeout = match c.management_timeout() {
                 Some(t) => t.to_owned(),
                 None => DEFAULT_MANAGEMENT_TIMEOUT,
@@ -230,7 +230,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             let name = c.identifier();
 
             let plane =
-                RemoteCloudControlPlane::new(c.secret_key(), c.access_key(), management_timeout);
+                RemoteCloudOrganization::new(c.secret_key(), c.access_key(), management_timeout);
 
             if active_control_plane.is_none() {
                 active_control_plane = Some(name.clone());
@@ -336,7 +336,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(UsersUpsert::new(state.clone())),
         nu_engine::whole_stream_command(UseBucket::new(state.clone())),
         nu_engine::whole_stream_command(UseCloud::new(state.clone())),
-        nu_engine::whole_stream_command(UseCloudControlPlane::new(state.clone())),
+        nu_engine::whole_stream_command(UseCloudOrganization::new(state.clone())),
         nu_engine::whole_stream_command(UseCluster::new(state.clone())),
         nu_engine::whole_stream_command(UseCmd::new(state.clone())),
         nu_engine::whole_stream_command(UseCollection::new(state.clone())),

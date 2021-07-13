@@ -51,7 +51,7 @@ fn clusters_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
     debug!("Running clouds clusters drop for {}", &name);
 
     let guard = state.lock().unwrap();
-    let control = guard.active_cloud_control_plane()?;
+    let control = guard.active_cloud_org()?;
     let client = control.client();
 
     let deadline = Instant::now().add(control.timeout());

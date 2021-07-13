@@ -53,7 +53,7 @@ fn clusters_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
     debug!("Running clouds clusters get for {}", &name);
 
     let guard = state.lock().unwrap();
-    let control = guard.active_cloud_control_plane()?;
+    let control = guard.active_cloud_org()?;
     let client = control.client();
 
     let deadline = Instant::now().add(control.timeout());

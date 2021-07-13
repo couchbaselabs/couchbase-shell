@@ -7,43 +7,40 @@ use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::sync::{Arc, Mutex};
 
-pub struct UseCloudControlPlane {
+pub struct UseCloudOrganization {
     state: Arc<Mutex<State>>,
 }
 
-impl UseCloudControlPlane {
+impl UseCloudOrganization {
     pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
 
 #[async_trait]
-impl nu_engine::WholeStreamCommand for UseCloudControlPlane {
+impl nu_engine::WholeStreamCommand for UseCloudOrganization {
     fn name(&self) -> &str {
-        "use cloud-control-plane"
+        "use cloud-organization"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("use cloud-control-plane").required(
+        Signature::build("use cloud-organization").required(
             "identifier",
             SyntaxShape::String,
-            "the identifier of the cloud control plane",
+            "the identifier of the cloud organization",
         )
     }
 
     fn usage(&self) -> &str {
-        "Sets the active cloud control plane based on its identifier"
+        "Sets the active cloud organization based on its identifier"
     }
 
     fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
         let guard = self.state.lock().unwrap();
-        guard.set_active_cloud_control_plane(args.req(0)?)?;
+        guard.set_active_cloud_org(args.req(0)?)?;
 
         let mut using_now = TaggedDictBuilder::new(Tag::default());
-        using_now.insert_value(
-            "cloud_control_plane",
-            guard.active_cloud_control_plane_name().unwrap(),
-        );
+        using_now.insert_value("cloud_organization", guard.active_cloud_org_name().unwrap());
         let cloud = vec![using_now.into_value()];
         Ok(cloud.into())
     }

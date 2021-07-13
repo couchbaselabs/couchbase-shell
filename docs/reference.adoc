@@ -37,10 +37,10 @@ analytics-timeout = "75s"
 search-timeout = "1m 15s"
 management-timeout = "75s"
 # cloud corresponds to the identifier of the relevant cloud api plane section
-# cloud-control-plane = "plane"
+# cloud-organisation= "org"
 
-# [[cloud-control-plane]]
-# identifier = "plane"
+# [[cloud-organisation]]
+# identifier = "org"
 # access-key = "x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG"
 # secret-key = "T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY"
 ----
@@ -65,8 +65,8 @@ password = "password"
 # tls-validate-hostnames = false
 
 
-# [[cloud-control-pane]]
-# identifier = "plane"
+# [[cloud-organisation]]
+# identifier = "org"
 # access-key = "x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG"
 # secret-key = "T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY"
 ----

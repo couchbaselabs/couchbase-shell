@@ -54,7 +54,7 @@ fn projects_create(
     debug!("Running projects drop for {}", &name);
 
     let guard = state.lock().unwrap();
-    let control = guard.active_cloud_control_plane()?;
+    let control = guard.active_cloud_org()?;
     let client = control.client();
     let deadline = Instant::now().add(control.timeout());
     let project_id = find_project_id(ctrl_c.clone(), name, &client, deadline)?;

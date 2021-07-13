@@ -69,9 +69,9 @@ fn use_cmd(_args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream,
             .unwrap_or_else(|| String::from("")),
     );
     using_now.insert_value(
-        "cloud_control_pane",
+        "cloud_organization",
         guard
-            .active_cloud_control_plane_name()
+            .active_cloud_org_name()
             .unwrap_or_else(|| String::from("")),
     );
     using_now.insert_value("project", project);

@@ -55,7 +55,7 @@ fn clusters_create(
     debug!("Running clouds clusters create for {}", &definition);
 
     let guard = state.lock().unwrap();
-    let control = guard.active_cloud_control_plane()?;
+    let control = guard.active_cloud_org()?;
     let client = control.client();
 
     let deadline = Instant::now().add(control.timeout());

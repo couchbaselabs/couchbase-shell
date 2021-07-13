@@ -54,7 +54,7 @@ fn projects_create(
     debug!("Running projects create for {}", &name);
 
     let guard = state.lock().unwrap();
-    let control = guard.active_cloud_control_plane()?;
+    let control = guard.active_cloud_org()?;
     let client = control.client();
     let project = JSONCloudCreateProjectRequest::new(name);
     let response = client.cloud_request(

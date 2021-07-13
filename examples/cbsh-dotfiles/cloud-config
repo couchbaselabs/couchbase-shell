@@ -1,0 +1,28 @@
+# Allows us to evolve in the future without breaking old config files
+version = 1
+
+[[cluster]]
+identifier = "test"
+hostnames = ["d5637eaf-59a4-427e-aa8e-1aadd302728d.dp.cloud.couchbase.com"]
+default-bucket = "couchbasecloudbucket"
+username = "dave"
+password = "Pa55word!"
+data-timeout = "25s"
+query-timeout = "1m 15s"
+tls-enabled = true
+tls-validate-hostnames = false
+tls-accept-all-certs = true
+cloud-organization = "org"
+
+[[cloud]]
+identifier = "a-cloud"
+default-project = "a-project"
+
+[[cloud]]
+identifier = "other-cloud"
+default-project = "other-cloud-project"
+
+[[cloud-organization]]
+identifier = "org"
+access-key = "x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG"
+secret-key = "T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY"

@@ -23,8 +23,8 @@ pub struct ShellConfig {
     #[serde(alias = "clusters")]
     clusters: Vec<ClusterConfig>,
 
-    #[serde(alias = "cloud-control-plane", default)]
-    control_planes: Vec<CloudControlPlaneConfig>,
+    #[serde(alias = "cloud-organization", default)]
+    cloud_orgs: Vec<CloudOrganizationConfig>,
 
     #[serde(alias = "cloud", default)]
     clouds: Vec<CloudConfig>,
@@ -63,10 +63,10 @@ impl ShellConfig {
                 }
             }
 
-            for value in config.control_planes_mut() {
+            for value in config.cloud_orgs_mut() {
                 let config_credentials = value.credentials_mut();
 
-                for cred in &standalone.control_planes {
+                for cred in &standalone.cloud_orgs {
                     if config_credentials.secret_key.is_empty() && !cred.secret_key.is_empty() {
                         config_credentials.secret_key = cred.secret_key.clone()
                     }
@@ -83,14 +83,14 @@ impl ShellConfig {
     pub fn new_from_clusters(
         clusters: Vec<ClusterConfig>,
         clouds: Vec<CloudConfig>,
-        control_planes: Vec<CloudControlPlaneConfig>,
+        cloud_orgs: Vec<CloudOrganizationConfig>,
     ) -> Self {
         Self {
             clusters,
             path: None,
             version: 1,
             clouds,
-            control_planes,
+            cloud_orgs,
         }
     }
 
@@ -124,12 +124,12 @@ impl ShellConfig {
         &mut self.clusters
     }
 
-    pub fn control_planes(&self) -> &Vec<CloudControlPlaneConfig> {
-        &self.control_planes
+    pub fn cloud_orgs(&self) -> &Vec<CloudOrganizationConfig> {
+        &self.cloud_orgs
     }
 
-    pub fn control_planes_mut(&mut self) -> &mut Vec<CloudControlPlaneConfig> {
-        &mut self.control_planes
+    pub fn cloud_orgs_mut(&mut self) -> &mut Vec<CloudOrganizationConfig> {
+        &mut self.cloud_orgs
     }
 
     pub fn clouds(&self) -> &Vec<CloudConfig> {
@@ -144,7 +144,7 @@ impl Default for ShellConfig {
             version: 1,
             path: None,
             clouds: vec![],
-            control_planes: vec![],
+            cloud_orgs: vec![],
         }
     }
 }
@@ -182,10 +182,10 @@ fn try_credentials_from_path(mut path: PathBuf) -> Option<StandaloneCredentialsC
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct CloudControlPlaneConfig {
+pub struct CloudOrganizationConfig {
     identifier: String,
     #[serde(flatten)]
-    credentials: CloudControlPlaneCredentials,
+    credentials: CloudOrganizationCredentials,
     #[serde(default)]
     #[serde(
         rename(deserialize = "management-timeout", serialize = "management-timeout"),
@@ -194,7 +194,7 @@ pub struct CloudControlPlaneConfig {
     management_timeout: Option<Duration>,
 }
 
-impl CloudControlPlaneConfig {
+impl CloudOrganizationConfig {
     pub fn new(
         identifier: String,
         secret_key: String,
@@ -203,7 +203,7 @@ impl CloudControlPlaneConfig {
     ) -> Self {
         Self {
             identifier,
-            credentials: CloudControlPlaneCredentials {
+            credentials: CloudOrganizationCredentials {
                 access_key,
                 secret_key,
             },
@@ -223,7 +223,7 @@ impl CloudControlPlaneConfig {
         self.management_timeout.as_ref()
     }
 
-    pub fn credentials_mut(&mut self) -> &mut CloudControlPlaneCredentials {
+    pub fn credentials_mut(&mut self) -> &mut CloudOrganizationCredentials {
         &mut self.credentials
     }
 }
@@ -247,8 +247,8 @@ pub struct ClusterConfig {
     tls: ClusterTlsConfig,
 
     #[serde(default)]
-    #[serde(rename(deserialize = "cloud-control-plane", serialize = "cloud-control-plane"))]
-    cloud_control_plane: Option<String>,
+    #[serde(rename(deserialize = "cloud-organization", serialize = "cloud-organization"))]
+    cloud_org: Option<String>,
 }
 
 impl ClusterConfig {
@@ -297,14 +297,14 @@ impl ClusterConfig {
     pub fn tls(&self) -> &ClusterTlsConfig {
         &self.tls
     }
-    pub fn cloud_control_plane(&self) -> Option<String> {
-        self.cloud_control_plane.clone()
+    pub fn cloud_org(&self) -> Option<String> {
+        self.cloud_org.clone()
     }
 }
 
 impl From<(String, &RemoteCluster)> for ClusterConfig {
     fn from(cluster: (String, &RemoteCluster)) -> Self {
-        let cloud = cluster.1.cloud_control_plane();
+        let cloud = cluster.1.cloud_org();
 
         Self {
             identifier: cluster.0,
@@ -324,13 +324,13 @@ impl From<(String, &RemoteCluster)> for ClusterConfig {
                 username: Some(cluster.1.username().to_string()),
                 password: Some(cluster.1.password().to_string()),
             },
-            cloud_control_plane: cloud,
+            cloud_org: cloud,
         }
     }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct CloudControlPlaneCredentials {
+pub struct CloudOrganizationCredentials {
     #[serde(default)]
     #[serde(rename(deserialize = "access-key", serialize = "access-key"))]
     access_key: String,
@@ -339,7 +339,7 @@ pub struct CloudControlPlaneCredentials {
     secret_key: String,
 }
 
-impl CloudControlPlaneCredentials {}
+impl CloudOrganizationCredentials {}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CloudConfig {
@@ -511,8 +511,8 @@ pub struct StandaloneCredentialsConfig {
     #[serde(alias = "clusters", default)]
     clusters: Vec<StandaloneClusterCredentials>,
 
-    #[serde(alias = "cloud-control-plane", default)]
-    control_planes: Vec<CloudControlPlaneCredentials>,
+    #[serde(alias = "cloud-organization", default)]
+    cloud_orgs: Vec<CloudOrganizationCredentials>,
 }
 
 impl StandaloneCredentialsConfig {
@@ -535,7 +535,7 @@ impl Default for StandaloneCredentialsConfig {
         Self {
             clusters: vec![],
             version: 1,
-            control_planes: vec![],
+            cloud_orgs: vec![],
         }
     }
 }

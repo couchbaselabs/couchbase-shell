@@ -69,7 +69,7 @@ fn addresses(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream
         )?;
 
         let cloud = guard
-            .control_plane_for_cluster(active_cluster.cloud_control_plane().unwrap())?
+            .cloud_org_for_cluster(active_cluster.cloud_org().unwrap())?
             .client();
         let cluster_id = cloud.find_cluster_id(
             identifier.clone(),

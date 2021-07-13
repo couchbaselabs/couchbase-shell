@@ -52,8 +52,8 @@ fn clusters(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream,
             collected.insert_value("identifier", k.clone());
             collected.insert_value("username", String::from(v.username()));
             collected.insert_value(
-                "cloud",
-                v.cloud_control_plane().unwrap_or_else(|| "".to_string()),
+                "cloud_organization",
+                v.cloud_org().unwrap_or_else(|| "".to_string()),
             );
             collected.into_value()
         })

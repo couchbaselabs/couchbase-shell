@@ -80,7 +80,7 @@ fn addresses_add(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
 
         let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
         let cloud = guard
-            .control_plane_for_cluster(active_cluster.cloud_control_plane().unwrap())?
+            .cloud_org_for_cluster(active_cluster.cloud_org().unwrap())?
             .client();
         let cluster_id =
             cloud.find_cluster_id(identifier.clone(), deadline.clone(), ctrl_c.clone())?;

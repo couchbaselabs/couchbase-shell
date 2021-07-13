@@ -111,7 +111,7 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
             }
         };
 
-        if active_cluster.cloud_control_plane().is_some()
+        if active_cluster.cloud_org().is_some()
             && (flush || durability.is_some() || expiry.is_some())
         {
             results.push(collected_value_from_error_string(
@@ -122,8 +122,8 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
         }
 
         let response: HttpResponse;
-        if let Some(plane) = active_cluster.cloud_control_plane() {
-            let cloud = guard.control_plane_for_cluster(plane)?.client();
+        if let Some(plane) = active_cluster.cloud_org() {
+            let cloud = guard.cloud_org_for_cluster(plane)?.client();
 
             let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
             let cluster_response = cloud.cloud_request(
@@ -155,7 +155,7 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
             if cluster_id.is_none() {
                 results.push(collected_value_from_error_string(
                     identifier.clone(),
-                    "Could not find active cluster in cloud control pane",
+                    "Could not find active cluster in cloud organization",
                 ));
                 continue;
             }

@@ -149,7 +149,7 @@ fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
             }
         };
 
-        if active_cluster.cloud_control_plane().is_some()
+        if active_cluster.cloud_org().is_some()
             && (bucket_type.clone().is_some()
                 || flush
                 || durability.clone().is_some()
@@ -163,8 +163,8 @@ fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
         }
 
         let response: HttpResponse;
-        if let Some(plane) = active_cluster.cloud_control_plane() {
-            let cloud = guard.control_plane_for_cluster(plane)?.client();
+        if let Some(plane) = active_cluster.cloud_org() {
+            let cloud = guard.cloud_org_for_cluster(plane)?.client();
             let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
             let cluster_id =
                 cloud.find_cluster_id(identifier.clone(), deadline.clone(), ctrl_c.clone())?;

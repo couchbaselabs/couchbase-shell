@@ -69,8 +69,8 @@ fn users_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
                 continue;
             }
         };
-        let response = if let Some(plane) = active_cluster.cloud_control_plane() {
-            let cloud = guard.control_plane_for_cluster(plane)?.client();
+        let response = if let Some(plane) = active_cluster.cloud_org() {
+            let cloud = guard.cloud_org_for_cluster(plane)?.client();
             let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
             let cluster_id =
                 cloud.find_cluster_id(identifier.clone(), deadline.clone(), ctrl_c.clone())?;

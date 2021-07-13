@@ -23,7 +23,7 @@ The commands that this apply to are any that perform an operation directly again
 
 === Config file format
 
-The `cloud-control-pane` and `cloud` sections in the `config` file are used as follows:
+The `cloud-organisation` and `cloud` sections in the `config` file are used as follows:
 
 [source,toml]
 ----
@@ -50,7 +50,7 @@ query-timeout = "1m 15s"
 tls-enabled = true
 tls-validate-hostnames = false
 tls-accept-all-certs = true
-cloud-control-plane = "plane"
+cloud-organisation = "org"
 
 [[cloud]]
 identifier = "a-cloud"
@@ -60,8 +60,8 @@ default-project = "cloud-project"
 identifier = "other-cloud"
 default-project = "cloud-project"
 
-[[cloud-control-plane]]
-identifier = "plane"
+[[cloud-organisation]]
+identifier = "org"
 access-key = "x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG"
 secret-key = "T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY"
 

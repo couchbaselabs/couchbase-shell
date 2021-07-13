@@ -1,5 +1,5 @@
 use crate::config::{
-    CloudConfig, CloudControlPlaneConfig, ClusterConfig, ClusterTlsConfig, ShellConfig,
+    CloudConfig, CloudOrganizationConfig, ClusterConfig, ClusterTlsConfig, ShellConfig,
 };
 use crate::state::{ClusterTimeouts, RemoteCluster, State};
 use nu_engine::CommandArgs;
@@ -94,9 +94,9 @@ impl nu_engine::WholeStreamCommand for ClustersRegister {
                 None,
             )
             .named(
-                "cloud",
+                "cloud-organization",
                 SyntaxShape::String,
-                "whether or not this is a cloud cluster",
+                "cloud organization that this cluster belongs to",
                 None,
             )
     }
@@ -131,7 +131,7 @@ fn clusters_register(
     let tls_accept_all_hosts = args.get_flag("tls-validate-hosts")?.unwrap_or(true);
     let cert_path = args.get_flag("tls-cert-path")?;
     let save = args.get_flag("save")?.unwrap_or(false);
-    let cloud = args.get_flag("cloud")?;
+    let cloud = args.get_flag("cloud-organization")?;
 
     let cluster = RemoteCluster::new(
         hostnames,
@@ -178,8 +178,8 @@ pub fn update_config_file(guard: &mut MutexGuard<State>) -> Result<(), ShellErro
         cloud_configs.push(CloudConfig::new(identifier.clone(), cloud.active_project()))
     }
     let mut control_plane_configs = Vec::new();
-    for (identifier, c) in guard.cloud_control_planes() {
-        control_plane_configs.push(CloudControlPlaneConfig::new(
+    for (identifier, c) in guard.cloud_orgs() {
+        control_plane_configs.push(CloudOrganizationConfig::new(
             identifier.clone(),
             c.secret_key(),
             c.access_key(),
