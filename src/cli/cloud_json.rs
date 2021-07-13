@@ -309,3 +309,44 @@ impl JSONCloudsResponse {
         self.data.as_ref()
     }
 }
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct JSONCloudsProjectsResponseItem {
+    id: String,
+    name: String,
+    //     #[serde(rename = "tenantId")]
+    //     tenant_id: String,
+    //     #[serde(rename = "createdAt")]
+    //     created_at: String,
+}
+
+impl JSONCloudsProjectsResponseItem {
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct JSONCloudsProjectsResponse {
+    data: Vec<JSONCloudsProjectsResponseItem>,
+}
+
+impl JSONCloudsProjectsResponse {
+    pub fn items(&self) -> &Vec<JSONCloudsProjectsResponseItem> {
+        self.data.as_ref()
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub(crate) struct JSONCloudCreateProjectRequest {
+    name: String,
+}
+
+impl JSONCloudCreateProjectRequest {
+    pub fn new(name: String) -> Self {
+        Self { name }
+    }
+}
