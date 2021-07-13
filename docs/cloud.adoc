@@ -16,14 +16,14 @@ You need to:
 Non-cloud specific (i.e. commands not prefixed with `clouds`) commands (broadly referred to as "management operations") require a specific section to be added to the `config` file as well as an extra entry in the relevant cluster section.
 Before being able to perform management operations against Couchbase Cloud you must https://docs.couchbase.com/cloud/public-api-guide/using-cloud-public-api.html#access-and-secret-keys[generate access and secret keys] to enable Couchbase Shell to interact with your cloud.
 
-//=== Cloud Commands
-//
-//Some of the commands that have the `clouds` prefix require an extra section to be added to the `config` file.
-//The commands that this apply to are any that perform an operation directly against a specific cloud instance.
+=== Cloud Commands
+
+Some of the commands that have the `clouds` prefix require an extra section to be added to the `config` file.
+The commands that this apply to are any that perform an operation directly against a specific cloud instance.
 
 === Config file format
 
-The `cloud-control-pane` section in the `config` file is used as follows:
+The `cloud-control-pane` and `cloud` sections in the `config` file are used as follows:
 
 [source,toml]
 ----
@@ -50,13 +50,22 @@ query-timeout = "1m 15s"
 tls-enabled = true
 tls-validate-hostnames = false
 tls-accept-all-certs = true
-cloud = true
+cloud-control-plane = "plane"
 
-[[cloud-control-pane]]
+[[cloud]]
+identifier = "a-cloud"
+default-project = "cloud-project"
+
+[[cloud]]
+identifier = "other-cloud"
+default-project = "cloud-project"
+
+[[cloud-control-plane]]
+identifier = "plane"
 access-key = "x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG"
 secret-key = "T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY"
 
 ----
 
-Note that the identifier of the cluster *must* match the name of the cluster in Couchbase Cloud for management operations to work.
+Note that the identifier of the cluster, and the cloud *must* match the name of the cluster in Couchbase Cloud for management operations to work.
 Also note that some operations are not supported by Couchbase Cloud.
