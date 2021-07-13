@@ -336,6 +336,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(UsersUpsert::new(state.clone())),
         nu_engine::whole_stream_command(UseBucket::new(state.clone())),
         nu_engine::whole_stream_command(UseCloud::new(state.clone())),
+        nu_engine::whole_stream_command(UseCloudControlPlane::new(state.clone())),
         nu_engine::whole_stream_command(UseCluster::new(state.clone())),
         nu_engine::whole_stream_command(UseCmd::new(state.clone())),
         nu_engine::whole_stream_command(UseCollection::new(state.clone())),

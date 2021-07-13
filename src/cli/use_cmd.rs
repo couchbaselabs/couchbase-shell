@@ -68,6 +68,12 @@ fn use_cmd(_args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream,
             .active_cloud_name()
             .unwrap_or_else(|| String::from("")),
     );
+    using_now.insert_value(
+        "cloud_control_pane",
+        guard
+            .active_cloud_control_plane_name()
+            .unwrap_or_else(|| String::from("")),
+    );
     using_now.insert_value("project", project);
     let clusters = vec![using_now.into_value()];
 

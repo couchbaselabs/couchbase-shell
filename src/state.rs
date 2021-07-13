@@ -146,6 +146,10 @@ impl State {
             .ok_or_else(|| ShellError::unexpected("Active control plane not known"))
     }
 
+    pub fn active_cloud_control_plane_name(&self) -> Option<String> {
+        self.active_cloud_control_plane.lock().unwrap().clone()
+    }
+
     pub fn set_active_cloud_control_plane(&self, active: String) -> Result<(), ShellError> {
         if !self.control_planes.contains_key(&active) {
             return Err(ShellError::unexpected(format!(
