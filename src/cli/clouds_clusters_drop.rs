@@ -1,4 +1,4 @@
-use crate::cli::util::find_project_id;
+use crate::cli::util::find_cloud_cluster_id;
 use crate::client::CloudRequest;
 use crate::state::State;
 use async_trait::async_trait;
@@ -11,62 +11,54 @@ use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
-pub struct ProjectsDrop {
+pub struct CloudsClustersDrop {
     state: Arc<Mutex<State>>,
 }
 
-impl ProjectsDrop {
+impl CloudsClustersDrop {
     pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
 
 #[async_trait]
-impl nu_engine::WholeStreamCommand for ProjectsDrop {
+impl nu_engine::WholeStreamCommand for CloudsClustersDrop {
     fn name(&self) -> &str {
-        "projects drop"
+        "clouds clusters-drop"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("projects drop").required(
+        Signature::build("clouds clusters-drop").required(
             "name",
             SyntaxShape::String,
-            "the name of the project",
+            "the name of the cluster",
         )
     }
 
     fn usage(&self) -> &str {
-        "Deletes a cloud project"
+        "Deletes a cloud cluster"
     }
 
     fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        projects_create(self.state.clone(), args)
+        clusters_drop(self.state.clone(), args)
     }
 }
 
-fn projects_create(
-    state: Arc<Mutex<State>>,
-    args: CommandArgs,
-) -> Result<OutputStream, ShellError> {
+fn clusters_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
     let name: String = args.req(0)?;
 
-    debug!("Running projects drop for {}", &name);
+    debug!("Running clouds clusters drop for {}", &name);
 
     let guard = state.lock().unwrap();
     let control = guard.active_cloud_control_plane()?;
     let client = control.client();
-    let deadline = Instant::now().add(control.timeout());
-    let project_id = find_project_id(ctrl_c.clone(), name, &client, deadline)?;
 
-    let response = client.cloud_request(
-        CloudRequest::DeleteProject {
-            project_id: project_id.to_string(),
-        },
-        deadline,
-        ctrl_c,
-    )?;
-    if response.status() != 204 {
+    let deadline = Instant::now().add(control.timeout());
+    let cluster_id = find_cloud_cluster_id(ctrl_c.clone(), name, &client, deadline)?;
+    let response =
+        client.cloud_request(CloudRequest::DeleteCluster { cluster_id }, deadline, ctrl_c)?;
+    if response.status() != 202 {
         return Err(ShellError::untagged_runtime_error(
             response.content().to_string(),
         ));

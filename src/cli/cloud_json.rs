@@ -31,12 +31,23 @@ impl JSONCloudClusterSummary {
     // pub fn project_id(&self) -> String {
     //     self.project_id.clone()
     // }
-    // pub fn services(&self) -> &Vec<String> {
-    //     &self.services
-    // }
-    // pub fn nodes(&self) -> i64 {
-    //     self.nodes
-    // }
+    pub fn services(&self) -> &Vec<String> {
+        &self.services
+    }
+    pub fn nodes(&self) -> i64 {
+        self.nodes
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct JSONCloudClustersSummaries {
+    data: Vec<JSONCloudClusterSummary>,
+}
+
+impl JSONCloudClustersSummaries {
+    pub fn items(&self) -> &Vec<JSONCloudClusterSummary> {
+        self.data.as_ref()
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -348,5 +359,119 @@ pub(crate) struct JSONCloudCreateProjectRequest {
 impl JSONCloudCreateProjectRequest {
     pub fn new(name: String) -> Self {
         Self { name }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub(crate) struct JSONCloudCreateClusterServerAWS {
+    #[serde(rename = "instanceSize")]
+    instance_size: String,
+    #[serde(rename = "ebsSizeGib")]
+    size_gb: u32,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub(crate) struct JSONCloudCreateClusterServerAzure {
+    #[serde(rename = "instanceSize")]
+    instance_size: String,
+    #[serde(rename = "volumeType")]
+    volume_type: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub(crate) struct JSONCloudCreateClusterServer {
+    size: u32,
+    services: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    aws: Option<JSONCloudCreateClusterServerAWS>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    azure: Option<JSONCloudCreateClusterServerAzure>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub(crate) struct JSONCloudCreateClusterServerSupportPackage {
+    #[serde(rename = "type")]
+    support_type: String,
+    timezone: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub(crate) struct JSONCloudCreateClusterRequest {
+    name: String,
+    #[serde(default)]
+    #[serde(rename = "cloudId")]
+    cloud_id: String,
+    #[serde(default)]
+    #[serde(rename = "projectId")]
+    project_id: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    servers: Vec<JSONCloudCreateClusterServer>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "supportPackage")]
+    support_package: Option<JSONCloudCreateClusterServerSupportPackage>,
+    version: Option<String>,
+}
+
+impl JSONCloudCreateClusterRequest {
+    pub fn set_cloud_id(&mut self, id: String) {
+        self.cloud_id = id
+    }
+    pub fn set_project_id(&mut self, id: String) {
+        self.project_id = id
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct JSONCloudClusterVersion {
+    name: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct JSONCloudCluster {
+    id: String,
+    name: String,
+    #[serde(rename = "tenantId")]
+    tenant_id: String,
+    #[serde(rename = "cloudId")]
+    cloud_id: String,
+    #[serde(rename = "projectId")]
+    project_id: String,
+    status: String,
+    version: JSONCloudClusterVersion,
+    #[serde(default)]
+    #[serde(rename = "endpointsURL")]
+    endpoints_url: Vec<String>,
+    #[serde(default)]
+    #[serde(rename = "endpointsSrv")]
+    endpoints_srv: Option<String>,
+}
+
+impl JSONCloudCluster {
+    pub fn id(&self) -> String {
+        self.id.clone()
+    }
+    pub fn name(&self) -> String {
+        self.name.clone()
+    }
+    pub fn tenant_id(&self) -> String {
+        self.tenant_id.clone()
+    }
+    pub fn cloud_id(&self) -> String {
+        self.cloud_id.clone()
+    }
+    pub fn project_id(&self) -> String {
+        self.project_id.clone()
+    }
+    pub fn status(&self) -> String {
+        self.status.clone()
+    }
+    pub fn version_name(&self) -> String {
+        self.version.name.clone()
+    }
+    pub fn endpoints_url(&self) -> Vec<String> {
+        self.endpoints_url.clone()
+    }
+    pub fn endpoints_srv(&self) -> Option<String> {
+        self.endpoints_srv.as_ref().cloned()
     }
 }

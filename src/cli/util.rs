@@ -1,3 +1,7 @@
+use crate::cli::cloud_json::{
+    JSONCloudClustersSummaries, JSONCloudsProjectsResponse, JSONCloudsResponse,
+};
+use crate::client::{CloudClient, CloudRequest};
 use crate::state::{RemoteCluster, State};
 use nu_cli::ToPrimitive;
 use nu_engine::CommandArgs;
@@ -5,7 +9,9 @@ use nu_errors::{CoerceInto, ShellError};
 use nu_protocol::{Primitive, TaggedDictBuilder, UnspannedPathMember, UntaggedValue, Value};
 use nu_source::{Tag, TaggedItem};
 use regex::Regex;
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
+use tokio::time::Instant;
 
 pub fn convert_row_to_nu_value(
     v: &serde_json::Value,
@@ -272,4 +278,73 @@ pub fn validate_is_not_cloud(cluster: &RemoteCluster, err_msg: &str) -> Result<(
     }
 
     Ok(())
+}
+
+pub(crate) fn find_project_id(
+    ctrl_c: Arc<AtomicBool>,
+    name: String,
+    client: &Arc<CloudClient>,
+    deadline: Instant,
+) -> Result<String, ShellError> {
+    let response = client.cloud_request(CloudRequest::GetProjects {}, deadline, ctrl_c)?;
+    if response.status() != 200 {
+        return Err(ShellError::untagged_runtime_error(
+            response.content().to_string(),
+        ));
+    };
+    let content: JSONCloudsProjectsResponse = serde_json::from_str(response.content())?;
+
+    for p in content.items() {
+        if p.name() == name.clone() {
+            return Ok(p.id().to_string());
+        }
+    }
+
+    Err(ShellError::unexpected("Project could not be found"))
+}
+
+pub(crate) fn find_cloud_id(
+    ctrl_c: Arc<AtomicBool>,
+    name: String,
+    client: &Arc<CloudClient>,
+    deadline: Instant,
+) -> Result<String, ShellError> {
+    let response = client.cloud_request(CloudRequest::GetClouds {}, deadline, ctrl_c)?;
+    if response.status() != 200 {
+        return Err(ShellError::untagged_runtime_error(
+            response.content().to_string(),
+        ));
+    };
+    let clouds: JSONCloudsResponse = serde_json::from_str(response.content())?;
+
+    for c in clouds.items() {
+        if c.name() == name {
+            return Ok(c.id().to_string());
+        }
+    }
+
+    Err(ShellError::unexpected("Cloud could not be found"))
+}
+
+pub(crate) fn find_cloud_cluster_id(
+    ctrl_c: Arc<AtomicBool>,
+    name: String,
+    client: &Arc<CloudClient>,
+    deadline: Instant,
+) -> Result<String, ShellError> {
+    let response = client.cloud_request(CloudRequest::GetClusters {}, deadline, ctrl_c)?;
+    if response.status() != 200 {
+        return Err(ShellError::untagged_runtime_error(
+            response.content().to_string(),
+        ));
+    };
+    let content: JSONCloudClustersSummaries = serde_json::from_str(response.content())?;
+
+    for c in content.items() {
+        if c.name() == name {
+            return Ok(c.id().to_string());
+        }
+    }
+
+    Err(ShellError::unexpected("Cluster could not be found"))
 }

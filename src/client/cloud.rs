@@ -207,9 +207,9 @@ pub enum CloudRequest {
         cluster_id: String,
         payload: String,
     },
-    // CreateCluster {
-    //     payload: String,
-    // },
+    CreateCluster {
+        payload: String,
+    },
     CreateProject {
         payload: String,
     },
@@ -225,9 +225,9 @@ pub enum CloudRequest {
         cluster_id: String,
         payload: String,
     },
-    // DeleteCluster {
-    //     cluster_id: String,
-    // },
+    DeleteCluster {
+        cluster_id: String,
+    },
     DeleteProject {
         project_id: String,
     },
@@ -249,9 +249,9 @@ pub enum CloudRequest {
     //     cloud_id: String,
     // },
     GetClouds,
-    // GetCluster {
-    //     cluster_id: String,
-    // },
+    GetCluster {
+        cluster_id: String,
+    },
     GetClusterHealth {
         cluster_id: String,
     },
@@ -291,7 +291,7 @@ impl CloudRequest {
             Self::CreateBucket { cluster_id, .. } => {
                 format!("/v2/clusters/{}/buckets", cluster_id)
             }
-            // Self::CreateCluster { .. } => "/v2/clusters".into(),
+            Self::CreateCluster { .. } => "/v2/clusters".into(),
             Self::CreateProject { .. } => "/v2/projects".into(),
             Self::CreateUser { cluster_id, .. } => {
                 format!("/v2/clusters/{}/users", cluster_id)
@@ -302,9 +302,9 @@ impl CloudRequest {
             Self::DeleteBucket { cluster_id, .. } => {
                 format!("/v2/clusters/{}/buckets", cluster_id)
             }
-            // Self::DeleteCluster { cluster_id, .. } => {
-            //     format!("/v2/clusters/{}", cluster_id)
-            // }
+            Self::DeleteCluster { cluster_id, .. } => {
+                format!("/v2/clusters/{}", cluster_id)
+            }
             Self::DeleteProject { project_id } => {
                 format!("/v2/projects/{}", project_id)
             }
@@ -331,9 +331,9 @@ impl CloudRequest {
             Self::GetClusterHealth { cluster_id } => {
                 format!("/v2/clusters/{}/health", cluster_id)
             }
-            // Self::GetCluster { cluster_id } => {
-            //     format!("/v2/clusters/{}", cluster_id)
-            // }
+            Self::GetCluster { cluster_id } => {
+                format!("/v2/clusters/{}", cluster_id)
+            }
             Self::GetClusters => "/v2/clusters".into(),
             // Self::GetClusterStatus { cluster_id } => {
             //     format!("/v2/clusters/{}/status", cluster_id)
@@ -366,12 +366,12 @@ impl CloudRequest {
         match self {
             Self::CreateAllowListEntry { .. } => HttpVerb::Post,
             Self::CreateBucket { .. } => HttpVerb::Post,
-            // Self::CreateCluster { .. } => HttpVerb::Post,
+            Self::CreateCluster { .. } => HttpVerb::Post,
             Self::CreateProject { .. } => HttpVerb::Post,
             Self::CreateUser { .. } => HttpVerb::Post,
             Self::DeleteAllowListEntry { .. } => HttpVerb::Delete,
             Self::DeleteBucket { .. } => HttpVerb::Delete,
-            // Self::DeleteCluster { .. } => HttpVerb::Delete,
+            Self::DeleteCluster { .. } => HttpVerb::Delete,
             Self::DeleteProject { .. } => HttpVerb::Delete,
             Self::DeleteUser { .. } => HttpVerb::Delete,
             // Self::GetAPIStatus => HttpVerb::Get,
@@ -381,7 +381,7 @@ impl CloudRequest {
             // Self::GetCloud { .. } => HttpVerb::Get,
             Self::GetClouds => HttpVerb::Get,
             Self::GetClusterHealth { .. } => HttpVerb::Get,
-            // Self::GetCluster { .. } => HttpVerb::Get,
+            Self::GetCluster { .. } => HttpVerb::Get,
             Self::GetClusters => HttpVerb::Get,
             // Self::GetClusterStatus { .. } => HttpVerb::Get,
             // Self::GetOrgUsers => HttpVerb::Get,
@@ -398,7 +398,7 @@ impl CloudRequest {
         match self {
             Self::CreateAllowListEntry { payload, .. } => Some(payload.as_bytes().into()),
             Self::CreateBucket { payload, .. } => Some(payload.as_bytes().into()),
-            // Self::CreateCluster { payload, .. } => Some(payload.as_bytes().into()),
+            Self::CreateCluster { payload, .. } => Some(payload.as_bytes().into()),
             Self::CreateProject { payload, .. } => Some(payload.as_bytes().into()),
             Self::CreateUser { payload, .. } => Some(payload.as_bytes().into()),
             Self::DeleteAllowListEntry { payload, .. } => Some(payload.as_bytes().into()),
