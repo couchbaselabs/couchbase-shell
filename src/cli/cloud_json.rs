@@ -261,3 +261,51 @@ impl JSONCloudGetAllowListResponse {
         self.duration.clone()
     }
 }
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct JSONCloudsResponseItem {
+    id: String,
+    name: String,
+    status: String,
+    provider: String,
+    region: String,
+    // #[serde(rename = "virtualNetworkID")]
+    // virtual_network_id: String,
+    // #[serde(rename = "virtualNetworkCIDR")]
+    // virtual_network_cidr: String,
+}
+
+impl JSONCloudsResponseItem {
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+    pub fn status(&self) -> &str {
+        &self.status
+    }
+    pub fn provider(&self) -> &str {
+        &self.provider
+    }
+    pub fn region(&self) -> &str {
+        &self.region
+    }
+    // pub fn virtual_network_id(&self) -> &str {
+    //     &self.virtual_network_id
+    // }
+    // pub fn virtual_network_cidr(&self) -> &str {
+    //     &self.virtual_network_cidr
+    // }
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct JSONCloudsResponse {
+    data: Vec<JSONCloudsResponseItem>,
+}
+
+impl JSONCloudsResponse {
+    pub fn items(&self) -> &Vec<JSONCloudsResponseItem> {
+        self.data.as_ref()
+    }
+}

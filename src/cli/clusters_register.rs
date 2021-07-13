@@ -169,11 +169,15 @@ pub fn update_config_file(guard: &mut MutexGuard<State>) -> Result<(), ShellErro
         cluster_configs.push(ClusterConfig::from((identifier.clone(), cluster)))
     }
     let mut cloud_configs = Vec::new();
-    for (identifier, _cloud) in guard.clouds() {
-        cloud_configs.push(CloudConfig::new(identifier.clone()))
+    for (identifier, cloud) in guard.clouds() {
+        cloud_configs.push(CloudConfig::new(identifier.clone(), cloud.active_project()))
     }
     let control_pane = match guard.cloud_control_pane() {
-        Ok(c) => Some(CloudControlPaneConfig::new(c.secret_key(), c.access_key())),
+        Ok(c) => Some(CloudControlPaneConfig::new(
+            c.secret_key(),
+            c.access_key(),
+            Some(c.timeout()),
+        )),
         Err(_e) => None,
     };
 

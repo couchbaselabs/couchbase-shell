@@ -39,6 +39,10 @@ impl nu_engine::WholeStreamCommand for UseCmd {
 fn use_cmd(_args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, ShellError> {
     let guard = state.lock().unwrap();
     let active = guard.active_cluster();
+    let project = match guard.active_cloud() {
+        Ok(c) => c.active_project().unwrap_or_else(|| "".to_string()),
+        Err(_e) => "".to_string(),
+    };
     let mut using_now = TaggedDictBuilder::new(Tag::default());
     using_now.insert_value("username", active.username());
     using_now.insert_value("cluster", guard.active());
@@ -58,6 +62,13 @@ fn use_cmd(_args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream,
             .active_collection()
             .unwrap_or_else(|| String::from("")),
     );
+    using_now.insert_value(
+        "cloud",
+        guard
+            .active_cloud_name()
+            .unwrap_or_else(|| String::from("")),
+    );
+    using_now.insert_value("project", project);
     let clusters = vec![using_now.into_value()];
 
     Ok(clusters.into())

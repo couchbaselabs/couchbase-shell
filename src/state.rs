@@ -2,6 +2,7 @@ use crate::client::{Client, CloudClient};
 use crate::config::ClusterTlsConfig;
 use crate::tutorial::Tutorial;
 use nu_errors::ShellError;
+use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -16,6 +17,8 @@ pub struct State {
     config_path: Option<PathBuf>,
     clouds: HashMap<String, RemoteCloud>,
     control_pane: Option<RemoteCloudControlPane>,
+    active_cloud: Mutex<Option<String>>,
+    default_project: Option<String>,
 }
 
 impl State {
@@ -27,6 +30,8 @@ impl State {
         config_path: Option<PathBuf>,
         clouds: HashMap<String, RemoteCloud>,
         control_pane: Option<RemoteCloudControlPane>,
+        active_cloud: Option<String>,
+        default_project: Option<String>,
     ) -> Self {
         let state = Self {
             active: Mutex::new(active.clone()),
@@ -37,6 +42,8 @@ impl State {
             config_path,
             clouds,
             control_pane,
+            active_cloud: Mutex::new(active_cloud),
+            default_project,
         };
         state.set_active(active).unwrap();
         state
@@ -123,18 +130,70 @@ impl State {
         if let Some(c) = &self.control_pane {
             Ok(c)
         } else {
-            Err(ShellError::unexpected(format!(
-                "No cloud control pane registered",
-            )))
+            Err(ShellError::unexpected("No cloud control pane registered"))
         }
+    }
+
+    pub fn set_active_cloud(&self, active: String) -> Result<(), ShellError> {
+        if !self.clouds.contains_key(&active) {
+            return Err(ShellError::unexpected(format!(
+                "Cloud not known: {}",
+                active
+            )));
+        }
+
+        {
+            let mut guard = self.active.lock().unwrap();
+            *guard = active.clone();
+        }
+
+        match self.active_cloud() {
+            Ok(c) => {
+                if let Some(p) = self.default_project.clone() {
+                    let _ = c.set_active_project(p);
+                }
+            }
+            Err(_e) => {}
+        }
+
+        Ok(())
+    }
+
+    pub fn active_cloud_name(&self) -> Option<String> {
+        self.active_cloud.lock().unwrap().clone()
+    }
+
+    pub fn active_cloud(&self) -> Result<&RemoteCloud, ShellError> {
+        let guard = self.active_cloud.lock().unwrap();
+
+        let active = match guard.deref() {
+            Some(a) => a,
+            None => return Err(ShellError::unexpected("No active cloud set")),
+        };
+
+        self.clouds
+            .get(&*active)
+            .ok_or_else(|| ShellError::unexpected("Active cloud name not known"))
     }
 }
 
-pub struct RemoteCloud {}
+pub struct RemoteCloud {
+    active_project: Mutex<Option<String>>,
+}
 
 impl RemoteCloud {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(active_project: Option<String>) -> Self {
+        Self {
+            active_project: Mutex::new(active_project),
+        }
+    }
+    pub fn active_project(&self) -> Option<String> {
+        self.active_project.lock().unwrap().clone()
+    }
+
+    pub fn set_active_project(&self, name: String) {
+        let mut active = self.active_project.lock().unwrap();
+        *active = Some(name);
     }
 }
 
@@ -142,14 +201,16 @@ pub struct RemoteCloudControlPane {
     secret_key: String,
     access_key: String,
     client: Mutex<Option<Arc<CloudClient>>>,
+    timeout: Duration,
 }
 
 impl RemoteCloudControlPane {
-    pub fn new(secret_key: String, access_key: String) -> Self {
+    pub fn new(secret_key: String, access_key: String, timeout: Duration) -> Self {
         Self {
             secret_key,
             access_key,
             client: Mutex::new(None),
+            timeout,
         }
     }
 
@@ -170,6 +231,10 @@ impl RemoteCloudControlPane {
             )));
         }
         c.as_ref().unwrap().clone()
+    }
+
+    pub fn timeout(&self) -> Duration {
+        self.timeout.clone()
     }
 }
 

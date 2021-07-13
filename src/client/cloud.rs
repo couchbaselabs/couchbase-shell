@@ -248,7 +248,7 @@ pub enum CloudRequest {
     // GetCloud {
     //     cloud_id: String,
     // },
-    // GetClouds,
+    GetClouds,
     // GetCluster {
     //     cluster_id: String,
     // },
@@ -327,7 +327,7 @@ impl CloudRequest {
             // Self::GetCloud { cloud_id } => {
             //     format!("/v2/clouds/{}", cloud_id)
             // }
-            // Self::GetClouds => "/v2/clouds".into(),
+            Self::GetClouds => "/v2/clouds".into(),
             Self::GetClusterHealth { cluster_id } => {
                 format!("/v2/clusters/{}/health", cluster_id)
             }
@@ -379,7 +379,7 @@ impl CloudRequest {
             Self::GetBuckets { .. } => HttpVerb::Get,
             // Self::GetCertificate { .. } => HttpVerb::Get,
             // Self::GetCloud { .. } => HttpVerb::Get,
-            // Self::GetClouds => HttpVerb::Get,
+            Self::GetClouds => HttpVerb::Get,
             Self::GetClusterHealth { .. } => HttpVerb::Get,
             // Self::GetCluster { .. } => HttpVerb::Get,
             Self::GetClusters => HttpVerb::Get,

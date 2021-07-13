@@ -23,7 +23,7 @@ pub struct ShellConfig {
     #[serde(alias = "clusters")]
     clusters: Vec<ClusterConfig>,
 
-    #[serde(alias = "cloud-control-plane", default)]
+    #[serde(alias = "cloud-control-pane", default)]
     control_pane: Option<CloudControlPaneConfig>,
 
     #[serde(alias = "cloud", default)]
@@ -185,15 +185,26 @@ fn try_credentials_from_path(mut path: PathBuf) -> Option<StandaloneCredentialsC
 pub struct CloudControlPaneConfig {
     #[serde(flatten)]
     credentials: CloudControlPaneCredentials,
+    #[serde(default)]
+    #[serde(
+        rename(deserialize = "management-timeout", serialize = "management-timeout"),
+        with = "humantime_serde"
+    )]
+    management_timeout: Option<Duration>,
 }
 
 impl CloudControlPaneConfig {
-    pub fn new(secret_key: String, access_key: String) -> Self {
+    pub fn new(
+        secret_key: String,
+        access_key: String,
+        management_timeout: Option<Duration>,
+    ) -> Self {
         Self {
             credentials: CloudControlPaneCredentials {
                 access_key,
                 secret_key,
             },
+            management_timeout,
         }
     }
     pub fn secret_key(&self) -> String {
@@ -201,6 +212,9 @@ impl CloudControlPaneConfig {
     }
     pub fn access_key(&self) -> String {
         self.credentials.access_key.clone()
+    }
+    pub fn management_timeout(&self) -> Option<&Duration> {
+        self.management_timeout.as_ref()
     }
 
     pub fn credentials_mut(&mut self) -> &mut CloudControlPaneCredentials {
@@ -324,14 +338,22 @@ impl CloudControlPaneCredentials {}
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CloudConfig {
     identifier: String,
+    #[serde(rename(deserialize = "default-project", serialize = "default-project"))]
+    default_project: Option<String>,
 }
 
 impl CloudConfig {
-    pub fn new(identifier: String) -> Self {
-        Self { identifier }
+    pub fn new(identifier: String, default_project: Option<String>) -> Self {
+        Self {
+            identifier,
+            default_project,
+        }
     }
     pub fn identifier(&self) -> String {
         self.identifier.clone()
+    }
+    pub fn default_project(&self) -> Option<String> {
+        self.default_project.as_ref().cloned()
     }
 }
 

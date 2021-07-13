@@ -70,6 +70,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut default_scope: Option<String> = None;
     let mut default_collection: Option<String> = None;
+    let mut default_project: Option<String> = None;
+    let mut active_cloud = None;
     let active = if config.clusters().is_empty() {
         let hostnames = if let Some(hosts) = opt.hostnames {
             hosts
@@ -220,12 +222,28 @@ fn main() -> Result<(), Box<dyn Error>> {
             clusters.insert(name.clone(), cluster);
         }
         if let Some(c) = config.control_pane() {
-            control_pane = Some(RemoteCloudControlPane::new(c.secret_key(), c.access_key()));
+            let management_timeout = match c.management_timeout() {
+                Some(t) => t.to_owned(),
+                None => DEFAULT_MANAGEMENT_TIMEOUT,
+            };
+            control_pane = Some(RemoteCloudControlPane::new(
+                c.secret_key(),
+                c.access_key(),
+                management_timeout,
+            ));
         }
+
         for c in config.clouds() {
             let name = c.identifier();
 
-            clouds.insert(name, RemoteCloud::new());
+            let cloud = RemoteCloud::new(c.default_project());
+
+            if active_cloud.is_none() {
+                default_project = c.default_project();
+                active_cloud = Some(name.clone());
+            }
+
+            clouds.insert(name, cloud);
         }
         active.unwrap()
     };
@@ -238,6 +256,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         config.location().clone(),
         clouds,
         control_pane,
+        active_cloud,
+        default_project,
     )));
 
     if !opt.silent && !opt.no_motd && opt.script.is_none() && opt.command.is_none() {
@@ -264,6 +284,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(BucketsGet::new(state.clone())),
         nu_engine::whole_stream_command(BucketsSample::new(state.clone())),
         nu_engine::whole_stream_command(BucketsUpdate::new(state.clone())),
+        nu_engine::whole_stream_command(Clouds::new(state.clone())),
+        nu_engine::whole_stream_command(CloudsStatus::new(state.clone())),
         nu_engine::whole_stream_command(Clusters::new(state.clone())),
         nu_engine::whole_stream_command(ClustersHealth::new(state.clone())),
         nu_engine::whole_stream_command(ClustersRegister::new(state.clone())),
@@ -299,9 +321,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(UsersRoles::new(state.clone())),
         nu_engine::whole_stream_command(UsersUpsert::new(state.clone())),
         nu_engine::whole_stream_command(UseBucket::new(state.clone())),
+        nu_engine::whole_stream_command(UseCloud::new(state.clone())),
         nu_engine::whole_stream_command(UseCluster::new(state.clone())),
         nu_engine::whole_stream_command(UseCmd::new(state.clone())),
         nu_engine::whole_stream_command(UseCollection::new(state.clone())),
+        nu_engine::whole_stream_command(UseProject::new(state.clone())),
         nu_engine::whole_stream_command(UseScope::new(state.clone())),
         nu_engine::whole_stream_command(Whoami::new(state)),
         nu_engine::whole_stream_command(Version::new()),

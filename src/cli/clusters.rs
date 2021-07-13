@@ -2,7 +2,7 @@ use crate::cli::util::cluster_identifiers_from;
 use crate::state::State;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
+use nu_protocol::{Signature, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::sync::{Arc, Mutex};
@@ -23,12 +23,7 @@ impl nu_engine::WholeStreamCommand for Clusters {
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("clusters").named(
-            "clusters",
-            SyntaxShape::String,
-            "the clusters which should be contacted",
-            None,
-        )
+        Signature::build("clusters")
     }
 
     fn usage(&self) -> &str {
