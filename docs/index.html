@@ -56,13 +56,15 @@
 </li>
 <li><a href="#_couchbase_cloud">4. Couchbase Cloud</a>
 <ul class="sectlevel2">
-<li><a href="#_document_level_operations">4.1. Document Level Operations</a></li>
-<li><a href="#_other_operations">4.2. Other Operations</a></li>
+<li><a href="#_document_level_commands">4.1. Document Level Commands</a></li>
+<li><a href="#_management_commands">4.2. Management Commands</a></li>
+<li><a href="#_cloud_commands">4.3. Cloud Commands</a></li>
+<li><a href="#_config_file_format">4.4. Config file format</a></li>
 </ul>
 </li>
 <li><a href="#_reference">5. Reference</a>
 <ul class="sectlevel2">
-<li><a href="#_config_file_format">5.1. Config File Format</a></li>
+<li><a href="#_config_file_format_2">5.1. Config File Format</a></li>
 <li><a href="#_credentials_file_format">5.2. Credentials File Format</a></li>
 </ul>
 </li>
@@ -915,9 +917,9 @@ If you have pivot mode (detailed above) turned off then this command can produce
 <h2 id="_couchbase_cloud">4. Couchbase Cloud</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_document_level_operations">4.1. Document Level Operations</h3>
+<h3 id="_document_level_commands">4.1. Document Level Commands</h3>
 <div class="paragraph">
-<p>Document level operations like those under <code>doc</code>, <code>analytics</code>, <code>query</code>, and <code>search</code> (with a couple of exceptions) do not require any special changes to the <code>config</code> config file.</p>
+<p>Document level commands like those under <code>doc</code>, <code>analytics</code>, <code>query</code>, and <code>search</code> (with a couple of exceptions) do not require any special changes to the <code>config</code> config file.</p>
 </div>
 <div class="paragraph">
 <p>You need to:</p>
@@ -940,13 +942,23 @@ If you have pivot mode (detailed above) turned off then this command can produce
 </div>
 </div>
 <div class="sect2">
-<h3 id="_other_operations">4.2. Other Operations</h3>
+<h3 id="_management_commands">4.2. Management Commands</h3>
 <div class="paragraph">
-<p>Other operations (broadly referred to as "management operations") require a specific section to be added to the <code>config</code> file as well as an extra entry in the relevant cluster section.
+<p>Non-cloud specific (i.e. commands not prefixed with <code>clouds</code>) commands (broadly referred to as "management operations") require a specific section to be added to the <code>config</code> file as well as an extra entry in the relevant cluster section.
 Before being able to perform management operations against Couchbase Cloud you must <a href="https://docs.couchbase.com/cloud/public-api-guide/using-cloud-public-api.html#access-and-secret-keys">generate access and secret keys</a> to enable Couchbase Shell to interact with your cloud.</p>
 </div>
+</div>
+<div class="sect2">
+<h3 id="_cloud_commands">4.3. Cloud Commands</h3>
 <div class="paragraph">
-<p>The <code>cloud</code> section in the <code>config</code> file is used as follows:</p>
+<p>Some of the commands that have the <code>clouds</code> prefix require an extra section to be added to the <code>config</code> file.
+The commands that this apply to are any that perform an operation directly against a specific cloud instance.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_config_file_format">4.4. Config file format</h3>
+<div class="paragraph">
+<p>The <code>cloud-organisation</code> and <code>cloud</code> sections in the <code>config</code> file are used as follows:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -961,7 +973,7 @@ default-bucket = &quot;travel-sample&quot;
 username = &quot;Administrator&quot;
 password = &quot;password&quot;
 
-[[clusters]]
+[[cluster]]
 # identifier *must* match the name of the cluster as provided in Couchbase Cloud
 identifier = &quot;cloud&quot;
 hostnames = [&quot;xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.dp.cloud.couchbase.com&quot;]
@@ -973,17 +985,24 @@ query-timeout = &quot;1m 15s&quot;
 tls-enabled = true
 tls-validate-hostnames = false
 tls-accept-all-certs = true
-# cloud corresponds to the identifier of the relevant cloud api plane section
-cloud = &quot;cloud&quot;
+cloud-organisation = &quot;org&quot;
 
 [[cloud]]
-identifier = &quot;cloud&quot;
+identifier = &quot;a-cloud&quot;
+default-project = &quot;cloud-project&quot;
+
+[[cloud]]
+identifier = &quot;other-cloud&quot;
+default-project = &quot;cloud-project&quot;
+
+[[cloud-organisation]]
+identifier = &quot;org&quot;
 access-key = &quot;x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG&quot;
 secret-key = &quot;T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY&quot;</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Note that the identifier of the cluster <strong>must</strong> match the name of the cluster in Couchbase Cloud for management operations to work.
+<p>Note that the identifier of the cluster, and the cloud <strong>must</strong> match the name of the cluster in Couchbase Cloud for management operations to work.
 Also note that some operations are not supported by Couchbase Cloud.</p>
 </div>
 </div>
@@ -993,7 +1012,7 @@ Also note that some operations are not supported by Couchbase Cloud.</p>
 <h2 id="_reference">5. Reference</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_config_file_format">5.1. Config File Format</h3>
+<h3 id="_config_file_format_2">5.1. Config File Format</h3>
 <div class="paragraph">
 <p>The <code>~/.cbsh/config</code> file with examples:</p>
 </div>
@@ -1017,9 +1036,25 @@ password = &quot;password&quot;
 # tls-accept-all-certs = true
 # tls-validate-hostnames = false
 
-data-timeout = &quot;25s&quot;
-connect-timeout = &quot;7500ms&quot;
-query-timeout = &quot;75s&quot;</code></pre>
+# Timeouts broadly apply to the operations that you would expect them to.
+# That is:
+# * data: commands using the kv service such as `doc`
+# * query: `query` commands
+# * analytics: `analytics` commands
+# * search: `search` commands
+# * management: commands that perform management level operations, such as `users`, `bucket`, `health` etc...
+data-timeout = &quot;10s&quot;
+query-timeout = &quot;75s&quot;
+analytics-timeout = &quot;75s&quot;
+search-timeout = &quot;1m 15s&quot;
+management-timeout = &quot;75s&quot;
+# cloud corresponds to the identifier of the relevant cloud api plane section
+# cloud-organisation= &quot;org&quot;
+
+# [[cloud-organisation]]
+# identifier = &quot;org&quot;
+# access-key = &quot;x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG&quot;
+# secret-key = &quot;T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY&quot;</code></pre>
 </div>
 </div>
 </div>
@@ -1041,7 +1076,13 @@ password = &quot;password&quot;
 # tls-enabled = true
 # tls-cert-path = &quot;/path/to/cert&quot; # either accept all certs or provide a cert path
 # tls-accept-all-certs = true
-# tls-validate-hostnames = false</code></pre>
+# tls-validate-hostnames = false
+
+
+# [[cloud-organisation]]
+# identifier = &quot;org&quot;
+# access-key = &quot;x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG&quot;
+# secret-key = &quot;T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY&quot;</code></pre>
 </div>
 </div>
 </div>
@@ -1466,7 +1507,7 @@ There are two ways that we can do this.</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2021-06-29 07:20:11 UTC
+Last updated 2021-07-14 10:52:55 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
