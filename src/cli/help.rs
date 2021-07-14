@@ -1,6 +1,4 @@
-use nu_cli::ActionStream;
-use nu_cli::TaggedListBuilder;
-use nu_cli::ValueExt;
+use nu_data::TaggedListBuilder;
 use nu_engine::{documentation::generate_docs, get_full_help, CommandArgs, Scope};
 use nu_engine::{Command, WholeStreamCommand};
 use nu_errors::ShellError;
@@ -10,9 +8,9 @@ use nu_protocol::{
 };
 use nu_source::Tag;
 use nu_source::{SpannedItem, Tagged};
-use nu_stream::IntoActionStream;
+use nu_stream::{ActionStream, IntoActionStream};
+use nu_value_ext::ValueExt;
 use serde::Deserialize;
-
 pub struct Help;
 
 #[derive(Deserialize)]
@@ -52,7 +50,7 @@ fn help(args: CommandArgs) -> Result<ActionStream, ShellError> {
                 .filter(|cmd_name| {
                     scope
                         .get_command(&cmd_name)
-                        .filter(|command| !command.is_internal())
+                        .filter(|command| !command.is_private())
                         .is_some()
                 })
                 .partition::<Vec<_>, _>(|cmd_name| cmd_name.contains(' '));

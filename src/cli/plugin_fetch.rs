@@ -1,12 +1,12 @@
 //! Command which delegates to the nu_plugin_fetch plugin so it's bundled with our binary.
 
-use nu_cli::ActionStream;
 use nu_engine::{CommandArgs, WholeStreamCommand};
 
 use nu_errors::ShellError;
 use nu_plugin::Plugin;
 use nu_plugin_fetch::Fetch;
 use nu_protocol::Signature;
+use nu_stream::ActionStream;
 
 pub struct PluginFetch {
     signature: Signature,

@@ -3,11 +3,11 @@ use crate::cli::cloud_json::{
 };
 use crate::client::{CloudClient, CloudRequest};
 use crate::state::{RemoteCluster, State};
-use nu_cli::ToPrimitive;
 use nu_engine::CommandArgs;
 use nu_errors::{CoerceInto, ShellError};
 use nu_protocol::{Primitive, TaggedDictBuilder, UnspannedPathMember, UntaggedValue, Value};
 use nu_source::{Tag, TaggedItem};
+use num_traits::cast::ToPrimitive;
 use regex::Regex;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
@@ -89,7 +89,7 @@ pub fn convert_json_value_to_nu_value(
     Ok(result)
 }
 
-// Adapted from https://github.com/nushell/nushell/blob/master/crates/nu-cli/src/commands/to_json.rs
+// Adapted from https://github.com/nushell/nushell/blob/main/crates/nu-command/src/commands/formats/to/json.rs
 pub fn convert_nu_value_to_json_value(v: &Value) -> Result<serde_json::Value, ShellError> {
     Ok(match &v.value {
         UntaggedValue::Primitive(Primitive::Boolean(b)) => serde_json::Value::Bool(*b),
