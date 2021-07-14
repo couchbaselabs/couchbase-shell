@@ -60,6 +60,9 @@ Note that if you want to spawn the highly experimental ui, use the `--ui` flag.
 
 These couchbase-specific commands are added on top of the regular nushell commands (always try with `--help` if you are unsure about args and flags).
 
+ - `addresses` - List all whitelisted addresses (cloud)
+ - `addresses add` - Add a whitelist address (cloud)
+ - `addresses drop` - Remove a whitelist address (cloud)
  - `analytics <statement>` - Perform an analytics query
  - `analytics dataverses` - List all dataverses
  - `analytics datasets` - List all datasets
@@ -67,17 +70,24 @@ These couchbase-specific commands are added on top of the regular nushell comman
  - `analytics links` - List all analytics links
  - `analytics buckets` - List all analytics buckets
  - `analytics pending-mutations` - List pending mutations
+ - `buckets` - Fetches buckets through the HTTP API
  - `buckets config` - Shows the bucket config (low level)
  - `buckets create` - Creates a bucket
  - `buckets drop` - Drops buckets through the HTTP API
  - `buckets flush` - Flushes buckets through the HTTP API
- - `buckets get` - Fetches buckets through the HTTP API
+ - `buckets get` - Fetches a bucket through the HTTP API
  - `buckets load-sample` - Load a sample bucket
  - `buckets update` - Updates a bucket
+ - `clouds` - List (active) clouds (cloud)
+ - `clouds clusters` - List all cloud clusters in the active organization  (cloud)
+ - `clouds clusters-create` - Create a cloud cluster in the active organization  (cloud)
+ - `clouds clusters-drop` - Remove a cloud cluster in the active organization  (cloud)
+ - `clouds clusters-Get` - Get a cloud cluster in the active organization  (cloud)
+ - `clouds status` - List all clouds in the active organization (cloud)
  - `clusters` - List (active) clusters
  - `clusters health` - Performs health checks on the target cluster(s)
+ - `collections` - Fetches collections through the HTTP API
  - `collections create` - Creates collections through the HTTP API
- - `collections get` - Fetches collections through the HTTP API
  - `doc get` - Perform a KV get operation
  - `doc insert` - Perform a KV insert operation
  - `doc remove` - Removes a KV document 
@@ -86,24 +96,31 @@ These couchbase-specific commands are added on top of the regular nushell comman
  - `fake` - Generate fake/mock data
  - `nodes` - List all nodes in the active cluster
  - `ping` - Ping available services in the cluster
+ - `projects` - List all projects (cloud)
+ - `projects create` - Create a new project (cloud)
+ - `projects drop` - Remove a project (cloud)
  - `query <statement>` - Perform a N1QL query
  - `query indexes` - list query indexes
- - `query advise` - ask the query advisor
+ - `query advise` - Ask the query advisor
  - `use` - Change the active bucket or cluster on the fly
+ - `scopes` - Fetches scopes through the HTTP API
  - `scopes create` - Creates scopes through the HTTP API
- - `scopes get` - Fetches scopes through the HTTP API
- - `search` - runs a query against a search index
- - `tutorial` - runs you through a tutorial of both nushell and cbshell
+ - `search` - Runs a query against a search index
+ - `transations list-atrs` - List all active transaction records (requires an index - create index id3 on `travel-sample`(meta().id, meta().xattrs.attempts)) 
+ - `tutorial` - Runs you through a tutorial of both nushell and cbshell
  - `use` - lists the currently active bucket, collection, etc.
  - `use bucket` - Sets the active bucket based on its name
+ - `use cloud` - Sets the active cloud based on its identifier
+ - `use cloud-organization` - Sets the active cloud organization based on its identifier
  - `use cluster` - Sets the active cluster based on its identifier
  - `use collection` - Sets the active collection based on its name
+ - `use project` - Sets the active cloud project based on its name
  - `use scope` - Sets the active scope based on its name
  - `users` - List all users
- - `users roles` - list roles available on the cluster
- - `users get` - show a specific user
- - `users upsert` - create a new user or replace one
- - `version` - shows the version of the shell
+ - `users roles` - List roles available on the cluster
+ - `users get` - Show a specific user
+ - `users upsert` - Create a new user or replace one
+ - `version` - Shows the version of the shell
  - `whoami` - Shows roles and domain for the connected user
 
 # Config & Multiple Clusters
