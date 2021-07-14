@@ -40,7 +40,7 @@ impl nu_engine::WholeStreamCommand for UseCollection {
         let active = guard.active_cluster();
 
         if active.active_bucket().is_none() {
-            return Err(ShellError::untagged_runtime_error(
+            return Err(ShellError::unexpected(
                 "You must select a bucket before a collection",
             ));
         }

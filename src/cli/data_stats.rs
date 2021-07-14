@@ -69,7 +69,7 @@ async fn run_stats(
         let core = match state.lock().unwrap().clusters().get(&identifier) {
             Some(c) => c.cluster().core(),
             None => {
-                return Err(ShellError::untagged_runtime_error("Cluster not found"));
+                return Err(ShellError::unexpected("Cluster not found"));
             }
         };
 
@@ -80,7 +80,7 @@ async fn run_stats(
         let input = match receiver.await {
             Ok(i) => i,
             Err(e) => {
-                return Err(ShellError::untagged_runtime_error(format!(
+                return Err(ShellError::unexpected(format!(
                     "Error streaming result {}",
                     e
                 )))

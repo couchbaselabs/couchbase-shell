@@ -149,7 +149,7 @@ fn run_insert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::untagged_runtime_error("Cluster not found"));
+                return Err(ShellError::unexpected("Cluster not found"));
             }
         };
 
@@ -168,7 +168,7 @@ fn run_insert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
             let value = match serde_json::to_vec(&item.1) {
                 Ok(v) => v,
                 Err(e) => {
-                    return Err(ShellError::untagged_runtime_error(e.to_string()));
+                    return Err(ShellError::unexpected(e.to_string()));
                 }
             };
 
@@ -186,7 +186,7 @@ fn run_insert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
                     deadline,
                     ctrl_c.clone(),
                 ))
-                .map_err(|e| ShellError::untagged_runtime_error(e.to_string()));
+                .map_err(|e| ShellError::unexpected(e.to_string()));
 
             match result {
                 Ok(_) => success += 1,

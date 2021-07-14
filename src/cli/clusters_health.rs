@@ -58,7 +58,7 @@ fn health(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, S
         let cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::untagged_runtime_error("Cluster not found"));
+                return Err(ShellError::unexpected("Cluster not found"));
             }
         };
 

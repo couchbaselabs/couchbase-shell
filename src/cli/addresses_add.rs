@@ -1,4 +1,3 @@
-use crate::cli::buckets_create::collected_value_from_error_string;
 use crate::cli::cloud_json::JSONCloudAppendAllowListRequest;
 use crate::cli::util::{cluster_identifiers_from, validate_is_cloud};
 use crate::client::CloudRequest;
@@ -65,12 +64,11 @@ fn addresses_add(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
     let guard = state.lock().unwrap();
 
-    let mut results = vec![];
     for identifier in cluster_identifiers {
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::untagged_runtime_error("Cluster not found"));
+                return Err(ShellError::unexpected("Cluster not found"));
             }
         };
         validate_is_cloud(
@@ -108,12 +106,9 @@ fn addresses_add(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
         match response.status() {
             202 => {}
             _ => {
-                results.push(collected_value_from_error_string(
-                    identifier.clone(),
-                    response.content(),
-                ));
+                return Err(ShellError::unexpected(response.content()));
             }
         };
     }
-    Ok(OutputStream::from(results))
+    Ok(OutputStream::empty())
 }

@@ -41,9 +41,7 @@ impl TryFrom<&str> for DurabilityLevel {
             "majority" => Ok(DurabilityLevel::Majority),
             "majorityAndPersistActive" => Ok(DurabilityLevel::MajorityAndPersistOnMaster),
             "persistToMajority" => Ok(DurabilityLevel::PersistToMajority),
-            _ => Err(ShellError::untagged_runtime_error(
-                "invalid durability mode",
-            )),
+            _ => Err(ShellError::unexpected("invalid durability mode")),
         }
     }
 }
@@ -64,7 +62,7 @@ impl TryFrom<&str> for BucketType {
             "membase" => Ok(BucketType::Couchbase),
             "memcached" => Ok(BucketType::Memcached),
             "ephemeral" => Ok(BucketType::Ephemeral),
-            _ => Err(ShellError::untagged_runtime_error("invalid bucket type")),
+            _ => Err(ShellError::unexpected("invalid bucket type")),
         }
     }
 }
@@ -94,9 +92,7 @@ impl TryFrom<&str> for ConflictResolutionType {
         match alias {
             "lww" => Ok(ConflictResolutionType::Timestamp),
             "seqno" => Ok(ConflictResolutionType::SequenceNumber),
-            _ => Err(ShellError::untagged_runtime_error(
-                "invalid conflict resolution policy",
-            )),
+            _ => Err(ShellError::unexpected("invalid conflict resolution policy")),
         }
     }
 }
@@ -128,9 +124,7 @@ impl TryFrom<&str> for EvictionPolicy {
             "valueOnly" => Ok(EvictionPolicy::ValueOnly),
             "nruEviction" => Ok(EvictionPolicy::NotRecentlyUsed),
             "noEviction" => Ok(EvictionPolicy::NoEviction),
-            _ => Err(ShellError::untagged_runtime_error(
-                "invalid eviction policy",
-            )),
+            _ => Err(ShellError::unexpected("invalid eviction policy")),
         }
     }
 }
@@ -163,9 +157,7 @@ impl TryFrom<&str> for CompressionMode {
             "off" => Ok(CompressionMode::Off),
             "passive" => Ok(CompressionMode::Passive),
             "active" => Ok(CompressionMode::Active),
-            _ => Err(ShellError::untagged_runtime_error(
-                "invalid compression mode",
-            )),
+            _ => Err(ShellError::unexpected("invalid compression mode")),
         }
     }
 }
@@ -404,9 +396,7 @@ impl TryFrom<JSONCloudBucketSettings> for BucketSettings {
 impl BucketSettings {
     pub fn as_form(&self, is_update: bool) -> Result<Vec<(&str, String)>, ShellError> {
         if self.ram_quota_mb < 100 {
-            return Err(ShellError::untagged_runtime_error(
-                "ram quota must be more than 100mb",
-            ));
+            return Err(ShellError::unexpected("ram quota must be more than 100mb"));
         }
         let flush_enabled = match self.flush_enabled {
             true => "1",
@@ -442,12 +432,12 @@ impl BucketSettings {
                 if let Some(eviction_policy) = self.eviction_policy {
                     match eviction_policy {
                         EvictionPolicy::NoEviction => {
-                            return Err(ShellError::untagged_runtime_error(
+                            return Err(ShellError::unexpected(
                                 "specified eviction policy cannot be used with couchbase buckets",
                             ));
                         }
                         EvictionPolicy::NotRecentlyUsed => {
-                            return Err(ShellError::untagged_runtime_error(
+                            return Err(ShellError::unexpected(
                                 "specified eviction policy cannot be used with couchbase buckets",
                             ));
                         }
@@ -463,12 +453,12 @@ impl BucketSettings {
                 if let Some(eviction_policy) = self.eviction_policy {
                     match eviction_policy {
                         EvictionPolicy::Full => {
-                            return Err(ShellError::untagged_runtime_error(
+                            return Err(ShellError::unexpected(
                                 "specified eviction policy cannot be used with ephemeral buckets",
                             ));
                         }
                         EvictionPolicy::ValueOnly => {
-                            return Err(ShellError::untagged_runtime_error(
+                            return Err(ShellError::unexpected(
                                 "specified eviction policy cannot be used with ephemeral buckets",
                             ));
                         }
@@ -481,12 +471,12 @@ impl BucketSettings {
             }
             BucketType::Memcached => {
                 if self.num_replicas > 0 {
-                    return Err(ShellError::untagged_runtime_error(
+                    return Err(ShellError::unexpected(
                         "field cannot be used with memcached buckets",
                     ));
                 }
                 if self.eviction_policy.is_some() {
-                    return Err(ShellError::untagged_runtime_error(
+                    return Err(ShellError::unexpected(
                         "field cannot be used with memcached buckets",
                     ));
                 }

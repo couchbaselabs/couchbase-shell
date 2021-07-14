@@ -83,9 +83,9 @@ fn run_fake(_state: Arc<Mutex<State>>, args: CommandArgs) -> Result<ActionStream
     if list_functions {
         let generated = tera
             .render_str(LIST_FUNCTIONS, &ctx)
-            .map_err(|e| ShellError::untagged_runtime_error(format!("{}", e)))?;
+            .map_err(|e| ShellError::unexpected(format!("{}", e)))?;
         let content = serde_json::from_str(&generated)
-            .map_err(|e| ShellError::untagged_runtime_error(format!("{}", e)))?;
+            .map_err(|e| ShellError::unexpected(format!("{}", e)))?;
         match content {
             serde_json::Value::Array(values) => {
                 let converted = values.into_iter().map(|v| {
@@ -103,8 +103,8 @@ fn run_fake(_state: Arc<Mutex<State>>, args: CommandArgs) -> Result<ActionStream
 
         let num_rows = args.get_flag("num-rows")?.unwrap_or(1);
 
-        let template = fs::read_to_string(path)
-            .map_err(|e| ShellError::untagged_runtime_error(format!("{}", e)))?;
+        let template =
+            fs::read_to_string(path).map_err(|e| ShellError::unexpected(format!("{}", e)))?;
 
         let converted = std::iter::repeat_with(move || {
             return match tera.render_str(&template, &ctx) {
@@ -113,9 +113,9 @@ fn run_fake(_state: Arc<Mutex<State>>, args: CommandArgs) -> Result<ActionStream
                         Ok(c) => Ok(ReturnSuccess::Value(c)),
                         Err(e) => Err(e),
                     },
-                    Err(e) => Err(ShellError::untagged_runtime_error(format!("{}", e))),
+                    Err(e) => Err(ShellError::unexpected(format!("{}", e))),
                 },
-                Err(e) => Err(ShellError::untagged_runtime_error(format!("{}", e))),
+                Err(e) => Err(ShellError::unexpected(format!("{}", e))),
             };
         })
         .take(num_rows as usize);

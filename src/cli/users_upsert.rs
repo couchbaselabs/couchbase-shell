@@ -1,4 +1,3 @@
-use crate::cli::buckets_create::collected_value_from_error_string;
 use crate::cli::cloud_json::{JSONCloudCreateUserRequest, JSONCloudUser, JSONCloudUserRoles};
 use crate::cli::util::cluster_identifiers_from;
 use crate::client::{CloudRequest, ManagementRequest};
@@ -86,16 +85,11 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
     let guard = state.lock().unwrap();
 
-    let mut results = vec![];
     for identifier in cluster_identifiers {
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                results.push(collected_value_from_error_string(
-                    identifier.clone(),
-                    "Cluster not found",
-                ));
-                continue;
+                return Err(ShellError::unexpected("Cluster not found"));
             }
         };
         let response = if let Some(plane) = active_cluster.cloud_org() {
@@ -149,11 +143,7 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
                 ctrl_c.clone(),
             )?;
             if response.status() != 200 {
-                results.push(collected_value_from_error_string(
-                    identifier.clone(),
-                    response.content(),
-                ));
-                continue;
+                return Err(ShellError::unexpected(response.content()));
             }
 
             let users: Vec<JSONCloudUser> = serde_json::from_str(response.content())?;
@@ -187,11 +177,9 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
                 let pass = match password.clone() {
                     Some(p) => p,
                     None => {
-                        results.push(collected_value_from_error_string(
-                            identifier.clone(),
+                        return Err(ShellError::unexpected(
                             "Cloud database user does not exist, password must be set",
                         ));
-                        continue;
                     }
                 };
 
@@ -235,13 +223,10 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
             202 => {}
             204 => {}
             _ => {
-                results.push(collected_value_from_error_string(
-                    identifier.clone(),
-                    response.content(),
-                ));
+                return Err(ShellError::unexpected(response.content()));
             }
         }
     }
 
-    Ok(OutputStream::from(results))
+    Ok(OutputStream::empty())
 }

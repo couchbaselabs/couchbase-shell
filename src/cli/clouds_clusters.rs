@@ -55,9 +55,7 @@ fn cloud_clusters(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
         ctrl_c,
     )?;
     if response.status() != 200 {
-        return Err(ShellError::untagged_runtime_error(
-            response.content().to_string(),
-        ));
+        return Err(ShellError::unexpected(response.content().to_string()));
     };
 
     let content: JSONCloudClustersSummaries = serde_json::from_str(response.content())?;

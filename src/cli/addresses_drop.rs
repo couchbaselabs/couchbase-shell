@@ -1,4 +1,3 @@
-use crate::cli::buckets_create::collected_value_from_error_string;
 use crate::cli::cloud_json::JSONCloudDeleteAllowListRequest;
 use crate::cli::util::{cluster_identifiers_from, validate_is_cloud};
 use crate::client::CloudRequest;
@@ -62,7 +61,6 @@ fn addresses_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
     let guard = state.lock().unwrap();
 
-    let mut results = vec![];
     for identifier in cluster_identifiers {
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
@@ -98,13 +96,10 @@ fn addresses_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
         match response.status() {
             204 => {}
             _ => {
-                results.push(collected_value_from_error_string(
-                    identifier.clone(),
-                    response.content(),
-                ));
+                return Err(ShellError::unexpected(response.content()));
             }
         }
     }
 
-    Ok(OutputStream::from(results))
+    Ok(OutputStream::empty())
 }

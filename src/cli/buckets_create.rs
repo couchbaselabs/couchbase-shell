@@ -8,8 +8,7 @@ use async_trait::async_trait;
 use log::debug;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, Value};
-use nu_source::Tag;
+use nu_protocol::{Signature, SyntaxShape};
 use nu_stream::OutputStream;
 use std::convert::TryFrom;
 use std::ops::Add;
@@ -98,7 +97,7 @@ fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
         builder = builder.bucket_type(match BucketType::try_from(t.as_str()) {
             Ok(bt) => bt,
             Err(e) => {
-                return Err(ShellError::untagged_runtime_error(format!(
+                return Err(ShellError::unexpected(format!(
                     "Failed to parse bucket type {}",
                     e
                 )));
@@ -109,7 +108,7 @@ fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
         builder = builder.num_replicas(match u32::try_from(r) {
             Ok(bt) => bt,
             Err(e) => {
-                return Err(ShellError::untagged_runtime_error(format!(
+                return Err(ShellError::unexpected(format!(
                     "Failed to parse durability level {}",
                     e
                 )));
@@ -123,7 +122,7 @@ fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
         builder = builder.minimum_durability_level(match DurabilityLevel::try_from(d.as_str()) {
             Ok(bt) => bt,
             Err(e) => {
-                return Err(ShellError::untagged_runtime_error(format!(
+                return Err(ShellError::unexpected(format!(
                     "Failed to parse durability level {}",
                     e
                 )));
@@ -136,16 +135,11 @@ fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
 
     let settings = builder.build();
 
-    let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                results.push(collected_value_from_error_string(
-                    identifier.clone(),
-                    "Cluster not found",
-                ));
-                continue;
+                return Err(ShellError::unexpected("Cluster not found"));
             }
         };
 
@@ -155,11 +149,9 @@ fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
                 || durability.clone().is_some()
                 || expiry.is_some())
         {
-            results.push(collected_value_from_error_string(
-                identifier.clone(),
+            return Err(ShellError::unexpected(
                 "Cloud flag cannot be used with type, flush, durability, or expiry",
             ));
-            continue;
         }
 
         let response: HttpResponse;
@@ -194,20 +186,10 @@ fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
             200 => {}
             202 => {}
             _ => {
-                results.push(collected_value_from_error_string(
-                    identifier.clone(),
-                    response.content(),
-                ));
+                return Err(ShellError::unexpected(response.content()));
             }
         }
     }
 
-    Ok(OutputStream::from(results))
-}
-
-pub(crate) fn collected_value_from_error_string(identifier: String, msg: &str) -> Value {
-    let mut collected = TaggedDictBuilder::new(Tag::default());
-    collected.insert_value("cluster", identifier);
-    collected.insert_value("error", msg);
-    collected.into_value()
+    Ok(OutputStream::empty())
 }

@@ -67,9 +67,7 @@ fn projects_create(
         ctrl_c,
     )?;
     if response.status() != 204 {
-        return Err(ShellError::untagged_runtime_error(
-            response.content().to_string(),
-        ));
+        return Err(ShellError::unexpected(response.content().to_string()));
     };
 
     Ok(OutputStream::empty())

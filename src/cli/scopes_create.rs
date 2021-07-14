@@ -5,8 +5,8 @@ use async_trait::async_trait;
 use log::debug;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, Value};
-use nu_source::Tag;
+use nu_protocol::{Signature, SyntaxShape};
+
 use nu_stream::OutputStream;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
@@ -61,12 +61,11 @@ fn scopes_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
 
     let scope: String = args.req(0)?;
 
-    let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::untagged_runtime_error("Cluster not found"));
+                return Err(ShellError::unexpected("Cluster not found"));
             }
         };
         validate_is_not_cloud(
@@ -79,7 +78,7 @@ fn scopes_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
             None => match active_cluster.active_bucket() {
                 Some(s) => s,
                 None => {
-                    return Err(ShellError::untagged_runtime_error(
+                    return Err(ShellError::unexpected(
                         "Could not auto-select a bucket - please use --bucket instead".to_string(),
                     ));
                 }
@@ -103,14 +102,10 @@ fn scopes_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
             200 => {}
             202 => {}
             _ => {
-                let tag = Tag::default();
-                let mut collected = TaggedDictBuilder::new(&tag);
-                collected.insert_value("error", response.content().to_string().trim_end());
-                collected.insert_value("cluster", identifier.clone());
-                results.push(collected.into_value())
+                return Err(ShellError::unexpected(response.content()));
             }
         }
     }
 
-    Ok(OutputStream::from(results))
+    Ok(OutputStream::empty())
 }

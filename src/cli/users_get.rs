@@ -64,7 +64,7 @@ fn users_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::untagged_runtime_error("Cluster not found"));
+                return Err(ShellError::unexpected("Cluster not found"));
             }
         };
 
@@ -118,14 +118,14 @@ fn users_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream
                 200 => match serde_json::from_str(response.content()) {
                     Ok(m) => m,
                     Err(e) => {
-                        return Err(ShellError::untagged_runtime_error(format!(
+                        return Err(ShellError::unexpected(format!(
                             "Failed to decode response body {}",
                             e,
                         )));
                     }
                 },
                 _ => {
-                    return Err(ShellError::untagged_runtime_error(format!(
+                    return Err(ShellError::unexpected(format!(
                         "Request failed {}",
                         response.content(),
                     )));

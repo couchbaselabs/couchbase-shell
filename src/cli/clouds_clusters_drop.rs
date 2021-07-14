@@ -59,9 +59,7 @@ fn clusters_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
     let response =
         client.cloud_request(CloudRequest::DeleteCluster { cluster_id }, deadline, ctrl_c)?;
     if response.status() != 202 {
-        return Err(ShellError::untagged_runtime_error(
-            response.content().to_string(),
-        ));
+        return Err(ShellError::unexpected(response.content().to_string()));
     };
 
     Ok(OutputStream::empty())

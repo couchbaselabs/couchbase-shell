@@ -58,7 +58,7 @@ impl nu_engine::WholeStreamCommand for TransactionsListAtrs {
             .or_else(|| active_cluster.active_bucket())
         {
             Some(v) => Ok(v),
-            None => Err(ShellError::untagged_runtime_error(
+            None => Err(ShellError::unexpected(
                 "Could not auto-select a bucket - please use --bucket instead".to_string(),
             )),
         }?;

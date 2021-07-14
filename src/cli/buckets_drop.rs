@@ -1,8 +1,6 @@
 //! The `buckets get` command fetches buckets from the server.
-
 use crate::state::State;
 
-use crate::cli::buckets_create::collected_value_from_error_string;
 use crate::cli::cloud_json::JSONCloudDeleteBucketRequest;
 use crate::cli::util::cluster_identifiers_from;
 use crate::client::{CloudRequest, HttpResponse, ManagementRequest};
@@ -10,7 +8,7 @@ use async_trait::async_trait;
 use log::debug;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, Value};
+use nu_protocol::{Signature, SyntaxShape};
 use nu_stream::OutputStream;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
@@ -61,16 +59,11 @@ fn buckets_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
 
     debug!("Running buckets drop for bucket {:?}", &name);
 
-    let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
         let cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                results.push(collected_value_from_error_string(
-                    identifier.clone(),
-                    "Cluster not found",
-                ));
-                continue;
+                return Err(ShellError::unexpected("Cluster not found"));
             }
         };
 
@@ -102,13 +95,10 @@ fn buckets_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
             200 => {}
             202 => {}
             _ => {
-                results.push(collected_value_from_error_string(
-                    identifier.clone(),
-                    result.content(),
-                ));
+                return Err(ShellError::unexpected(result.content()));
             }
         }
     }
 
-    Ok(OutputStream::from(results))
+    Ok(OutputStream::empty())
 }

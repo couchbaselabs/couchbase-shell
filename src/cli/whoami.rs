@@ -56,7 +56,7 @@ fn whoami(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, S
         let cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::untagged_runtime_error("Cluster not found"));
+                return Err(ShellError::unexpected("Cluster not found"));
             }
         };
         validate_is_not_cloud(cluster, "whoami cannot be run against cloud clusters")?;

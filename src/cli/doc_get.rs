@@ -119,7 +119,7 @@ fn run_get(state: Arc<Mutex<State>>, mut args: CommandArgs) -> Result<OutputStre
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::untagged_runtime_error("Cluster not found"));
+                return Err(ShellError::unexpected("Cluster not found"));
             }
         };
 
@@ -128,7 +128,7 @@ fn run_get(state: Arc<Mutex<State>>, mut args: CommandArgs) -> Result<OutputStre
             .or_else(|| active_cluster.active_bucket())
         {
             Some(v) => Ok(v),
-            None => Err(ShellError::untagged_runtime_error(
+            None => Err(ShellError::unexpected(
                 "Could not auto-select a bucket - please use --bucket instead".to_string(),
             )),
         }?;

@@ -55,9 +55,7 @@ fn projects(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream,
         ctrl_c,
     )?;
     if response.status() != 200 {
-        return Err(ShellError::untagged_runtime_error(
-            response.content().to_string(),
-        ));
+        return Err(ShellError::unexpected(response.content().to_string()));
     };
 
     let content: JSONCloudsProjectsResponse = serde_json::from_str(response.content())?;

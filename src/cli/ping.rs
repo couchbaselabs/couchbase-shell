@@ -69,7 +69,7 @@ fn run_ping(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream,
     {
         Some(v) => v,
         None => {
-            return Err(ShellError::untagged_runtime_error(
+            return Err(ShellError::unexpected(
                 "Could not auto-select a bucket - please use --bucket instead".to_string(),
             ))
         }

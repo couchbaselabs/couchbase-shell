@@ -71,7 +71,7 @@ fn indexes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, 
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::untagged_runtime_error("Cluster not found"));
+                return Err(ShellError::unexpected("Cluster not found"));
             }
         };
 
@@ -104,12 +104,12 @@ fn indexes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, 
                     )?);
                 }
             } else {
-                return Err(ShellError::untagged_runtime_error(
+                return Err(ShellError::unexpected(
                     "Query result not an array - malformed response",
                 ));
             }
         } else {
-            return Err(ShellError::untagged_runtime_error(
+            return Err(ShellError::unexpected(
                 "Query toplevel result not  an object - malformed response",
             ));
         }

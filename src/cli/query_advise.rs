@@ -67,7 +67,7 @@ fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Shel
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::untagged_runtime_error("Cluster not found"));
+                return Err(ShellError::unexpected("Cluster not found"));
             }
         };
         let response = active_cluster.cluster().http_client().query_request(
@@ -99,7 +99,7 @@ fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Shel
                         )?);
                     }
                 } else {
-                    return Err(ShellError::untagged_runtime_error(
+                    return Err(ShellError::unexpected(
                         "Query errors not an array - malformed response",
                     ));
                 }
@@ -110,7 +110,7 @@ fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Shel
                             .push(convert_json_value_to_nu_value(result, Tag::default()).unwrap());
                     }
                 } else {
-                    return Err(ShellError::untagged_runtime_error(
+                    return Err(ShellError::unexpected(
                         "Query results not an array - malformed response",
                     ));
                 }

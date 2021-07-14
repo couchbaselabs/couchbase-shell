@@ -65,7 +65,7 @@ fn scopes_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::untagged_runtime_error("Cluster not found"));
+                return Err(ShellError::unexpected("Cluster not found"));
             }
         };
         validate_is_not_cloud(
@@ -78,7 +78,7 @@ fn scopes_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
             None => match active_cluster.active_bucket() {
                 Some(s) => s,
                 None => {
-                    return Err(ShellError::untagged_runtime_error(
+                    return Err(ShellError::unexpected(
                         "Could not auto-select a bucket - please use --bucket instead".to_string(),
                     ));
                 }
@@ -97,18 +97,14 @@ fn scopes_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
             200 => match serde_json::from_str(response.content()) {
                 Ok(m) => m,
                 Err(e) => {
-                    return Err(ShellError::untagged_runtime_error(format!(
+                    return Err(ShellError::unexpected(format!(
                         "Failed to decode response body {}",
                         e,
                     )));
                 }
             },
             _ => {
-                let mut collected = TaggedDictBuilder::new(Tag::default());
-                collected.insert_value("error", response.content().to_string());
-                collected.insert_value("cluster", identifier.clone());
-                results.push(collected.into_value());
-                continue;
+                return Err(ShellError::unexpected(response.content()));
             }
         };
 

@@ -51,7 +51,7 @@ pub fn convert_json_value_to_nu_value(
                 if let Some(nas) = n.as_i64() {
                     UntaggedValue::int(nas).into_value(&tag)
                 } else {
-                    return Err(ShellError::untagged_runtime_error(format!(
+                    return Err(ShellError::unexpected(format!(
                         "Could not get value as number {}",
                         v
                     )));
@@ -59,7 +59,7 @@ pub fn convert_json_value_to_nu_value(
             } else if let Some(nas) = n.as_f64() {
                 UntaggedValue::decimal_from_float(nas, span).into_value(&tag)
             } else {
-                return Err(ShellError::untagged_runtime_error(format!(
+                return Err(ShellError::unexpected(format!(
                     "Could not get value as number {}",
                     v
                 )));
@@ -213,7 +213,7 @@ pub fn cluster_identifiers_from(
     let re = match Regex::new(identifier_arg.as_str()) {
         Ok(v) => v,
         Err(e) => {
-            return Err(ShellError::untagged_runtime_error(format!(
+            return Err(ShellError::unexpected(format!(
                 "Could not parse regex {}",
                 e
             )))
@@ -226,7 +226,7 @@ pub fn cluster_identifiers_from(
         .cloned()
         .collect();
     if clusters.is_empty() {
-        return Err(ShellError::untagged_runtime_error("Cluster not found"));
+        return Err(ShellError::unexpected("Cluster not found"));
     }
 
     Ok(clusters)
@@ -240,7 +240,7 @@ pub fn namespace_from_args(
 ) -> Result<(String, String, String), ShellError> {
     let bucket = match bucket_flag.or_else(|| active_cluster.active_bucket()) {
         Some(v) => Ok(v),
-        None => Err(ShellError::untagged_runtime_error(
+        None => Err(ShellError::unexpected(
             "Could not auto-select a bucket - please use --bucket instead".to_string(),
         )),
     }?;
@@ -288,9 +288,7 @@ pub(crate) fn find_project_id(
 ) -> Result<String, ShellError> {
     let response = client.cloud_request(CloudRequest::GetProjects {}, deadline, ctrl_c)?;
     if response.status() != 200 {
-        return Err(ShellError::untagged_runtime_error(
-            response.content().to_string(),
-        ));
+        return Err(ShellError::unexpected(response.content().to_string()));
     };
     let content: JSONCloudsProjectsResponse = serde_json::from_str(response.content())?;
 
@@ -311,9 +309,7 @@ pub(crate) fn find_cloud_id(
 ) -> Result<String, ShellError> {
     let response = client.cloud_request(CloudRequest::GetClouds {}, deadline, ctrl_c)?;
     if response.status() != 200 {
-        return Err(ShellError::untagged_runtime_error(
-            response.content().to_string(),
-        ));
+        return Err(ShellError::unexpected(response.content().to_string()));
     };
     let clouds: JSONCloudsResponse = serde_json::from_str(response.content())?;
 
@@ -334,9 +330,7 @@ pub(crate) fn find_cloud_cluster_id(
 ) -> Result<String, ShellError> {
     let response = client.cloud_request(CloudRequest::GetClusters {}, deadline, ctrl_c)?;
     if response.status() != 200 {
-        return Err(ShellError::untagged_runtime_error(
-            response.content().to_string(),
-        ));
+        return Err(ShellError::unexpected(response.content().to_string()));
     };
     let content: JSONCloudClustersSummaries = serde_json::from_str(response.content())?;
 

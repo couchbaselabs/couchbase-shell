@@ -1,7 +1,6 @@
 use crate::cli::buckets_builder::{
     BucketSettings, DurabilityLevel, JSONBucketSettings, JSONCloudBucketSettings,
 };
-use crate::cli::buckets_create::collected_value_from_error_string;
 use crate::cli::cloud_json::JSONCloudClusterSummary;
 use crate::cli::util::cluster_identifiers_from;
 use crate::client::{CloudRequest, HttpResponse, ManagementRequest};
@@ -10,7 +9,7 @@ use async_trait::async_trait;
 use log::debug;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, Value};
+use nu_protocol::{Signature, SyntaxShape};
 use nu_stream::OutputStream;
 use std::convert::TryFrom;
 use std::ops::Add;
@@ -98,27 +97,20 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
     let guard = state.lock().unwrap();
 
-    let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                results.push(collected_value_from_error_string(
-                    identifier.clone(),
-                    "Cluster not found",
-                ));
-                continue;
+                return Err(ShellError::unexpected("Cluster not found"));
             }
         };
 
         if active_cluster.cloud_org().is_some()
             && (flush || durability.is_some() || expiry.is_some())
         {
-            results.push(collected_value_from_error_string(
-                identifier.clone(),
+            return Err(ShellError::unexpected(
                 "Cloud flag cannot be used with type, flush, durability, or expiry",
             ));
-            continue;
         }
 
         let response: HttpResponse;
@@ -133,11 +125,7 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
             )?;
 
             if cluster_response.status() != 200 {
-                results.push(collected_value_from_error_string(
-                    identifier.clone(),
-                    cluster_response.content(),
-                ));
-                continue;
+                return Err(ShellError::unexpected(cluster_response.content()));
             }
 
             let data: serde_json::Value = serde_json::from_str(cluster_response.content())?;
@@ -153,11 +141,9 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
             }
 
             if cluster_id.is_none() {
-                results.push(collected_value_from_error_string(
-                    identifier.clone(),
+                return Err(ShellError::unexpected(
                     "Could not find active cluster in cloud organization",
                 ));
-                continue;
             }
 
             let buckets_response = cloud.cloud_request(
@@ -168,11 +154,7 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
                 ctrl_c.clone(),
             )?;
             if buckets_response.status() != 200 {
-                results.push(collected_value_from_error_string(
-                    identifier.clone(),
-                    buckets_response.content(),
-                ));
-                continue;
+                return Err(ShellError::unexpected(buckets_response.content()));
             }
 
             let mut buckets: Vec<JSONCloudBucketSettings> =
@@ -184,11 +166,7 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
             let idx = match buckets.iter().position(|b| b.name() == name.clone()) {
                 Some(i) => i,
                 None => {
-                    results.push(collected_value_from_error_string(
-                        identifier.clone(),
-                        "Bucket not found",
-                    ));
-                    continue;
+                    return Err(ShellError::unexpected("Bucket not found"));
                 }
             };
 
@@ -250,15 +228,12 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
             201 => {}
             202 => {}
             _ => {
-                results.push(collected_value_from_error_string(
-                    identifier.clone(),
-                    response.content(),
-                ));
+                return Err(ShellError::unexpected(response.content()));
             }
         }
     }
 
-    Ok(OutputStream::from(results))
+    Ok(OutputStream::empty())
 }
 
 fn update_bucket_settings(
@@ -276,7 +251,7 @@ fn update_bucket_settings(
         settings.set_num_replicas(match u32::try_from(r) {
             Ok(bt) => bt,
             Err(e) => {
-                return Err(ShellError::untagged_runtime_error(format!(
+                return Err(ShellError::unexpected(format!(
                     "Failed to parse durability level {}",
                     e
                 )));
@@ -290,7 +265,7 @@ fn update_bucket_settings(
         settings.set_minimum_durability_level(match DurabilityLevel::try_from(d.as_str()) {
             Ok(bt) => bt,
             Err(e) => {
-                return Err(ShellError::untagged_runtime_error(format!(
+                return Err(ShellError::unexpected(format!(
                     "Failed to parse durability level {}",
                     e
                 )));

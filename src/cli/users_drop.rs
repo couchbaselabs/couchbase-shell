@@ -1,4 +1,3 @@
-use crate::cli::buckets_create::collected_value_from_error_string;
 use crate::cli::util::cluster_identifiers_from;
 use crate::client::{CloudRequest, ManagementRequest};
 use crate::state::State;
@@ -57,16 +56,11 @@ fn users_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
     let guard = state.lock().unwrap();
 
-    let mut results = vec![];
     for identifier in cluster_identifiers {
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                results.push(collected_value_from_error_string(
-                    identifier.clone(),
-                    "Cluster not found",
-                ));
-                continue;
+                return Err(ShellError::unexpected("Cluster not found"));
             }
         };
         let response = if let Some(plane) = active_cluster.cloud_org() {
@@ -96,13 +90,10 @@ fn users_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
             200 => {}
             204 => {}
             _ => {
-                results.push(collected_value_from_error_string(
-                    identifier.clone(),
-                    response.content(),
-                ));
+                return Err(ShellError::unexpected(response.content()));
             }
         }
     }
 
-    Ok(OutputStream::from(results))
+    Ok(OutputStream::empty())
 }

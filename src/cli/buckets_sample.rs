@@ -66,7 +66,7 @@ fn load_sample_bucket(
         let cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::untagged_runtime_error("Cluster not found"));
+                return Err(ShellError::unexpected("Cluster not found"));
             }
         };
 
@@ -85,11 +85,7 @@ fn load_sample_bucket(
 
         match response.status() {
             202 => {}
-            _ => {
-                return Err(ShellError::untagged_runtime_error(
-                    response.content().to_string(),
-                ))
-            }
+            _ => return Err(ShellError::unexpected(response.content().to_string())),
         }
 
         let resp: Vec<String> = serde_json::from_str(response.content())?;
