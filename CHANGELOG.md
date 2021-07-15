@@ -2,7 +2,9 @@
 
 All user visible changes to this project will be documented in this file.
 
-## 1.0.0-beta.1 - Unreleased
+## 1.0.0-beta.2 - Unreleased
+
+## 1.0.0-beta.1 - 2021-07-15
 
  - Nushell pinned to 0.34
  - Added support for alternate addresses (enables all data commands for Couchbase Cloud)
@@ -17,7 +19,7 @@ All user visible changes to this project will be documented in this file.
  - Return an error if the `--clusters` flag does not return a single cluster.
  - Cloud support to the `nodes` command has been added.‚‚
  - The Message of the Day has been brought back.
- - Commands have been reordered so the `get` subcommands are now at the toplevel.
+ - Commands have been reordered so the `get` subcommands are now "at the toplevel.
  - Bundling the `fetch` plugin so now you can load any site/data you want.
  
 ## 1.0.0-alpha.2 - 2021-06-09

@@ -27,7 +27,7 @@ Next, clone the repository and then run `cargo run`. The first time it will take
 
 ```
 $ ./cbsh -h
-The Couchbase Shell 1.0.0-alpha.2
+The Couchbase Shell 1.0.0-beta.1
 Alternative Shell and UI for Couchbase Server and Cloud
 
 USAGE:
