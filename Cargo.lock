@@ -990,7 +990,7 @@ dependencies = [
 
 [[package]]
 name = "couchbase-shell"
-version = "1.0.0-beta.1"
+version = "1.0.0-beta.2-dev"
 dependencies = [
  "ansi_term 0.12.1",
  "async-stream",
