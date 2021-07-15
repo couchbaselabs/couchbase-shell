@@ -6,7 +6,7 @@ The current latest version is *1.0.0-beta.1*.
 
 There are a couple ways you can get access to `cbsh`, the easiest one is to download our pre-built binaries for your platform of choice:
 
- - Linux: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.1/cbsh-1.0.0-beta.1-linux.zip[cbsh-1.0.0-beta.1-linux.zip]
+ - Linux: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.1/cbsh-1.0.0-beta.1-linux.tar.gz[cbsh-1.0.0-beta.1-linux.tar.gz]
  - macOS: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.1/cbsh-1.0.0-beta.1-mac.zip[cbsh-1.0.0-beta.1-mac.zip]
  - Windows: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.1/cbsh-1.0.0-beta.1-windows.zip[cbsh-1.0.0-beta.1-windows.zip]
 
