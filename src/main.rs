@@ -5,13 +5,14 @@ mod client;
 mod config;
 mod state;
 mod tutorial;
+mod ui;
 
 use crate::config::{
     ShellConfig, DEFAULT_ANALYTICS_TIMEOUT, DEFAULT_DATA_TIMEOUT, DEFAULT_MANAGEMENT_TIMEOUT,
     DEFAULT_QUERY_TIMEOUT, DEFAULT_SEARCH_TIMEOUT,
 };
+use crate::state::ClusterTimeouts;
 use crate::state::{RemoteCloud, RemoteCloudOrganization, RemoteCluster};
-use crate::{cli::*, state::ClusterTimeouts};
 use config::ClusterTlsConfig;
 use env_logger::Env;
 use isahc::{prelude::*, Request};
@@ -272,83 +273,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let context = nu_cli::create_default_context(true)?;
-    context.add_commands(vec![
-        nu_engine::whole_stream_command(Addresses::new(state.clone())),
-        nu_engine::whole_stream_command(AddressesAdd::new(state.clone())),
-        nu_engine::whole_stream_command(AddressesDrop::new(state.clone())),
-        nu_engine::whole_stream_command(Analytics::new(state.clone())),
-        nu_engine::whole_stream_command(AnalyticsDatasets::new(state.clone())),
-        nu_engine::whole_stream_command(AnalyticsDataverses::new(state.clone())),
-        nu_engine::whole_stream_command(AnalyticsIndexes::new(state.clone())),
-        nu_engine::whole_stream_command(AnalyticsLinks::new(state.clone())),
-        nu_engine::whole_stream_command(AnalyticsBuckets::new(state.clone())),
-        nu_engine::whole_stream_command(AnalyticsPendingMutations::new(state.clone())),
-        nu_engine::whole_stream_command(Buckets::new(state.clone())),
-        nu_engine::whole_stream_command(BucketsConfig::new(state.clone())),
-        nu_engine::whole_stream_command(BucketsCreate::new(state.clone())),
-        nu_engine::whole_stream_command(BucketsDrop::new(state.clone())),
-        nu_engine::whole_stream_command(BucketsFlush::new(state.clone())),
-        nu_engine::whole_stream_command(BucketsGet::new(state.clone())),
-        nu_engine::whole_stream_command(BucketsSample::new(state.clone())),
-        nu_engine::whole_stream_command(BucketsUpdate::new(state.clone())),
-        nu_engine::whole_stream_command(Clouds::new(state.clone())),
-        nu_engine::whole_stream_command(CloudsClusters::new(state.clone())),
-        nu_engine::whole_stream_command(CloudsClustersCreate::new(state.clone())),
-        nu_engine::whole_stream_command(CloudsClustersDrop::new(state.clone())),
-        nu_engine::whole_stream_command(CloudsClustersGet::new(state.clone())),
-        nu_engine::whole_stream_command(CloudsStatus::new(state.clone())),
-        nu_engine::whole_stream_command(Clusters::new(state.clone())),
-        nu_engine::whole_stream_command(ClustersHealth::new(state.clone())),
-        nu_engine::whole_stream_command(ClustersRegister::new(state.clone())),
-        nu_engine::whole_stream_command(ClustersUnregister::new(state.clone())),
-        nu_engine::whole_stream_command(CollectionsCreate::new(state.clone())),
-        nu_engine::whole_stream_command(Collections::new(state.clone())),
-        nu_engine::whole_stream_command(Doc {}),
-        nu_engine::whole_stream_command(DocGet::new(state.clone())),
-        nu_engine::whole_stream_command(DocInsert::new(state.clone())),
-        nu_engine::whole_stream_command(DocRemove::new(state.clone())),
-        nu_engine::whole_stream_command(DocReplace::new(state.clone())),
-        nu_engine::whole_stream_command(DocUpsert::new(state.clone())),
-        nu_engine::whole_stream_command(FakeData::new(state.clone())),
-        nu_engine::whole_stream_command(Help {}),
-        nu_engine::whole_stream_command(Nodes::new(state.clone())),
-        nu_engine::whole_stream_command(Ping::new(state.clone())),
-        nu_engine::whole_stream_command(PluginFetch::new()),
-        nu_engine::whole_stream_command(Projects::new(state.clone())),
-        nu_engine::whole_stream_command(ProjectsCreate::new(state.clone())),
-        nu_engine::whole_stream_command(ProjectsDrop::new(state.clone())),
-        nu_engine::whole_stream_command(Query::new(state.clone())),
-        nu_engine::whole_stream_command(QueryAdvise::new(state.clone())),
-        nu_engine::whole_stream_command(QueryIndexes::new(state.clone())),
-        nu_engine::whole_stream_command(ScopesCreate::new(state.clone())),
-        nu_engine::whole_stream_command(Scopes::new(state.clone())),
-        nu_engine::whole_stream_command(Search::new(state.clone())),
-        nu_engine::whole_stream_command(Transactions {}),
-        nu_engine::whole_stream_command(TransactionsListAtrs::new(state.clone())),
-        nu_engine::whole_stream_command(Tutorial::new(state.clone())),
-        nu_engine::whole_stream_command(TutorialNext::new(state.clone())),
-        nu_engine::whole_stream_command(TutorialPage::new(state.clone())),
-        nu_engine::whole_stream_command(TutorialPrev::new(state.clone())),
-        nu_engine::whole_stream_command(Users::new(state.clone())),
-        nu_engine::whole_stream_command(UsersDrop::new(state.clone())),
-        nu_engine::whole_stream_command(UsersGet::new(state.clone())),
-        nu_engine::whole_stream_command(UsersRoles::new(state.clone())),
-        nu_engine::whole_stream_command(UsersUpsert::new(state.clone())),
-        nu_engine::whole_stream_command(UseBucket::new(state.clone())),
-        nu_engine::whole_stream_command(UseCloud::new(state.clone())),
-        nu_engine::whole_stream_command(UseCloudOrganization::new(state.clone())),
-        nu_engine::whole_stream_command(UseCluster::new(state.clone())),
-        nu_engine::whole_stream_command(UseCmd::new(state.clone())),
-        nu_engine::whole_stream_command(UseCollection::new(state.clone())),
-        nu_engine::whole_stream_command(UseProject::new(state.clone())),
-        nu_engine::whole_stream_command(UseScope::new(state.clone())),
-        nu_engine::whole_stream_command(Whoami::new(state)),
-        nu_engine::whole_stream_command(Version::new()),
-        /*
-        nu_engine::whole_stream_command(DataStats::new(state.clone())),
-        nu_engine::whole_stream_command(Data {}),
-        */
-    ]);
+    cli::add_commands(&context, state.clone());
 
     let mut options = nu_cli::app::CliOptions::new();
 
@@ -387,6 +312,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         options.scripts = vec![NuScript::source_file(filepath.as_os_str())?];
         nu_cli::run_script_file(context, options)?;
         return Ok(());
+    }
+
+    if opt.ui {
+        ui::serve(state.clone())?;
     }
 
     nu_cli::cli(context, options)?;
@@ -478,6 +407,8 @@ struct CliOptions {
     tls_cert_path: Option<String>,
     #[structopt(short = "s", long = "silent")]
     silent: bool,
+    #[structopt(long = "ui")]
+    ui: bool,
 }
 
 fn validate_hostnames(hostnames: Vec<String>) -> Vec<String> {

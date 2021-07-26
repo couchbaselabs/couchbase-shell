@@ -59,6 +59,7 @@ toml = "0.5"
 trust-dns-resolver = { version = "0.20.3", features = ["dns-over-rustls"] }
 url = "2.1"
 uuid = { version = "0.8", features = ["v4"] }
+warp = "0.3"
 
 [dev-dependencies]
 nu-test-support = "0.29.0"
