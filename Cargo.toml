@@ -35,6 +35,7 @@ nu-cli = { version = "0.34.0" }
 nu-engine = { version = "0.34.0" }
 nu-plugin = { version = "0.34.0" } 
 nu_plugin_fetch = { version = "0.34.0" } 
+nu_plugin_from_bson = { version = "0.34.0" }
 nu-value-ext = { version = "0.34.0" } 
 num-bigint = "0.4"
 num-traits = "0.2.14"

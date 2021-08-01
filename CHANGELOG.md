@@ -4,6 +4,8 @@ All user visible changes to this project will be documented in this file.
 
 ## 1.0.0-beta.2 - Unreleased
 
+ - Added support for `from bson` (also supports opening `bson` files directly).
+
 ## 1.0.0-beta.1 - 2021-07-15
 
  - Nushell pinned to 0.34

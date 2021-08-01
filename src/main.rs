@@ -314,6 +314,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(Nodes::new(state.clone())),
         nu_engine::whole_stream_command(Ping::new(state.clone())),
         nu_engine::whole_stream_command(PluginFetch::new()),
+        nu_engine::whole_stream_command(PluginFromBson::new()),
         nu_engine::whole_stream_command(Projects::new(state.clone())),
         nu_engine::whole_stream_command(ProjectsCreate::new(state.clone())),
         nu_engine::whole_stream_command(ProjectsDrop::new(state.clone())),
