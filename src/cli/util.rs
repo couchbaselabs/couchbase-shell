@@ -181,6 +181,7 @@ pub fn convert_nu_value_to_json_value(v: &Value) -> Result<serde_json::Value, Sh
             }
             serde_json::Value::Object(m)
         }
+        UntaggedValue::FrameStruct(_) => serde_json::Value::Null,
     })
 }
 
