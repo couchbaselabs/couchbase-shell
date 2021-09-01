@@ -83,7 +83,7 @@ impl KvClient {
             if s.name == scope {
                 for c in &s.collections {
                     if c.name == collection {
-                        return Ok(c.uid.parse::<u32>().unwrap());
+                        return Ok(u32::from_str_radix(c.uid.as_str(), 16).unwrap());
                     }
                 }
             }
