@@ -59,7 +59,7 @@ To Multiple Documents
  4 │ Bray               │ Albert            │ France  │     │ [row alt lat lon] │ LFAQ │ 1258 │ airport │ Europe/Paris
 ───┴────────────────────┴───────────────────┴─────────┴─────┴───────────────────┴──────┴──────┴─────────┴──────────────
 
-> query "SELECT `travel-sample`.* FROM `travel-sample` WHERE `type`='airport' LIMIT 5" | each { save $(echo "airport_" $(echo  $it.id | str from) ".json" | str collect) }
+> query "SELECT `travel-sample`.* FROM `travel-sample` WHERE `type`='airport' LIMIT 5" | each { echo $it | save (echo (build-string "user_" $it.id ".json")) }
 > ls airport*.json
 > ls airport*.json
 ───┬───────────────────┬──────┬───────┬─────────────
