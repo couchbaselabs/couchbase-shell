@@ -63,18 +63,6 @@ fn run_ping(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream,
 
     let guard = state.lock().unwrap();
 
-    let bucket_name = match args
-        .get_flag("bucket")?
-        .or_else(|| guard.active_cluster().active_bucket())
-    {
-        Some(v) => v,
-        None => {
-            return Err(ShellError::unexpected(
-                "Could not auto-select a bucket - please use --bucket instead".to_string(),
-            ))
-        }
-    };
-
     debug!("Running ping");
 
     let rt = Runtime::new().unwrap();
@@ -114,7 +102,15 @@ fn run_ping(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream,
                     results.push(collected.into_value());
                 }
             }
-            Err(_e) => {}
+            Err(e) => {}
+        };
+        let bucket_name = match args.get_flag("bucket")?.or_else(|| cluster.active_bucket()) {
+            Some(v) => v,
+            None => {
+                return Err(ShellError::unexpected(
+                    "Could not auto-select a bucket - please use --bucket instead".to_string(),
+                ))
+            }
         };
 
         // TODO: do this in parallel to http ops.
@@ -148,7 +144,7 @@ fn run_ping(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream,
                     results.push(collected.into_value());
                 }
             }
-            Err(_e) => {}
+            Err(e) => {}
         };
     }
     Ok(OutputStream::from(results))
