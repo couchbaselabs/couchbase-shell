@@ -52,6 +52,12 @@ fn clusters_unregister(
     let save = args.get_flag("save")?.unwrap_or(false);
 
     let mut guard = state.lock().unwrap();
+    if guard.active() == identifier.clone() {
+        return Err(ShellError::unexpected(
+            "Cannot unregister the active cluster",
+        ));
+    }
+
     if guard.remove_cluster(identifier).is_none() {
         return Err(ShellError::unexpected(
             "identifier is not registered to a cluster",

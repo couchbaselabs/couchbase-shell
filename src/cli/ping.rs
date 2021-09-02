@@ -102,7 +102,7 @@ fn run_ping(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream,
                     results.push(collected.into_value());
                 }
             }
-            Err(e) => {}
+            Err(_e) => {}
         };
         let bucket_name = match args.get_flag("bucket")?.or_else(|| cluster.active_bucket()) {
             Some(v) => v,
@@ -144,7 +144,7 @@ fn run_ping(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream,
                     results.push(collected.into_value());
                 }
             }
-            Err(e) => {}
+            Err(_e) => {}
         };
     }
     Ok(OutputStream::from(results))
