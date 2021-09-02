@@ -11,8 +11,6 @@ use std::{collections::HashMap, time::Duration};
 pub struct State {
     active: Mutex<String>,
     clusters: HashMap<String, RemoteCluster>,
-    default_scope: Option<String>,
-    default_collection: Option<String>,
     tutorial: Tutorial,
     config_path: Option<PathBuf>,
     clouds: HashMap<String, RemoteCloud>,
@@ -26,8 +24,6 @@ impl State {
     pub fn new(
         clusters: HashMap<String, RemoteCluster>,
         active: String,
-        default_scope: Option<String>,
-        default_collection: Option<String>,
         config_path: Option<PathBuf>,
         clouds: HashMap<String, RemoteCloud>,
         cloud_orgs: HashMap<String, RemoteCloudOrganization>,
@@ -38,8 +34,6 @@ impl State {
         let state = Self {
             active: Mutex::new(active.clone()),
             clusters,
-            default_scope,
-            default_collection,
             tutorial: Tutorial::new(),
             config_path,
             clouds,
@@ -93,10 +87,11 @@ impl State {
         //if remote.active_bucket().is_some() {
         //    let _ = remote.bucket(remote.active_bucket().unwrap().as_str());
         //}
-        if let Some(s) = self.default_scope.clone() {
+
+        if let Some(s) = remote.active_scope().clone() {
             let _ = remote.set_active_scope(s);
         }
-        if let Some(c) = self.default_collection.clone() {
+        if let Some(c) = remote.active_collection().clone() {
             let _ = remote.set_active_collection(c);
         }
 

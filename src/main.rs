@@ -68,8 +68,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         false => None,
     };
 
-    let mut default_scope: Option<String> = None;
-    let mut default_collection: Option<String> = None;
     let mut default_project: Option<String> = None;
     let mut active_cloud = None;
     let mut active_control_plane = None;
@@ -91,9 +89,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         } else {
             DEFAULT_PASSWORD.into()
         };
-
-        default_scope = opt.scope.clone();
-        default_collection = opt.collection.clone();
 
         let tls_config = ClusterTlsConfig::new(
             !opt.disable_tls,
@@ -166,13 +161,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                 if let Some(c) = opt.collection.clone() {
                     collection = Some(c);
                 }
-            }
-
-            if default_scope.is_none() && scope.is_some() {
-                default_scope = scope.clone();
-            }
-            if default_collection.is_none() && collection.is_some() {
-                default_collection = collection.clone();
             }
 
             let timeouts = v.timeouts();
@@ -257,8 +245,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     let state = Arc::new(Mutex::new(State::new(
         clusters,
         active,
-        default_scope,
-        default_collection,
         config.location().clone(),
         clouds,
         control_planes,
