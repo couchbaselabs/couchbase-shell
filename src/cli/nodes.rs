@@ -77,7 +77,6 @@ fn nodes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Sh
                 return Err(ShellError::unexpected(response.content()));
             }
 
-            dbg!(response.content());
             let resp: JSONCloudClusterHealthResponse = serde_json::from_str(response.content())?;
 
             let mut n = resp
