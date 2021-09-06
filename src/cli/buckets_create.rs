@@ -184,6 +184,7 @@ fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
 
         match response.status() {
             200 => {}
+            201 => {}
             202 => {}
             _ => {
                 return Err(ShellError::unexpected(response.content()));
