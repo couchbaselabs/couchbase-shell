@@ -24,7 +24,11 @@ impl nu_engine::WholeStreamCommand for UseCmd {
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("use")
+        Signature::build("use").switch(
+            "cloud",
+            "show default execution environment of  cloud",
+            None,
+        )
     }
 
     fn usage(&self) -> &str {
@@ -36,7 +40,9 @@ impl nu_engine::WholeStreamCommand for UseCmd {
     }
 }
 
-fn use_cmd(_args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, ShellError> {
+fn use_cmd(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, ShellError> {
+    let show_cloud = args.has_flag("cloud");
+
     let guard = state.lock().unwrap();
     let active = guard.active_cluster();
     let project = match guard.active_cloud() {
@@ -44,37 +50,43 @@ fn use_cmd(_args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream,
         Err(_e) => "".to_string(),
     };
     let mut using_now = TaggedDictBuilder::new(Tag::default());
-    using_now.insert_value("username", active.username());
-    using_now.insert_value("cluster", guard.active());
-    using_now.insert_value(
-        "bucket",
-        active
-            .active_bucket()
-            .unwrap_or_else(|| String::from("<not set>")),
-    );
-    using_now.insert_value(
-        "scope",
-        active.active_scope().unwrap_or_else(|| String::from("")),
-    );
-    using_now.insert_value(
-        "collection",
-        active
-            .active_collection()
-            .unwrap_or_else(|| String::from("")),
-    );
-    using_now.insert_value(
-        "cloud",
-        guard
-            .active_cloud_name()
-            .unwrap_or_else(|| String::from("")),
-    );
-    using_now.insert_value(
-        "cloud_organization",
-        guard
-            .active_cloud_org_name()
-            .unwrap_or_else(|| String::from("")),
-    );
-    using_now.insert_value("project", project);
+    if show_cloud {
+        using_now.insert_value(
+            "cloud_organization",
+            guard
+                .active_cloud_org_name()
+                .unwrap_or_else(|| String::from("")),
+        );
+        using_now.insert_value(
+            "cloud",
+            guard
+                .active_cloud_name()
+                .unwrap_or_else(|| String::from("")),
+        );
+        using_now.insert_value("project", project);
+    } else {
+        using_now.insert_value("username", active.username());
+        using_now.insert_value("cluster", guard.active());
+        using_now.insert_value(
+            "bucket",
+            active
+                .active_bucket()
+                .unwrap_or_else(|| String::from("<not set>")),
+        );
+        using_now.insert_value(
+            "scope",
+            active.active_scope().unwrap_or_else(|| String::from("")),
+        );
+        using_now.insert_value(
+            "collection",
+            active
+                .active_collection()
+                .unwrap_or_else(|| String::from("")),
+        );
+        if let Some(co) = active.cloud_org() {
+            using_now.insert_value("cloud_organization", co);
+        }
+    }
     let clusters = vec![using_now.into_value()];
 
     Ok(clusters.into())
