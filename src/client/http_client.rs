@@ -381,6 +381,15 @@ pub enum ManagementRequest {
     DropBucket {
         name: String,
     },
+    DropCollection {
+        scope: String,
+        bucket: String,
+        name: String,
+    },
+    DropScope {
+        name: String,
+        bucket: String,
+    },
     DropUser {
         username: String,
     },
@@ -444,6 +453,14 @@ impl ManagementRequest {
                 "/pools/default/buckets/{}/scopes/{}/collections",
                 bucket, scope
             ),
+            Self::DropCollection {
+                scope,
+                bucket,
+                name,
+            } => format!(
+                "/pools/default/buckets/{}/scopes/{}/collections/{}",
+                bucket, scope, name
+            ),
             Self::GetCollections { bucket } => format!("/pools/default/buckets/{}/scopes", bucket),
             Self::GetNodes => "/pools/default".into(),
             Self::GetUsers => "/settings/rbac/users/local".into(),
@@ -455,6 +472,9 @@ impl ManagementRequest {
             Self::UpsertUser { username, .. } => format!("/settings/rbac/users/local/{}", username),
             Self::CreateScope { bucket, .. } => {
                 format!("/pools/default/buckets/{}/scopes/", bucket)
+            }
+            Self::DropScope { bucket, name } => {
+                format!("/pools/default/buckets/{}/scopes/{}", bucket, name)
             }
             Self::GetScopes { bucket } => format!("/pools/default/buckets/{}/scopes", bucket),
         }
@@ -475,6 +495,7 @@ impl ManagementRequest {
             Self::LoadSampleBucket { .. } => HttpVerb::Post,
             Self::UpdateBucket { .. } => HttpVerb::Post,
             Self::CreateCollection { .. } => HttpVerb::Post,
+            Self::DropCollection { .. } => HttpVerb::Delete,
             Self::GetCollections { .. } => HttpVerb::Get,
             Self::GetUsers => HttpVerb::Get,
             Self::GetUser { .. } => HttpVerb::Get,
@@ -482,6 +503,7 @@ impl ManagementRequest {
             Self::UpsertUser { .. } => HttpVerb::Put,
             Self::GetNodes => HttpVerb::Get,
             Self::CreateScope { .. } => HttpVerb::Post,
+            Self::DropScope { .. } => HttpVerb::Delete,
             Self::GetScopes { .. } => HttpVerb::Get,
         }
     }
