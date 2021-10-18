@@ -1,64 +1,70 @@
+# Couchbase Shell - Shell Yeah!
 ![CI](https://github.com/couchbaselabs/couchbase-shell/workflows/CI/badge.svg)
 
-# cbsh - a new couchbase shell!
-
-cbsh is a modern and fun shell for Couchbase Server and Cloud.
+Couchbase Shell (`cbsh`) is a modern, productive and fun shell for Couchbase Server and Cloud.
 
 *Note that while the project is maintained by Couchbase, it is not covered under the EE support contract. We are providing community support through this bug tracker.*
 
-# Usage
+The documentation is available [here](https://couchbase.sh/docs/).
 
-You can either build it from source if you want the latest and greatest or download (semi regular) binaries. Check the
-[releases](https://github.com/couchbaselabs/couchbase-shell/releases) page for the latest binaries available for
-your platform. For now we only build for linux and OSX.
+# Quickstart
 
-For the latest and greatest, build for yourself:
+First, download the archive for your operating system.
 
-Prerequisites:
+ - [Linux 1.0.0-beta.2](https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.2/cbsh-1.0.0-beta.2-linux.tar.gz)
+ - [macOS 1.0.0-beta.2](https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.2/cbsh-1.0.0-beta.2-mac.zip)
+ - [Windows 1.0.0-beta.2](https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.2/cbsh-1.0.0-beta.2-windows.zip)
 
- - Make sure to have a recent rust version installed (recommended: [rustup](https://rustup.rs/))
- - Depending on your platform you'll need some libraries installed through homebrew or apt etc.
- - This should work for ubuntu (`sudo apt-get install git libssl-dev pkg-config cmake libevent-dev libxcb-composite0-dev libx11-dev llvm-dev libclang-dev clang`)
- - On macOS make sure you brew install automake and brew install libtool
- - By default cbshell connects to the locahost instance of couchbase server, ensure that a local instance of couchbase server is installed and running.
+You do not need any extra dependencies to run `cbsh`, it comes "batteries included".
 
+**macOS Users**: You will need to grant the binary permissions through `Security & Privacy` settings the first time you run it. 
 
-Next, clone the repository and then run `cargo run`. The first time it will take some time since it builds all the dependencies, but you should end up in a shell. You can use `cargo run -- -h` to see all the available flags:
+After extracting the archive, run the `cbsh` binary in your terminal.
 
 ```
-$ ./cbsh -h
+❯ ./cbsh --version
 The Couchbase Shell 1.0.0-beta.2
-Alternative Shell and UI for Couchbase Server and Cloud
-
-USAGE:
-    cbsh [FLAGS] [OPTIONS]
-
-FLAGS:
-        --disable-tls
-        --dont-validate-hostnames
-    -h, --help                       Prints help information
-        --no-motd
-    -p, --password
-        --stdin
-    -V, --version                    Prints version information
-
-OPTIONS:
-        --bucket <bucket>
-        --cluster <cluster>
-        --collection <collection>
-    -c, --command <command>
-        --hostnames <hostnames>
-        --scope <scope>
-        --script <script>
-        --tls-cert-path <tls-cert-path>
-    -u, --username <username>
 ```
 
-Note that if you want to spawn the highly experimental ui, use the `--ui` flag.
+# Basic Usage
+
+Once the binary is available, you can connect to a cluster on the fly and run a simple command to list the (user-visible) buckets.
+
+```
+❯ ./cbsh --hostnames 127.0.0.1 -u username -p                       
+Password: 
+👤 username 🏠 default in 🗄 <not set>
+> buckets
+───┬─────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────
+ # │ cluster │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud 
+───┼─────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────
+ 0 │ default │ beer-sample   │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false 
+ 1 │ default │ default       │ couchbase │        1 │ none                 │  104.9 MB │ true          │        │ false 
+ 2 │ default │ targetBucket  │ couchbase │        0 │ none                 │  104.9 MB │ true          │        │ false 
+ 3 │ default │ travel-sample │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false 
+───┴─────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴────────┴───────
+```
+
+While passing in command-line arguments is fine if you want to connect quickly, using the dotfile `~/.cbsh/config` for configuration is much more convenient. Here is a simple config which connects to a cluster running on localhost:
+
+```toml
+version = 1
+
+[[cluster]]
+identifier = "my-local-cb-node"
+hostnames = ["127.0.0.1"]
+default-bucket = "travel-sample"
+username = "Administrator"
+password = "password"
+```
+
+After the config is in place, you can run `./cbsh` without any arguments and it will connect to that cluster after start automatically. 
+
+The downloaded archive contains an `example` directory which also contains sample configuration files for more information. Also, please see the [docs](https://couchbase.sh/docs/) for full guidance, including information about how to work with multiple clusters at the same time.
 
 # cbsh commands
 
-These couchbase-specific commands are added on top of the regular nushell commands (always try with `--help` if you are unsure about args and flags).
+On top of [nushell](https://www.nushell.sh/) built-in commands, the following couchbase commands are available:
 
  - `addresses` - List all whitelisted addresses (cloud)
  - `addresses add` - Add a whitelist address (cloud)
@@ -123,86 +129,25 @@ These couchbase-specific commands are added on top of the regular nushell comman
  - `version` - Shows the version of the shell
  - `whoami` - Shows roles and domain for the connected user
 
-# Config & Multiple Clusters
+# Building From Source
 
-While quickly connecting with command line arguments is convenient, if you manage multiple clusters it can get tedious. 
-For this reason, the shell supports managing multiple clusters at the same time. 
-This works by adding a `.cbsh/config` file to either the path where you run the binary from, or more practical, from your home directory (`~/.cbsh/config`).
+If you want to build from source, make sure you have a modern rust version and cargo installed (ideally through the [rustup](https://rustup.rs/) toolchain).
 
-The format of the rc file is `toml`, and the default looks pretty much like this:
+## Installing as a binary
 
-```toml
-# Allows us to evolve in the future without breaking old config files
-version = 1
-
-[[cluster]]
-identifier = "default"
-hostnames = ["couchbase://127.0.0.1"]
-default-bucket = "default"
-username = "Administrator"
-password = "password"
-```
-
-You can modify it so that it contains all the clusters you need:
-
-```toml
-# Allows us to evolve in the future without breaking old config files
-version = 1
-
-[[cluster]]
-identifier = "cluster1"
-hostnames = ["couchbase://10.143.193.101"]
-default-bucket = "default"
-username = "user1"
-password = "pw1"
-
-[[cluster]]
-identifier = "cluster2"
-hostnames = ["couchbase://10.143.193.102"]
-default-bucket = "default"
-username = "user2"
-password = "pw2"
-```
-
-You can use the `clusters` command to list them:
+If you just want to use it and don't want to bother compiling all the time, you can use `cargo install --path .` to install it into your cargo bin path (run from the checked out source directory).
 
 ```
-❯ clusters
-───┬────────┬──────────┬────────────────────────────┬───────────────
- # │ active │ name     │ connstr                    │ username 
-───┼────────┼──────────┼────────────────────────────┼───────────────
- 0 │ Yes    │ cluster1 │ couchbase://10.143.193.101 │ Administrator 
- 1 │ No     │ cluster2 │ couchbase://10.143.193.102 │ Administrator 
-───┴────────┴──────────┴────────────────────────────┴───────────────
-```
-
-By default the first alphabetically first one (in this case `cluster1`) will be active, but you can override this on the command line with `./cbsh --cluster=cluster2` for example. This allows you to store all cluster references in one rc file and then activate the one you need.
-
-You can switch the cluster by identifier while being in the shell `clusters --activate identifier`.
-
-# Installing into bin
-
-If you just want to use it and don't want to bother compiling all the time, you can use `cargo install --path .` to install it into your cargo bin path.
-
-```
-/couchbase-shell$ cargo install --path .
-  Installing couchbase-shell v0.1.0 (/couchbase-shell)
-    Updating git repository `https://github.com/couchbaselabs/couchbase-rs`
+❯ cargo install --path .
+  Installing couchbase-shell v1.0.0-beta.2 (/Users/michaelnitschinger/couchbase/code/rust/couchbase-shell)
     Updating crates.io index
-   Compiling libc v0.2.66
-   Compiling proc-macro2 v1.0.8
-   *** SNIP ***
-   Compiling heim-process v0.0.9
-   Compiling heim v0.0.9
-   Compiling couchbase-shell v0.1.0 (/couchbase-shell)
-    Finished release [optimized] target(s) in 8m 10s
-  Installing /.cargo/bin/cbsh
-   Installed package `couchbase-shell v0.1.0 (/couchbase-shell)` (executable `cbsh`)
-```
-
-Grab a quick coffee or tea since this will take some time to compile (since it compiles it in *release* mode) but then it is available in your regular path like this:
+  Downloaded plist v1.2.1
+  Downloaded onig v6.3.0
+  Downloaded string_cache v0.8.2
+  Downloaded num-bigint v0.4.2
+  ...
 
 ```
-/couchbase-shell$ cbsh
-/couchbase-shell(master)> 
+
+Grab a quick coffee or tea since this will take some time to compile.
 ```
