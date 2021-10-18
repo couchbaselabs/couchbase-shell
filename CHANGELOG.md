@@ -2,9 +2,15 @@
 
 All user visible changes to this project will be documented in this file.
 
-## 1.0.0-beta.2 - Unreleased
+## 1.0.0-beta.2 - 2021-10-18
 
+ - Nushell pinned to 0.38
  - Added support for `from bson` (also supports opening `bson` files directly).
+ - Update the default collection and scope when the cluster is changed.
+ - Use the default bucket from each cluster with ping.
+ - Don't allow to unregister the active cluster.
+ - Add a `--cloud` switch to use to only display cloud info when used.
+ - Add support for scope/collection drop.
 
 ## 1.0.0-beta.1 - 2021-07-15
 
