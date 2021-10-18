@@ -6,77 +6,77 @@ The following introduction only touches on the basic concepts to make you produc
 
 === Navigating the Shell
 
-Commands take inputs and produce output in a structured manner, most often represented as tables. Note how both the generic `ls` command and the couchbase-specific `buckets get` command both produce a table as their output:
+Commands take inputs and produce output in a structured manner, most often represented as tables. Note how both the generic `ls` command and the couchbase-specific `buckets` command both produce a table as their output:
 
 ```
-❯ ls
-────┬──────────────┬──────┬──────────┬──────────────
- #  │ name         │ type │ size     │ modified
-────┼──────────────┼──────┼──────────┼──────────────
-  0 │ CHANGELOG.md │ File │    977 B │ 3 hours ago
-  1 │ Cargo.lock   │ File │ 133.8 KB │ 6 hours ago
-  2 │ Cargo.toml   │ File │   1.6 KB │ 3 hours ago
-  3 │ LICENSE      │ File │  11.4 KB │ 2 months ago
-  4 │ README.md    │ File │   6.3 KB │ 3 hours ago
-  5 │ docs         │ Dir  │    288 B │ 27 mins ago
-  6 │ examples     │ Dir  │     96 B │ 2 months ago
-  7 │ jupyter      │ Dir  │    128 B │ 2 weeks ago
-  8 │ src          │ Dir  │    224 B │ 3 hours ago
-  9 │ target       │ Dir  │    192 B │ 2 months ago
- 10 │ ui-assets    │ Dir  │    832 B │ 3 weeks ago
-────┴──────────────┴──────┴──────────┴──────────────
+> ls
+────┬──────────────┬──────┬──────────┬────────────────
+ #  │     name     │ type │   size   │    modified    
+────┼──────────────┼──────┼──────────┼────────────────
+  0 │ CHANGELOG.md │ File │   4.8 KB │ 2 hours ago    
+  1 │ Cargo.lock   │ File │ 170.2 KB │ 16 minutes ago 
+  2 │ Cargo.toml   │ File │   1.8 KB │ 16 minutes ago 
+  3 │ LICENSE      │ File │  11.4 KB │ 2 days ago     
+  4 │ README.md    │ File │   8.6 KB │ 9 minutes ago  
+  5 │ docs         │ Dir  │    544 B │ 2 days ago     
+  6 │ examples     │ Dir  │    192 B │ 2 days ago     
+  7 │ jupyter      │ Dir  │    128 B │ 2 days ago     
+  8 │ src          │ Dir  │    256 B │ 2 days ago     
+  9 │ target       │ Dir  │    224 B │ 32 minutes ago 
+ 10 │ tests        │ Dir  │    224 B │ 2 days ago     
+────┴──────────────┴──────┴──────────┴────────────────
 ```
 
 ```
-> buckets get
-───┬─────────┬──────────────────────────────────────┬───────────┬──────────┬───────────┬───────────────┬──────────────────────
- # │ cluster │                 name                 │   type    │ replicas │ ram_quota │ flush_enabled │ min_durability_level 
-───┼─────────┼──────────────────────────────────────┼───────────┼──────────┼───────────┼───────────────┼──────────────────────
- 0 │ local   │ 529dafb7-78d0-4baa-aa33-ba01fbc50af6 │ couchbase │        1 │  100.0 MB │ No            │ none                 
- 1 │ local   │ 4b78e6f0-f69d-460b-a698-a46dfe7173c2 │ couchbase │        1 │  100.0 MB │ No            │ none                 
- 2 │ local   │ d3a01765-2a66-41e4-b201-a2cea57a23ab │ couchbase │        1 │  100.0 MB │ No            │ none                 
- 3 │ local   │ 97568ca9-665d-4949-b343-e2649a741f5a │ couchbase │        1 │  100.0 MB │ No            │ none                 
- 4 │ local   │ 181ce90d-19d1-4745-8100-a9d49c59dd02 │ couchbase │        1 │  100.0 MB │ No            │ none                 
- 5 │ local   │ 97b23720-a6fc-425e-896c-75cfd07319a1 │ couchbase │        1 │  100.0 MB │ No            │ none                 
- 6 │ local   │ beer-sample                          │ couchbase │        1 │  100.0 MB │ No            │ none                 
- 7 │ local   │ travel-sample                        │ couchbase │        3 │  100.0 MB │ No            │ none                 
-───┴─────────┴──────────────────────────────────────┴───────────┴──────────┴───────────┴───────────────┴──────────────────────
+> buckets
+───┬─────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────
+ # │ cluster │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud 
+───┼─────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────
+ 0 │ default │ beer-sample   │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false 
+ 1 │ default │ default       │ couchbase │        1 │ none                 │  104.9 MB │ true          │        │ false 
+ 2 │ default │ targetBucket  │ couchbase │        0 │ none                 │  104.9 MB │ true          │        │ false 
+ 3 │ default │ travel-sample │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false 
+───┴─────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴────────┴───────
 ```
 
 You can pipe the output into other commands, for example if you only want to see buckets that have `sample` in their name you can utilize the `where` command:
 
 ```
-> buckets get | where name =~ "sample"
-───┬─────────┬───────────────┬───────────┬──────────┬───────────┬───────────────┬──────────────────────
- # │ cluster │     name      │   type    │ replicas │ ram_quota │ flush_enabled │ min_durability_level 
-───┼─────────┼───────────────┼───────────┼──────────┼───────────┼───────────────┼──────────────────────
- 0 │ local   │ beer-sample   │ couchbase │        1 │  100.0 MB │ No            │ none                 
- 1 │ local   │ travel-sample │ couchbase │        3 │  100.0 MB │ No            │ none                 
-───┴─────────┴───────────────┴───────────┴──────────┴───────────┴───────────────┴──────────────────────
+> buckets | where name =~ "sample"
+───┬─────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────
+ # │ cluster │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud 
+───┼─────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────
+ 0 │ default │ beer-sample   │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false 
+ 1 │ default │ travel-sample │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false 
+───┴─────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴────────┴───────
 ```
 
 In a similar fashion you can turn this structured table into other output formats, for example JSON:
 
 ```
-> buckets get | where name =~ "sample" | to json --pretty 2
+> buckets | where name =~ "sample" | to json --pretty 2
 [
   {
-    "cluster": "local",
+    "cluster": "default",
     "name": "beer-sample",
     "type": "couchbase",
     "replicas": 1,
-    "ram_quota": 100000000,
+    "min_durability_level": "none",
+    "ram_quota": 209715200,
     "flush_enabled": false,
-    "min_durability_level": "none"
+    "status": "",
+    "cloud": false
   },
   {
-    "cluster": "local",
+    "cluster": "default",
     "name": "travel-sample",
     "type": "couchbase",
-    "replicas": 3,
-    "ram_quota": 100000000,
+    "replicas": 1,
+    "min_durability_level": "none",
+    "ram_quota": 209715200,
     "flush_enabled": false,
-    "min_durability_level": "none"
+    "status": "",
+    "cloud": false
   }
 ]
 ```
@@ -105,6 +105,7 @@ Subcommands:
 
 Flags:
   -h, --help: Display this help message
+  --clusters <string>: the clusters which should be contacted
 ```
 
 Some commands (like the one above) only act as groupings for subcommands, like `from`, `to` or `doc`. Since they do not serve a purpose on their own, they will render their help output automatically:
@@ -131,11 +132,11 @@ Flags:
 Couchbase Shell uses a custom, two line prompt to show you exactly in what environment you are working in right now. Since you can connect to different clusters, switch buckets etc. it is important to know what is currently "active". Here is a sample prompt that will greet you when starting the shell:
 
 ```
-👤 Administrator at 🏠 local in 🛫  travel-sample
+👤 Administrator at 🏠 local in 🗄 travel-sample
 >
 ```
 
-It tells you that your user is `Administrator`, the current active cluster identifier is `local` and the active bucket is `travel-sample`. Note that the emoji for the active bucket changes if you use a regular bucket vs. the sample buckets we ship (if you are curious, try loading the `beer-sample` as well!).
+It tells you that your user is `Administrator`, the current active cluster identifier is `local` and the active bucket is `travel-sample`.
 
 In the second line, your actual user prompt starts.
 
@@ -147,10 +148,11 @@ The `open` command will look at file endings and try to decode it automatically.
 
 ```
 > open user.json
-──────┬─────────
- name │ Michael 
- age  │ 32      
-──────┴─────────
+───┬─────────┬─────
+ # │  name   │ age 
+───┼─────────┼─────
+ 0 │ Michael │ 32  
+───┴─────────┴─────
 ```
 
 As you can see, the `open` command already decoded the JSON document into the tabular format. If the filename would only be `user`, the import would look like this instead:
@@ -164,10 +166,11 @@ If you are dealing with data that cannot be decoded automatically, you can use t
 
 ```
 > open user | from json
-──────┬─────────
- name │ Michael 
- age  │ 32      
-──────┴─────────
+───┬─────────┬─────
+ # │  name   │ age 
+───┼─────────┼─────
+ 0 │ Michael │ 32  
+───┴─────────┴─────
 ```
 
 TIP: look at the many different import formats `from` supports, including csv, xml, yaml and even sqlite. With this simple tool at hand you are able to load many different data formats quickly and import them into couchbase!

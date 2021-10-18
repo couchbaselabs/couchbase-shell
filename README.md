@@ -7,7 +7,7 @@ Couchbase Shell (`cbsh`) is a modern, productive and fun shell for Couchbase Ser
 
 The documentation is available [here](https://couchbase.sh/docs/).
 
-# Quickstart
+## Quickstart
 
 First, download the archive for your operating system.
 
@@ -26,7 +26,7 @@ After extracting the archive, run the `cbsh` binary in your terminal.
 The Couchbase Shell 1.0.0-beta.2
 ```
 
-# Basic Usage
+## Basic Usage
 
 Once the binary is available, you can connect to a cluster on the fly and run a simple command to list the (user-visible) buckets.
 
@@ -94,6 +94,7 @@ On top of [nushell](https://www.nushell.sh/) built-in commands, the following co
  - `clusters health` - Performs health checks on the target cluster(s)
  - `collections` - Fetches collections through the HTTP API
  - `collections create` - Creates collections through the HTTP API
+ - `collections drop` - Removes a collection
  - `doc get` - Perform a KV get operation
  - `doc insert` - Perform a KV insert operation
  - `doc remove` - Removes a KV document 
@@ -111,6 +112,7 @@ On top of [nushell](https://www.nushell.sh/) built-in commands, the following co
  - `use` - Change the active bucket or cluster on the fly
  - `scopes` - Fetches scopes through the HTTP API
  - `scopes create` - Creates scopes through the HTTP API
+ - `scopes drop` - Removes a scope
  - `search` - Runs a query against a search index
  - `transations list-atrs` - List all active transaction records (requires an index - create index id3 on `travel-sample`(meta().id, meta().xattrs.attempts)) 
  - `tutorial` - Runs you through a tutorial of both nushell and cbshell
@@ -129,11 +131,13 @@ On top of [nushell](https://www.nushell.sh/) built-in commands, the following co
  - `version` - Shows the version of the shell
  - `whoami` - Shows roles and domain for the connected user
 
-# Building From Source
+## Building From Source
 
 If you want to build from source, make sure you have a modern rust version and cargo installed (ideally through the [rustup](https://rustup.rs/) toolchain).
 
-## Installing as a binary
+After that, you can build and/or run through `cargo build` / `cargo run`. By default it will build in debug mode, so if you want to build a binary and test the performance, make sure to include `--release`.
+
+### Installing as a binary through cargo
 
 If you just want to use it and don't want to bother compiling all the time, you can use `cargo install --path .` to install it into your cargo bin path (run from the checked out source directory).
 
