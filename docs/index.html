@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Asciidoctor 2.0.15">
+<meta name="generator" content="Asciidoctor 2.0.16">
 <meta name="author" content="(c) Copyright 2021, All Rights Reserved">
 <title>Couchbase Shell Documentation</title>
 <link rel="stylesheet" href="./couchbase.css">
@@ -121,7 +121,7 @@
 <div class="sect2">
 <h3 id="_installation">1.1. Installation</h3>
 <div class="paragraph">
-<p>The current latest version is <strong>1.0.0-beta.1</strong>.</p>
+<p>The current latest version is <strong>1.0.0-beta.2</strong>.</p>
 </div>
 <div class="paragraph">
 <p>There are a couple ways you can get access to <code>cbsh</code>, the easiest one is to download our pre-built binaries for your platform of choice:</p>
@@ -129,13 +129,13 @@
 <div class="ulist">
 <ul>
 <li>
-<p>Linux: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.1/cbsh-1.0.0-beta.1-linux.tar.gz">cbsh-1.0.0-beta.1-linux.tar.gz</a></p>
+<p>Linux: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.2/cbsh-1.0.0-beta.2-linux.tar.gz">cbsh-1.0.0-beta.2-linux.tar.gz</a></p>
 </li>
 <li>
-<p>macOS: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.1/cbsh-1.0.0-beta.1-mac.zip">cbsh-1.0.0-beta.1-mac.zip</a></p>
+<p>macOS: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.2/cbsh-1.0.0-beta.2-mac.zip">cbsh-1.0.0-beta.2-mac.zip</a></p>
 </li>
 <li>
-<p>Windows: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.1/cbsh-1.0.0-beta.1-windows.zip">cbsh-1.0.0-beta.1-windows.zip</a></p>
+<p>Windows: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.2/cbsh-1.0.0-beta.2-windows.zip">cbsh-1.0.0-beta.2-windows.zip</a></p>
 </li>
 </ul>
 </div>
@@ -144,8 +144,7 @@
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>$ unzip cbsh-1.0.0-beta.1-osx.zip
-$ cd cbsh-mac-x86_64
+<pre class="CodeRay highlight"><code>$ unzip cbsh-1.0.0-beta.2-osx.zip
 $ ls
 cbsh  examples  LICENSE  README.md</code></pre>
 </div>
@@ -155,13 +154,8 @@ cbsh  examples  LICENSE  README.md</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>$ ./cbsh
-~/cbsh-mac-x86_64
-───┬───────────────
- # │    version
-───┼───────────────
- 0 │ 1.0.0-beta.1
-───┴───────────────</code></pre>
+<pre class="CodeRay highlight"><code>❯ ./cbsh --version
+The Couchbase Shell 1.0.0-beta.2</code></pre>
 </div>
 </div>
 <div class="admonitionblock tip">
@@ -192,11 +186,10 @@ If you are running a recent macOS release (i.e. 10.15.x), you&#8217;ll likely se
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>$ ./cbsh --username Administrator --hostnames 127.0.0.1 -p
+<pre class="CodeRay highlight"><code>❯ ./cbsh --username Administrator --hostnames 127.0.0.1 -p
 Password:
-Thanks for trying CBSH!
-~/cbsh-mac-x86_64
-❯</code></pre>
+👤 Administrator 🏠 my-local-cb-node in 🗄 travel-sample
+&gt;</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -208,12 +201,12 @@ Thanks for trying CBSH!
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; nodes
-───┬─────────┬────────────────┬─────────┬───────────────────────────────────────┬───────────────────────┬───────────────────────────┬──────────────┬─────────────
- # │ cluster │    hostname    │ status  │               services                │        version        │            os             │ memory_total │ memory_free
-───┼─────────┼────────────────┼─────────┼───────────────────────────────────────┼───────────────────────┼───────────────────────────┼──────────────┼─────────────
- 0 │ local   │ 127.0.0.1:8091 │ healthy │ analytics,eventing,search,indexing,kv │ 6.6.1-9213-enterprise │ x86_64-apple-darwin18.7.0 │      34.4 GB │      9.7 GB
-   │         │                │         │ ,query                                │                       │                           │              │
-───┴─────────┴────────────────┴─────────┴───────────────────────────────────────┴───────────────────────┴───────────────────────────┴──────────────┴─────────────</code></pre>
+───┬─────────┬────────────────┬─────────┬─────────────────────────────────────┬───────────────────────┬───────────────────────────┬──────────────┬─────────────┬───────
+ # │ cluster │    hostname    │ status  │              services               │        version        │            os             │ memory_total │ memory_free │ cloud
+───┼─────────┼────────────────┼─────────┼─────────────────────────────────────┼───────────────────────┼───────────────────────────┼──────────────┼─────────────┼───────
+ 0 │ default │ 127.0.0.1:8091 │ healthy │ backup,analytics,eventing,search,in │ 7.0.1-6102-enterprise │ x86_64-apple-darwin18.7.0 │      34.4 GB │     17.6 GB │ false
+   │         │                │         │ dexing,kv,query                     │                       │                           │              │             │
+───┴─────────┴────────────────┴─────────┴─────────────────────────────────────┴───────────────────────┴───────────────────────────┴──────────────┴─────────────┴───────</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -222,11 +215,11 @@ Thanks for trying CBSH!
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt;  doc get airline_10 --bucket travel-sample | flatten
-───┬────┬─────────────────────┬──────┬─────────────┬──────────┬──────┬───────────────┬─────────┬───────
- # │ id │         cas         │ icao │    name     │ callsign │ iata │    country    │  type   │ error
-───┼────┼─────────────────────┼──────┼─────────────┼──────────┼──────┼───────────────┼─────────┼───────
- 0 │ 10 │ 1597310924052692992 │ MLA  │ 40-Mile Air │ MILE-AIR │ Q5   │ United States │ airline │
-───┴────┴─────────────────────┴──────┴─────────────┴──────────┴──────┴───────────────┴─────────┴───────</code></pre>
+───┬────────────┬─────────────────────┬────────────┬─────────┬─────────────┬──────┬──────┬──────────┬───────────────┬───────┬─────────
+ # │     id     │         cas         │ content_id │  type   │    name     │ iata │ icao │ callsign │    country    │ error │ cluster
+───┼────────────┼─────────────────────┼────────────┼─────────┼─────────────┼──────┼──────┼──────────┼───────────────┼───────┼─────────
+ 0 │ airline_10 │ 1629809626107281408 │         10 │ airline │ 40-Mile Air │ Q5   │ MLA  │ MILE-AIR │ United States │       │ default
+───┴────────────┴─────────────────────┴────────────┴─────────┴─────────────┴──────┴──────┴──────────┴───────────────┴───────┴─────────</code></pre>
 </div>
 </div>
 </div>
@@ -278,43 +271,39 @@ password = &quot;password&quot;
 <div class="sect2">
 <h3 id="_navigating_the_shell">2.1. Navigating the Shell</h3>
 <div class="paragraph">
-<p>Commands take inputs and produce output in a structured manner, most often represented as tables. Note how both the generic <code>ls</code> command and the couchbase-specific <code>buckets get</code> command both produce a table as their output:</p>
+<p>Commands take inputs and produce output in a structured manner, most often represented as tables. Note how both the generic <code>ls</code> command and the couchbase-specific <code>buckets</code> command both produce a table as their output:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>❯ ls
-────┬──────────────┬──────┬──────────┬──────────────
- #  │ name         │ type │ size     │ modified
-────┼──────────────┼──────┼──────────┼──────────────
-  0 │ CHANGELOG.md │ File │    977 B │ 3 hours ago
-  1 │ Cargo.lock   │ File │ 133.8 KB │ 6 hours ago
-  2 │ Cargo.toml   │ File │   1.6 KB │ 3 hours ago
-  3 │ LICENSE      │ File │  11.4 KB │ 2 months ago
-  4 │ README.md    │ File │   6.3 KB │ 3 hours ago
-  5 │ docs         │ Dir  │    288 B │ 27 mins ago
-  6 │ examples     │ Dir  │     96 B │ 2 months ago
-  7 │ jupyter      │ Dir  │    128 B │ 2 weeks ago
-  8 │ src          │ Dir  │    224 B │ 3 hours ago
-  9 │ target       │ Dir  │    192 B │ 2 months ago
- 10 │ ui-assets    │ Dir  │    832 B │ 3 weeks ago
-────┴──────────────┴──────┴──────────┴──────────────</code></pre>
+<pre class="CodeRay highlight"><code>&gt; ls
+────┬──────────────┬──────┬──────────┬────────────────
+ #  │     name     │ type │   size   │    modified
+────┼──────────────┼──────┼──────────┼────────────────
+  0 │ CHANGELOG.md │ File │   4.8 KB │ 2 hours ago
+  1 │ Cargo.lock   │ File │ 170.2 KB │ 16 minutes ago
+  2 │ Cargo.toml   │ File │   1.8 KB │ 16 minutes ago
+  3 │ LICENSE      │ File │  11.4 KB │ 2 days ago
+  4 │ README.md    │ File │   8.6 KB │ 9 minutes ago
+  5 │ docs         │ Dir  │    544 B │ 2 days ago
+  6 │ examples     │ Dir  │    192 B │ 2 days ago
+  7 │ jupyter      │ Dir  │    128 B │ 2 days ago
+  8 │ src          │ Dir  │    256 B │ 2 days ago
+  9 │ target       │ Dir  │    224 B │ 32 minutes ago
+ 10 │ tests        │ Dir  │    224 B │ 2 days ago
+────┴──────────────┴──────┴──────────┴────────────────</code></pre>
 </div>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; buckets get
-───┬─────────┬──────────────────────────────────────┬───────────┬──────────┬───────────┬───────────────┬──────────────────────
- # │ cluster │                 name                 │   type    │ replicas │ ram_quota │ flush_enabled │ min_durability_level
-───┼─────────┼──────────────────────────────────────┼───────────┼──────────┼───────────┼───────────────┼──────────────────────
- 0 │ local   │ 529dafb7-78d0-4baa-aa33-ba01fbc50af6 │ couchbase │        1 │  100.0 MB │ No            │ none
- 1 │ local   │ 4b78e6f0-f69d-460b-a698-a46dfe7173c2 │ couchbase │        1 │  100.0 MB │ No            │ none
- 2 │ local   │ d3a01765-2a66-41e4-b201-a2cea57a23ab │ couchbase │        1 │  100.0 MB │ No            │ none
- 3 │ local   │ 97568ca9-665d-4949-b343-e2649a741f5a │ couchbase │        1 │  100.0 MB │ No            │ none
- 4 │ local   │ 181ce90d-19d1-4745-8100-a9d49c59dd02 │ couchbase │        1 │  100.0 MB │ No            │ none
- 5 │ local   │ 97b23720-a6fc-425e-896c-75cfd07319a1 │ couchbase │        1 │  100.0 MB │ No            │ none
- 6 │ local   │ beer-sample                          │ couchbase │        1 │  100.0 MB │ No            │ none
- 7 │ local   │ travel-sample                        │ couchbase │        3 │  100.0 MB │ No            │ none
-───┴─────────┴──────────────────────────────────────┴───────────┴──────────┴───────────┴───────────────┴──────────────────────</code></pre>
+<pre class="CodeRay highlight"><code>&gt; buckets
+───┬─────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────
+ # │ cluster │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud
+───┼─────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────
+ 0 │ default │ beer-sample   │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false
+ 1 │ default │ default       │ couchbase │        1 │ none                 │  104.9 MB │ true          │        │ false
+ 2 │ default │ targetBucket  │ couchbase │        0 │ none                 │  104.9 MB │ true          │        │ false
+ 3 │ default │ travel-sample │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false
+───┴─────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴────────┴───────</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -322,13 +311,13 @@ password = &quot;password&quot;
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; buckets get | where name =~ &quot;sample&quot;
-───┬─────────┬───────────────┬───────────┬──────────┬───────────┬───────────────┬──────────────────────
- # │ cluster │     name      │   type    │ replicas │ ram_quota │ flush_enabled │ min_durability_level
-───┼─────────┼───────────────┼───────────┼──────────┼───────────┼───────────────┼──────────────────────
- 0 │ local   │ beer-sample   │ couchbase │        1 │  100.0 MB │ No            │ none
- 1 │ local   │ travel-sample │ couchbase │        3 │  100.0 MB │ No            │ none
-───┴─────────┴───────────────┴───────────┴──────────┴───────────┴───────────────┴──────────────────────</code></pre>
+<pre class="CodeRay highlight"><code>&gt; buckets | where name =~ &quot;sample&quot;
+───┬─────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────
+ # │ cluster │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud
+───┼─────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────
+ 0 │ default │ beer-sample   │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false
+ 1 │ default │ travel-sample │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false
+───┴─────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴────────┴───────</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -336,25 +325,29 @@ password = &quot;password&quot;
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; buckets get | where name =~ &quot;sample&quot; | to json --pretty 2
+<pre class="CodeRay highlight"><code>&gt; buckets | where name =~ &quot;sample&quot; | to json --pretty 2
 [
   {
-    &quot;cluster&quot;: &quot;local&quot;,
+    &quot;cluster&quot;: &quot;default&quot;,
     &quot;name&quot;: &quot;beer-sample&quot;,
     &quot;type&quot;: &quot;couchbase&quot;,
     &quot;replicas&quot;: 1,
-    &quot;ram_quota&quot;: 100000000,
+    &quot;min_durability_level&quot;: &quot;none&quot;,
+    &quot;ram_quota&quot;: 209715200,
     &quot;flush_enabled&quot;: false,
-    &quot;min_durability_level&quot;: &quot;none&quot;
+    &quot;status&quot;: &quot;&quot;,
+    &quot;cloud&quot;: false
   },
   {
-    &quot;cluster&quot;: &quot;local&quot;,
+    &quot;cluster&quot;: &quot;default&quot;,
     &quot;name&quot;: &quot;travel-sample&quot;,
     &quot;type&quot;: &quot;couchbase&quot;,
-    &quot;replicas&quot;: 3,
-    &quot;ram_quota&quot;: 100000000,
+    &quot;replicas&quot;: 1,
+    &quot;min_durability_level&quot;: &quot;none&quot;,
+    &quot;ram_quota&quot;: 209715200,
     &quot;flush_enabled&quot;: false,
-    &quot;min_durability_level&quot;: &quot;none&quot;
+    &quot;status&quot;: &quot;&quot;,
+    &quot;cloud&quot;: false
   }
 ]</code></pre>
 </div>
@@ -386,7 +379,8 @@ Subcommands:
   buckets update - Updates a bucket
 
 Flags:
-  -h, --help: Display this help message</code></pre>
+  -h, --help: Display this help message
+  --clusters &lt;string&gt;: the clusters which should be contacted</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -419,12 +413,12 @@ Flags:
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>👤 Administrator at 🏠 local in 🛫  travel-sample
+<pre class="CodeRay highlight"><code>👤 Administrator at 🏠 local in 🗄 travel-sample
 &gt;</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>It tells you that your user is <code>Administrator</code>, the current active cluster identifier is <code>local</code> and the active bucket is <code>travel-sample</code>. Note that the emoji for the active bucket changes if you use a regular bucket vs. the sample buckets we ship (if you are curious, try loading the <code>beer-sample</code> as well!).</p>
+<p>It tells you that your user is <code>Administrator</code>, the current active cluster identifier is <code>local</code> and the active bucket is <code>travel-sample</code>.</p>
 </div>
 <div class="paragraph">
 <p>In the second line, your actual user prompt starts.</p>
@@ -441,10 +435,11 @@ Flags:
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; open user.json
-──────┬─────────
- name │ Michael
- age  │ 32
-──────┴─────────</code></pre>
+───┬─────────┬─────
+ # │  name   │ age
+───┼─────────┼─────
+ 0 │ Michael │ 32
+───┴─────────┴─────</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -462,10 +457,11 @@ Flags:
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; open user | from json
-──────┬─────────
- name │ Michael
- age  │ 32
-──────┴─────────</code></pre>
+───┬─────────┬─────
+ # │  name   │ age
+───┼─────────┼─────
+ 0 │ Michael │ 32
+───┴─────────┴─────</code></pre>
 </div>
 </div>
 <div class="admonitionblock tip">
@@ -1387,7 +1383,7 @@ If you want to only store the document body then you can use <code>doc get &lt;i
  4 │ Bray               │ Albert            │ France  │     │ [row alt lat lon] │ LFAQ │ 1258 │ airport │ Europe/Paris
 ───┴────────────────────┴───────────────────┴─────────┴─────┴───────────────────┴──────┴──────┴─────────┴──────────────
 
-&gt; query &quot;SELECT `travel-sample`.* FROM `travel-sample` WHERE `type`='airport' LIMIT 5&quot; | each { save $(echo &quot;airport_&quot; $(echo  $it.id | str from) &quot;.json&quot; | str collect) }
+&gt; query &quot;SELECT `travel-sample`.* FROM `travel-sample` WHERE `type`='airport' LIMIT 5&quot; | each { echo $it | save (echo (build-string &quot;user_&quot; $it.id &quot;.json&quot;)) }
 &gt; ls airport*.json
 &gt; ls airport*.json
 ───┬───────────────────┬──────┬───────┬─────────────
@@ -1507,7 +1503,7 @@ There are two ways that we can do this.</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2021-07-15 16:25:17 UTC
+Last updated 2021-10-18 10:03:00 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
