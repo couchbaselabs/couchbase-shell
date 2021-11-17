@@ -79,7 +79,7 @@ impl HTTPHandler {
     ) -> Result<(String, u16), ClientError> {
         let now = Instant::now();
         if now >= deadline {
-            return Err(ClientError::Timeout);
+            return Err(ClientError::Timeout { key: None });
         }
         let timeout = deadline.sub(now);
         let ctrl_c_fut = CtrlcFuture::new(ctrl_c);
@@ -114,7 +114,7 @@ impl HTTPHandler {
                 let status = response.status().into();
                 Ok((content, status))
             },
-            () = ctrl_c_fut => Err(ClientError::Cancelled),
+            () = ctrl_c_fut => Err(ClientError::Cancelled{key: None}),
         }
     }
 

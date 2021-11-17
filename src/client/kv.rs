@@ -43,6 +43,7 @@ impl KvEndpoint {
                     .await
                     .map_err(|e| ClientError::RequestFailed {
                         reason: Some(e.to_string()),
+                        key: None,
                     })?;
 
             let mut builder = tokio_native_tls::native_tls::TlsConnector::builder();
@@ -54,6 +55,7 @@ impl KvEndpoint {
                 builder.add_root_certificate(Certificate::from_pem(cert.as_slice()).map_err(
                     |e| ClientError::RequestFailed {
                         reason: Some(e.to_string()),
+                        key: None,
                     },
                 )?);
             }
@@ -65,6 +67,7 @@ impl KvEndpoint {
                 .await
                 .map_err(|e| ClientError::RequestFailed {
                     reason: Some(e.to_string()),
+                    key: None,
                 })?;
             KvEndpoint::setup(username, password, bucket, socket).await
         } else {
@@ -73,6 +76,7 @@ impl KvEndpoint {
                     .await
                     .map_err(|e| ClientError::RequestFailed {
                         reason: Some(e.to_string()),
+                        key: None,
                     })?;
             KvEndpoint::setup(username, password, bucket, socket).await
         }
@@ -178,6 +182,7 @@ impl KvEndpoint {
             Err(e) => {
                 return Err(ClientError::RequestFailed {
                     reason: Some(e.to_string()),
+                    key: None,
                 });
             }
         };
@@ -201,6 +206,7 @@ impl KvEndpoint {
             Err(e) => {
                 return Err(ClientError::RequestFailed {
                     reason: Some(e.to_string()),
+                    key: None,
                 });
             }
         };
@@ -214,6 +220,7 @@ impl KvEndpoint {
             Err(e) => {
                 return Err(ClientError::RequestFailed {
                     reason: Some(e.to_string()),
+                    key: None,
                 });
             }
         };
@@ -227,17 +234,18 @@ impl KvEndpoint {
         Ok(ep)
     }
 
-    fn status_to_error(&self, status: Status) -> Result<(), ClientError> {
+    fn status_to_error(&self, status: Status, key: Option<String>) -> Result<(), ClientError> {
         match status {
             Status::Success => Ok(()),
             Status::AuthError => Err(ClientError::AuthError),
             Status::AccessError => Err(ClientError::AccessError),
-            Status::KeyNotFound => Err(ClientError::KeyNotFound),
-            Status::KeyExists => Err(ClientError::KeyAlreadyExists),
-            Status::CollectionUnknown => Err(ClientError::CollectionNotFound),
-            Status::ScopeUnknown => Err(ClientError::ScopeNotFound),
+            Status::KeyNotFound => Err(ClientError::KeyNotFound { key }),
+            Status::KeyExists => Err(ClientError::KeyAlreadyExists { key }),
+            Status::CollectionUnknown => Err(ClientError::CollectionNotFound { key }),
+            Status::ScopeUnknown => Err(ClientError::ScopeNotFound { key }),
             _ => Err(ClientError::RequestFailed {
                 reason: Some(status.as_string()),
+                key,
             }),
         }
     }
@@ -253,7 +261,7 @@ impl KvEndpoint {
             0,
             partition,
             0,
-            Some(key.into()),
+            Some(key.clone().into()),
             None,
             None,
             collection_id,
@@ -266,9 +274,10 @@ impl KvEndpoint {
             Ok(r) => Ok(r),
             Err(e) => Err(ClientError::RequestFailed {
                 reason: Some(e.to_string()),
+                key: Some(key.clone()),
             }),
         }?;
-        self.status_to_error(response.status())?;
+        self.status_to_error(response.status(), Some(key))?;
         Ok(response)
     }
 
@@ -288,7 +297,7 @@ impl KvEndpoint {
             0,
             partition,
             0,
-            Some(key.into()),
+            Some(key.clone().into()),
             Some(extras.freeze()),
             Some(value.into()),
             collection_id,
@@ -301,9 +310,10 @@ impl KvEndpoint {
             Ok(r) => Ok(r),
             Err(e) => Err(ClientError::RequestFailed {
                 reason: Some(e.to_string()),
+                key: Some(key.clone()),
             }),
         }?;
-        self.status_to_error(response.status())?;
+        self.status_to_error(response.status(), Some(key))?;
         Ok(response)
     }
 
@@ -323,7 +333,7 @@ impl KvEndpoint {
             0,
             partition,
             0,
-            Some(key.into()),
+            Some(key.clone().into()),
             Some(extras.freeze()),
             Some(value.into()),
             collection_id,
@@ -336,9 +346,10 @@ impl KvEndpoint {
             Ok(r) => Ok(r),
             Err(e) => Err(ClientError::RequestFailed {
                 reason: Some(e.to_string()),
+                key: Some(key.clone()),
             }),
         }?;
-        self.status_to_error(response.status())?;
+        self.status_to_error(response.status(), Some(key))?;
         Ok(response)
     }
 
@@ -358,7 +369,7 @@ impl KvEndpoint {
             0,
             partition,
             0,
-            Some(key.into()),
+            Some(key.clone().into()),
             Some(extras.freeze()),
             Some(value.into()),
             collection_id,
@@ -371,9 +382,10 @@ impl KvEndpoint {
             Ok(r) => Ok(r),
             Err(e) => Err(ClientError::RequestFailed {
                 reason: Some(e.to_string()),
+                key: Some(key.clone()),
             }),
         }?;
-        self.status_to_error(response.status())?;
+        self.status_to_error(response.status(), Some(key))?;
         Ok(response)
     }
 
@@ -388,7 +400,7 @@ impl KvEndpoint {
             0,
             partition,
             0,
-            Some(key.into()),
+            Some(key.clone().into()),
             None,
             None,
             collection_id,
@@ -401,9 +413,10 @@ impl KvEndpoint {
             Ok(r) => Ok(r),
             Err(e) => Err(ClientError::RequestFailed {
                 reason: Some(e.to_string()),
+                key: Some(key.clone()),
             }),
         }?;
-        self.status_to_error(response.status())?;
+        self.status_to_error(response.status(), Some(key))?;
         Ok(response)
     }
 
@@ -417,9 +430,10 @@ impl KvEndpoint {
             Ok(r) => Ok(r),
             Err(e) => Err(ClientError::RequestFailed {
                 reason: Some(e.to_string()),
+                key: None,
             }),
         }?;
-        self.status_to_error(response.status())?;
+        self.status_to_error(response.status(), None)?;
         Ok(response)
     }
 
@@ -442,6 +456,7 @@ impl KvEndpoint {
             }
             Err(e) => Err(ClientError::RequestFailed {
                 reason: Some(e.to_string()),
+                key: None,
             }),
         }
     }
@@ -601,10 +616,14 @@ async fn receive_hello(
             }
             _ => Err(ClientError::RequestFailed {
                 reason: Some(status.as_string()),
+                key: None,
             }),
         }
     } else {
-        Err(ClientError::RequestFailed { reason: None })
+        Err(ClientError::RequestFailed {
+            reason: None,
+            key: None,
+        })
     };
 
     match completetx.send(result) {
@@ -632,15 +651,22 @@ async fn receive_error_map(
                     let error_map = serde_json::from_slice(body.as_ref()).unwrap();
                     Ok(error_map)
                 } else {
-                    Err(ClientError::RequestFailed { reason: None })
+                    Err(ClientError::RequestFailed {
+                        reason: None,
+                        key: None,
+                    })
                 }
             }
             _ => Err(ClientError::RequestFailed {
                 reason: Some(status.as_string()),
+                key: None,
             }),
         }
     } else {
-        Err(ClientError::RequestFailed { reason: None })
+        Err(ClientError::RequestFailed {
+            reason: None,
+            key: None,
+        })
     };
 
     match completetx.send(result) {
@@ -665,10 +691,14 @@ async fn receive_auth(
             Status::Success => Ok(()),
             _ => Err(ClientError::RequestFailed {
                 reason: Some(status.as_string()),
+                key: None,
             }),
         }
     } else {
-        Err(ClientError::RequestFailed { reason: None })
+        Err(ClientError::RequestFailed {
+            reason: None,
+            key: None,
+        })
     };
 
     match completetx.send(result) {
@@ -693,10 +723,14 @@ async fn receive_select_bucket(
             Status::Success => Ok(()),
             _ => Err(ClientError::RequestFailed {
                 reason: Some(status.as_string()),
+                key: None,
             }),
         }
     } else {
-        Err(ClientError::RequestFailed { reason: None })
+        Err(ClientError::RequestFailed {
+            reason: None,
+            key: None,
+        })
     };
 
     match completetx.send(result) {

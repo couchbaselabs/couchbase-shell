@@ -4,18 +4,54 @@ use std::fmt;
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone, Serialize, Deserialize, Hash)]
 pub enum ClientError {
-    ConfigurationLoadFailed { reason: Option<String> },
-    CollectionManifestLoadFailed { reason: Option<String> },
-    CollectionNotFound,
-    ScopeNotFound,
-    KeyNotFound,
-    KeyAlreadyExists,
+    ConfigurationLoadFailed {
+        reason: Option<String>,
+    },
+    CollectionManifestLoadFailed {
+        reason: Option<String>,
+    },
+    CollectionNotFound {
+        key: Option<String>,
+    },
+    ScopeNotFound {
+        key: Option<String>,
+    },
+    KeyNotFound {
+        key: Option<String>,
+    },
+    KeyAlreadyExists {
+        key: Option<String>,
+    },
     AccessError,
     AuthError,
-    Timeout,
-    Cancelled,
-    ClusterNotFound { name: String },
-    RequestFailed { reason: Option<String> },
+    Timeout {
+        key: Option<String>,
+    },
+    Cancelled {
+        key: Option<String>,
+    },
+    ClusterNotFound {
+        name: String,
+    },
+    RequestFailed {
+        reason: Option<String>,
+        key: Option<String>,
+    },
+}
+
+impl ClientError {
+    pub fn key(&self) -> Option<String> {
+        match self {
+            ClientError::CollectionNotFound { key } => key.clone(),
+            ClientError::ScopeNotFound { key } => key.clone(),
+            ClientError::KeyNotFound { key } => key.clone(),
+            ClientError::KeyAlreadyExists { key } => key.clone(),
+            ClientError::Timeout { key } => key.clone(),
+            ClientError::Cancelled { key } => key.clone(),
+            ClientError::RequestFailed { key, .. } => key.clone(),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for ClientError {
@@ -29,16 +65,16 @@ impl fmt::Display for ClientError {
                 Some(re) => format!("failed to load collection manifest from cluster: {}", re),
                 None => "failed to load collection manifest from cluster".into(),
             },
-            Self::CollectionNotFound => "collection not found".into(),
-            Self::ScopeNotFound => "scope not found".into(),
-            Self::KeyNotFound => "key not found".into(),
-            Self::KeyAlreadyExists => "key already exists".into(),
+            Self::CollectionNotFound { .. } => "collection not found".into(),
+            Self::ScopeNotFound { .. } => "scope not found".into(),
+            Self::KeyNotFound { .. } => "key not found".into(),
+            Self::KeyAlreadyExists { .. } => "key already exists".into(),
             Self::AccessError => "access error".into(),
             Self::AuthError => "authentication error".into(),
-            Self::Timeout => "timeout".into(),
-            Self::Cancelled => "request cancelled".into(),
+            Self::Timeout { .. } => "timeout".into(),
+            Self::Cancelled { .. } => "request cancelled".into(),
             Self::ClusterNotFound { name } => format!("cluster not found: {}", name),
-            Self::RequestFailed { reason } => match reason.as_ref() {
+            Self::RequestFailed { reason, .. } => match reason.as_ref() {
                 Some(re) => format!("request failed: {}", re),
                 None => "request failed".into(),
             },
@@ -58,6 +94,7 @@ impl From<std::io::Error> for ClientError {
     fn from(e: std::io::Error) -> Self {
         ClientError::RequestFailed {
             reason: Some(format!("{}", e)),
+            key: None,
         }
     }
 }
@@ -66,6 +103,7 @@ impl From<isahc::Error> for ClientError {
     fn from(e: isahc::Error) -> Self {
         ClientError::RequestFailed {
             reason: Some(format!("{}", e)),
+            key: None,
         }
     }
 }
@@ -74,6 +112,7 @@ impl From<serde_json::Error> for ClientError {
     fn from(e: serde_json::Error) -> Self {
         ClientError::RequestFailed {
             reason: Some(format!("{}", e)),
+            key: None,
         }
     }
 }
@@ -82,6 +121,7 @@ impl From<isahc::http::Error> for ClientError {
     fn from(e: isahc::http::Error) -> Self {
         ClientError::RequestFailed {
             reason: Some(format!("{}", e)),
+            key: None,
         }
     }
 }

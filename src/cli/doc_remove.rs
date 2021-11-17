@@ -2,9 +2,11 @@
 
 use crate::state::State;
 
+use crate::cli::doc_upsert::{build_batched_kv_items, process_kv_workers};
 use crate::cli::util::{cluster_identifiers_from, namespace_from_args};
-use crate::client::KeyValueRequest;
+use crate::client::{KeyValueRequest, KvClient};
 use async_trait::async_trait;
+use futures::stream::FuturesUnordered;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
 use nu_protocol::{MaybeOwned, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
@@ -102,10 +104,8 @@ fn run_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, 
         }
         None
     });
-    let mut all_items = vec![];
-    for item in filtered.chain(input_args).into_iter() {
-        all_items.push(item);
-    }
+
+    let all_items = build_batched_kv_items(500, filtered.chain(input_args));
 
     let mut results = vec![];
     for identifier in cluster_identifiers {
@@ -124,31 +124,53 @@ fn run_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, 
         )?;
 
         let rt = Runtime::new().unwrap();
-        let mut client = active_cluster.cluster().key_value_client();
+        let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
+        let mut client = rt.block_on(active_cluster.cluster().key_value_client(
+            bucket.clone(),
+            deadline,
+            ctrl_c.clone(),
+        ))?;
 
+        if KvClient::is_non_default_scope_collection(scope.clone(), collection.clone()) {
+            let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
+            rt.block_on(client.fetch_collections_manifest(deadline, ctrl_c.clone()))
+                .map_err(|e| ShellError::unexpected(e.to_string()))?;
+        }
+
+        let client = Arc::new(client);
+
+        let mut workers = FuturesUnordered::new();
         let mut success = 0;
         let mut failed = 0;
         let mut fail_reasons: HashSet<String> = HashSet::new();
-        for item in all_items.clone() {
-            let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
-            let result = rt
-                .block_on(client.request(
-                    KeyValueRequest::Remove { key: item },
-                    bucket.clone(),
-                    scope.clone(),
-                    collection.clone(),
-                    deadline,
-                    ctrl_c.clone(),
-                ))
-                .map_err(|e| ShellError::unexpected(e.to_string()));
+        for items in all_items.clone() {
+            for item in items.clone() {
+                let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
+                let scope = scope.clone();
+                let collection = collection.clone();
+                let ctrl_c = ctrl_c.clone();
 
-            match result {
-                Ok(_) => success += 1,
-                Err(e) => {
-                    failed += 1;
-                    fail_reasons.insert(e.to_string());
-                }
-            };
+                let client = client.clone();
+
+                workers.push(async move {
+                    client
+                        .request(
+                            KeyValueRequest::Remove { key: item },
+                            scope,
+                            collection,
+                            deadline,
+                            ctrl_c,
+                        )
+                        .await
+                });
+            }
+
+            let worked = process_kv_workers(workers, &rt);
+
+            success += worked.success;
+            failed += worked.failed;
+            fail_reasons.extend(worked.fail_reasons);
+            workers = FuturesUnordered::new()
         }
 
         let tag = Tag::default();

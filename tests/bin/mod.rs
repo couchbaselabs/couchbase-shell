@@ -4,7 +4,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::PermissionsExt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::{env, fs};
 use tokio::fs::File;
@@ -25,7 +25,7 @@ const CAVES_BINARY: &str = "gocaves-linux";
 const CAVES_URL: &str = "https://github.com/couchbaselabs/gocaves/releases/download";
 const CAVES_VERSION: &str = "v0.0.1-38";
 
-async fn fetch_caves() {
+async fn fetch_caves(path: &PathBuf) {
     let response =
         reqwest::get(format!("{}/{}/{}", CAVES_URL, CAVES_VERSION, CAVES_BINARY).as_str())
             .await
@@ -35,7 +35,6 @@ async fn fetch_caves() {
         panic!("Response failed: {}", response.status())
     }
 
-    let path = Path::new(CAVES_BINARY);
     let mut file = File::create(path).await.expect("Failed to create file");
 
     let content = response
@@ -48,18 +47,18 @@ async fn fetch_caves() {
         .expect("Failed to write response data to file");
     drop(file);
 
-    set_permissions();
+    set_permissions(path);
 }
 
 #[cfg(target_os = "windows")]
-fn set_permissions() {}
+fn set_permissions(_path: &PathBuf) {}
 
 #[cfg(not(target_os = "windows"))]
-fn set_permissions() {
-    let meta = fs::metadata(CAVES_BINARY).expect("Failed to get file metadata");
+fn set_permissions(path: &PathBuf) {
+    let meta = fs::metadata(path).expect("Failed to get file metadata");
     let mut perms = meta.permissions();
     perms.set_mode(0o744);
-    fs::set_permissions(CAVES_BINARY, perms).expect("Failed to set file permissions");
+    fs::set_permissions(&path, perms).expect("Failed to set file permissions");
 }
 
 #[derive(Serialize, Deserialize)]
@@ -69,12 +68,8 @@ struct CreateConfig {
     id: String,
 }
 
-fn start_caves(port: u16) -> Child {
-    let mut cmd = if cfg!(target_os = "windows") {
-        Command::new(CAVES_BINARY)
-    } else {
-        Command::new(format!("./{}", CAVES_BINARY))
-    };
+fn start_caves(path: &PathBuf, port: u16) -> Child {
+    let mut cmd = Command::new(path);
 
     // Caves outputs a lot of info, we need to redirect this so that our tests don't pick it up
     // on stdout.
@@ -88,9 +83,22 @@ fn start_caves(port: u16) -> Child {
 
 #[tokio::main]
 async fn main() {
-    println!("Fetching caves {}", CAVES_VERSION);
-    fetch_caves().await;
-    println!("Fetched caves");
+    let path = std::env::temp_dir().join(Path::new(CAVES_BINARY));
+    if path.exists() {
+        println!(
+            "Found existing caves binary for {} at {}",
+            CAVES_VERSION,
+            path.to_string_lossy()
+        );
+    } else {
+        println!(
+            "Fetching caves {} to {}",
+            CAVES_VERSION,
+            path.to_string_lossy()
+        );
+        fetch_caves(&path).await;
+        println!("Fetched caves");
+    }
 
     let listener = TcpListener::bind("127.0.0.1:0")
         .await
@@ -101,7 +109,7 @@ async fn main() {
         .port();
 
     println!("Caves starting");
-    let mut caves = start_caves(port);
+    let mut caves = start_caves(&path, port);
     println!("Caves started");
 
     let (mut stream, _) = listener

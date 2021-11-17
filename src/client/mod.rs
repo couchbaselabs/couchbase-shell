@@ -5,7 +5,11 @@ pub use crate::client::http_client::{
     ServiceType,
 };
 pub use crate::client::http_handler::HttpResponse;
-pub use crate::client::kv_client::{KeyValueRequest, KvClient};
+pub use crate::client::kv_client::{KeyValueRequest, KvClient, KvResponse};
+use nu_errors::ShellError;
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
+use tokio::time::Instant;
 
 use crate::config::ClusterTlsConfig;
 use trust_dns_resolver::config::{ResolverConfig, ResolverOpts};
@@ -34,6 +38,12 @@ impl Client {
         password: String,
         tls_config: ClusterTlsConfig,
     ) -> Self {
+        let seeds = if seeds.len() == 1 {
+            Client::try_lookup_srv(seeds[0].clone()).unwrap_or(seeds)
+        } else {
+            seeds
+        };
+
         Self {
             seeds,
             username,
@@ -43,53 +53,53 @@ impl Client {
     }
 
     pub fn http_client(&self) -> HTTPClient {
-        let mut seeds = self.seeds.clone();
-        if seeds.len() == 1 {
-            if let Ok(s) = Client::try_lookup_srv(seeds[0].clone()) {
-                seeds = s
-            }
-        }
-
         HTTPClient::new(
-            seeds,
+            self.seeds.clone(),
             self.username.clone(),
             self.password.clone(),
             self.tls_config.clone(),
         )
     }
 
-    pub fn key_value_client(&self) -> KvClient {
-        let mut seeds = self.seeds.clone();
-        if seeds.len() == 1 {
-            if let Ok(s) = Client::try_lookup_srv(seeds[0].clone()) {
-                seeds = s
-            }
-        }
-
-        KvClient::new(
-            seeds,
+    pub async fn key_value_client(
+        &self,
+        bucket: String,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<KvClient, ShellError> {
+        KvClient::connect(
+            self.seeds.clone(),
             self.username.clone(),
             self.password.clone(),
             self.tls_config.clone(),
+            bucket,
+            deadline,
+            ctrl_c,
         )
+        .await
+        .map_err(|e| ShellError::unexpected(e.to_string()))
     }
 
     fn try_lookup_srv(addr: String) -> Result<Vec<String>, ClientError> {
+        // NOTE: resolver is going to build its own runtime, which is a pain...
         let resolver =
             Resolver::new(ResolverConfig::default(), ResolverOpts::default()).map_err(|e| {
                 ClientError::RequestFailed {
                     reason: Some(e.to_string()),
+                    key: None,
                 }
             })?;
         let mut address = addr;
         if !address.starts_with("_couchbases._tcp.") {
             address = format!("_couchbases._tcp.{}", address);
         }
+
         let response = match resolver.srv_lookup(address) {
             Ok(k) => k,
             Err(e) => {
                 return Err(ClientError::RequestFailed {
                     reason: Some(e.to_string()),
+                    key: None,
                 })
             }
         };

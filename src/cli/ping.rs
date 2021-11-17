@@ -115,10 +115,13 @@ fn run_ping(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream,
 
         // TODO: do this in parallel to http ops.
         let kv_deadline = Instant::now().add(cluster.timeouts().data_timeout());
-        let mut client = cluster.cluster().key_value_client();
+        let mut client = rt.block_on(cluster.cluster().key_value_client(
+            bucket_name.clone(),
+            kv_deadline,
+            ctrl_c.clone(),
+        ))?;
 
-        let kv_result =
-            rt.block_on(client.ping_all(bucket_name.clone(), kv_deadline, ctrl_c.clone()));
+        let kv_result = rt.block_on(client.ping_all(kv_deadline, ctrl_c.clone()));
         match kv_result {
             Ok(res) => {
                 for ping in res {
