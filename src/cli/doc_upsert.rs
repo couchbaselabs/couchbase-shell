@@ -5,14 +5,17 @@ use super::util::convert_nu_value_to_json_value;
 use crate::state::State;
 
 use crate::cli::util::{cluster_identifiers_from, namespace_from_args};
-use crate::client::KeyValueRequest;
+use crate::client::{ClientError, KeyValueRequest, KvClient, KvResponse};
 use async_trait::async_trait;
+use futures::stream::FuturesUnordered;
+use futures::StreamExt;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
-use nu_protocol::{MaybeOwned, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
+use nu_protocol::{MaybeOwned, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Value};
 use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::collections::HashSet;
+use std::future::Future;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
@@ -86,7 +89,21 @@ impl nu_engine::WholeStreamCommand for DocUpsert {
     }
 }
 
+fn build_req(key: String, value: Vec<u8>, expiry: u32) -> KeyValueRequest {
+    KeyValueRequest::Set { key, value, expiry }
+}
+
 fn run_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+    let results = run_kv_store_ops(state, args, build_req)?;
+
+    Ok(OutputStream::from(results))
+}
+
+pub(crate) fn run_kv_store_ops(
+    state: Arc<Mutex<State>>,
+    args: CommandArgs,
+    req_builder: fn(String, Vec<u8>, u32) -> KeyValueRequest,
+) -> Result<Vec<Value>, ShellError> {
     let ctrl_c = args.ctrl_c();
 
     let id_column = args
@@ -96,6 +113,9 @@ fn run_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
     let content_column = args
         .get_flag("content-column")?
         .unwrap_or_else(|| String::from("content"));
+
+    let expiry: i32 = args.get_flag("expiry")?.unwrap_or(0);
+
     let bucket_flag = args.get_flag("bucket")?;
     let scope_flag = args.get_flag("scope")?;
     let collection_flag = args.get_flag("collection")?;
@@ -103,8 +123,6 @@ fn run_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
 
     let guard = state.lock().unwrap();
-
-    let expiry: i32 = args.get_flag("expiry")?.unwrap_or(0);
 
     let input_args = if let Some(id) = args.opt::<String>(0)? {
         if let Some(content) = args.opt::<String>(1)? {
@@ -139,10 +157,7 @@ fn run_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
         None
     });
 
-    let mut all_items = vec![];
-    for item in filtered.chain(input_args).into_iter() {
-        all_items.push((item.0, item.1));
-    }
+    let all_items = build_batched_kv_items(500, filtered.chain(input_args));
 
     let rt = Runtime::new().unwrap();
 
@@ -161,42 +176,60 @@ fn run_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
             collection_flag.clone(),
             active_cluster,
         )?;
-        let mut client = active_cluster.cluster().key_value_client();
+        let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
+        let mut client = rt.block_on(active_cluster.cluster().key_value_client(
+            bucket.clone(),
+            deadline,
+            ctrl_c.clone(),
+        ))?;
 
+        if KvClient::is_non_default_scope_collection(scope.clone(), collection.clone()) {
+            let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
+            rt.block_on(client.fetch_collections_manifest(deadline, ctrl_c.clone()))
+                .map_err(|e| ShellError::unexpected(e.to_string()))?;
+        }
+
+        let client = Arc::new(client);
+
+        let mut workers = FuturesUnordered::new();
         let mut success = 0;
         let mut failed = 0;
         let mut fail_reasons: HashSet<String> = HashSet::new();
-        for item in all_items.clone() {
-            let value = match serde_json::to_vec(&item.1) {
-                Ok(v) => v,
-                Err(e) => {
-                    return Err(ShellError::unexpected(e.to_string()));
-                }
-            };
+        for items in all_items.clone() {
+            for item in items.clone() {
+                let value = match serde_json::to_vec(&item.1) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        return Err(ShellError::unexpected(e.to_string()));
+                    }
+                };
 
-            let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
-            let result = rt
-                .block_on(client.request(
-                    KeyValueRequest::Set {
-                        key: item.0,
-                        value,
-                        expiry: expiry as u32,
-                    },
-                    bucket.clone(),
-                    scope.clone(),
-                    collection.clone(),
-                    deadline,
-                    ctrl_c.clone(),
-                ))
-                .map_err(|e| ShellError::unexpected(e.to_string()));
+                let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
 
-            match result {
-                Ok(_) => success += 1,
-                Err(e) => {
-                    failed += 1;
-                    fail_reasons.insert(e.to_string());
-                }
-            };
+                let scope = scope.clone();
+                let collection = collection.clone();
+                let ctrl_c = ctrl_c.clone();
+
+                let client = client.clone();
+
+                workers.push(async move {
+                    client
+                        .request(
+                            req_builder(item.0, value, expiry as u32),
+                            scope,
+                            collection,
+                            deadline,
+                            ctrl_c,
+                        )
+                        .await
+                });
+            }
+            let worked = process_kv_workers(workers, &rt);
+
+            success += worked.success;
+            failed += worked.failed;
+            fail_reasons.extend(worked.fail_reasons);
+            workers = FuturesUnordered::new()
         }
 
         let tag = Tag::default();
@@ -219,5 +252,61 @@ fn run_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
         results.push(collected.into_value());
     }
 
-    Ok(OutputStream::from(results))
+    Ok(results)
+}
+
+pub(crate) struct WorkerResponse {
+    pub(crate) success: i32,
+    pub(crate) failed: i32,
+    pub(crate) fail_reasons: HashSet<String>,
+}
+
+pub(crate) fn process_kv_workers(
+    mut workers: FuturesUnordered<impl Future<Output = Result<KvResponse, ClientError>>>,
+    rt: &Runtime,
+) -> WorkerResponse {
+    let (success, failed, fail_reasons) = rt.block_on(async {
+        let mut success = 0;
+        let mut failed = 0;
+        let mut fail_reasons: HashSet<String> = HashSet::new();
+        while let Some(result) = workers.next().await {
+            match result {
+                Ok(_) => success += 1,
+                Err(e) => {
+                    failed += 1;
+                    fail_reasons.insert(e.to_string());
+                }
+            }
+        }
+        (success, failed, fail_reasons)
+    });
+
+    WorkerResponse {
+        success,
+        failed,
+        fail_reasons,
+    }
+}
+
+pub(crate) fn build_batched_kv_items<T>(
+    batch_size: u32,
+    items: impl IntoIterator<Item = T>,
+) -> Vec<Vec<T>> {
+    let mut all_items = vec![];
+    let mut these_items = vec![];
+    let mut i = 0;
+    for item in items.into_iter() {
+        these_items.push(item);
+        if i == batch_size {
+            all_items.push(these_items);
+            these_items = vec![];
+            i = 0;
+            continue;
+        }
+
+        i += 1;
+    }
+    all_items.push(these_items);
+
+    all_items
 }

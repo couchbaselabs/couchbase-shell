@@ -4,7 +4,9 @@ use super::util::convert_json_value_to_nu_value;
 use crate::state::State;
 
 use crate::cli::util::cluster_identifiers_from;
-use crate::client::KeyValueRequest;
+use crate::client::{KeyValueRequest, KvClient};
+use futures::stream::FuturesUnordered;
+use futures::StreamExt;
 use log::debug;
 use nu_engine::{CommandArgs, Example};
 use nu_errors::ShellError;
@@ -112,6 +114,25 @@ fn run_get(state: Arc<Mutex<State>>, mut args: CommandArgs) -> Result<OutputStre
         ids.push(id);
     }
 
+    let batch_size = 500;
+
+    let mut all_ids = vec![];
+    let mut these_ids = vec![];
+    let mut i = 0;
+    for id in ids.clone() {
+        these_ids.push(id);
+        if i == batch_size {
+            all_ids.push(these_ids);
+            these_ids = vec![];
+            i = 0;
+            continue;
+        }
+
+        i += 1;
+    }
+    all_ids.push(these_ids);
+
+    let mut workers = FuturesUnordered::new();
     let guard = state.lock().unwrap();
 
     let mut results = vec![];
@@ -152,46 +173,85 @@ fn run_get(state: Arc<Mutex<State>>, mut args: CommandArgs) -> Result<OutputStre
         debug!("Running kv get for docs {:?}", &ids);
 
         let rt = Runtime::new().unwrap();
-        let mut client = active_cluster.cluster().key_value_client();
-        for id in ids.clone() {
-            let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
-            let response = rt.block_on(client.request(
-                KeyValueRequest::Get { key: id.clone() },
-                bucket.clone(),
-                scope.clone(),
-                collection.clone(),
-                deadline,
-                ctrl_c.clone(),
-            ));
+        let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
+        let mut client = rt.block_on(active_cluster.cluster().key_value_client(
+            bucket.clone(),
+            deadline,
+            ctrl_c.clone(),
+        ))?;
 
-            match response {
-                Ok(mut res) => {
-                    let tag = Tag::default();
-                    let mut collected = TaggedDictBuilder::new(&tag);
-                    collected.insert_value(&id_column, id.clone());
-                    collected.insert_value(
-                        "cas",
-                        UntaggedValue::int(res.cas() as i64).into_untagged_value(),
-                    );
-                    let content = res.content().unwrap();
-                    let content_converted =
-                        convert_json_value_to_nu_value(&content, Tag::default())?;
-                    collected.insert_value("content", content_converted);
-                    collected.insert_value("error", "".to_string());
-                    collected.insert_value("cluster", identifier.clone());
-                    results.push(collected.into_value());
-                }
-                Err(e) => {
-                    let tag = Tag::default();
-                    let mut collected = TaggedDictBuilder::new(&tag);
-                    collected.insert_value(&id_column, id.clone());
-                    collected.insert_value("cas", "".to_string());
-                    collected.insert_value("content", "".to_string());
-                    collected.insert_value("error", e.to_string());
-                    collected.insert_value("cluster", identifier.clone());
-                    results.push(collected.into_value());
-                }
+        if KvClient::is_non_default_scope_collection(scope.clone(), collection.clone()) {
+            let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
+            rt.block_on(client.fetch_collections_manifest(deadline, ctrl_c.clone()))
+                .map_err(|e| ShellError::unexpected(e.to_string()))?;
+        }
+
+        let client = Arc::new(client);
+
+        for ids in all_ids.clone() {
+            for id in ids {
+                let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
+
+                let scope = scope.clone();
+                let collection = collection.clone();
+                let ctrl_c = ctrl_c.clone();
+                let id = id.clone();
+
+                let client = client.clone();
+
+                workers.push(async move {
+                    client
+                        .request(
+                            KeyValueRequest::Get { key: id },
+                            scope,
+                            collection,
+                            deadline,
+                            ctrl_c,
+                        )
+                        .await
+                });
             }
+            rt.block_on(async {
+                while let Some(response) = workers.next().await {
+                    match response {
+                        Ok(mut res) => {
+                            let tag = Tag::default();
+                            let mut collected = TaggedDictBuilder::new(&tag);
+                            collected.insert_value(&id_column, res.key());
+                            collected.insert_value(
+                                "cas",
+                                UntaggedValue::int(res.cas() as i64).into_untagged_value(),
+                            );
+                            let content = res.content().unwrap();
+                            match convert_json_value_to_nu_value(&content, Tag::default()) {
+                                Ok(c) => {
+                                    collected.insert_value("content", c);
+                                    collected.insert_value("error", "".to_string());
+                                }
+                                Err(e) => {
+                                    collected.insert_value("content", "".to_string());
+                                    collected.insert_value("error", e.to_string());
+                                }
+                            }
+                            collected.insert_value("cluster", identifier.clone());
+                            results.push(collected.into_value());
+                        }
+                        Err(e) => {
+                            let tag = Tag::default();
+                            let mut collected = TaggedDictBuilder::new(&tag);
+                            collected.insert_value(
+                                &id_column,
+                                e.key().unwrap_or_else(|| "".to_string()),
+                            );
+                            collected.insert_value("cas", "".to_string());
+                            collected.insert_value("content", "".to_string());
+                            collected.insert_value("error", e.to_string());
+                            collected.insert_value("cluster", identifier.clone());
+                            results.push(collected.into_value());
+                        }
+                    }
+                }
+            });
         }
     }
 

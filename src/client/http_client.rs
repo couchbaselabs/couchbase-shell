@@ -60,6 +60,7 @@ impl HTTPClient {
                     .parse::<i32>()
                     .map_err(|e| ClientError::RequestFailed {
                         reason: Some(e.to_string()),
+                        key: None,
                     })?;
             }
 
@@ -232,6 +233,7 @@ impl HTTPClient {
 
             Err(ClientError::RequestFailed {
                 reason: Some("No nodes found for service".to_string()),
+                key: None,
             })
         })
     }
@@ -265,6 +267,7 @@ impl HTTPClient {
                     _ => {
                         return Err(ClientError::RequestFailed {
                             reason: Some("Method not allowed for queries".into()),
+                            key: None,
                         });
                     }
                 };
@@ -274,6 +277,7 @@ impl HTTPClient {
 
             Err(ClientError::RequestFailed {
                 reason: Some("No nodes found for service".to_string()),
+                key: None,
             })
         })
     }
@@ -307,6 +311,7 @@ impl HTTPClient {
                     _ => {
                         return Err(ClientError::RequestFailed {
                             reason: Some("Method not allowed for analytics queries".into()),
+                            key: None,
                         });
                     }
                 };
@@ -316,6 +321,7 @@ impl HTTPClient {
 
             Err(ClientError::RequestFailed {
                 reason: Some("No nodes found for service".to_string()),
+                key: None,
             })
         })
     }
@@ -348,6 +354,7 @@ impl HTTPClient {
                     _ => {
                         return Err(ClientError::RequestFailed {
                             reason: Some("Method not allowed for analytics queries".into()),
+                            key: None,
                         });
                     }
                 };
@@ -357,6 +364,7 @@ impl HTTPClient {
 
             Err(ClientError::RequestFailed {
                 reason: Some("No nodes found for service".to_string()),
+                key: None,
             })
         })
     }
