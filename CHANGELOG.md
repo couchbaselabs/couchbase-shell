@@ -2,6 +2,11 @@
 
 All user visible changes to this project will be documented in this file.
 
+## 1.0.0-beta.3 - 2021-11-22
+
+- Nushell pinned to 0.40
+- Added support for batching `docs` operations.
+
 ## 1.0.0-beta.2 - 2021-10-18
 
  - Nushell pinned to 0.38
