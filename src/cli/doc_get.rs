@@ -3,8 +3,9 @@
 use super::util::convert_json_value_to_nu_value;
 use crate::state::State;
 
+use crate::cli::doc_upsert::{build_batched_kv_items, prime_manifest_if_required};
 use crate::cli::util::cluster_identifiers_from;
-use crate::client::{KeyValueRequest, KvClient};
+use crate::client::KeyValueRequest;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use log::debug;
@@ -63,6 +64,12 @@ impl nu_engine::WholeStreamCommand for DocGet {
                 "the clusters which should be contacted",
                 None,
             )
+            .named(
+                "batch-size",
+                SyntaxShape::Number,
+                "the maximum number of items to batch send at a time",
+                None,
+            )
     }
 
     fn usage(&self) -> &str {
@@ -93,47 +100,17 @@ fn run_get(state: Arc<Mutex<State>>, mut args: CommandArgs) -> Result<OutputStre
     let ctrl_c = args.ctrl_c();
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
+    let batch_size: Option<i32> = args.get_flag("batch-size")?;
     let id_column: String = args.get_flag("id-column")?.unwrap_or_else(|| "id".into());
-    let mut ids = vec![];
-    while let Some(item) = args.input.next() {
-        let untagged = item.into();
-        match untagged {
-            UntaggedValue::Primitive(Primitive::String(s)) => ids.push(s.clone()),
-            UntaggedValue::Row(d) => {
-                if let MaybeOwned::Borrowed(d) = d.get_data(id_column.as_ref()) {
-                    let untagged = &d.value;
-                    if let UntaggedValue::Primitive(Primitive::String(s)) = untagged {
-                        ids.push(s.clone())
-                    }
-                }
-            }
-            _ => {}
-        }
-    }
-    if let Some(id) = args.opt(0)? {
-        ids.push(id);
-    }
-
-    let batch_size = 500;
-
-    let mut all_ids = vec![];
-    let mut these_ids = vec![];
-    let mut i = 0;
-    for id in ids.clone() {
-        these_ids.push(id);
-        if i == batch_size {
-            all_ids.push(these_ids);
-            these_ids = vec![];
-            i = 0;
-            continue;
-        }
-
-        i += 1;
-    }
-    all_ids.push(these_ids);
+    let ids = ids_from_input(&mut args, id_column.clone())?;
 
     let mut workers = FuturesUnordered::new();
     let guard = state.lock().unwrap();
+
+    let mut all_ids: Vec<Vec<String>> = vec![];
+    if let Some(size) = batch_size {
+        all_ids = build_batched_kv_items(size as u32, ids.clone());
+    }
 
     let mut results = vec![];
     for identifier in cluster_identifiers {
@@ -170,6 +147,10 @@ fn run_get(state: Arc<Mutex<State>>, mut args: CommandArgs) -> Result<OutputStre
             },
         };
 
+        if all_ids.is_empty() {
+            all_ids = build_batched_kv_items(active_cluster.kv_batch_size(), ids.clone());
+        }
+
         debug!("Running kv get for docs {:?}", &ids);
 
         let rt = Runtime::new().unwrap();
@@ -180,11 +161,14 @@ fn run_get(state: Arc<Mutex<State>>, mut args: CommandArgs) -> Result<OutputStre
             ctrl_c.clone(),
         ))?;
 
-        if KvClient::is_non_default_scope_collection(scope.clone(), collection.clone()) {
-            let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
-            rt.block_on(client.fetch_collections_manifest(deadline, ctrl_c.clone()))
-                .map_err(|e| ShellError::unexpected(e.to_string()))?;
-        }
+        prime_manifest_if_required(
+            &rt,
+            scope.clone(),
+            collection.clone(),
+            ctrl_c.clone(),
+            Instant::now().add(active_cluster.timeouts().data_timeout()),
+            &mut client,
+        )?;
 
         let client = Arc::new(client);
 
@@ -256,4 +240,31 @@ fn run_get(state: Arc<Mutex<State>>, mut args: CommandArgs) -> Result<OutputStre
     }
 
     Ok(OutputStream::from(results))
+}
+
+pub(crate) fn ids_from_input(
+    args: &mut CommandArgs,
+    id_column: String,
+) -> Result<Vec<String>, ShellError> {
+    let mut ids = vec![];
+    for item in &mut args.input {
+        let untagged = item.into();
+        match untagged {
+            UntaggedValue::Primitive(Primitive::String(s)) => ids.push(s.clone()),
+            UntaggedValue::Row(d) => {
+                if let MaybeOwned::Borrowed(d) = d.get_data(id_column.as_ref()) {
+                    let untagged = &d.value;
+                    if let UntaggedValue::Primitive(Primitive::String(s)) = untagged {
+                        ids.push(s.clone())
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    if let Some(id) = args.opt(0)? {
+        ids.push(id);
+    }
+
+    Ok(ids)
 }

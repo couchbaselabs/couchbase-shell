@@ -291,6 +291,7 @@ pub struct RemoteCluster {
     tls_config: ClusterTlsConfig,
     timeouts: ClusterTimeouts,
     cloud_org: Option<String>,
+    kv_batch_size: u32,
 }
 
 impl RemoteCluster {
@@ -304,6 +305,7 @@ impl RemoteCluster {
         tls_config: ClusterTlsConfig,
         timeouts: ClusterTimeouts,
         cloud_org: Option<String>,
+        kv_batch_size: u32,
     ) -> Self {
         Self {
             cluster: Mutex::new(None),
@@ -316,6 +318,7 @@ impl RemoteCluster {
             tls_config,
             timeouts,
             cloud_org,
+            kv_batch_size,
         }
     }
 
@@ -388,6 +391,10 @@ impl RemoteCluster {
 
     pub fn cloud_org(&self) -> Option<String> {
         self.cloud_org.clone()
+    }
+
+    pub fn kv_batch_size(&self) -> u32 {
+        self.kv_batch_size
     }
 }
 

@@ -1,5 +1,6 @@
 use crate::config::{
     CloudConfig, CloudOrganizationConfig, ClusterConfig, ClusterTlsConfig, ShellConfig,
+    DEFAULT_KV_BATCH_SIZE,
 };
 use crate::state::{ClusterTimeouts, RemoteCluster, State};
 use nu_engine::CommandArgs;
@@ -148,6 +149,7 @@ fn clusters_register(
         ),
         ClusterTimeouts::default(),
         cloud,
+        DEFAULT_KV_BATCH_SIZE,
     );
 
     let mut guard = state.lock().unwrap();

@@ -12,6 +12,7 @@ pub(crate) const DEFAULT_QUERY_TIMEOUT: Duration = Duration::from_millis(75000);
 pub(crate) const DEFAULT_ANALYTICS_TIMEOUT: Duration = Duration::from_millis(75000);
 pub(crate) const DEFAULT_SEARCH_TIMEOUT: Duration = Duration::from_millis(75000);
 pub(crate) const DEFAULT_MANAGEMENT_TIMEOUT: Duration = Duration::from_millis(75000);
+pub(crate) const DEFAULT_KV_BATCH_SIZE: u32 = 500;
 
 /// Holds the complete config in an aggregated manner.
 #[derive(Debug, Deserialize, Serialize)]
@@ -246,6 +247,9 @@ pub struct ClusterConfig {
     #[serde(flatten)]
     tls: ClusterTlsConfig,
 
+    #[serde(rename(deserialize = "kv-batch-size", serialize = "kv-batch-size"))]
+    kv_batch_size: Option<u32>,
+
     #[serde(default)]
     #[serde(rename(deserialize = "cloud-organization", serialize = "cloud-organization"))]
     cloud_org: Option<String>,
@@ -300,6 +304,9 @@ impl ClusterConfig {
     pub fn cloud_org(&self) -> Option<String> {
         self.cloud_org.clone()
     }
+    pub fn kv_batch_size(&self) -> Option<u32> {
+        self.kv_batch_size.clone()
+    }
 }
 
 impl From<(String, &RemoteCluster)> for ClusterConfig {
@@ -325,6 +332,7 @@ impl From<(String, &RemoteCluster)> for ClusterConfig {
                 password: Some(cluster.1.password().to_string()),
             },
             cloud_org: cloud,
+            kv_batch_size: Some(cluster.1.kv_batch_size()),
         }
     }
 }

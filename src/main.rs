@@ -7,8 +7,8 @@ mod state;
 mod tutorial;
 
 use crate::config::{
-    ShellConfig, DEFAULT_ANALYTICS_TIMEOUT, DEFAULT_DATA_TIMEOUT, DEFAULT_MANAGEMENT_TIMEOUT,
-    DEFAULT_QUERY_TIMEOUT, DEFAULT_SEARCH_TIMEOUT,
+    ShellConfig, DEFAULT_ANALYTICS_TIMEOUT, DEFAULT_DATA_TIMEOUT, DEFAULT_KV_BATCH_SIZE,
+    DEFAULT_MANAGEMENT_TIMEOUT, DEFAULT_QUERY_TIMEOUT, DEFAULT_SEARCH_TIMEOUT,
 };
 use crate::state::{RemoteCloud, RemoteCloudOrganization, RemoteCluster};
 use crate::{cli::*, state::ClusterTimeouts};
@@ -111,6 +111,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             tls_config,
             ClusterTimeouts::default(),
             None,
+            DEFAULT_KV_BATCH_SIZE,
         );
         clusters.insert("default".into(), cluster);
         String::from("default")
@@ -184,6 +185,10 @@ fn main() -> Result<(), Box<dyn Error>> {
                 Some(t) => t.to_owned(),
                 None => DEFAULT_MANAGEMENT_TIMEOUT,
             };
+            let kv_batch_size = match v.kv_batch_size() {
+                Some(b) => b,
+                None => DEFAULT_KV_BATCH_SIZE,
+            };
 
             let cluster = RemoteCluster::new(
                 validate_hostnames(v.hostnames().clone()),
@@ -201,6 +206,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     management_timeout,
                 ),
                 v.cloud_org(),
+                kv_batch_size,
             );
             if !v.tls().clone().enabled() {
                 warn!(

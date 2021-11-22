@@ -17,6 +17,7 @@ use nu_stream::OutputStream;
 use std::collections::HashSet;
 use std::future::Future;
 use std::ops::Add;
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 use tokio::time::Instant;
@@ -78,6 +79,12 @@ impl nu_engine::WholeStreamCommand for DocUpsert {
                 "the clusters which should be contacted",
                 None,
             )
+            .named(
+                "batch-size",
+                SyntaxShape::Number,
+                "the maximum number of items to batch send at a time",
+                None,
+            )
     }
 
     fn usage(&self) -> &str {
@@ -115,6 +122,7 @@ pub(crate) fn run_kv_store_ops(
         .unwrap_or_else(|| String::from("content"));
 
     let expiry: i32 = args.get_flag("expiry")?.unwrap_or(0);
+    let batch_size: Option<i32> = args.get_flag("batch-size")?;
 
     let bucket_flag = args.get_flag("bucket")?;
     let scope_flag = args.get_flag("scope")?;
@@ -157,7 +165,22 @@ pub(crate) fn run_kv_store_ops(
         None
     });
 
-    let all_items = build_batched_kv_items(500, filtered.chain(input_args));
+    let mut all_items = vec![];
+    for item in filtered.chain(input_args).into_iter() {
+        let value = match serde_json::to_vec(&item.1) {
+            Ok(v) => v,
+            Err(e) => {
+                return Err(ShellError::unexpected(e.to_string()));
+            }
+        };
+
+        all_items.push((item.0, value));
+    }
+
+    let mut all_values = vec![];
+    if let Some(size) = batch_size {
+        all_values = build_batched_kv_items(size as u32, all_items.clone());
+    }
 
     let rt = Runtime::new().unwrap();
 
@@ -183,27 +206,27 @@ pub(crate) fn run_kv_store_ops(
             ctrl_c.clone(),
         ))?;
 
-        if KvClient::is_non_default_scope_collection(scope.clone(), collection.clone()) {
-            let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
-            rt.block_on(client.fetch_collections_manifest(deadline, ctrl_c.clone()))
-                .map_err(|e| ShellError::unexpected(e.to_string()))?;
-        }
+        prime_manifest_if_required(
+            &rt,
+            scope.clone(),
+            collection.clone(),
+            ctrl_c.clone(),
+            Instant::now().add(active_cluster.timeouts().data_timeout()),
+            &mut client,
+        )?;
 
         let client = Arc::new(client);
+
+        if all_values.is_empty() {
+            all_values = build_batched_kv_items(active_cluster.kv_batch_size(), all_items.clone());
+        }
 
         let mut workers = FuturesUnordered::new();
         let mut success = 0;
         let mut failed = 0;
         let mut fail_reasons: HashSet<String> = HashSet::new();
-        for items in all_items.clone() {
+        for items in all_values.clone() {
             for item in items.clone() {
-                let value = match serde_json::to_vec(&item.1) {
-                    Ok(v) => v,
-                    Err(e) => {
-                        return Err(ShellError::unexpected(e.to_string()));
-                    }
-                };
-
                 let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
 
                 let scope = scope.clone();
@@ -215,7 +238,7 @@ pub(crate) fn run_kv_store_ops(
                 workers.push(async move {
                     client
                         .request(
-                            req_builder(item.0, value, expiry as u32),
+                            req_builder(item.0, item.1, expiry as u32),
                             scope,
                             collection,
                             deadline,
@@ -309,4 +332,20 @@ pub(crate) fn build_batched_kv_items<T>(
     all_items.push(these_items);
 
     all_items
+}
+
+pub(crate) fn prime_manifest_if_required(
+    rt: &Runtime,
+    scope: String,
+    collection: String,
+    ctrl_c: Arc<AtomicBool>,
+    deadline: Instant,
+    client: &mut KvClient,
+) -> Result<(), ShellError> {
+    if KvClient::is_non_default_scope_collection(scope, collection) {
+        rt.block_on(client.fetch_collections_manifest(deadline, ctrl_c))
+            .map_err(|e| ShellError::unexpected(e.to_string()))?;
+    }
+
+    Ok(())
 }

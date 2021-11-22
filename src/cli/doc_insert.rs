@@ -67,6 +67,12 @@ impl nu_engine::WholeStreamCommand for DocInsert {
                 "the clusters which should be contacted",
                 None,
             )
+            .named(
+                "batch-size",
+                SyntaxShape::Number,
+                "the maximum number of items to batch send at a time",
+                None,
+            )
     }
 
     fn usage(&self) -> &str {

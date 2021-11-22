@@ -2,14 +2,17 @@
 
 use crate::state::State;
 
-use crate::cli::doc_upsert::{build_batched_kv_items, process_kv_workers};
+use crate::cli::doc_get::ids_from_input;
+use crate::cli::doc_upsert::{
+    build_batched_kv_items, prime_manifest_if_required, process_kv_workers,
+};
 use crate::cli::util::{cluster_identifiers_from, namespace_from_args};
-use crate::client::{KeyValueRequest, KvClient};
+use crate::client::KeyValueRequest;
 use async_trait::async_trait;
 use futures::stream::FuturesUnordered;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
-use nu_protocol::{MaybeOwned, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
+use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
 use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::collections::HashSet;
@@ -62,6 +65,12 @@ impl nu_engine::WholeStreamCommand for DocRemove {
                 "the clusters which should be contacted",
                 None,
             )
+            .named(
+                "batch-size",
+                SyntaxShape::Number,
+                "the maximum number of items to batch send at a time",
+                None,
+            )
     }
 
     fn usage(&self) -> &str {
@@ -73,12 +82,19 @@ impl nu_engine::WholeStreamCommand for DocRemove {
     }
 }
 
-fn run_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
+fn run_get(state: Arc<Mutex<State>>, mut args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
 
     let id_column = args
         .get_flag("id-column")?
         .unwrap_or_else(|| String::from("id"));
+
+    let ids = ids_from_input(&mut args, id_column)?;
+    let batch_size: Option<i32> = args.get_flag("batch-size")?;
+    let mut all_ids: Vec<Vec<String>> = vec![];
+    if let Some(size) = batch_size {
+        all_ids = build_batched_kv_items(size as u32, ids.clone());
+    }
 
     let bucket_flag = args.get_flag("bucket")?;
     let scope_flag = args.get_flag("scope")?;
@@ -87,25 +103,6 @@ fn run_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
 
     let guard = state.lock().unwrap();
-
-    let input_args = if let Some(id) = args.opt::<String>(0)? {
-        vec![id]
-    } else {
-        vec![]
-    };
-
-    let filtered = args.input.filter_map(move |i| {
-        let id_column = id_column.clone();
-
-        if let UntaggedValue::Row(dict) = i.value {
-            if let MaybeOwned::Borrowed(d) = dict.get_data(id_column.as_ref()) {
-                return d.as_string().ok();
-            }
-        }
-        None
-    });
-
-    let all_items = build_batched_kv_items(500, filtered.chain(input_args));
 
     let mut results = vec![];
     for identifier in cluster_identifiers {
@@ -131,10 +128,17 @@ fn run_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, 
             ctrl_c.clone(),
         ))?;
 
-        if KvClient::is_non_default_scope_collection(scope.clone(), collection.clone()) {
-            let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
-            rt.block_on(client.fetch_collections_manifest(deadline, ctrl_c.clone()))
-                .map_err(|e| ShellError::unexpected(e.to_string()))?;
+        prime_manifest_if_required(
+            &rt,
+            scope.clone(),
+            collection.clone(),
+            ctrl_c.clone(),
+            Instant::now().add(active_cluster.timeouts().data_timeout()),
+            &mut client,
+        )?;
+
+        if all_ids.is_empty() {
+            all_ids = build_batched_kv_items(active_cluster.kv_batch_size(), ids.clone());
         }
 
         let client = Arc::new(client);
@@ -143,7 +147,7 @@ fn run_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, 
         let mut success = 0;
         let mut failed = 0;
         let mut fail_reasons: HashSet<String> = HashSet::new();
-        for items in all_items.clone() {
+        for items in all_ids.clone() {
             for item in items.clone() {
                 let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
                 let scope = scope.clone();
