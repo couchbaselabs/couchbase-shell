@@ -54,7 +54,7 @@
 <li><a href="#_version">3.9. <code>version</code></a></li>
 </ul>
 </li>
-<li><a href="#_couchbase_cloud">4. Couchbase Cloud</a>
+<li><a href="#_couchbase_capella_dbaas">4. Couchbase Capella (DBaaS)</a>
 <ul class="sectlevel2">
 <li><a href="#_document_level_commands">4.1. Document Level Commands</a></li>
 <li><a href="#_management_commands">4.2. Management Commands</a></li>
@@ -121,7 +121,7 @@
 <div class="sect2">
 <h3 id="_installation">1.1. Installation</h3>
 <div class="paragraph">
-<p>The current latest version is <strong>1.0.0-beta.2</strong>.</p>
+<p>The current latest version is <strong>1.0.0-beta.3</strong>.</p>
 </div>
 <div class="paragraph">
 <p>There are a couple ways you can get access to <code>cbsh</code>, the easiest one is to download our pre-built binaries for your platform of choice:</p>
@@ -129,13 +129,13 @@
 <div class="ulist">
 <ul>
 <li>
-<p>Linux: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.2/cbsh-1.0.0-beta.2-linux.tar.gz">cbsh-1.0.0-beta.2-linux.tar.gz</a></p>
+<p>Linux: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.3/cbsh-1.0.0-beta.3-linux.tar.gz">cbsh-1.0.0-beta.3-linux.tar.gz</a></p>
 </li>
 <li>
-<p>macOS: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.2/cbsh-1.0.0-beta.2-mac.zip">cbsh-1.0.0-beta.2-mac.zip</a></p>
+<p>macOS: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.3/cbsh-1.0.0-beta.3-mac.zip">cbsh-1.0.0-beta.3-mac.zip</a></p>
 </li>
 <li>
-<p>Windows: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.2/cbsh-1.0.0-beta.2-windows.zip">cbsh-1.0.0-beta.2-windows.zip</a></p>
+<p>Windows: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.3/cbsh-1.0.0-beta.3-windows.zip">cbsh-1.0.0-beta.3-windows.zip</a></p>
 </li>
 </ul>
 </div>
@@ -144,7 +144,7 @@
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>$ unzip cbsh-1.0.0-beta.2-osx.zip
+<pre class="CodeRay highlight"><code>$ unzip cbsh-1.0.0-beta.3-mac.zip
 $ ls
 cbsh  examples  LICENSE  README.md</code></pre>
 </div>
@@ -155,7 +155,7 @@ cbsh  examples  LICENSE  README.md</code></pre>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>❯ ./cbsh --version
-The Couchbase Shell 1.0.0-beta.2</code></pre>
+The Couchbase Shell 1.0.0-beta.3</code></pre>
 </div>
 </div>
 <div class="admonitionblock tip">
@@ -910,8 +910,11 @@ If you have pivot mode (detailed above) turned off then this command can produce
 </div>
 </div>
 <div class="sect1">
-<h2 id="_couchbase_cloud">4. Couchbase Cloud</h2>
+<h2 id="_couchbase_capella_dbaas">4. Couchbase Capella (DBaaS)</h2>
 <div class="sectionbody">
+<div class="paragraph">
+<p><a href="https://cloud.couchbase.com/sign-up?ref=cbsh-web-capella">Couchabse Capella</a> is a Database as a Service offering from Couchbase which you can interact with from Couchbase Shell.</p>
+</div>
 <div class="sect2">
 <h3 id="_document_level_commands">4.1. Document Level Commands</h3>
 <div class="paragraph">
@@ -923,7 +926,7 @@ If you have pivot mode (detailed above) turned off then this command can produce
 <div class="ulist">
 <ul>
 <li>
-<p><a href="https://docs.couchbase.com/cloud/clusters/create-cluster.html">create a cluster</a> in your Couchbase Cloud account</p>
+<p><a href="https://docs.couchbase.com/cloud/clusters/create-cluster.html">create a cluster</a> in your Couchbase Capella account</p>
 </li>
 <li>
 <p>ensure that your <a href="https://docs.couchbase.com/cloud/security/allow-ip-address.html">IP address is whitelisted</a></p>
@@ -941,7 +944,7 @@ If you have pivot mode (detailed above) turned off then this command can produce
 <h3 id="_management_commands">4.2. Management Commands</h3>
 <div class="paragraph">
 <p>Non-cloud specific (i.e. commands not prefixed with <code>clouds</code>) commands (broadly referred to as "management operations") require a specific section to be added to the <code>config</code> file as well as an extra entry in the relevant cluster section.
-Before being able to perform management operations against Couchbase Cloud you must <a href="https://docs.couchbase.com/cloud/public-api-guide/using-cloud-public-api.html#access-and-secret-keys">generate access and secret keys</a> to enable Couchbase Shell to interact with your cloud.</p>
+Before being able to perform management operations against Couchbase Capella you must <a href="https://docs.couchbase.com/cloud/public-api-guide/using-cloud-public-api.html#access-and-secret-keys">generate access and secret keys</a> to enable Couchbase Shell to interact with your cloud.</p>
 </div>
 </div>
 <div class="sect2">
@@ -998,8 +1001,8 @@ secret-key = &quot;T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yz
 </div>
 </div>
 <div class="paragraph">
-<p>Note that the identifier of the cluster, and the cloud <strong>must</strong> match the name of the cluster in Couchbase Cloud for management operations to work.
-Also note that some operations are not supported by Couchbase Cloud.</p>
+<p>Note that the identifier of the cluster, and the cloud <strong>must</strong> match the name of the cluster in Couchbase Capella for management operations to work.
+Also note that some operations are not supported by Couchbase Capella.</p>
 </div>
 </div>
 </div>
@@ -1503,7 +1506,7 @@ There are two ways that we can do this.</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2021-11-18 07:01:55 UTC
+Last updated 2021-11-23 09:33:41 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
