@@ -64,6 +64,8 @@ uuid = { version = "0.8", features = ["v4"] }
 nu-test-support = "0.29.0"
 dunce = "1.0.1"
 lazy_static = "1.4.0"
+strum = "0.22.0"
+strum_macros = "0.22"
 
 [[bin]]
 name = "cbsh"
@@ -73,7 +75,7 @@ path = "src/main.rs"
 lto = true
 codegen-units = 1
 
-[[bin]]
-doc=false
-name="runtests"
-path="tests/bin/mod.rs"
+[[test]]
+name = "test"
+path = "tests/integration/main.rs"
+harness = false

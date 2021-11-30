@@ -72,13 +72,13 @@ jobs:
     - name: Build
       run: |
         cargo build --verbose
-        cargo run --bin runtests
+        cargo test
       if: matrix.os == 'ubuntu-18.04'
 
     - name: Build
       run: |
-          cargo build --verbose
-          cargo run --bin runtests
+        cargo build --verbose
+        cargo test
       env:
         VCPKGRS_DYNAMIC: 1
         RUSTFLAGS: -Ctarget-feature=+crt-static
@@ -86,8 +86,8 @@ jobs:
 
     - name: Build
       run: |
-          cargo build --verbose
-          cargo run --bin runtests
+        cargo build --verbose
+        cargo test
       env:
         MACOSX_DEPLOYMENT_TARGET: 10.9
       if: matrix.os == 'macos-latest'
