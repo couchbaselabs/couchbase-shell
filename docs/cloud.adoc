@@ -1,6 +1,40 @@
 == Couchbase Capella (DBaaS)
 
-https://cloud.couchbase.com/sign-up?ref=cbsh-web-capella[Couchabse Capella] is a Database as a Service offering from Couchbase which you can interact with from Couchbase Shell.
+https://cloud.couchbase.com/sign-up?ref=cbsh-web-capella[Couchbase Capella] is a Database as a Service offering from Couchbase which you can interact with from Couchbase Shell.
+
+=== `use`  and the Environment
+
+For general usage of the `use` command see <<_use_and_the_environment>>.
+When using <<_management_commands>> with Couchbase Capella and Couchbase Shell we need to be able to manage more active resources than the base `use` command gives us.
+You can use the `use --cloud` command to see which cloud resources are current active:
+
+```
+> use --cloud
+────────────────────┬─────────────────
+ cloud_organization │ mycloudorg
+ cloud              │ dyncluster-test
+ project            │ mycloudproject
+────────────────────┴────────────────
+```
+
+The active resource can be changed with the `use` command:
+
+```
+> use -h
+Modify the default execution environment of commands
+
+Usage:
+  > use <subcommand> {flags}
+
+Subcommands:
+  use bucket - Sets the active bucket based on its name
+  use cloud - Sets the active cloud based on its identifier
+  use cloud-organization - Sets the active cloud organization based on its identifier
+  use cluster - Sets the active cluster based on its identifier
+  use collection - Sets the active collection based on its name
+  use project - Sets the active project based on its name
+  use scope - Sets the active scope based on its name
+```
 
 === Document Level Commands
 

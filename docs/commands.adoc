@@ -2,100 +2,6 @@
 
 The following sections discuss the individual couchbase specific commands in greater detail. Remember, you can always mix and match them with built-in other shell commands as well as executables from your environment.
 
-=== Preface: the `--clusters` flag
-
-On many commands, you will notice a flag called `--clusters`. This flag allows you to run the specific command not just against the active cluster, but rather against a group of clusters that the shell knows about. The argument for this flag is an identifier combined with a regular expression. So imagine you have three clusters setup with the following identifiers:
-
-```
-> clusters | get identifier
-───┬────────
- 0 │ prod-us-west
- 1 │ prod-us-east
- 2 │ prod-eu-center
- 3 │ local-test
-───┴────────
-```
-
-If you wanted to run a command against all clusters in `prod-us`, you could use `--clusters prod-us.*`. In the background this gets passed to a regex engine, so you can go a little crazy with it if needed.
-
-
-=== Preface: pivot mode
-
-Sometimes data is easier to see if the table is pivoted so that the columns become rows and rows become columns.
-For example the `nodes` command detailed below, by default the output will look like:
-
-```
-> nodes
-───┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────
- # │ cluster │ hostnam │ status  │ service │ version │   os    │ memory_ │ memory_
-   │         │    e    │         │    s    │         │         │  total  │  free
-───┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────
- 0 │ local   │ 127.0.0 │ healthy │ analyti │ 6.5.1-6 │ x86_64- │ 34.4 GB │  8.4 GB
-   │         │ .1:8091 │         │ cs,even │ 299-ent │ apple-d │         │
-   │         │         │         │ ting,se │ erprise │ arwin17 │         │
-   │         │         │         │ arch,in │         │ .7.0    │         │
-   │         │         │         │ dexing, │         │         │         │
-   │         │         │         │ kv,quer │         │         │         │
-   │         │         │         │ y       │         │         │         │
-───┴─────────┴─────────┴─────────┴─────────┴─────────┴─────────┴─────────┴─────────
-```
-
-This is easier to see if the table is pivoted to:
-
-```
-> nodes
-──────────────┬─────────────────────────────────────────────
- cluster      │ local
- hostname     │ 127.0.0.1:8091
- status       │ healthy
- services     │ analytics,eventing,search,indexing,kv,query
- version      │ 6.5.1-6299-enterprise
- os           │ x86_64-apple-darwin17.7.0
- memory_total │ 34.4 GB
- memory_free  │ 8.4 GB
-──────────────┴─────────────────────────────────────────────
-```
-
-Nushell offers a couple of ways to set pivoting mode:
-
- * `config set pivot_mode off` this is the default setting where pivoting is turned off.
- * `config set pivot_mode auto` (*recommended*) will allow Nushell to determine when to apply pivoting (typically when there is only one row in the results).
- * `config set pivot_mode always` will cause tables to always be pivoted.
-
-
-=== `use` and the Environment
-
-While mulitple clusters can be connected at the same time, there is only ever one cluster (at most) active. The same is true for a bucket inside that cluster.
-
-You can run the `use` command, which will tell you which cluster and bucket are currently active (you are also able to tell from the prompt):
-
-```
-> use
-─────────┬───────────────
- cluster │ local         
- bucket  │ travel-sample 
-─────────┴───────────────
-```
-
-Changing the active cluster is done via `use cluster`, and changing the active bucket via `use bucket`:
-
-```
-> use bucket beer-sample
-────────┬─────────────
- bucket │ beer-sample 
-────────┴─────────────
-```
-
-```
-> use
-─────────┬─────────────
- cluster │ local       
- bucket  │ beer-sample 
-─────────┴─────────────
-```
-
-Both the output of `use` and the prompt will reflect the changes.
-
 === Working with `clusters`
 
 The `clusters` command lists all the clusters you specified in your configuration and the shell might be connected to.
@@ -162,6 +68,152 @@ As an advanced command, it is also possible to get the configuration for a bucke
 
 If you are unsure what you would use this for, you probably don't need it.
 If you have pivot mode (detailed above) turned off then this command can produce results that are difficult to read.
+
+=== Working with `scopes` and `collections`
+
+The `scopes` and `collections` commands can be used for managing scopes and collection respectively.
+
+==== Scopes
+
+```
+> scopes -h
+Fetches scopes through the HTTP API
+
+Usage:
+  > scopes <subcommand> {flags}
+
+Subcommands:
+  scopes create - Creates scopes through the HTTP API
+  scopes drop - Deletes scopes through the HTTP API
+
+Flags:
+  -h, --help: Display this help message
+  --bucket <string>: the name of the bucket
+  --clusters <string>: the clusters to query against
+```
+
+To list all scopes in the bucket you would use:
+
+```
+> scopes
+───┬─────────────────┬──────────────
+ # │      scope      │   cluster
+───┼─────────────────┼──────────────
+ 0 │ inventory       │ prod-us-west
+ 1 │ tenant_agent_00 │ prod-us-west
+ 2 │ tenant_agent_01 │ prod-us-west
+ 3 │ tenant_agent_02 │ prod-us-west
+ 4 │ tenant_agent_03 │ prod-us-west
+ 5 │ tenant_agent_04 │ prod-us-west
+ 6 │ _default        │ prod-us-west
+───┴─────────────────┴──────────────
+```
+
+You can also create and remove scopes:
+
+```
+> scopes create tenant_agent_05
+> scopes
+───┬─────────────────┬──────────────
+# │      scope      │   cluster
+───┼─────────────────┼──────────────
+0 │ tenant_agent_05 │ prod-us-west
+1 │ inventory       │ prod-us-west
+2 │ tenant_agent_00 │ prod-us-west
+3 │ tenant_agent_01 │ prod-us-west
+4 │ tenant_agent_02 │ prod-us-west
+5 │ tenant_agent_03 │ prod-us-west
+6 │ tenant_agent_04 │ prod-us-west
+7 │ _default        │ prod-us-west
+───┴─────────────────┴──────────────
+```
+
+```
+> scopes drop tenant_agent_05
+> scopes
+───┬─────────────────┬──────────────
+ # │      scope      │   cluster
+───┼─────────────────┼──────────────
+ 0 │ inventory       │ prod-us-west
+ 1 │ tenant_agent_00 │ prod-us-west
+ 2 │ tenant_agent_01 │ prod-us-west
+ 3 │ tenant_agent_02 │ prod-us-west
+ 4 │ tenant_agent_03 │ prod-us-west
+ 5 │ tenant_agent_04 │ prod-us-west
+ 6 │ _default        │ prod-us-west
+───┴─────────────────┴──────────────
+```
+
+==== Collections
+
+```
+> collections -h
+Fetches collections through the HTTP API
+
+Usage:
+  > collections <subcommand> {flags}
+
+Subcommands:
+  collections create - Creates collections through the HTTP API
+  collections drop - Deletes collections through the HTTP API
+
+Flags:
+  -h, --help: Display this help message
+  --bucket <string>: the name of the bucket
+  --scope <string>: the name of the scope
+  --clusters <string>: the clusters to query against
+```
+
+To list all collection in the bucket you would use:
+
+```
+> collections
+────┬─────────────────┬────────────┬────────────┬──────────────
+ #  │      scope      │ collection │ max_expiry │   cluster
+────┼─────────────────┼────────────┼────────────┼──────────────
+  0 │ inventory       │ hotel      │ 0sec       │ prod-us-west
+  1 │ inventory       │ airport    │ 0sec       │ prod-us-west
+  2 │ inventory       │ airline    │ 0sec       │ prod-us-west
+  3 │ inventory       │ route      │ 0sec       │ prod-us-west
+  4 │ inventory       │ landmark   │ 0sec       │ prod-us-west
+  5 │ tenant_agent_00 │ users      │ 0sec       │ prod-us-west
+  6 │ tenant_agent_00 │ bookings   │ 0sec       │ prod-us-west
+  7 │ tenant_agent_01 │ bookings   │ 0sec       │ prod-us-west
+  8 │ tenant_agent_01 │ users      │ 0sec       │ prod-us-west
+  9 │ tenant_agent_02 │ users      │ 0sec       │ prod-us-west
+ 10 │ tenant_agent_02 │ bookings   │ 0sec       │ prod-us-west
+ 11 │ tenant_agent_03 │ users      │ 0sec       │ prod-us-west
+ 12 │ tenant_agent_03 │ bookings   │ 0sec       │ prod-us-west
+ 13 │ tenant_agent_04 │ bookings   │ 0sec       │ prod-us-west
+ 14 │ tenant_agent_04 │ users      │ 0sec       │ prod-us-west
+ 15 │ _default        │ _default   │ 0sec       │ prod-us-west
+────┴─────────────────┴────────────┴────────────┴──────────────
+```
+
+You can also create and remove collections:
+
+```
+> collections create staff --scope tenant_agent_00
+> collections --scope tenant_agent_00
+───┬─────────────────┬────────────┬────────────┬──────────────
+ # │      scope      │ collection │ max_expiry │   cluster
+───┼─────────────────┼────────────┼────────────┼──────────────
+ 0 │ tenant_agent_00 │ staff      │ 0sec       │ prod-us-west
+ 1 │ tenant_agent_00 │ users      │ 0sec       │ prod-us-west
+ 2 │ tenant_agent_00 │ bookings   │ 0sec       │ prod-us-west
+───┴─────────────────┴────────────┴────────────┴──────────────
+```
+
+```
+> collections drop staff --scope tenant_agent_00
+> collections --scope tenant_agent_00
+───┬─────────────────┬────────────┬────────────┬──────────────
+ # │      scope      │ collection │ max_expiry │   cluster
+───┼─────────────────┼────────────┼────────────┼──────────────
+ 0 │ tenant_agent_00 │ users      │ 0sec       │ prod-us-west
+ 1 │ tenant_agent_00 │ bookings   │ 0sec       │ prod-us-west
+───┴─────────────────┴────────────┴────────────┴──────────────
+```
 
 === Listing `nodes`
 

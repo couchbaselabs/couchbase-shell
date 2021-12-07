@@ -1,0 +1,125 @@
+== `use` and the Environment
+
+While multiple clusters can be connected at the same time, there is only ever one cluster (at most) active.
+The same is true for buckets, scopes, and collections.
+When a resource is active then it used as the default to run commands against (this can be overridden on a per command basis).
+
+You can run the `use` command, which will tell you which resources are currently active (you are also able to tell from the prompt):
+
+```
+> use
+────────────┬───────────────
+ username   │ Susan
+ cluster    │ dev.local
+ bucket     │ travel-sample
+ scope      │ inventory
+ collection │ hotel
+────────────┴───────────────
+```
+
+If you were to now run a command then we would be running it:
+
+* As the user "Susan"
+* Against the "dev.local" cluster
+* Against the "travel-sample" bucket
+* Against the "inventory" scope
+* Against the "hotel" collection
+
+You can also change the active resources with the `use` command.
+(Note there are extra resources listed here, see <<cloud.adoc#_use_and_the_environment>> for more information on these)
+
+```
+> use -h
+Modify the default execution environment of commands
+
+Usage:
+  > use <subcommand> {flags}
+
+Subcommands:
+  use bucket - Sets the active bucket based on its name
+  use cloud - Sets the active cloud based on its identifier
+  use cloud-organization - Sets the active cloud organization based on its identifier
+  use cluster - Sets the active cluster based on its identifier
+  use collection - Sets the active collection based on its name
+  use project - Sets the active project based on its name
+  use scope - Sets the active scope based on its name
+```
+
+For example if you change the active bucket:
+
+```
+> use bucket beer-sample
+────────┬─────────────
+ bucket │ beer-sample
+────────┴─────────────
+```
+
+```
+> use
+────────────┬─────────────
+ username   │ Susan
+ cluster    │ dev.local
+ bucket     │ beer-sample
+ scope      │ inventory
+ collection │ hotel
+────────────┴─────────────
+```
+
+Both the output of `use` and the prompt will reflect the changes.
+
+=== `Use`ing different execution environments
+
+On many commands you will notice a set of flags which allow you to override the active execution environment.
+Different commands support different flags, depending on the command you can expect to see any of:
+
+* `--clusters`
+* `--bucket`
+* `--scope`
+* `--collection`
+
+==== The `--clusters` flag
+
+The argument for this flag is an identifier combined with a regular expression.
+So imagine you have three clusters setup with the following identifiers:
+
+```
+> clusters | get identifier
+───┬────────
+ 0 │ prod-us-west
+ 1 │ prod-us-east
+ 2 │ prod-eu-center
+ 3 │ local-test
+───┴────────
+```
+
+If you wanted to run a command against all clusters in `prod-us`, you could use `--clusters prod-us.*`, e.g.
+
+```
+> buckets --clusters prod-us.*
+───┬──────────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────
+ # │   cluster    │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud
+───┼──────────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────
+ 0 │ prod-us-east │ default       │ couchbase │        1 │ none                 │  268.4 MB │ false         │        │ false
+ 1 │ prod-us-west │ default       │ couchbase │        1 │ none                 │  268.4 MB │ false         │        │ false
+ 2 │ prod-us-west │ travel-sample │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false
+───┴──────────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴────────┴───────
+```
+
+In the background this gets passed to a regex engine, so you can go a little crazy with it if needed.
+
+==== The `--bucket`, `--scope`, `--collection` flags
+
+These flags are a little different to the `--clusters` flag, they are not regular expressions and can only be used to defined a single name each.
+Unlike `--clusters` the name provided to these flags does not have to be already known to Couchbase Shell, they can refer to any bucket, scope, and collection that exist within your active cluster or defined cluster(s).
+For example:
+
+```
+> doc get 1 --bucket travel-sample --scope tenant_agent_00 --collection users
+───┬────┬─────────────────────┬──────────────────┬───────┬──────────────
+ # │ id │         cas         │     content      │ error │   cluster
+───┼────┼─────────────────────┼──────────────────┼───────┼──────────────
+ 0 │ 1  │ 1638870288919035904 │ [row 11 columns] │       │ prod-us-west
+───┴────┴─────────────────────┴──────────────────┴───────┴──────────────
+```
+
+

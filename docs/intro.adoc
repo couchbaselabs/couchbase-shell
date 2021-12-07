@@ -140,6 +140,49 @@ It tells you that your user is `Administrator`, the current active cluster ident
 
 In the second line, your actual user prompt starts.
 
+=== Pivot mode
+
+Sometimes data is easier to see if the table is pivoted so that the columns become rows and rows become columns.
+For example the `nodes` command detailed below, by default the output will look like:
+
+```
+> nodes
+───┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────
+ # │ cluster │ hostnam │ status  │ service │ version │   os    │ memory_ │ memory_
+   │         │    e    │         │    s    │         │         │  total  │  free
+───┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────
+ 0 │ local   │ 127.0.0 │ healthy │ analyti │ 6.5.1-6 │ x86_64- │ 34.4 GB │  8.4 GB
+   │         │ .1:8091 │         │ cs,even │ 299-ent │ apple-d │         │
+   │         │         │         │ ting,se │ erprise │ arwin17 │         │
+   │         │         │         │ arch,in │         │ .7.0    │         │
+   │         │         │         │ dexing, │         │         │         │
+   │         │         │         │ kv,quer │         │         │         │
+   │         │         │         │ y       │         │         │         │
+───┴─────────┴─────────┴─────────┴─────────┴─────────┴─────────┴─────────┴─────────
+```
+
+This is easier to see if the table is pivoted to:
+
+```
+> nodes
+──────────────┬─────────────────────────────────────────────
+ cluster      │ local
+ hostname     │ 127.0.0.1:8091
+ status       │ healthy
+ services     │ analytics,eventing,search,indexing,kv,query
+ version      │ 6.5.1-6299-enterprise
+ os           │ x86_64-apple-darwin17.7.0
+ memory_total │ 34.4 GB
+ memory_free  │ 8.4 GB
+──────────────┴─────────────────────────────────────────────
+```
+
+Nushell offers a couple of ways to set pivoting mode:
+
+* `config set pivot_mode off` this is the default setting where pivoting is turned off.
+* `config set pivot_mode auto` (*recommended*) will allow Nushell to determine when to apply pivoting (typically when there is only one row in the results).
+* `config set pivot_mode always` will cause tables to always be pivoted.
+
 === Loading Data into the Shell
 
 If you want to import data into Couchbase, or just load it into the shell for further processing, there are different commands available to help you. Once the data is loaded into the shell it can be sent to one of the couchbase save commands like `doc upsert`. Depending on the structure of the data, you may also need to tweak it a little bit so it can be properly stored.
