@@ -3,3 +3,5 @@
 include::recipes/importing-data.adoc[]
 
 include::recipes/exporting-data.adoc[]
+
+include::recipes/useful-snippets.adoc[]

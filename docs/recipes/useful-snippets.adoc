@@ -1,0 +1,19 @@
+=== Useful snippets
+
+This section contains a collection of useful commands and sets of commands which don't really fit into their own section of recipes.
+
+==== Migrating scope and collection definitions
+
+When you create a new cluster it can be useful to migrate scope and collection definitions from an old cluster.
+A good example here is migrating from an on-premise cluster to a Capella cluster.
+
+To migrate scopes, except the `_default` scope:
+
+`scopes --clusters "On-Prem-Cluster" --bucket travel-sample | select scope | where scope != "_default" | each { scopes create $it.scope --clusters "Capella-Cluster" }`
+
+To migrate all collections, except the `_default` collection:
+
+`collections --clusters "On-Prem-Cluster" --bucket "travel-sample" | select scope collection | where $it.scope != "_default" | where $it.collection != "_default" | each { collections create $it.collection --clusters "Capella-Cluster" --bucket "travel-sample-import" --scope $it.scope`
+
+These examples can easily be extended to filter out any other scopes and collections you do not want to migrate.
+For example to filter more scopes you would just add more `where` clauses: `... | where scope != "_default" | where scope != "inventory" | ...`
