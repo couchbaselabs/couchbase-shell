@@ -17,3 +17,12 @@ To migrate all collections, except the `_default` collection:
 
 These examples can easily be extended to filter out any other scopes and collections you do not want to migrate.
 For example to filter more scopes you would just add more `where` clauses: `... | where scope != "_default" | where scope != "inventory" | ...`
+
+==== Migrating query index definitions
+
+When you create a new cluster it can be useful to migrate index definitions from an old cluster.
+A good example here is migrating from an on-premise cluster to a Capella cluster.
+
+To migrate all of your index definitions:
+
+`query indexes --definitions --clusters "On-Prem-Cluster" | get definition | each { query $it --clusters "Capella-Cluster" }`
