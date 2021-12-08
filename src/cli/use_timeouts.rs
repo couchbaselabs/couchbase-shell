@@ -27,31 +27,31 @@ impl nu_engine::WholeStreamCommand for UseTimeouts {
     fn signature(&self) -> Signature {
         Signature::build("use timeouts")
             .named(
-                "analytics",
+                "analytics-timeout",
                 SyntaxShape::Int,
                 "the new timeout for analytics queries (in ms)",
                 None,
             )
             .named(
-                "query",
+                "query-timeout",
                 SyntaxShape::Int,
                 "the new timeout for queries (in ms)",
                 None,
             )
             .named(
-                "search",
+                "search-timeout",
                 SyntaxShape::Int,
                 "the new timeout for search queries (in ms)",
                 None,
             )
             .named(
-                "data",
+                "data-timeout",
                 SyntaxShape::Int,
                 "the new timeout for data operations (in ms)",
                 None,
             )
             .named(
-                "management",
+                "management-timeout",
                 SyntaxShape::Int,
                 "the new timeout for management operations (in ms)",
                 None,
@@ -66,11 +66,11 @@ impl nu_engine::WholeStreamCommand for UseTimeouts {
         let guard = self.state.lock().unwrap();
         let active = guard.active_cluster();
 
-        let analytics = args.get_flag("analytics")?;
-        let search = args.get_flag("search")?;
-        let query = args.get_flag("query")?;
-        let data = args.get_flag("data")?;
-        let management = args.get_flag("management")?;
+        let analytics = args.get_flag("analytics-timeout")?;
+        let search = args.get_flag("search-timeout")?;
+        let query = args.get_flag("query-timeout")?;
+        let data = args.get_flag("data-timeout")?;
+        let management = args.get_flag("management-timeout")?;
 
         let mut timeouts = active.timeouts();
 

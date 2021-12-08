@@ -56,7 +56,7 @@ fn use_cmd(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, 
         };
 
         using_now.insert_value(
-            "cloud_organization",
+            "cloud-organization",
             guard
                 .active_cloud_org_name()
                 .unwrap_or_else(|| String::from("")),
@@ -88,29 +88,29 @@ fn use_cmd(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, 
                 .unwrap_or_else(|| String::from("")),
         );
         if let Some(co) = active.cloud_org() {
-            using_now.insert_value("cloud_organization", co);
+            using_now.insert_value("cloud-organization", co);
         }
     }
     if show_timeouts {
         let timeouts = active.timeouts();
         using_now.insert_value(
-            "data_timeout (ms)",
+            "data-timeout (ms)",
             UntaggedValue::int(timeouts.data_timeout().as_millis() as i64),
         );
         using_now.insert_value(
-            "management_timeout (ms)",
+            "management-timeout (ms)",
             UntaggedValue::int(timeouts.management_timeout().as_millis() as i64),
         );
         using_now.insert_value(
-            "analytics_timeout (ms)",
+            "analytics-timeout (ms)",
             UntaggedValue::int(timeouts.analytics_timeout().as_millis() as i64),
         );
         using_now.insert_value(
-            "query_timeout (ms)",
+            "query-timeout (ms)",
             UntaggedValue::int(timeouts.query_timeout().as_millis() as i64),
         );
         using_now.insert_value(
-            "search_timeout (ms)",
+            "search-timeout (ms)",
             UntaggedValue::int(timeouts.search_timeout().as_millis() as i64),
         );
     }
