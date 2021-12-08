@@ -112,6 +112,7 @@
 <li><a href="#_useful_snippets">7.3. Useful snippets</a>
 <ul class="sectlevel3">
 <li><a href="#_migrating_scope_and_collection_definitions">7.3.1. Migrating scope and collection definitions</a></li>
+<li><a href="#_migrating_query_index_definitions">7.3.2. Migrating query index definitions</a></li>
 </ul>
 </li>
 </ul>
@@ -1861,13 +1862,26 @@ A good example here is migrating from an on-premise cluster to a Capella cluster
 For example to filter more scopes you would just add more <code>where</code> clauses: <code>&#8230;&#8203; | where scope != "_default" | where scope != "inventory" | &#8230;&#8203;</code></p>
 </div>
 </div>
+<div class="sect3">
+<h4 id="_migrating_query_index_definitions">7.3.2. Migrating query index definitions</h4>
+<div class="paragraph">
+<p>When you create a new cluster it can be useful to migrate index definitions from an old cluster.
+A good example here is migrating from an on-premise cluster to a Capella cluster.</p>
+</div>
+<div class="paragraph">
+<p>To migrate all of your index definitions:</p>
+</div>
+<div class="paragraph">
+<p><code>query indexes --definitions --clusters "On-Prem-Cluster" | get definition | each { query $it --clusters "Capella-Cluster" }</code></p>
+</div>
+</div>
 </div>
 </div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2021-12-08 08:32:37 UTC
+Last updated 2021-12-08 18:55:05 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
