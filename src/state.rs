@@ -289,7 +289,7 @@ pub struct RemoteCluster {
     active_scope: Mutex<Option<String>>,
     active_collection: Mutex<Option<String>>,
     tls_config: ClusterTlsConfig,
-    timeouts: ClusterTimeouts,
+    timeouts: Mutex<ClusterTimeouts>,
     cloud_org: Option<String>,
     kv_batch_size: u32,
 }
@@ -316,7 +316,7 @@ impl RemoteCluster {
             active_scope: Mutex::new(active_scope),
             active_collection: Mutex::new(active_collection),
             tls_config,
-            timeouts,
+            timeouts: Mutex::new(timeouts),
             cloud_org,
             kv_batch_size,
         }
@@ -385,8 +385,15 @@ impl RemoteCluster {
         &self.tls_config
     }
 
-    pub fn timeouts(&self) -> &ClusterTimeouts {
-        &self.timeouts
+    pub fn timeouts(&self) -> ClusterTimeouts {
+        let active = self.timeouts.lock().unwrap();
+        let x = active.clone();
+        x
+    }
+
+    pub fn set_timeouts(&self, timeouts: ClusterTimeouts) {
+        let mut active = self.timeouts.lock().unwrap();
+        *active = timeouts
     }
 
     pub fn cloud_org(&self) -> Option<String> {
@@ -454,5 +461,25 @@ impl ClusterTimeouts {
 
     pub fn management_timeout(&self) -> Duration {
         self.management_timeout
+    }
+
+    pub fn set_analytics_timeout(&mut self, duration: Duration) {
+        self.analytics_timeout = duration
+    }
+
+    pub fn set_search_timeout(&mut self, duration: Duration) {
+        self.search_timeout = duration
+    }
+
+    pub fn set_query_timeout(&mut self, duration: Duration) {
+        self.query_timeout = duration
+    }
+
+    pub fn set_data_timeout(&mut self, duration: Duration) {
+        self.data_timeout = duration
+    }
+
+    pub fn set_management_timeout(&mut self, duration: Duration) {
+        self.management_timeout = duration
     }
 }

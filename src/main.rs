@@ -336,6 +336,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(UseCollection::new(state.clone())),
         nu_engine::whole_stream_command(UseProject::new(state.clone())),
         nu_engine::whole_stream_command(UseScope::new(state.clone())),
+        nu_engine::whole_stream_command(UseTimeouts::new(state.clone())),
         nu_engine::whole_stream_command(Whoami::new(state)),
         nu_engine::whole_stream_command(Version::new()),
         /*

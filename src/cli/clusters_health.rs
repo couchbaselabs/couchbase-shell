@@ -185,7 +185,7 @@ fn check_resident_ratio(
 fn check_cloud_health(
     identifier: &str,
     cloud: &RemoteCloudOrganization,
-    timeouts: &ClusterTimeouts,
+    timeouts: ClusterTimeouts,
     ctrl_c: Arc<AtomicBool>,
 ) -> Result<Vec<Value>, ShellError> {
     let mut results = Vec::new();
