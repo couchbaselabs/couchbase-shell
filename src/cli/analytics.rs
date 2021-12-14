@@ -1,5 +1,6 @@
 use crate::cli::util::{
     cluster_identifiers_from, convert_json_value_to_nu_value, convert_row_to_nu_value,
+    duration_to_golang_string,
 };
 use crate::client::AnalyticsQueryRequest;
 use crate::state::State;
@@ -96,6 +97,9 @@ fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Shel
                 AnalyticsQueryRequest::Execute {
                     statement: statement.clone(),
                     scope: maybe_scope,
+                    timeout: duration_to_golang_string(
+                        active_cluster.timeouts().analytics_timeout(),
+                    ),
                 },
                 Instant::now().add(active_cluster.timeouts().analytics_timeout()),
                 ctrl_c.clone(),

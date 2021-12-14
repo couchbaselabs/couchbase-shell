@@ -1,4 +1,4 @@
-use crate::cli::util::cluster_identifiers_from;
+use crate::cli::util::{cluster_identifiers_from, duration_to_golang_string};
 use crate::client::SearchQueryRequest;
 use crate::state::State;
 use async_trait::async_trait;
@@ -79,6 +79,7 @@ fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Shel
                 SearchQueryRequest::Execute {
                     query: query.clone(),
                     index: index.clone(),
+                    timeout: duration_to_golang_string(active_cluster.timeouts().search_timeout()),
                 },
                 Instant::now().add(active_cluster.timeouts().search_timeout()),
                 ctrl_c.clone(),

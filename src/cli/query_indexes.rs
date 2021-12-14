@@ -1,4 +1,6 @@
-use crate::cli::util::{cluster_identifiers_from, convert_row_to_nu_value};
+use crate::cli::util::{
+    cluster_identifiers_from, convert_row_to_nu_value, duration_to_golang_string,
+};
 use crate::client::{ManagementRequest, QueryRequest};
 use crate::state::{RemoteCluster, State};
 use log::debug;
@@ -85,6 +87,7 @@ fn indexes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, 
             QueryRequest::Execute {
                 statement: statement.into(),
                 scope: None,
+                timeout: duration_to_golang_string(active_cluster.timeouts().query_timeout()),
             },
             Instant::now().add(active_cluster.timeouts().query_timeout()),
             ctrl_c.clone(),

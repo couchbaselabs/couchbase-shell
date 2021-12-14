@@ -1,4 +1,4 @@
-use crate::cli::util::convert_json_value_to_nu_value;
+use crate::cli::util::{convert_json_value_to_nu_value, duration_to_golang_string};
 use crate::client::QueryRequest;
 use crate::state::State;
 use nu_engine::CommandArgs;
@@ -88,6 +88,7 @@ impl nu_engine::WholeStreamCommand for TransactionsListAtrs {
             QueryRequest::Execute {
                 statement,
                 scope: None,
+                timeout: duration_to_golang_string(active_cluster.timeouts().query_timeout()),
             },
             Instant::now().add(active_cluster.timeouts().management_timeout()),
             ctrl_c,

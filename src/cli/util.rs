@@ -11,6 +11,7 @@ use num_traits::cast::ToPrimitive;
 use regex::Regex;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tokio::time::Instant;
 
 pub fn convert_row_to_nu_value(
@@ -342,4 +343,53 @@ pub(crate) fn find_cloud_cluster_id(
     }
 
     Err(ShellError::unexpected("Cluster could not be found"))
+}
+
+// duration_to_golang_string creates a golang formatted string to use with timeouts. Unlike Golang
+// strings it does not deal with fracational seconds, we do not need that accuracy.
+pub fn duration_to_golang_string(duration: Duration) -> String {
+    let mut total_secs = duration.as_secs();
+    let secs = total_secs % 60;
+    total_secs = total_secs / 60;
+    let mut golang_string = format!("{}s", secs);
+    if total_secs > 0 {
+        let minutes = total_secs % 60;
+        total_secs = total_secs / 60;
+        golang_string = format!("{}m{}", minutes, golang_string);
+        if total_secs > 0 {
+            golang_string = format!("{}h{}", total_secs, golang_string)
+        }
+    }
+
+    golang_string
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::cli::util::duration_to_golang_string;
+    use std::time::Duration;
+
+    #[test]
+    fn duration_to_golang_string_some_seconds() {
+        assert_eq!(
+            "2s".to_string(),
+            duration_to_golang_string(Duration::from_secs(2))
+        );
+    }
+
+    #[test]
+    fn duration_to_golang_string_some_seconds_and_minutes() {
+        assert_eq!(
+            "5m2s".to_string(),
+            duration_to_golang_string(Duration::from_secs(302))
+        );
+    }
+
+    #[test]
+    fn duration_to_golang_string_some_seconds_and_minutes_and_hours() {
+        assert_eq!(
+            "1h5m2s".to_string(),
+            duration_to_golang_string(Duration::from_secs(3902))
+        );
+    }
 }

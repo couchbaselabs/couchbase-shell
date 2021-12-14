@@ -559,6 +559,7 @@ pub enum QueryRequest {
     Execute {
         statement: String,
         scope: Option<(String, String)>,
+        timeout: String,
     },
 }
 
@@ -577,10 +578,15 @@ impl QueryRequest {
 
     pub fn payload(&self) -> Option<Vec<u8>> {
         match self {
-            Self::Execute { statement, scope } => {
+            Self::Execute {
+                statement,
+                scope,
+                timeout,
+            } => {
                 if let Some(scope) = scope {
                     let ctx = format!("`default`:`{}`.`{}`", scope.0, scope.1);
-                    let json = json!({ "statement": statement, "query_context": ctx });
+                    let json =
+                        json!({ "statement": statement, "query_context": ctx, "timeout": timeout });
                     Some(serde_json::to_vec(&json).unwrap())
                 } else {
                     let json = json!({ "statement": statement });
@@ -605,6 +611,7 @@ pub enum AnalyticsQueryRequest {
     Execute {
         statement: String,
         scope: Option<(String, String)>,
+        timeout: String,
     },
     PendingMutations,
 }
@@ -626,10 +633,15 @@ impl AnalyticsQueryRequest {
 
     pub fn payload(&self) -> Option<Vec<u8>> {
         match self {
-            Self::Execute { statement, scope } => {
+            Self::Execute {
+                statement,
+                scope,
+                timeout,
+            } => {
                 if let Some(scope) = scope {
                     let ctx = format!("`default`:`{}`.`{}`", scope.0, scope.1);
-                    let json = json!({ "statement": statement, "query_context": ctx });
+                    let json =
+                        json!({ "statement": statement, "query_context": ctx, "timeout": timeout });
                     Some(serde_json::to_vec(&json).unwrap())
                 } else {
                     let json = json!({ "statement": statement });
@@ -653,7 +665,11 @@ impl AnalyticsQueryRequest {
 }
 
 pub enum SearchQueryRequest {
-    Execute { index: String, query: String },
+    Execute {
+        index: String,
+        query: String,
+        timeout: String,
+    },
 }
 
 impl SearchQueryRequest {
@@ -671,8 +687,8 @@ impl SearchQueryRequest {
 
     pub fn payload(&self) -> Option<Vec<u8>> {
         match self {
-            Self::Execute { query, .. } => {
-                let json = json!({ "query": { "query": query }});
+            Self::Execute { query, timeout, .. } => {
+                let json = json!({ "query": { "query": query }, "ctl": { "timeout": timeout }});
                 Some(serde_json::to_vec(&json).unwrap())
             }
         }
