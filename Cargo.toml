@@ -25,17 +25,17 @@ isahc = "1.3"
 lazy_static = "1.4.0"
 log = "0.4"
 mime_guess = "2.0"
-nu = { version = "0.40.0", features = ["extra"] }
-nu-protocol = { version = "0.40.0" }
-nu-data = { version = "0.40.0" }
-nu-errors = { version = "0.40.0" }
-nu-stream = { version = "0.40.0" }
-nu-source = { version = "0.40.0" }
-nu-cli = { version = "0.40.0" }
-nu-engine = { version = "0.40.0" }
-nu-plugin = { version = "0.40.0" }
-nu_plugin_from_bson = { version = "0.40.0" }
-nu-value-ext = { version = "0.40.0" }
+nu = { version = "0.42.0", features = ["extra"] }
+nu-protocol = { version = "0.42.0" }
+nu-data = { version = "0.42.0" }
+nu-errors = { version = "0.42.0" }
+nu-stream = { version = "0.42.0" }
+nu-source = { version = "0.42.0" }
+nu-cli = { version = "0.42.0" }
+nu-engine = { version = "0.42.0" }
+nu-plugin = { version = "0.42.0" }
+nu_plugin_from_bson = { version = "0.42.0" }
+nu-value-ext = { version = "0.42.0" }
 num-bigint = "0.4"
 num-traits = "0.2.14"
 pretty_env_logger = "0.3"
