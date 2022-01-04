@@ -73,8 +73,7 @@
 <li><a href="#_use_and_the_environment_2">5.1. <code>use</code>  and the Environment</a></li>
 <li><a href="#_document_level_commands">5.2. Document Level Commands</a></li>
 <li><a href="#_management_commands">5.3. Management Commands</a></li>
-<li><a href="#_cloud_commands">5.4. Cloud Commands</a></li>
-<li><a href="#_config_file_format">5.5. Config file format</a></li>
+<li><a href="#_config_file_format">5.4. Config file format</a></li>
 </ul>
 </li>
 <li><a href="#_reference">6. Reference</a>
@@ -672,7 +671,7 @@ Usage:
 Subcommands:
   use bucket - Sets the active bucket based on its name
   use cloud - Sets the active cloud based on its identifier
-  use cloud-organization - Sets the active cloud organization based on its identifier
+  use capella-organization - Sets the active capella organization based on its identifier
   use cluster - Sets the active cluster based on its identifier
   use collection - Sets the active collection based on its name
   use project - Sets the active project based on its name
@@ -735,7 +734,7 @@ So imagine you have three clusters setup with the following identifiers:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; clusters | get identifier
+<pre class="CodeRay highlight"><code>&gt; clusters managed | get identifier
 ───┬────────
  0 │ prod-us-west
  1 │ prod-us-east
@@ -751,7 +750,7 @@ So imagine you have three clusters setup with the following identifiers:</p>
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; buckets --clusters prod-us.*
 ───┬──────────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────
- # │   cluster    │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud
+ # │   cluster    │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ capella
 ───┼──────────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────
  0 │ prod-us-east │ default       │ couchbase │        1 │ none                 │  268.4 MB │ false         │        │ false
  1 │ prod-us-west │ default       │ couchbase │        1 │ none                 │  268.4 MB │ false         │        │ false
@@ -793,11 +792,11 @@ For example:</p>
 <div class="sect2">
 <h3 id="_working_with_clusters">4.1. Working with <code>clusters</code></h3>
 <div class="paragraph">
-<p>The <code>clusters</code> command lists all the clusters you specified in your configuration and the shell might be connected to.</p>
+<p>The <code>clusters managed</code> command lists all the clusters you specified in your configuration and the shell might be connected to.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; clusters
+<pre class="CodeRay highlight"><code>&gt; clusters managed
 ───┬────────┬─────┬────────────┬───────────────
  # │ active │ tls │ identifier │ username
 ───┼────────┼─────┼────────────┼───────────────
@@ -1214,16 +1213,16 @@ Flags:
 <div class="paragraph">
 <p>For general usage of the <code>use</code> command see <a href="#_use_and_the_environment"><code>use</code> and the Environment</a>.
 When using <a href="#_management_commands">Management Commands</a> with Couchbase Capella and Couchbase Shell we need to be able to manage more active resources than the base <code>use</code> command gives us.
-You can use the <code>use --cloud</code> command to see which cloud resources are current active:</p>
+You can use the <code>use --capella</code> command to see which cloud resources are current active:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; use --cloud
-────────────────────┬─────────────────
- cloud_organization │ mycloudorg
- cloud              │ dyncluster-test
- project            │ mycloudproject
-────────────────────┴────────────────</code></pre>
+<pre class="CodeRay highlight"><code>&gt; use --capella
+──────────────────────┬──────────────────
+ capella-organization │ mycapellaorg
+ cloud                │
+ project              │ mycapellaproject
+──────────────────────┴──────────────────</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1240,7 +1239,7 @@ Usage:
 Subcommands:
   use bucket - Sets the active bucket based on its name
   use cloud - Sets the active cloud based on its identifier
-  use cloud-organization - Sets the active cloud organization based on its identifier
+  use capella-organization - Sets the active capella organization based on its identifier
   use cluster - Sets the active cluster based on its identifier
   use collection - Sets the active collection based on its name
   use project - Sets the active project based on its name
@@ -1276,21 +1275,14 @@ Subcommands:
 <div class="sect2">
 <h3 id="_management_commands">5.3. Management Commands</h3>
 <div class="paragraph">
-<p>Non-cloud specific (i.e. commands not prefixed with <code>clouds</code>) commands (broadly referred to as "management operations") require a specific section to be added to the <code>config</code> file as well as an extra entry in the relevant cluster section.
-Before being able to perform management operations against Couchbase Capella you must <a href="https://docs.couchbase.com/cloud/public-api-guide/using-cloud-public-api.html#access-and-secret-keys">generate access and secret keys</a> to enable Couchbase Shell to interact with your cloud.</p>
+<p>Management commands (such as <code>cluster</code> and <code>bucket</code> management) require a specific section to be added to the <code>config</code> file as well as an extra entry in the relevant cluster section.
+Before being able to perform management operations against Couchbase Capella you must <a href="https://docs.couchbase.com/cloud/public-api-guide/using-cloud-public-api.html#access-and-secret-keys">generate access and secret keys</a> to enable Couchbase Shell to interact with your Capella organisation.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_cloud_commands">5.4. Cloud Commands</h3>
+<h3 id="_config_file_format">5.4. Config file format</h3>
 <div class="paragraph">
-<p>Some of the commands that have the <code>clouds</code> prefix require an extra section to be added to the <code>config</code> file.
-The commands that this apply to are any that perform an operation directly against a specific cloud instance.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_config_file_format">5.5. Config file format</h3>
-<div class="paragraph">
-<p>The <code>cloud-organisation</code> and <code>cloud</code> sections in the <code>config</code> file are used as follows:</p>
+<p>The <code>capella-organisation</code> section in the <code>config</code> file is used as follows:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -1307,7 +1299,7 @@ password = &quot;password&quot;
 
 [[cluster]]
 # identifier *must* match the name of the cluster as provided in Couchbase Cloud
-identifier = &quot;cloud&quot;
+identifier = &quot;capellahostedcluster&quot;
 hostnames = [&quot;xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.dp.cloud.couchbase.com&quot;]
 default-bucket = &quot;couchbasecloudbucket&quot;
 username = &quot;dave&quot;
@@ -1317,24 +1309,26 @@ query-timeout = &quot;1m 15s&quot;
 tls-enabled = true
 tls-validate-hostnames = false
 tls-accept-all-certs = true
-cloud-organisation = &quot;org&quot;
+capella-organisation = &quot;myhostedorg&quot;
 
-[[cloud]]
-identifier = &quot;a-cloud&quot;
-default-project = &quot;cloud-project&quot;
-
-[[cloud]]
-identifier = &quot;other-cloud&quot;
-default-project = &quot;cloud-project&quot;
-
-[[cloud-organisation]]
-identifier = &quot;org&quot;
+[[capella-organisation]]
+identifier = &quot;myhostedorg&quot;
 access-key = &quot;x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG&quot;
-secret-key = &quot;T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY&quot;</code></pre>
+secret-key = &quot;T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY&quot;
+default-project = &quot;mydefaultproject&quot;
+# The environment field defaults to &quot;hosted&quot; so we don't have to include it here.
+
+[[capella-organisation]]
+identifier = &quot;myinvpcorg&quot;
+access-key = &quot;x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG&quot;
+secret-key = &quot;T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY&quot;
+default-project = &quot;mydefaultproject&quot;
+default-cloud = &quot;mydefaultcloud&quot;
+environment = &quot;in-vpc&quot;</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Note that the identifier of the cluster, and the cloud <strong>must</strong> match the name of the cluster in Couchbase Capella for management operations to work.
+<p>Note that the identifier of the cluster, and the default-cloud (if applicable) <strong>must</strong> match the corresponding names in Couchbase Capella for management operations to work.
 Also note that some operations are not supported by Couchbase Capella.</p>
 </div>
 </div>
@@ -1881,7 +1875,7 @@ A good example here is migrating from an on-premise cluster to a Capella cluster
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2021-12-08 18:55:05 UTC
+Last updated 2022-01-04 11:16:56 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
