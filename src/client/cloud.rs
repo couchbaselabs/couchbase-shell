@@ -22,12 +22,12 @@ struct LimitedClusterSummary {
     name: String,
 }
 
-pub struct CloudClient {
+pub struct CapellaClient {
     secret_key: String,
     access_key: String,
 }
 
-impl CloudClient {
+impl CapellaClient {
     pub fn new(secret_key: String, access_key: String) -> Self {
         Self {
             secret_key,
@@ -154,7 +154,7 @@ impl CloudClient {
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<String, ClientError> {
-        let request = CloudRequest::GetClusters {};
+        let request = CapellaRequest::GetClusters {};
         let (content, status) = self.http_get(request.path().as_str(), deadline, ctrl_c)?;
 
         if status != 200 {
@@ -177,9 +177,9 @@ impl CloudClient {
         Err(ClientError::ClusterNotFound { name: cluster_name })
     }
 
-    pub fn cloud_request(
+    pub fn capella_request(
         &self,
-        request: CloudRequest,
+        request: CapellaRequest,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<HttpResponse, ClientError> {
@@ -199,7 +199,7 @@ impl CloudClient {
     }
 }
 
-pub enum CloudRequest {
+pub enum CapellaRequest {
     CreateAllowListEntry {
         cluster_id: String,
         payload: String,
@@ -209,6 +209,9 @@ pub enum CloudRequest {
         payload: String,
     },
     CreateCluster {
+        payload: String,
+    },
+    CreateClusterV3 {
         payload: String,
     },
     CreateProject {
@@ -227,6 +230,9 @@ pub enum CloudRequest {
         payload: String,
     },
     DeleteCluster {
+        cluster_id: String,
+    },
+    DeleteClusterV3 {
         cluster_id: String,
     },
     DeleteProject {
@@ -253,10 +259,14 @@ pub enum CloudRequest {
     GetCluster {
         cluster_id: String,
     },
+    GetClusterV3 {
+        cluster_id: String,
+    },
     GetClusterHealth {
         cluster_id: String,
     },
     GetClusters,
+    GetClustersV3,
     // GetClusterStatus {
     //     cluster_id: String,
     // },
@@ -283,7 +293,7 @@ pub enum CloudRequest {
     },
 }
 
-impl CloudRequest {
+impl CapellaRequest {
     pub fn path(&self) -> String {
         match self {
             Self::CreateAllowListEntry { cluster_id, .. } => {
@@ -293,6 +303,7 @@ impl CloudRequest {
                 format!("/v2/clusters/{}/buckets", cluster_id)
             }
             Self::CreateCluster { .. } => "/v2/clusters".into(),
+            Self::CreateClusterV3 { .. } => "/v3/clusters".into(),
             Self::CreateProject { .. } => "/v2/projects".into(),
             Self::CreateUser { cluster_id, .. } => {
                 format!("/v2/clusters/{}/users", cluster_id)
@@ -305,6 +316,9 @@ impl CloudRequest {
             }
             Self::DeleteCluster { cluster_id, .. } => {
                 format!("/v2/clusters/{}", cluster_id)
+            }
+            Self::DeleteClusterV3 { cluster_id, .. } => {
+                format!("/v3/clusters/{}", cluster_id)
             }
             Self::DeleteProject { project_id } => {
                 format!("/v2/projects/{}", project_id)
@@ -335,7 +349,11 @@ impl CloudRequest {
             Self::GetCluster { cluster_id } => {
                 format!("/v2/clusters/{}", cluster_id)
             }
+            Self::GetClusterV3 { cluster_id } => {
+                format!("/v3/clusters/{}", cluster_id)
+            }
             Self::GetClusters => "/v2/clusters".into(),
+            Self::GetClustersV3 => "/v3/clusters".into(),
             // Self::GetClusterStatus { cluster_id } => {
             //     format!("/v2/clusters/{}/status", cluster_id)
             // }
@@ -368,11 +386,13 @@ impl CloudRequest {
             Self::CreateAllowListEntry { .. } => HttpVerb::Post,
             Self::CreateBucket { .. } => HttpVerb::Post,
             Self::CreateCluster { .. } => HttpVerb::Post,
+            Self::CreateClusterV3 { .. } => HttpVerb::Post,
             Self::CreateProject { .. } => HttpVerb::Post,
             Self::CreateUser { .. } => HttpVerb::Post,
             Self::DeleteAllowListEntry { .. } => HttpVerb::Delete,
             Self::DeleteBucket { .. } => HttpVerb::Delete,
             Self::DeleteCluster { .. } => HttpVerb::Delete,
+            Self::DeleteClusterV3 { .. } => HttpVerb::Delete,
             Self::DeleteProject { .. } => HttpVerb::Delete,
             Self::DeleteUser { .. } => HttpVerb::Delete,
             // Self::GetAPIStatus => HttpVerb::Get,
@@ -383,7 +403,9 @@ impl CloudRequest {
             Self::GetClouds => HttpVerb::Get,
             Self::GetClusterHealth { .. } => HttpVerb::Get,
             Self::GetCluster { .. } => HttpVerb::Get,
+            Self::GetClusterV3 { .. } => HttpVerb::Get,
             Self::GetClusters => HttpVerb::Get,
+            Self::GetClustersV3 => HttpVerb::Get,
             // Self::GetClusterStatus { .. } => HttpVerb::Get,
             // Self::GetOrgUsers => HttpVerb::Get,
             // Self::GetProject { .. } => HttpVerb::Get,
@@ -400,6 +422,7 @@ impl CloudRequest {
             Self::CreateAllowListEntry { payload, .. } => Some(payload.as_bytes().into()),
             Self::CreateBucket { payload, .. } => Some(payload.as_bytes().into()),
             Self::CreateCluster { payload, .. } => Some(payload.as_bytes().into()),
+            Self::CreateClusterV3 { payload, .. } => Some(payload.as_bytes().into()),
             Self::CreateProject { payload, .. } => Some(payload.as_bytes().into()),
             Self::CreateUser { payload, .. } => Some(payload.as_bytes().into()),
             Self::DeleteAllowListEntry { payload, .. } => Some(payload.as_bytes().into()),

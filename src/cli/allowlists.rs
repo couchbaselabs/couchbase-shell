@@ -1,6 +1,6 @@
 use crate::cli::cloud_json::JSONCloudGetAllowListResponse;
 use crate::cli::util::{cluster_identifiers_from, validate_is_cloud};
-use crate::client::CloudRequest;
+use crate::client::CapellaRequest;
 use crate::state::State;
 use async_trait::async_trait;
 use log::debug;
@@ -13,24 +13,24 @@ use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
-pub struct Addresses {
+pub struct AllowLists {
     state: Arc<Mutex<State>>,
 }
 
-impl Addresses {
+impl AllowLists {
     pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
 
 #[async_trait]
-impl nu_engine::WholeStreamCommand for Addresses {
+impl nu_engine::WholeStreamCommand for AllowLists {
     fn name(&self) -> &str {
-        "addresses"
+        "allowlists"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("addresses").named(
+        Signature::build("allowlists").named(
             "clusters",
             SyntaxShape::String,
             "the clusters which should be contacted",
@@ -39,7 +39,7 @@ impl nu_engine::WholeStreamCommand for Addresses {
     }
 
     fn usage(&self) -> &str {
-        "List all allowed addresses for cloud cluster access"
+        "Displays allow list for Capella cluster access"
     }
 
     fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
@@ -50,7 +50,7 @@ impl nu_engine::WholeStreamCommand for Addresses {
 fn addresses(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
     let ctrl_c = args.ctrl_c();
 
-    debug!("Running addresses");
+    debug!("Running allowlists");
 
     let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
     let guard = state.lock().unwrap();
@@ -64,11 +64,11 @@ fn addresses(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream
         };
         validate_is_cloud(
             active_cluster,
-            "addresses can only be used with clusters registered to a cloud control pane",
+            "allowlists can only be used with clusters registered to a Capella organisation",
         )?;
 
         let cloud = guard
-            .cloud_org_for_cluster(active_cluster.cloud_org().unwrap())?
+            .capella_org_for_cluster(active_cluster.capella_org().unwrap())?
             .client();
         let cluster_id = cloud.find_cluster_id(
             identifier.clone(),
@@ -76,8 +76,8 @@ fn addresses(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream
             ctrl_c.clone(),
         )?;
 
-        let response = cloud.cloud_request(
-            CloudRequest::GetAllowList { cluster_id },
+        let response = cloud.capella_request(
+            CapellaRequest::GetAllowList { cluster_id },
             Instant::now().add(active_cluster.timeouts().query_timeout()),
             ctrl_c.clone(),
         )?;

@@ -1,6 +1,5 @@
 use crate::config::{
-    CloudConfig, CloudOrganizationConfig, ClusterConfig, ClusterTlsConfig, ShellConfig,
-    DEFAULT_KV_BATCH_SIZE,
+    CapellaOrganizationConfig, ClusterConfig, ClusterTlsConfig, ShellConfig, DEFAULT_KV_BATCH_SIZE,
 };
 use crate::state::{ClusterTimeouts, RemoteCluster, State};
 use nu_engine::CommandArgs;
@@ -95,9 +94,9 @@ impl nu_engine::WholeStreamCommand for ClustersRegister {
                 None,
             )
             .named(
-                "cloud-organization",
+                "capella-organization",
                 SyntaxShape::String,
-                "cloud organization that this cluster belongs to",
+                "capella organization that this cluster belongs to",
                 None,
             )
     }
@@ -132,7 +131,7 @@ fn clusters_register(
     let tls_accept_all_hosts = args.get_flag("tls-validate-hosts")?.unwrap_or(true);
     let cert_path = args.get_flag("tls-cert-path")?;
     let save = args.get_flag("save")?.unwrap_or(false);
-    let cloud = args.get_flag("cloud-organization")?;
+    let capella = args.get_flag("capella-organization")?;
 
     let cluster = RemoteCluster::new(
         hostnames,
@@ -148,7 +147,7 @@ fn clusters_register(
             tls_accept_all_hosts,
         ),
         ClusterTimeouts::default(),
-        cloud,
+        capella,
         DEFAULT_KV_BATCH_SIZE,
     );
 
@@ -175,22 +174,20 @@ pub fn update_config_file(guard: &mut MutexGuard<State>) -> Result<(), ShellErro
     for (identifier, cluster) in guard.clusters() {
         cluster_configs.push(ClusterConfig::from((identifier.clone(), cluster)))
     }
-    let mut cloud_configs = Vec::new();
-    for (identifier, cloud) in guard.clouds() {
-        cloud_configs.push(CloudConfig::new(identifier.clone(), cloud.active_project()))
-    }
-    let mut control_plane_configs = Vec::new();
-    for (identifier, c) in guard.cloud_orgs() {
-        control_plane_configs.push(CloudOrganizationConfig::new(
+    let mut capella_configs = Vec::new();
+    for (identifier, c) in guard.capella_orgs() {
+        capella_configs.push(CapellaOrganizationConfig::new(
             identifier.clone(),
             c.secret_key(),
             c.access_key(),
             Some(c.timeout()),
+            c.active_project(),
+            c.active_cloud(),
+            Some(c.environment()),
         ))
     }
 
-    let config =
-        ShellConfig::new_from_clusters(cluster_configs, cloud_configs, control_plane_configs);
+    let config = ShellConfig::new_from_clusters(cluster_configs, capella_configs);
 
     fs::write(
         path,

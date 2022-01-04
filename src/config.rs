@@ -1,4 +1,4 @@
-use crate::state::RemoteCluster;
+use crate::state::{CapellaEnvironment, RemoteCluster};
 use log::debug;
 use log::error;
 use serde::{Deserialize, Serialize};
@@ -24,11 +24,8 @@ pub struct ShellConfig {
     #[serde(alias = "clusters")]
     clusters: Vec<ClusterConfig>,
 
-    #[serde(alias = "cloud-organization", default)]
-    cloud_orgs: Vec<CloudOrganizationConfig>,
-
-    #[serde(alias = "cloud", default)]
-    clouds: Vec<CloudConfig>,
+    #[serde(alias = "capella-organization", default)]
+    capella_orgs: Vec<CapellaOrganizationConfig>,
 
     /// Stores the path from which it got loaded, if present
     path: Option<PathBuf>,
@@ -64,10 +61,10 @@ impl ShellConfig {
                 }
             }
 
-            for value in config.cloud_orgs_mut() {
+            for value in config.capella_orgs_mut() {
                 let config_credentials = value.credentials_mut();
 
-                for cred in &standalone.cloud_orgs {
+                for cred in &standalone.capella_orgs {
                     if config_credentials.secret_key.is_empty() && !cred.secret_key.is_empty() {
                         config_credentials.secret_key = cred.secret_key.clone()
                     }
@@ -83,15 +80,13 @@ impl ShellConfig {
 
     pub fn new_from_clusters(
         clusters: Vec<ClusterConfig>,
-        clouds: Vec<CloudConfig>,
-        cloud_orgs: Vec<CloudOrganizationConfig>,
+        capella_orgs: Vec<CapellaOrganizationConfig>,
     ) -> Self {
         Self {
             clusters,
             path: None,
             version: 1,
-            clouds,
-            cloud_orgs,
+            capella_orgs,
         }
     }
 
@@ -125,16 +120,12 @@ impl ShellConfig {
         &mut self.clusters
     }
 
-    pub fn cloud_orgs(&self) -> &Vec<CloudOrganizationConfig> {
-        &self.cloud_orgs
+    pub fn capella_orgs(&self) -> &Vec<CapellaOrganizationConfig> {
+        &self.capella_orgs
     }
 
-    pub fn cloud_orgs_mut(&mut self) -> &mut Vec<CloudOrganizationConfig> {
-        &mut self.cloud_orgs
-    }
-
-    pub fn clouds(&self) -> &Vec<CloudConfig> {
-        &self.clouds
+    pub fn capella_orgs_mut(&mut self) -> &mut Vec<CapellaOrganizationConfig> {
+        &mut self.capella_orgs
     }
 }
 
@@ -144,8 +135,7 @@ impl Default for ShellConfig {
             clusters: vec![],
             version: 1,
             path: None,
-            clouds: vec![],
-            cloud_orgs: vec![],
+            capella_orgs: vec![],
         }
     }
 }
@@ -176,39 +166,50 @@ fn try_credentials_from_path(mut path: PathBuf) -> Option<StandaloneCredentialsC
     match read {
         Ok(r) => Some(StandaloneCredentialsConfig::from_str(&r)),
         Err(e) => {
-            debug!("Could not locate {:?} becaue of {:?}", path, e);
+            debug!("Could not locate {:?} because of {:?}", path, e);
             None
         }
     }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct CloudOrganizationConfig {
+pub struct CapellaOrganizationConfig {
     identifier: String,
     #[serde(flatten)]
-    credentials: CloudOrganizationCredentials,
+    credentials: CapellaOrganizationCredentials,
     #[serde(default)]
     #[serde(
         rename(deserialize = "management-timeout", serialize = "management-timeout"),
         with = "humantime_serde"
     )]
     management_timeout: Option<Duration>,
+    #[serde(rename(deserialize = "default-project", serialize = "default-project"))]
+    default_project: Option<String>,
+    #[serde(rename(deserialize = "default-cloud", serialize = "default-cloud"))]
+    default_cloud: Option<String>,
+    environment: Option<CapellaEnvironment>,
 }
 
-impl CloudOrganizationConfig {
+impl CapellaOrganizationConfig {
     pub fn new(
         identifier: String,
         secret_key: String,
         access_key: String,
         management_timeout: Option<Duration>,
+        default_project: Option<String>,
+        default_cloud: Option<String>,
+        environment: Option<CapellaEnvironment>,
     ) -> Self {
         Self {
             identifier,
-            credentials: CloudOrganizationCredentials {
+            credentials: CapellaOrganizationCredentials {
                 access_key,
                 secret_key,
             },
             management_timeout,
+            default_project,
+            default_cloud,
+            environment,
         }
     }
     pub fn identifier(&self) -> String {
@@ -223,8 +224,17 @@ impl CloudOrganizationConfig {
     pub fn management_timeout(&self) -> Option<&Duration> {
         self.management_timeout.as_ref()
     }
+    pub fn default_project(&self) -> Option<String> {
+        self.default_project.as_ref().cloned()
+    }
+    pub fn default_cloud(&self) -> Option<String> {
+        self.default_cloud.as_ref().cloned()
+    }
+    pub fn environment(&self) -> Option<CapellaEnvironment> {
+        self.environment.as_ref().cloned()
+    }
 
-    pub fn credentials_mut(&mut self) -> &mut CloudOrganizationCredentials {
+    pub fn credentials_mut(&mut self) -> &mut CapellaOrganizationCredentials {
         &mut self.credentials
     }
 }
@@ -251,8 +261,11 @@ pub struct ClusterConfig {
     kv_batch_size: Option<u32>,
 
     #[serde(default)]
-    #[serde(rename(deserialize = "cloud-organization", serialize = "cloud-organization"))]
-    cloud_org: Option<String>,
+    #[serde(rename(
+        deserialize = "capella-organization",
+        serialize = "capella-organization"
+    ))]
+    capella_org: Option<String>,
 }
 
 impl ClusterConfig {
@@ -302,7 +315,7 @@ impl ClusterConfig {
         &self.tls
     }
     pub fn cloud_org(&self) -> Option<String> {
-        self.cloud_org.clone()
+        self.capella_org.clone()
     }
     pub fn kv_batch_size(&self) -> Option<u32> {
         self.kv_batch_size.clone()
@@ -311,7 +324,7 @@ impl ClusterConfig {
 
 impl From<(String, &RemoteCluster)> for ClusterConfig {
     fn from(cluster: (String, &RemoteCluster)) -> Self {
-        let cloud = cluster.1.cloud_org();
+        let cloud = cluster.1.capella_org();
 
         Self {
             identifier: cluster.0,
@@ -331,14 +344,14 @@ impl From<(String, &RemoteCluster)> for ClusterConfig {
                 username: Some(cluster.1.username().to_string()),
                 password: Some(cluster.1.password().to_string()),
             },
-            cloud_org: cloud,
+            capella_org: cloud,
             kv_batch_size: Some(cluster.1.kv_batch_size()),
         }
     }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct CloudOrganizationCredentials {
+pub struct CapellaOrganizationCredentials {
     #[serde(default)]
     #[serde(rename(deserialize = "access-key", serialize = "access-key"))]
     access_key: String,
@@ -347,29 +360,7 @@ pub struct CloudOrganizationCredentials {
     secret_key: String,
 }
 
-impl CloudOrganizationCredentials {}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct CloudConfig {
-    identifier: String,
-    #[serde(rename(deserialize = "default-project", serialize = "default-project"))]
-    default_project: Option<String>,
-}
-
-impl CloudConfig {
-    pub fn new(identifier: String, default_project: Option<String>) -> Self {
-        Self {
-            identifier,
-            default_project,
-        }
-    }
-    pub fn identifier(&self) -> String {
-        self.identifier.clone()
-    }
-    pub fn default_project(&self) -> Option<String> {
-        self.default_project.as_ref().cloned()
-    }
-}
+impl CapellaOrganizationCredentials {}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ClusterCredentials {
@@ -519,8 +510,8 @@ pub struct StandaloneCredentialsConfig {
     #[serde(alias = "clusters", default)]
     clusters: Vec<StandaloneClusterCredentials>,
 
-    #[serde(alias = "cloud-organization", default)]
-    cloud_orgs: Vec<CloudOrganizationCredentials>,
+    #[serde(alias = "capella-organization", default)]
+    capella_orgs: Vec<CapellaOrganizationCredentials>,
 }
 
 impl StandaloneCredentialsConfig {
@@ -543,7 +534,7 @@ impl Default for StandaloneCredentialsConfig {
         Self {
             clusters: vec![],
             version: 1,
-            cloud_orgs: vec![],
+            capella_orgs: vec![],
         }
     }
 }

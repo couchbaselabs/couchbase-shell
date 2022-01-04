@@ -64,7 +64,7 @@ fn pending_mutations(
         };
         validate_is_not_cloud(
             active_cluster,
-            "pending mutations cannot be run against cloud clusters",
+            "pending mutations cannot be run against Capella clusters",
         )?;
 
         let response = active_cluster

@@ -1,6 +1,6 @@
 use crate::cli::cloud_json::{JSONCloudCreateUserRequest, JSONCloudUser, JSONCloudUserRoles};
 use crate::cli::util::cluster_identifiers_from;
-use crate::client::{CloudRequest, ManagementRequest};
+use crate::client::{CapellaRequest, ManagementRequest};
 use crate::state::State;
 use async_trait::async_trait;
 use log::debug;
@@ -92,7 +92,7 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
                 return Err(ShellError::unexpected("Cluster not found"));
             }
         };
-        let response = if let Some(plane) = active_cluster.cloud_org() {
+        let response = if let Some(plane) = active_cluster.capella_org() {
             let mut bucket_roles_map: HashMap<&str, Vec<&str>> = HashMap::new();
             for role in roles.split(',') {
                 let split_role = role.split_once("[");
@@ -132,11 +132,11 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
                 ));
             };
 
-            let cloud = guard.cloud_org_for_cluster(plane)?.client();
+            let cloud = guard.capella_org_for_cluster(plane)?.client();
             let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
             let cluster_id = cloud.find_cluster_id(identifier.clone(), deadline, ctrl_c.clone())?;
-            let response = cloud.cloud_request(
-                CloudRequest::GetUsers {
+            let response = cloud.capella_request(
+                CapellaRequest::GetUsers {
                     cluster_id: cluster_id.clone(),
                 },
                 deadline,
@@ -163,8 +163,8 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
                     bucket_roles,
                     all_access_role,
                 );
-                cloud.cloud_request(
-                    CloudRequest::UpdateUser {
+                cloud.capella_request(
+                    CapellaRequest::UpdateUser {
                         cluster_id,
                         payload: serde_json::to_string(&user)?,
                         username: username.clone(),
@@ -178,7 +178,7 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
                     Some(p) => p,
                     None => {
                         return Err(ShellError::unexpected(
-                            "Cloud database user does not exist, password must be set",
+                            "Capella database user does not exist, password must be set",
                         ));
                     }
                 };
@@ -189,8 +189,8 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
                     bucket_roles,
                     all_access_role,
                 );
-                cloud.cloud_request(
-                    CloudRequest::CreateUser {
+                cloud.capella_request(
+                    CapellaRequest::CreateUser {
                         cluster_id,
                         payload: serde_json::to_string(&user)?,
                     },

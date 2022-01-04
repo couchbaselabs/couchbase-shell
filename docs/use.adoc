@@ -38,7 +38,7 @@ Usage:
 Subcommands:
   use bucket - Sets the active bucket based on its name
   use cloud - Sets the active cloud based on its identifier
-  use cloud-organization - Sets the active cloud organization based on its identifier
+  use capella-organization - Sets the active capella organization based on its identifier
   use cluster - Sets the active cluster based on its identifier
   use collection - Sets the active collection based on its name
   use project - Sets the active project based on its name
@@ -83,7 +83,7 @@ The argument for this flag is an identifier combined with a regular expression.
 So imagine you have three clusters setup with the following identifiers:
 
 ```
-> clusters | get identifier
+> clusters managed | get identifier
 ───┬────────
  0 │ prod-us-west
  1 │ prod-us-east
@@ -97,7 +97,7 @@ If you wanted to run a command against all clusters in `prod-us`, you could use 
 ```
 > buckets --clusters prod-us.*
 ───┬──────────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────
- # │   cluster    │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud
+ # │   cluster    │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ capella
 ───┼──────────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────
  0 │ prod-us-east │ default       │ couchbase │        1 │ none                 │  268.4 MB │ false         │        │ false
  1 │ prod-us-west │ default       │ couchbase │        1 │ none                 │  268.4 MB │ false         │        │ false

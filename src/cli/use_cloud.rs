@@ -32,15 +32,17 @@ impl nu_engine::WholeStreamCommand for UseCloud {
     }
 
     fn usage(&self) -> &str {
-        "Sets the active cloud based on its identifier"
+        "Sets the active cloud on the active capella organisation, based on its identifier"
     }
 
     fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
+        let cloud_name: String = args.req(0)?;
         let guard = self.state.lock().unwrap();
-        guard.set_active_cloud(args.req(0)?)?;
+        let org = guard.active_capella_org()?;
+        org.set_active_cloud(cloud_name.clone());
 
         let mut using_now = TaggedDictBuilder::new(Tag::default());
-        using_now.insert_value("cloud", guard.active_cloud_name().unwrap());
+        using_now.insert_value("cloud", cloud_name);
         let cloud = vec![using_now.into_value()];
         Ok(cloud.into())
     }

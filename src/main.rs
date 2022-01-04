@@ -10,7 +10,7 @@ use crate::config::{
     ShellConfig, DEFAULT_ANALYTICS_TIMEOUT, DEFAULT_DATA_TIMEOUT, DEFAULT_KV_BATCH_SIZE,
     DEFAULT_MANAGEMENT_TIMEOUT, DEFAULT_QUERY_TIMEOUT, DEFAULT_SEARCH_TIMEOUT,
 };
-use crate::state::{RemoteCloud, RemoteCloudOrganization, RemoteCluster};
+use crate::state::{CapellaEnvironment, RemoteCapellaOrganization, RemoteCluster};
 use crate::{cli::*, state::ClusterTimeouts};
 use config::ClusterTlsConfig;
 use env_logger::Env;
@@ -60,17 +60,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     debug!("Config {:?}", config);
 
     let mut clusters = HashMap::new();
-    let mut clouds = HashMap::new();
-    let mut control_planes = HashMap::new();
+    let mut capella_orgs = HashMap::new();
 
     let password = match opt.password {
         true => Some(rpassword::read_password_from_tty(Some("Password: ")).unwrap()),
         false => None,
     };
 
-    let mut default_project: Option<String> = None;
-    let mut active_cloud = None;
-    let mut active_control_plane = None;
+    let mut active_capella_org = None;
     let active = if config.clusters().is_empty() {
         let hostnames = if let Some(hosts) = opt.hostnames {
             hosts
@@ -216,35 +213,32 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
             clusters.insert(name.clone(), cluster);
         }
-        for c in config.cloud_orgs() {
+        for c in config.capella_orgs() {
             let management_timeout = match c.management_timeout() {
                 Some(t) => t.to_owned(),
                 None => DEFAULT_MANAGEMENT_TIMEOUT,
             };
             let name = c.identifier();
+            let default_cloud = c.default_cloud();
+            let default_project = c.default_project();
+            let environment = c.environment().unwrap_or(CapellaEnvironment::Hosted);
 
-            let plane =
-                RemoteCloudOrganization::new(c.secret_key(), c.access_key(), management_timeout);
+            let plane = RemoteCapellaOrganization::new(
+                c.secret_key(),
+                c.access_key(),
+                management_timeout,
+                default_project,
+                default_cloud,
+                environment,
+            );
 
-            if active_control_plane.is_none() {
-                active_control_plane = Some(name.clone());
+            if active_capella_org.is_none() {
+                active_capella_org = Some(name.clone());
             }
 
-            control_planes.insert(name, plane);
+            capella_orgs.insert(name, plane);
         }
 
-        for c in config.clouds() {
-            let name = c.identifier();
-
-            let cloud = RemoteCloud::new(c.default_project());
-
-            if active_cloud.is_none() {
-                default_project = c.default_project();
-                active_cloud = Some(name.clone());
-            }
-
-            clouds.insert(name, cloud);
-        }
         active.unwrap()
     };
 
@@ -252,11 +246,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         clusters,
         active,
         config.location().clone(),
-        clouds,
-        control_planes,
-        active_cloud,
-        active_control_plane,
-        default_project,
+        capella_orgs,
+        active_capella_org,
     )));
 
     if !opt.silent && !opt.no_motd && opt.script.is_none() && opt.command.is_none() {
@@ -265,9 +256,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let context = nu_cli::create_default_context(true)?;
     context.add_commands(vec![
-        nu_engine::whole_stream_command(Addresses::new(state.clone())),
-        nu_engine::whole_stream_command(AddressesAdd::new(state.clone())),
-        nu_engine::whole_stream_command(AddressesDrop::new(state.clone())),
+        nu_engine::whole_stream_command(AllowLists::new(state.clone())),
+        nu_engine::whole_stream_command(AllowListsAdd::new(state.clone())),
+        nu_engine::whole_stream_command(AllowListsDrop::new(state.clone())),
         nu_engine::whole_stream_command(Analytics::new(state.clone())),
         nu_engine::whole_stream_command(AnalyticsDatasets::new(state.clone())),
         nu_engine::whole_stream_command(AnalyticsDataverses::new(state.clone())),
@@ -284,13 +275,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(BucketsSample::new(state.clone())),
         nu_engine::whole_stream_command(BucketsUpdate::new(state.clone())),
         nu_engine::whole_stream_command(Clouds::new(state.clone())),
-        nu_engine::whole_stream_command(CloudsClusters::new(state.clone())),
-        nu_engine::whole_stream_command(CloudsClustersCreate::new(state.clone())),
-        nu_engine::whole_stream_command(CloudsClustersDrop::new(state.clone())),
-        nu_engine::whole_stream_command(CloudsClustersGet::new(state.clone())),
-        nu_engine::whole_stream_command(CloudsStatus::new(state.clone())),
+        nu_engine::whole_stream_command(ClustersCreate::new(state.clone())),
+        nu_engine::whole_stream_command(ClustersDrop::new(state.clone())),
+        nu_engine::whole_stream_command(ClustersGet::new(state.clone())),
         nu_engine::whole_stream_command(Clusters::new(state.clone())),
         nu_engine::whole_stream_command(ClustersHealth::new(state.clone())),
+        nu_engine::whole_stream_command(ClustersManaged::new(state.clone())),
         nu_engine::whole_stream_command(ClustersRegister::new(state.clone())),
         nu_engine::whole_stream_command(ClustersUnregister::new(state.clone())),
         nu_engine::whole_stream_command(CollectionsCreate::new(state.clone())),
@@ -330,7 +320,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         nu_engine::whole_stream_command(UsersUpsert::new(state.clone())),
         nu_engine::whole_stream_command(UseBucket::new(state.clone())),
         nu_engine::whole_stream_command(UseCloud::new(state.clone())),
-        nu_engine::whole_stream_command(UseCloudOrganization::new(state.clone())),
+        nu_engine::whole_stream_command(UseCapellaOrganization::new(state.clone())),
         nu_engine::whole_stream_command(UseCluster::new(state.clone())),
         nu_engine::whole_stream_command(UseCmd::new(state.clone())),
         nu_engine::whole_stream_command(UseCollection::new(state.clone())),

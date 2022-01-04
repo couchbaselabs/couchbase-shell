@@ -25,7 +25,11 @@ impl nu_engine::WholeStreamCommand for UseCmd {
 
     fn signature(&self) -> Signature {
         Signature::build("use")
-            .switch("cloud", "show default execution environment of cloud", None)
+            .switch(
+                "capella",
+                "show default execution environment of capella",
+                None,
+            )
             .switch(
                 "timeouts",
                 "show default execution environment for timeouts",
@@ -43,31 +47,29 @@ impl nu_engine::WholeStreamCommand for UseCmd {
 }
 
 fn use_cmd(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, ShellError> {
-    let show_cloud = args.has_flag("cloud");
+    let show_capella = args.has_flag("capella");
     let show_timeouts = args.has_flag("timeouts");
 
     let guard = state.lock().unwrap();
     let active = guard.active_cluster();
     let mut using_now = TaggedDictBuilder::new(Tag::default());
-    if show_cloud {
-        let project = match guard.active_cloud() {
-            Ok(c) => c.active_project().unwrap_or_else(|| "".to_string()),
-            Err(_e) => "".to_string(),
-        };
+    if show_capella {
+        let org = guard.active_capella_org()?;
 
         using_now.insert_value(
-            "cloud-organization",
+            "capella-organization",
             guard
-                .active_cloud_org_name()
+                .active_capella_org_name()
                 .unwrap_or_else(|| String::from("")),
         );
         using_now.insert_value(
             "cloud",
-            guard
-                .active_cloud_name()
-                .unwrap_or_else(|| String::from("")),
+            org.active_cloud().unwrap_or_else(|| String::from("")),
         );
-        using_now.insert_value("project", project);
+        using_now.insert_value(
+            "project",
+            org.active_project().unwrap_or_else(|| String::from("")),
+        );
     } else {
         using_now.insert_value("username", active.username());
         using_now.insert_value("cluster", guard.active());
@@ -87,8 +89,8 @@ fn use_cmd(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, 
                 .active_collection()
                 .unwrap_or_else(|| String::from("")),
         );
-        if let Some(co) = active.cloud_org() {
-            using_now.insert_value("cloud-organization", co);
+        if let Some(co) = active.capella_org() {
+            using_now.insert_value("capella-organization", co);
         }
     }
     if show_timeouts {

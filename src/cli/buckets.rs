@@ -1,7 +1,7 @@
 use crate::cli::buckets_builder::{BucketSettings, JSONBucketSettings, JSONCloudBucketSettings};
 use crate::cli::buckets_get::bucket_to_tagged_dict;
 use crate::cli::util::cluster_identifiers_from;
-use crate::client::{CloudRequest, ManagementRequest};
+use crate::client::{CapellaRequest, ManagementRequest};
 use crate::state::State;
 use log::debug;
 use nu_engine::CommandArgs;
@@ -66,12 +66,12 @@ fn buckets_get_all(
             }
         };
 
-        if let Some(plane) = cluster.cloud_org() {
-            let cloud = guard.cloud_org_for_cluster(plane)?.client();
+        if let Some(plane) = cluster.capella_org() {
+            let cloud = guard.capella_org_for_cluster(plane)?.client();
             let deadline = Instant::now().add(cluster.timeouts().management_timeout());
             let cluster_id = cloud.find_cluster_id(identifier.clone(), deadline, ctrl_c.clone())?;
-            let response = cloud.cloud_request(
-                CloudRequest::GetBuckets { cluster_id },
+            let response = cloud.capella_request(
+                CapellaRequest::GetBuckets { cluster_id },
                 deadline,
                 ctrl_c.clone(),
             )?;

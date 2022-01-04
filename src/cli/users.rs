@@ -1,7 +1,7 @@
 use crate::cli::cloud_json::JSONCloudUser;
 use crate::cli::user_builder::UserAndMetadata;
 use crate::cli::util::cluster_identifiers_from;
-use crate::client::{CloudRequest, ManagementRequest};
+use crate::client::{CapellaRequest, ManagementRequest};
 use crate::state::State;
 use async_trait::async_trait;
 use log::debug;
@@ -63,13 +63,13 @@ fn users_get_all(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
                 return Err(ShellError::unexpected("Cluster not found"));
             }
         };
-        let mut stream: Vec<Value> = if let Some(plane) = active_cluster.cloud_org() {
-            let cloud = guard.cloud_org_for_cluster(plane)?.client();
+        let mut stream: Vec<Value> = if let Some(plane) = active_cluster.capella_org() {
+            let cloud = guard.capella_org_for_cluster(plane)?.client();
             let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
             let cluster_id =
                 cloud.find_cluster_id(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
-            let response = cloud.cloud_request(
-                CloudRequest::GetUsers { cluster_id },
+            let response = cloud.capella_request(
+                CapellaRequest::GetUsers { cluster_id },
                 deadline,
                 ctrl_c.clone(),
             )?;

@@ -1,0 +1,32 @@
+{
+  "environment": "hosted",
+  "servers": [
+    {
+      "compute": "m5.xlarge",
+      "size": 3,
+      "services": [
+        "data",
+        "index"
+      ],
+      "storage": {
+        "size": 50,
+        "IOPS": 3000,
+        "type": "GP3"
+      }
+    }
+  ],
+  "supportPackage": {
+    "timezone": "IST",
+    "type": "DeveloperPro"
+  },
+  "clusterName": "testing 1 2",
+  "description": "Example description of a G2 cluster",
+  "place": {
+    "singleAZ": true,
+    "hosted": {
+      "provider": "aws",
+      "CIDR": "10.0.0.0/20",
+      "region": "us-west-2"
+    }
+  }
+}

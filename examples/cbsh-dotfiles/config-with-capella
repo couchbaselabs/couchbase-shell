@@ -12,17 +12,19 @@ query-timeout = "1m 15s"
 tls-enabled = true
 tls-validate-hostnames = false
 tls-accept-all-certs = true
-cloud-organization = "org"
+capella-organization = "my-hosted"
 
-[[cloud]]
-identifier = "a-cloud"
-default-project = "a-project"
-
-[[cloud]]
-identifier = "other-cloud"
-default-project = "other-cloud-project"
-
-[[cloud-organization]]
-identifier = "org"
+[[capella-organization]]
+identifier = "my-in-vpc"
 access-key = "x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG"
 secret-key = "T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY"
+default-cloud = "mydefaultcloud"
+default-project = "mydefaultproject"
+environment = "in-vpc"
+
+[[capella-organization]]
+identifier = "my-hosted"
+access-key = "x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG"
+secret-key = "T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY"
+default-project = "mydefaultproject"
+# The environment field defaults to "hosted" so we don't have to include it.

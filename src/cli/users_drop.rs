@@ -1,5 +1,5 @@
 use crate::cli::util::cluster_identifiers_from;
-use crate::client::{CloudRequest, ManagementRequest};
+use crate::client::{CapellaRequest, ManagementRequest};
 use crate::state::State;
 use async_trait::async_trait;
 use log::debug;
@@ -63,13 +63,13 @@ fn users_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
                 return Err(ShellError::unexpected("Cluster not found"));
             }
         };
-        let response = if let Some(plane) = active_cluster.cloud_org() {
-            let cloud = guard.cloud_org_for_cluster(plane)?.client();
+        let response = if let Some(plane) = active_cluster.capella_org() {
+            let cloud = guard.capella_org_for_cluster(plane)?.client();
             let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
             let cluster_id =
                 cloud.find_cluster_id(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
-            cloud.cloud_request(
-                CloudRequest::DeleteUser {
+            cloud.capella_request(
+                CapellaRequest::DeleteUser {
                     cluster_id,
                     username: username.clone(),
                 },

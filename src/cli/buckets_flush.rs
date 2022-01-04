@@ -69,7 +69,7 @@ fn buckets_flush(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
         };
         validate_is_not_cloud(
             cluster,
-            "buckets flush cannot be run against cloud clusters",
+            "buckets flush cannot be run against Capella clusters",
         )?;
 
         let result = cluster.cluster().http_client().management_request(

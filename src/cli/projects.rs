@@ -1,5 +1,5 @@
 use crate::cli::cloud_json::JSONCloudsProjectsResponse;
-use crate::client::CloudRequest;
+use crate::client::CapellaRequest;
 use crate::state::State;
 use async_trait::async_trait;
 use log::debug;
@@ -33,7 +33,7 @@ impl nu_engine::WholeStreamCommand for Projects {
     }
 
     fn usage(&self) -> &str {
-        "Lists all cloud projects"
+        "Lists all Capella projects"
     }
 
     fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
@@ -47,10 +47,10 @@ fn projects(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream,
     debug!("Running projects");
 
     let guard = state.lock().unwrap();
-    let control = guard.active_cloud_org()?;
+    let control = guard.active_capella_org()?;
     let client = control.client();
-    let response = client.cloud_request(
-        CloudRequest::GetProjects {},
+    let response = client.capella_request(
+        CapellaRequest::GetProjects {},
         Instant::now().add(control.timeout()),
         ctrl_c,
     )?;

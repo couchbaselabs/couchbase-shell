@@ -76,7 +76,7 @@ fn collections_get(
         };
         validate_is_not_cloud(
             active_cluster,
-            "collections get cannot be run against cloud clusters",
+            "collections get cannot be run against Capella clusters",
         )?;
 
         let bucket = match args.get_flag("bucket")? {
