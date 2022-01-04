@@ -3,7 +3,7 @@ use crate::cli::buckets_builder::{
 };
 use crate::cli::cloud_json::JSONCloudClusterSummary;
 use crate::cli::util::cluster_identifiers_from;
-use crate::client::{CloudRequest, HttpResponse, ManagementRequest};
+use crate::client::{CapellaRequest, HttpResponse, ManagementRequest};
 use crate::state::State;
 use async_trait::async_trait;
 use log::debug;
@@ -105,21 +105,21 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
             }
         };
 
-        if active_cluster.cloud_org().is_some()
+        if active_cluster.capella_org().is_some()
             && (flush || durability.is_some() || expiry.is_some())
         {
             return Err(ShellError::unexpected(
-                "Cloud flag cannot be used with type, flush, durability, or expiry",
+                "Capella flag cannot be used with type, flush, durability, or expiry",
             ));
         }
 
         let response: HttpResponse;
-        if let Some(plane) = active_cluster.cloud_org() {
-            let cloud = guard.cloud_org_for_cluster(plane)?.client();
+        if let Some(plane) = active_cluster.capella_org() {
+            let cloud = guard.capella_org_for_cluster(plane)?.client();
 
             let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
-            let cluster_response = cloud.cloud_request(
-                CloudRequest::GetClusters {},
+            let cluster_response = cloud.capella_request(
+                CapellaRequest::GetClusters {},
                 deadline.clone(),
                 ctrl_c.clone(),
             )?;
@@ -142,12 +142,12 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
 
             if cluster_id.is_none() {
                 return Err(ShellError::unexpected(
-                    "Could not find active cluster in cloud organization",
+                    "Could not find active cluster in Capella organization",
                 ));
             }
 
-            let buckets_response = cloud.cloud_request(
-                CloudRequest::GetBuckets {
+            let buckets_response = cloud.capella_request(
+                CapellaRequest::GetBuckets {
                     cluster_id: cluster_id.clone().unwrap(),
                 },
                 deadline.clone(),
@@ -182,8 +182,8 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
 
             buckets.push(JSONCloudBucketSettings::try_from(&settings)?);
 
-            response = cloud.cloud_request(
-                CloudRequest::UpdateBucket {
+            response = cloud.capella_request(
+                CapellaRequest::UpdateBucket {
                     cluster_id: cluster_id.unwrap(),
                     payload: serde_json::to_string(&buckets)?,
                 },

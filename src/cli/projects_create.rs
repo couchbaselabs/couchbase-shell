@@ -1,5 +1,5 @@
 use crate::cli::cloud_json::JSONCloudCreateProjectRequest;
-use crate::client::CloudRequest;
+use crate::client::CapellaRequest;
 use crate::state::State;
 use async_trait::async_trait;
 use log::debug;
@@ -36,7 +36,7 @@ impl nu_engine::WholeStreamCommand for ProjectsCreate {
     }
 
     fn usage(&self) -> &str {
-        "Creates a new cloud project"
+        "Creates a new Capella project"
     }
 
     fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
@@ -54,11 +54,11 @@ fn projects_create(
     debug!("Running projects create for {}", &name);
 
     let guard = state.lock().unwrap();
-    let control = guard.active_cloud_org()?;
+    let control = guard.active_capella_org()?;
     let client = control.client();
     let project = JSONCloudCreateProjectRequest::new(name);
-    let response = client.cloud_request(
-        CloudRequest::CreateProject {
+    let response = client.capella_request(
+        CapellaRequest::CreateProject {
             payload: serde_json::to_string(&project)?,
         },
         Instant::now().add(control.timeout()),

@@ -1,7 +1,8 @@
 use crate::cli::cloud_json::{
-    JSONCloudClustersSummaries, JSONCloudsProjectsResponse, JSONCloudsResponse,
+    JSONCloudClustersSummaries, JSONCloudClustersSummariesV3, JSONCloudsProjectsResponse,
+    JSONCloudsResponse,
 };
-use crate::client::{CloudClient, CloudRequest};
+use crate::client::{CapellaClient, CapellaRequest};
 use crate::state::{RemoteCluster, State};
 use nu_engine::CommandArgs;
 use nu_errors::{CoerceInto, ShellError};
@@ -267,7 +268,7 @@ pub fn namespace_from_args(
 }
 
 pub fn validate_is_cloud(cluster: &RemoteCluster, err_msg: &str) -> Result<(), ShellError> {
-    if cluster.cloud_org().is_none() {
+    if cluster.capella_org().is_none() {
         return Err(ShellError::unexpected(err_msg));
     }
 
@@ -275,7 +276,7 @@ pub fn validate_is_cloud(cluster: &RemoteCluster, err_msg: &str) -> Result<(), S
 }
 
 pub fn validate_is_not_cloud(cluster: &RemoteCluster, err_msg: &str) -> Result<(), ShellError> {
-    if cluster.cloud_org().is_some() {
+    if cluster.capella_org().is_some() {
         return Err(ShellError::unexpected(err_msg));
     }
 
@@ -285,10 +286,10 @@ pub fn validate_is_not_cloud(cluster: &RemoteCluster, err_msg: &str) -> Result<(
 pub(crate) fn find_project_id(
     ctrl_c: Arc<AtomicBool>,
     name: String,
-    client: &Arc<CloudClient>,
+    client: &Arc<CapellaClient>,
     deadline: Instant,
 ) -> Result<String, ShellError> {
-    let response = client.cloud_request(CloudRequest::GetProjects {}, deadline, ctrl_c)?;
+    let response = client.capella_request(CapellaRequest::GetProjects {}, deadline, ctrl_c)?;
     if response.status() != 200 {
         return Err(ShellError::unexpected(response.content().to_string()));
     };
@@ -306,10 +307,10 @@ pub(crate) fn find_project_id(
 pub(crate) fn find_cloud_id(
     ctrl_c: Arc<AtomicBool>,
     name: String,
-    client: &Arc<CloudClient>,
+    client: &Arc<CapellaClient>,
     deadline: Instant,
 ) -> Result<String, ShellError> {
-    let response = client.cloud_request(CloudRequest::GetClouds {}, deadline, ctrl_c)?;
+    let response = client.capella_request(CapellaRequest::GetClouds {}, deadline, ctrl_c)?;
     if response.status() != 200 {
         return Err(ShellError::unexpected(response.content().to_string()));
     };
@@ -324,13 +325,34 @@ pub(crate) fn find_cloud_id(
     Err(ShellError::unexpected("Cloud could not be found"))
 }
 
-pub(crate) fn find_cloud_cluster_id(
+pub(crate) fn find_capella_cluster_id_hosted(
     ctrl_c: Arc<AtomicBool>,
     name: String,
-    client: &Arc<CloudClient>,
+    client: &Arc<CapellaClient>,
     deadline: Instant,
 ) -> Result<String, ShellError> {
-    let response = client.cloud_request(CloudRequest::GetClusters {}, deadline, ctrl_c)?;
+    let response = client.capella_request(CapellaRequest::GetClustersV3 {}, deadline, ctrl_c)?;
+    if response.status() != 200 {
+        return Err(ShellError::unexpected(response.content().to_string()));
+    };
+    let content: JSONCloudClustersSummariesV3 = serde_json::from_str(response.content())?;
+
+    for c in content.items() {
+        if c.name() == name {
+            return Ok(c.id().to_string());
+        }
+    }
+
+    Err(ShellError::unexpected("Cluster could not be found"))
+}
+
+pub(crate) fn find_capella_cluster_id_vpc(
+    ctrl_c: Arc<AtomicBool>,
+    name: String,
+    client: &Arc<CapellaClient>,
+    deadline: Instant,
+) -> Result<String, ShellError> {
+    let response = client.capella_request(CapellaRequest::GetClusters {}, deadline, ctrl_c)?;
     if response.status() != 200 {
         return Err(ShellError::unexpected(response.content().to_string()));
     };

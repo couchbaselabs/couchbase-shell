@@ -2,7 +2,7 @@ use crate::cli::util::cluster_identifiers_from;
 use crate::state::State;
 
 use crate::cli::cloud_json::JSONCloudClusterHealthResponse;
-use crate::client::{CloudRequest, ManagementRequest};
+use crate::client::{CapellaRequest, ManagementRequest};
 use async_trait::async_trait;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
@@ -63,13 +63,13 @@ fn nodes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Sh
                 return Err(ShellError::unexpected("Cluster not found"));
             }
         };
-        if let Some(plane) = active_cluster.cloud_org() {
-            let cloud = guard.cloud_org_for_cluster(plane)?.client();
+        if let Some(plane) = active_cluster.capella_org() {
+            let cloud = guard.capella_org_for_cluster(plane)?.client();
             let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
             let cluster_id =
                 cloud.find_cluster_id(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
-            let response = cloud.cloud_request(
-                CloudRequest::GetClusterHealth { cluster_id },
+            let response = cloud.capella_request(
+                CapellaRequest::GetClusterHealth { cluster_id },
                 deadline,
                 ctrl_c.clone(),
             )?;
@@ -100,7 +100,7 @@ fn nodes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Sh
                     collected.insert_value("os", "");
                     collected.insert_value("memory_total", "");
                     collected.insert_value("memory_free", "");
-                    collected.insert_value("cloud", true);
+                    collected.insert_value("capella", true);
 
                     collected.into_value()
                 })
@@ -152,7 +152,7 @@ fn nodes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Sh
                     collected.insert_value("os", n.os);
                     collected.insert_value("memory_total", UntaggedValue::filesize(n.memory_total));
                     collected.insert_value("memory_free", UntaggedValue::filesize(n.memory_free));
-                    collected.insert_value("cloud", false);
+                    collected.insert_value("capella", false);
 
                     collected.into_value()
                 })

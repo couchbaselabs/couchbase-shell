@@ -1,4 +1,4 @@
-pub use crate::client::cloud::{CloudClient, CloudRequest};
+pub use crate::client::cloud::{CapellaClient, CapellaRequest};
 pub use crate::client::error::ClientError;
 pub use crate::client::http_client::{
     AnalyticsQueryRequest, HTTPClient, ManagementRequest, QueryRequest, SearchQueryRequest,

@@ -55,7 +55,7 @@ fn buckets(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, 
 
     validate_is_not_cloud(
         active_cluster,
-        "buckets config cannot be run against cloud clusters",
+        "buckets config cannot be run against Capella clusters",
     )?;
 
     let response = cluster.http_client().management_request(

@@ -1,7 +1,7 @@
 use crate::cli::cloud_json::JSONCloudClusterHealthResponse;
 use crate::cli::util::cluster_identifiers_from;
-use crate::client::{CloudRequest, ManagementRequest};
-use crate::state::{ClusterTimeouts, RemoteCloudOrganization, RemoteCluster, State};
+use crate::client::{CapellaRequest, ManagementRequest};
+use crate::state::{ClusterTimeouts, RemoteCapellaOrganization, RemoteCluster, State};
 use log::warn;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
@@ -62,8 +62,8 @@ fn health(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, S
             }
         };
 
-        if let Some(plane) = cluster.cloud_org() {
-            let cloud = guard.cloud_org_for_cluster(plane)?;
+        if let Some(plane) = cluster.capella_org() {
+            let cloud = guard.capella_org_for_cluster(plane)?;
             let values =
                 check_cloud_health(&identifier, cloud, cluster.timeouts(), ctrl_c.clone())?;
             for value in values {
@@ -124,7 +124,7 @@ fn check_autofailover(
     collected.insert_value("bucket", "-".to_string());
     collected.insert_value("expected", UntaggedValue::boolean(true));
     collected.insert_value("actual", UntaggedValue::boolean(resp.enabled));
-    collected.insert_value("cloud", false);
+    collected.insert_value("capella", false);
 
     let remedy = if resp.enabled {
         "Not needed"
@@ -170,7 +170,7 @@ fn check_resident_ratio(
     collected.insert_value("bucket", bucket_name.to_string());
     collected.insert_value("expected", ">= 10%");
     collected.insert_value("actual", format!("{}%", &ratio));
-    collected.insert_value("cloud", false);
+    collected.insert_value("capella", false);
 
     let remedy = if ratio >= 10 {
         "Not needed"
@@ -184,7 +184,7 @@ fn check_resident_ratio(
 
 fn check_cloud_health(
     identifier: &str,
-    cloud: &RemoteCloudOrganization,
+    cloud: &RemoteCapellaOrganization,
     timeouts: ClusterTimeouts,
     ctrl_c: Arc<AtomicBool>,
 ) -> Result<Vec<Value>, ShellError> {
@@ -195,8 +195,8 @@ fn check_cloud_health(
         cloud
             .client()
             .find_cluster_id(identifier.to_string(), deadline.clone(), ctrl_c.clone())?;
-    let response = cloud.client().cloud_request(
-        CloudRequest::GetClusterHealth { cluster_id },
+    let response = cloud.client().capella_request(
+        CapellaRequest::GetClusterHealth { cluster_id },
         deadline,
         ctrl_c,
     )?;
@@ -210,7 +210,7 @@ fn check_cloud_health(
     status_collected.insert_value("bucket", "-".to_string());
     status_collected.insert_value("expected", "ready".to_string());
     status_collected.insert_value("actual", status.clone());
-    status_collected.insert_value("cloud", true);
+    status_collected.insert_value("capella", true);
 
     let remedy = if status == *"ready" {
         "Not needed"
@@ -229,7 +229,7 @@ fn check_cloud_health(
     health_collected.insert_value("bucket", "-".to_string());
     health_collected.insert_value("expected", "healthy".to_string());
     health_collected.insert_value("actual", health.clone());
-    health_collected.insert_value("cloud", true);
+    health_collected.insert_value("capella", true);
 
     let remedy = if health == *"healthy" {
         "Not needed"

@@ -70,7 +70,7 @@ fn scopes_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
         };
         validate_is_not_cloud(
             active_cluster,
-            "scopes get cannot be run against cloud clusters",
+            "scopes get cannot be run against Capella clusters",
         )?;
 
         let bucket = match args.get_flag("bucket")? {

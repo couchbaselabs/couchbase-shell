@@ -1,23 +1,29 @@
-use crate::client::{Client, CloudClient};
+use crate::client::{CapellaClient, Client};
 use crate::config::ClusterTlsConfig;
 use crate::tutorial::Tutorial;
 use nu_errors::ShellError;
+use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::{collections::HashMap, time::Duration};
 
+#[derive(Clone, Debug, Deserialize, Serialize, Copy, Ord, PartialOrd, Eq, PartialEq)]
+pub enum CapellaEnvironment {
+    #[serde(rename = "hosted")]
+    Hosted,
+    #[serde(rename = "in-vpc")]
+    InVPC,
+}
+
 pub struct State {
     active: Mutex<String>,
     clusters: HashMap<String, RemoteCluster>,
     tutorial: Tutorial,
     config_path: Option<PathBuf>,
-    clouds: HashMap<String, RemoteCloud>,
-    cloud_orgs: HashMap<String, RemoteCloudOrganization>,
-    active_cloud: Mutex<Option<String>>,
-    active_cloud_org: Mutex<Option<String>>,
-    default_project: Option<String>,
+    capella_orgs: HashMap<String, RemoteCapellaOrganization>,
+    active_capella_org: Mutex<Option<String>>,
 }
 
 impl State {
@@ -25,22 +31,16 @@ impl State {
         clusters: HashMap<String, RemoteCluster>,
         active: String,
         config_path: Option<PathBuf>,
-        clouds: HashMap<String, RemoteCloud>,
-        cloud_orgs: HashMap<String, RemoteCloudOrganization>,
-        active_cloud: Option<String>,
-        active_cloud_control_pane: Option<String>,
-        default_project: Option<String>,
+        capella_orgs: HashMap<String, RemoteCapellaOrganization>,
+        active_capella_org: Option<String>,
     ) -> Self {
         let state = Self {
             active: Mutex::new(active.clone()),
             clusters,
             tutorial: Tutorial::new(),
             config_path,
-            clouds,
-            cloud_orgs,
-            active_cloud: Mutex::new(active_cloud),
-            active_cloud_org: Mutex::new(active_cloud_control_pane),
-            default_project,
+            capella_orgs,
+            active_capella_org: Mutex::new(active_capella_org),
         };
         state.set_active(active).unwrap();
         state
@@ -106,8 +106,7 @@ impl State {
 
     pub fn active_cluster(&self) -> &RemoteCluster {
         let active = self.active.lock().unwrap();
-        &self
-            .clusters
+        self.clusters
             .get(&*active)
             .expect("No active cluster, this is a bug :(")
     }
@@ -120,94 +119,48 @@ impl State {
         &self.config_path
     }
 
-    pub fn clouds(&self) -> &HashMap<String, RemoteCloud> {
-        &self.clouds
+    pub fn capella_orgs(&self) -> &HashMap<String, RemoteCapellaOrganization> {
+        &self.capella_orgs
     }
 
-    pub fn cloud_orgs(&self) -> &HashMap<String, RemoteCloudOrganization> {
-        &self.cloud_orgs
-    }
-
-    pub fn active_cloud_org(&self) -> Result<&RemoteCloudOrganization, ShellError> {
-        let guard = self.active_cloud_org.lock().unwrap();
+    pub fn active_capella_org(&self) -> Result<&RemoteCapellaOrganization, ShellError> {
+        let guard = self.active_capella_org.lock().unwrap();
 
         let active = match guard.deref() {
             Some(a) => a,
-            None => return Err(ShellError::unexpected("No active cloud organization set")),
+            None => return Err(ShellError::unexpected("No Capella organization set")),
         };
 
-        self.cloud_orgs
+        self.capella_orgs
             .get(&*active)
-            .ok_or_else(|| ShellError::unexpected("Active cloud organization not known"))
+            .ok_or_else(|| ShellError::unexpected("Active Capella organization not known"))
     }
 
-    pub fn active_cloud_org_name(&self) -> Option<String> {
-        self.active_cloud_org.lock().unwrap().clone()
+    pub fn active_capella_org_name(&self) -> Option<String> {
+        self.active_capella_org.lock().unwrap().clone()
     }
 
-    pub fn set_active_cloud_org(&self, active: String) -> Result<(), ShellError> {
-        if !self.cloud_orgs.contains_key(&active) {
+    pub fn set_active_capella_org(&self, active: String) -> Result<(), ShellError> {
+        if !self.capella_orgs.contains_key(&active) {
             return Err(ShellError::unexpected(format!(
-                "Cloud organization not known: {}",
+                "Capella organization not known: {}",
                 active
             )));
         }
 
         {
-            let mut guard = self.active_cloud_org.lock().unwrap();
+            let mut guard = self.active_capella_org.lock().unwrap();
             *guard = Some(active.clone());
         }
 
         Ok(())
     }
 
-    pub fn set_active_cloud(&self, active: String) -> Result<(), ShellError> {
-        if !self.clouds.contains_key(&active) {
-            return Err(ShellError::unexpected(format!(
-                "Cloud not known: {}",
-                active
-            )));
-        }
-
-        {
-            let mut guard = self.active_cloud.lock().unwrap();
-            *guard = Some(active.clone());
-        }
-
-        match self.active_cloud() {
-            Ok(c) => {
-                if let Some(p) = self.default_project.clone() {
-                    let _ = c.set_active_project(p);
-                }
-            }
-            Err(_e) => {}
-        }
-
-        Ok(())
-    }
-
-    pub fn active_cloud_name(&self) -> Option<String> {
-        self.active_cloud.lock().unwrap().clone()
-    }
-
-    pub fn active_cloud(&self) -> Result<&RemoteCloud, ShellError> {
-        let guard = self.active_cloud.lock().unwrap();
-
-        let active = match guard.deref() {
-            Some(a) => a,
-            None => return Err(ShellError::unexpected("No active cloud set")),
-        };
-
-        self.clouds
-            .get(&*active)
-            .ok_or_else(|| ShellError::unexpected("Active cloud name not known"))
-    }
-
-    pub fn cloud_org_for_cluster(
+    pub fn capella_org_for_cluster(
         &self,
         identifier: String,
-    ) -> Result<&RemoteCloudOrganization, ShellError> {
-        let org = &self.cloud_orgs.get(identifier.as_str());
+    ) -> Result<&RemoteCapellaOrganization, ShellError> {
+        let org = &self.capella_orgs.get(identifier.as_str());
         if let Some(c) = org {
             Ok(c)
         } else {
@@ -219,40 +172,33 @@ impl State {
     }
 }
 
-pub struct RemoteCloud {
-    active_project: Mutex<Option<String>>,
-}
-
-impl RemoteCloud {
-    pub fn new(active_project: Option<String>) -> Self {
-        Self {
-            active_project: Mutex::new(active_project),
-        }
-    }
-    pub fn active_project(&self) -> Option<String> {
-        self.active_project.lock().unwrap().clone()
-    }
-
-    pub fn set_active_project(&self, name: String) {
-        let mut active = self.active_project.lock().unwrap();
-        *active = Some(name);
-    }
-}
-
-pub struct RemoteCloudOrganization {
+pub struct RemoteCapellaOrganization {
     secret_key: String,
     access_key: String,
-    client: Mutex<Option<Arc<CloudClient>>>,
+    client: Mutex<Option<Arc<CapellaClient>>>,
     timeout: Duration,
+    active_project: Mutex<Option<String>>,
+    active_cloud: Mutex<Option<String>>,
+    environment: CapellaEnvironment,
 }
 
-impl RemoteCloudOrganization {
-    pub fn new(secret_key: String, access_key: String, timeout: Duration) -> Self {
+impl RemoteCapellaOrganization {
+    pub fn new(
+        secret_key: String,
+        access_key: String,
+        timeout: Duration,
+        active_project: Option<String>,
+        active_cloud: Option<String>,
+        environment: CapellaEnvironment,
+    ) -> Self {
         Self {
             secret_key,
             access_key,
             client: Mutex::new(None),
             timeout,
+            active_project: Mutex::new(active_project),
+            active_cloud: Mutex::new(active_cloud),
+            environment,
         }
     }
 
@@ -264,10 +210,10 @@ impl RemoteCloudOrganization {
         self.access_key.clone()
     }
 
-    pub fn client(&self) -> Arc<CloudClient> {
+    pub fn client(&self) -> Arc<CapellaClient> {
         let mut c = self.client.lock().unwrap();
         if c.is_none() {
-            *c = Some(Arc::new(CloudClient::new(
+            *c = Some(Arc::new(CapellaClient::new(
                 self.secret_key.clone(),
                 self.access_key.clone(),
             )));
@@ -277,6 +223,28 @@ impl RemoteCloudOrganization {
 
     pub fn timeout(&self) -> Duration {
         self.timeout.clone()
+    }
+
+    pub fn active_project(&self) -> Option<String> {
+        self.active_project.lock().unwrap().clone()
+    }
+
+    pub fn set_active_project(&self, name: String) {
+        let mut active = self.active_project.lock().unwrap();
+        *active = Some(name);
+    }
+
+    pub fn active_cloud(&self) -> Option<String> {
+        self.active_cloud.lock().unwrap().clone()
+    }
+
+    pub fn set_active_cloud(&self, name: String) {
+        let mut active = self.active_cloud.lock().unwrap();
+        *active = Some(name);
+    }
+
+    pub fn environment(&self) -> CapellaEnvironment {
+        self.environment
     }
 }
 
@@ -290,7 +258,7 @@ pub struct RemoteCluster {
     active_collection: Mutex<Option<String>>,
     tls_config: ClusterTlsConfig,
     timeouts: Mutex<ClusterTimeouts>,
-    cloud_org: Option<String>,
+    capella_org: Option<String>,
     kv_batch_size: u32,
 }
 
@@ -304,7 +272,7 @@ impl RemoteCluster {
         active_collection: Option<String>,
         tls_config: ClusterTlsConfig,
         timeouts: ClusterTimeouts,
-        cloud_org: Option<String>,
+        capella_org: Option<String>,
         kv_batch_size: u32,
     ) -> Self {
         Self {
@@ -317,7 +285,7 @@ impl RemoteCluster {
             active_collection: Mutex::new(active_collection),
             tls_config,
             timeouts: Mutex::new(timeouts),
-            cloud_org,
+            capella_org,
             kv_batch_size,
         }
     }
@@ -396,8 +364,8 @@ impl RemoteCluster {
         *active = timeouts
     }
 
-    pub fn cloud_org(&self) -> Option<String> {
-        self.cloud_org.clone()
+    pub fn capella_org(&self) -> Option<String> {
+        self.capella_org.clone()
     }
 
     pub fn kv_batch_size(&self) -> u32 {
