@@ -262,6 +262,7 @@ impl KvClient {
         }
         let deadline_sleep = sleep(deadline.sub(now));
         tokio::pin!(deadline_sleep);
+        tokio::pin!(deadline_sleep);
 
         let ctrl_c_fut = CtrlcFuture::new(ctrl_c.clone());
         tokio::pin!(ctrl_c_fut);
@@ -270,7 +271,10 @@ impl KvClient {
         for seed in self.config.key_value_seeds(self.tls_config.enabled()) {
             let addr = seed.0.clone();
             let port = seed.1;
-            let ep = self.endpoints.get(addr.clone().as_str()).unwrap();
+            let ep = self
+                .endpoints
+                .get(format!("{}:{}", addr.clone(), port).as_str())
+                .unwrap();
 
             let op = ep.noop();
 
