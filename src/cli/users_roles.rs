@@ -72,7 +72,7 @@ fn run_async(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream
         };
         validate_is_not_cloud(
             active_cluster,
-            "user roles cannot be run against cloud clusters",
+            "user roles cannot be run against capella clusters",
         )?;
 
         let response = active_cluster.cluster().http_client().management_request(

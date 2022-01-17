@@ -2,7 +2,7 @@ use crate::cli::buckets_builder::{BucketSettings, JSONBucketSettings, JSONCloudB
 use crate::cli::buckets_get::bucket_to_tagged_dict;
 use crate::cli::util::cluster_identifiers_from;
 use crate::client::{CapellaRequest, ManagementRequest};
-use crate::state::State;
+use crate::state::{CapellaEnvironment, State};
 use log::debug;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
@@ -69,9 +69,18 @@ fn buckets_get_all(
         if let Some(plane) = cluster.capella_org() {
             let cloud = guard.capella_org_for_cluster(plane)?.client();
             let deadline = Instant::now().add(cluster.timeouts().management_timeout());
-            let cluster_id = cloud.find_cluster_id(identifier.clone(), deadline, ctrl_c.clone())?;
+            let cluster = cloud.find_cluster(identifier.clone(), deadline, ctrl_c.clone())?;
+
+            if cluster.environment() == CapellaEnvironment::Hosted {
+                return Err(ShellError::unexpected(
+                    "buckets cannot be run against hosted Capella clusters",
+                ));
+            }
+
             let response = cloud.capella_request(
-                CapellaRequest::GetBuckets { cluster_id },
+                CapellaRequest::GetBuckets {
+                    cluster_id: cluster.id(),
+                },
                 deadline,
                 ctrl_c.clone(),
             )?;

@@ -66,10 +66,12 @@ fn nodes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Sh
         if let Some(plane) = active_cluster.capella_org() {
             let cloud = guard.capella_org_for_cluster(plane)?.client();
             let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
-            let cluster_id =
-                cloud.find_cluster_id(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
+            let cluster =
+                cloud.find_cluster(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
             let response = cloud.capella_request(
-                CapellaRequest::GetClusterHealth { cluster_id },
+                CapellaRequest::GetClusterHealth {
+                    cluster_id: cluster.id(),
+                },
                 deadline,
                 ctrl_c.clone(),
             )?;

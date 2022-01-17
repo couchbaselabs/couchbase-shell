@@ -1,7 +1,7 @@
 use crate::cli::cloud_json::JSONCloudAppendAllowListRequest;
 use crate::cli::util::{cluster_identifiers_from, validate_is_cloud};
 use crate::client::CapellaRequest;
-use crate::state::State;
+use crate::state::{CapellaEnvironment, State};
 use async_trait::async_trait;
 use log::debug;
 use nu_engine::CommandArgs;
@@ -80,8 +80,13 @@ fn addresses_add(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
         let cloud = guard
             .capella_org_for_cluster(active_cluster.capella_org().unwrap())?
             .client();
-        let cluster_id =
-            cloud.find_cluster_id(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
+        let cluster = cloud.find_cluster(identifier.clone(), deadline, ctrl_c.clone())?;
+
+        if cluster.environment() == CapellaEnvironment::Hosted {
+            return Err(ShellError::unexpected(
+                "allowlists add cannot be run against hosted Capella clusters",
+            ));
+        }
 
         let rule_type = if duration.is_some() {
             "temporary"
@@ -96,7 +101,7 @@ fn addresses_add(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
         );
         let response = cloud.capella_request(
             CapellaRequest::CreateAllowListEntry {
-                cluster_id,
+                cluster_id: cluster.id(),
                 payload: serde_json::to_string(&entry)?,
             },
             deadline,

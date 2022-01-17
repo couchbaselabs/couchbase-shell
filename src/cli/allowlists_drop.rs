@@ -1,7 +1,7 @@
 use crate::cli::cloud_json::JSONCloudDeleteAllowListRequest;
 use crate::cli::util::{cluster_identifiers_from, validate_is_cloud};
 use crate::client::CapellaRequest;
-use crate::state::State;
+use crate::state::{CapellaEnvironment, State};
 use async_trait::async_trait;
 use log::debug;
 use nu_engine::CommandArgs;
@@ -76,17 +76,23 @@ fn addresses_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
         let cloud = guard
             .capella_org_for_cluster(active_cluster.capella_org().unwrap())?
             .client();
-        let cluster_id = cloud.find_cluster_id(
+        let cluster = cloud.find_cluster(
             identifier.clone(),
             Instant::now().add(active_cluster.timeouts().query_timeout()),
             ctrl_c.clone(),
         )?;
 
+        if cluster.environment() == CapellaEnvironment::Hosted {
+            return Err(ShellError::unexpected(
+                "allowlists drop cannot be run against hosted Capella clusters",
+            ));
+        }
+
         let entry = JSONCloudDeleteAllowListRequest::new(address.clone());
 
         let response = cloud.capella_request(
             CapellaRequest::DeleteAllowListEntry {
-                cluster_id,
+                cluster_id: cluster.id(),
                 payload: serde_json::to_string(&entry)?,
             },
             Instant::now().add(active_cluster.timeouts().query_timeout()),

@@ -10,7 +10,7 @@ use crate::config::{
     ShellConfig, DEFAULT_ANALYTICS_TIMEOUT, DEFAULT_DATA_TIMEOUT, DEFAULT_KV_BATCH_SIZE,
     DEFAULT_MANAGEMENT_TIMEOUT, DEFAULT_QUERY_TIMEOUT, DEFAULT_SEARCH_TIMEOUT,
 };
-use crate::state::{CapellaEnvironment, RemoteCapellaOrganization, RemoteCluster};
+use crate::state::{RemoteCapellaOrganization, RemoteCluster};
 use crate::{cli::*, state::ClusterTimeouts};
 use config::ClusterTlsConfig;
 use env_logger::Env;
@@ -221,7 +221,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             let name = c.identifier();
             let default_cloud = c.default_cloud();
             let default_project = c.default_project();
-            let environment = c.environment().unwrap_or(CapellaEnvironment::Hosted);
 
             let plane = RemoteCapellaOrganization::new(
                 c.secret_key(),
@@ -229,7 +228,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                 management_timeout,
                 default_project,
                 default_cloud,
-                environment,
             );
 
             if active_capella_org.is_none() {

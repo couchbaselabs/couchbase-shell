@@ -1,7 +1,7 @@
 use crate::cli::cloud_json::{JSONCloudCreateClusterRequest, JSONCloudCreateClusterRequestV3};
 use crate::cli::util::{find_cloud_id, find_project_id};
 use crate::client::CapellaRequest;
-use crate::state::{CapellaEnvironment, State};
+use crate::state::State;
 use async_trait::async_trait;
 use log::debug;
 use nu_engine::CommandArgs;
@@ -41,6 +41,12 @@ impl nu_engine::WholeStreamCommand for ClustersCreate {
                 "the Capella organization to use",
                 None,
             )
+            .named(
+                "environment",
+                SyntaxShape::String,
+                "the Capella environment to use (\"hosted\" or \"vpc\")",
+                None,
+            )
     }
 
     fn usage(&self) -> &str {
@@ -59,6 +65,7 @@ fn clusters_create(
     let ctrl_c = args.ctrl_c();
     let definition: String = args.req(0)?;
     let capella = args.get_flag("capella")?;
+    let environment = args.get_flag("capella")?.unwrap_or("hosted".to_string());
 
     debug!("Running clusters create for {}", &definition);
 
@@ -77,7 +84,7 @@ fn clusters_create(
     };
     let project_id = find_project_id(ctrl_c.clone(), project_name, &client, deadline)?;
 
-    if control.environment() == CapellaEnvironment::Hosted {
+    if environment == "hosted".to_string() {
         let mut json: JSONCloudCreateClusterRequestV3 =
             serde_json::from_str(definition.as_str())
                 .map_err(|e| ShellError::unexpected(e.to_string()))?;

@@ -1,5 +1,5 @@
 //! The `buckets get` command fetches buckets from the server.
-use crate::state::State;
+use crate::state::{CapellaEnvironment, State};
 
 use crate::cli::cloud_json::JSONCloudDeleteBucketRequest;
 use crate::cli::util::cluster_identifiers_from;
@@ -71,13 +71,20 @@ fn buckets_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
         if let Some(plane) = cluster.capella_org() {
             let cloud = guard.capella_org_for_cluster(plane)?.client();
             let deadline = Instant::now().add(cluster.timeouts().management_timeout());
-            let cluster_id =
-                cloud.find_cluster_id(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
+            let cluster =
+                cloud.find_cluster(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
+
+            if cluster.environment() == CapellaEnvironment::Hosted {
+                return Err(ShellError::unexpected(
+                    "buckets drop cannot  be run against hosted Capella clusters",
+                ));
+            }
+
             let req = JSONCloudDeleteBucketRequest::new(name.clone());
             let payload = serde_json::to_string(&req)?;
             result = cloud.capella_request(
                 CapellaRequest::DeleteBucket {
-                    cluster_id,
+                    cluster_id: cluster.id(),
                     payload,
                 },
                 deadline,

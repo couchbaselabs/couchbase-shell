@@ -1,4 +1,4 @@
-use crate::state::{CapellaEnvironment, RemoteCluster};
+use crate::state::RemoteCluster;
 use log::debug;
 use log::error;
 use serde::{Deserialize, Serialize};
@@ -187,7 +187,6 @@ pub struct CapellaOrganizationConfig {
     default_project: Option<String>,
     #[serde(rename(deserialize = "default-cloud", serialize = "default-cloud"))]
     default_cloud: Option<String>,
-    environment: Option<CapellaEnvironment>,
 }
 
 impl CapellaOrganizationConfig {
@@ -198,7 +197,6 @@ impl CapellaOrganizationConfig {
         management_timeout: Option<Duration>,
         default_project: Option<String>,
         default_cloud: Option<String>,
-        environment: Option<CapellaEnvironment>,
     ) -> Self {
         Self {
             identifier,
@@ -209,7 +207,6 @@ impl CapellaOrganizationConfig {
             management_timeout,
             default_project,
             default_cloud,
-            environment,
         }
     }
     pub fn identifier(&self) -> String {
@@ -229,9 +226,6 @@ impl CapellaOrganizationConfig {
     }
     pub fn default_cloud(&self) -> Option<String> {
         self.default_cloud.as_ref().cloned()
-    }
-    pub fn environment(&self) -> Option<CapellaEnvironment> {
-        self.environment.as_ref().cloned()
     }
 
     pub fn credentials_mut(&mut self) -> &mut CapellaOrganizationCredentials {

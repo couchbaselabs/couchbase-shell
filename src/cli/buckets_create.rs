@@ -3,7 +3,7 @@ use crate::cli::buckets_builder::{
 };
 use crate::cli::util::cluster_identifiers_from;
 use crate::client::{CapellaRequest, HttpResponse, ManagementRequest};
-use crate::state::State;
+use crate::state::{CapellaEnvironment, State};
 use async_trait::async_trait;
 use log::debug;
 use nu_engine::CommandArgs;
@@ -158,12 +158,19 @@ fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
         if let Some(plane) = active_cluster.capella_org() {
             let cloud = guard.capella_org_for_cluster(plane)?.client();
             let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
-            let cluster_id =
-                cloud.find_cluster_id(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
+            let cluster =
+                cloud.find_cluster(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
+
+            if cluster.environment() == CapellaEnvironment::Hosted {
+                return Err(ShellError::unexpected(
+                    "buckets create cannot be run against hosted Capella clusters",
+                ));
+            }
+
             let json_settings = JSONCloudBucketSettings::try_from(&settings)?;
             response = cloud.capella_request(
                 CapellaRequest::CreateBucket {
-                    cluster_id,
+                    cluster_id: cluster.id(),
                     payload: serde_json::to_string(&json_settings)?,
                 },
                 deadline,

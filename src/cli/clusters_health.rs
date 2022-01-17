@@ -1,7 +1,9 @@
 use crate::cli::cloud_json::JSONCloudClusterHealthResponse;
 use crate::cli::util::cluster_identifiers_from;
 use crate::client::{CapellaRequest, ManagementRequest};
-use crate::state::{ClusterTimeouts, RemoteCapellaOrganization, RemoteCluster, State};
+use crate::state::{
+    CapellaEnvironment, ClusterTimeouts, RemoteCapellaOrganization, RemoteCluster, State,
+};
 use log::warn;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
@@ -191,12 +193,21 @@ fn check_cloud_health(
     let mut results = Vec::new();
 
     let deadline = Instant::now().add(timeouts.management_timeout());
-    let cluster_id =
+    let cluster =
         cloud
             .client()
-            .find_cluster_id(identifier.to_string(), deadline.clone(), ctrl_c.clone())?;
+            .find_cluster(identifier.to_string(), deadline.clone(), ctrl_c.clone())?;
+
+    if cluster.environment() == CapellaEnvironment::Hosted {
+        return Err(ShellError::unexpected(
+            "clusters health cannot be run against hosted Capella clusters",
+        ));
+    }
+
     let response = cloud.client().capella_request(
-        CapellaRequest::GetClusterHealth { cluster_id },
+        CapellaRequest::GetClusterHealth {
+            cluster_id: cluster.id(),
+        },
         deadline,
         ctrl_c,
     )?;
