@@ -13,7 +13,7 @@ use std::{collections::HashMap, time::Duration};
 pub enum CapellaEnvironment {
     #[serde(rename = "hosted")]
     Hosted,
-    #[serde(rename = "in-vpc")]
+    #[serde(rename = "vpc")]
     InVPC,
 }
 
@@ -179,7 +179,6 @@ pub struct RemoteCapellaOrganization {
     timeout: Duration,
     active_project: Mutex<Option<String>>,
     active_cloud: Mutex<Option<String>>,
-    environment: CapellaEnvironment,
 }
 
 impl RemoteCapellaOrganization {
@@ -189,7 +188,6 @@ impl RemoteCapellaOrganization {
         timeout: Duration,
         active_project: Option<String>,
         active_cloud: Option<String>,
-        environment: CapellaEnvironment,
     ) -> Self {
         Self {
             secret_key,
@@ -198,7 +196,6 @@ impl RemoteCapellaOrganization {
             timeout,
             active_project: Mutex::new(active_project),
             active_cloud: Mutex::new(active_cloud),
-            environment,
         }
     }
 
@@ -241,10 +238,6 @@ impl RemoteCapellaOrganization {
     pub fn set_active_cloud(&self, name: String) {
         let mut active = self.active_cloud.lock().unwrap();
         *active = Some(name);
-    }
-
-    pub fn environment(&self) -> CapellaEnvironment {
-        self.environment
     }
 }
 

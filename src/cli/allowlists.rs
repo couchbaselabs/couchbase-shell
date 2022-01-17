@@ -1,7 +1,7 @@
 use crate::cli::cloud_json::JSONCloudGetAllowListResponse;
 use crate::cli::util::{cluster_identifiers_from, validate_is_cloud};
 use crate::client::CapellaRequest;
-use crate::state::State;
+use crate::state::{CapellaEnvironment, State};
 use async_trait::async_trait;
 use log::debug;
 use nu_engine::CommandArgs;
@@ -70,14 +70,22 @@ fn addresses(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream
         let cloud = guard
             .capella_org_for_cluster(active_cluster.capella_org().unwrap())?
             .client();
-        let cluster_id = cloud.find_cluster_id(
+        let cluster = cloud.find_cluster(
             identifier.clone(),
             Instant::now().add(active_cluster.timeouts().query_timeout()),
             ctrl_c.clone(),
         )?;
 
+        if cluster.environment() == CapellaEnvironment::Hosted {
+            return Err(ShellError::unexpected(
+                "allowlists cannot be run against hosted Capella clusters",
+            ));
+        }
+
         let response = cloud.capella_request(
-            CapellaRequest::GetAllowList { cluster_id },
+            CapellaRequest::GetAllowList {
+                cluster_id: cluster.id(),
+            },
             Instant::now().add(active_cluster.timeouts().query_timeout()),
             ctrl_c.clone(),
         )?;

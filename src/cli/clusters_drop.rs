@@ -1,4 +1,3 @@
-use crate::cli::util::{find_capella_cluster_id_hosted, find_capella_cluster_id_vpc};
 use crate::client::CapellaRequest;
 use crate::state::{CapellaEnvironment, State};
 use async_trait::async_trait;
@@ -64,20 +63,20 @@ fn clusters_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
     let client = control.client();
 
     let deadline = Instant::now().add(control.timeout());
-    let cluster_id = if control.environment() == CapellaEnvironment::Hosted {
-        find_capella_cluster_id_hosted(ctrl_c.clone(), name, &client, deadline)
-    } else {
-        find_capella_cluster_id_vpc(ctrl_c.clone(), name, &client, deadline)
-    }?;
-    let response = if control.environment() == CapellaEnvironment::Hosted {
+    let cluster = client.find_cluster(name, deadline.clone(), ctrl_c.clone())?;
+    let response = if cluster.environment() == CapellaEnvironment::Hosted {
         client.capella_request(
-            CapellaRequest::DeleteClusterV3 { cluster_id },
+            CapellaRequest::DeleteClusterV3 {
+                cluster_id: cluster.id(),
+            },
             deadline,
             ctrl_c,
         )
     } else {
         client.capella_request(
-            CapellaRequest::DeleteCluster { cluster_id },
+            CapellaRequest::DeleteCluster {
+                cluster_id: cluster.id(),
+            },
             deadline,
             ctrl_c,
         )

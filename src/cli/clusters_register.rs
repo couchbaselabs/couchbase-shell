@@ -183,7 +183,6 @@ pub fn update_config_file(guard: &mut MutexGuard<State>) -> Result<(), ShellErro
             Some(c.timeout()),
             c.active_project(),
             c.active_cloud(),
-            Some(c.environment()),
         ))
     }
 

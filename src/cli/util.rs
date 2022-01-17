@@ -1,7 +1,4 @@
-use crate::cli::cloud_json::{
-    JSONCloudClustersSummaries, JSONCloudClustersSummariesV3, JSONCloudsProjectsResponse,
-    JSONCloudsResponse,
-};
+use crate::cli::cloud_json::{JSONCloudsProjectsResponse, JSONCloudsResponse};
 use crate::client::{CapellaClient, CapellaRequest};
 use crate::state::{RemoteCluster, State};
 use nu_engine::CommandArgs;
@@ -323,48 +320,6 @@ pub(crate) fn find_cloud_id(
     }
 
     Err(ShellError::unexpected("Cloud could not be found"))
-}
-
-pub(crate) fn find_capella_cluster_id_hosted(
-    ctrl_c: Arc<AtomicBool>,
-    name: String,
-    client: &Arc<CapellaClient>,
-    deadline: Instant,
-) -> Result<String, ShellError> {
-    let response = client.capella_request(CapellaRequest::GetClustersV3 {}, deadline, ctrl_c)?;
-    if response.status() != 200 {
-        return Err(ShellError::unexpected(response.content().to_string()));
-    };
-    let content: JSONCloudClustersSummariesV3 = serde_json::from_str(response.content())?;
-
-    for c in content.items() {
-        if c.name() == name {
-            return Ok(c.id().to_string());
-        }
-    }
-
-    Err(ShellError::unexpected("Cluster could not be found"))
-}
-
-pub(crate) fn find_capella_cluster_id_vpc(
-    ctrl_c: Arc<AtomicBool>,
-    name: String,
-    client: &Arc<CapellaClient>,
-    deadline: Instant,
-) -> Result<String, ShellError> {
-    let response = client.capella_request(CapellaRequest::GetClusters {}, deadline, ctrl_c)?;
-    if response.status() != 200 {
-        return Err(ShellError::unexpected(response.content().to_string()));
-    };
-    let content: JSONCloudClustersSummaries = serde_json::from_str(response.content())?;
-
-    for c in content.items() {
-        if c.name() == name {
-            return Ok(c.id().to_string());
-        }
-    }
-
-    Err(ShellError::unexpected("Cluster could not be found"))
 }
 
 // duration_to_golang_string creates a golang formatted string to use with timeouts. Unlike Golang

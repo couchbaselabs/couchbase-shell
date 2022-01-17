@@ -1,7 +1,7 @@
 use crate::cli::cloud_json::{JSONCloudCreateUserRequest, JSONCloudUser, JSONCloudUserRoles};
 use crate::cli::util::cluster_identifiers_from;
 use crate::client::{CapellaRequest, ManagementRequest};
-use crate::state::State;
+use crate::state::{CapellaEnvironment, State};
 use async_trait::async_trait;
 use log::debug;
 use nu_engine::CommandArgs;
@@ -134,10 +134,17 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
 
             let cloud = guard.capella_org_for_cluster(plane)?.client();
             let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
-            let cluster_id = cloud.find_cluster_id(identifier.clone(), deadline, ctrl_c.clone())?;
+            let cluster = cloud.find_cluster(identifier.clone(), deadline, ctrl_c.clone())?;
+
+            if cluster.environment() == CapellaEnvironment::Hosted {
+                return Err(ShellError::unexpected(
+                    "users upsert cannot be run against hosted Capella clusters",
+                ));
+            }
+
             let response = cloud.capella_request(
                 CapellaRequest::GetUsers {
-                    cluster_id: cluster_id.clone(),
+                    cluster_id: cluster.id(),
                 },
                 deadline,
                 ctrl_c.clone(),
@@ -165,7 +172,7 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
                 );
                 cloud.capella_request(
                     CapellaRequest::UpdateUser {
-                        cluster_id,
+                        cluster_id: cluster.id(),
                         payload: serde_json::to_string(&user)?,
                         username: username.clone(),
                     },
@@ -191,7 +198,7 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
                 );
                 cloud.capella_request(
                     CapellaRequest::CreateUser {
-                        cluster_id,
+                        cluster_id: cluster.id(),
                         payload: serde_json::to_string(&user)?,
                     },
                     deadline,

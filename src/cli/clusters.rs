@@ -1,9 +1,9 @@
-use crate::cli::cloud_json::{JSONCloudClustersSummaries, JSONCloudClustersSummariesV3};
+use crate::cli::cloud_json::JSONCloudClustersSummariesV3;
 use crate::client::CapellaRequest;
-use crate::state::{CapellaEnvironment, State};
+use crate::state::State;
 use nu_engine::CommandArgs;
 use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
+use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder};
 use nu_source::Tag;
 use nu_stream::OutputStream;
 use std::ops::Add;
@@ -56,46 +56,28 @@ fn clusters(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream,
     }?;
     let client = control.client();
 
-    let mut results = vec![];
-    if control.environment() == CapellaEnvironment::Hosted {
-        let response = client.capella_request(
-            CapellaRequest::GetClustersV3 {},
-            Instant::now().add(control.timeout()),
-            ctrl_c,
-        )?;
-        if response.status() != 200 {
-            return Err(ShellError::unexpected(response.content().to_string()));
-        };
-
-        let content: JSONCloudClustersSummariesV3 = serde_json::from_str(response.content())?;
-
-        for cluster in content.items() {
-            let mut collected = TaggedDictBuilder::new(Tag::default());
-            collected.insert_value("name", cluster.name());
-            collected.insert_value("id", cluster.id());
-            results.push(collected.into_value())
-        }
-    } else {
-        let response = client.capella_request(
-            CapellaRequest::GetClusters {},
-            Instant::now().add(control.timeout()),
-            ctrl_c,
-        )?;
-        if response.status() != 200 {
-            return Err(ShellError::unexpected(response.content().to_string()));
-        };
-
-        let content: JSONCloudClustersSummaries = serde_json::from_str(response.content())?;
-
-        for cluster in content.items() {
-            let mut collected = TaggedDictBuilder::new(Tag::default());
-            collected.insert_value("name", cluster.name());
-            collected.insert_value("id", cluster.id());
-            collected.insert_value("services", cluster.services().join(","));
-            collected.insert_value("nodes", UntaggedValue::int(cluster.nodes()));
-            results.push(collected.into_value())
-        }
+    let response = client.capella_request(
+        CapellaRequest::GetClustersV3 {},
+        Instant::now().add(control.timeout()),
+        ctrl_c,
+    )?;
+    if response.status() != 200 {
+        return Err(ShellError::unexpected(response.content().to_string()));
     };
+
+    let content: JSONCloudClustersSummariesV3 = serde_json::from_str(response.content())?;
+
+    let mut results = vec![];
+    for cluster in content.items() {
+        let mut collected = TaggedDictBuilder::new(Tag::default());
+        collected.insert_value("name", cluster.name());
+        collected.insert_value("id", cluster.id());
+        collected.insert_value("cloud_id", cluster.cloud_id());
+        collected.insert_value("project_id", cluster.project_id());
+        collected.insert_value("environment", cluster.environment());
+        collected.insert_value("tenant_id", content.tenant_id());
+        results.push(collected.into_value())
+    }
 
     Ok(OutputStream::from(results))
 }

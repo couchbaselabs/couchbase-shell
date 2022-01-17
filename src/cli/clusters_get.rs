@@ -1,5 +1,4 @@
 use crate::cli::cloud_json::{JSONCloudCluster, JSONCloudClusterV3};
-use crate::cli::util::{find_capella_cluster_id_hosted, find_capella_cluster_id_vpc};
 use crate::client::CapellaRequest;
 use crate::state::{CapellaEnvironment, State};
 use async_trait::async_trait;
@@ -65,11 +64,12 @@ fn clusters_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
     let client = control.client();
 
     let deadline = Instant::now().add(control.timeout());
-    if control.environment() == CapellaEnvironment::Hosted {
-        let cluster_id = find_capella_cluster_id_hosted(ctrl_c.clone(), name, &client, deadline)?;
-
+    let cluster = client.find_cluster(name, deadline, ctrl_c.clone())?;
+    if cluster.environment() == CapellaEnvironment::Hosted {
         let response = client.capella_request(
-            CapellaRequest::GetClusterV3 { cluster_id },
+            CapellaRequest::GetClusterV3 {
+                cluster_id: cluster.id(),
+            },
             deadline,
             ctrl_c,
         )?;
@@ -94,10 +94,13 @@ fn clusters_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
         return Ok(OutputStream::from(vec![collected.into_value()]));
     }
 
-    let cluster_id = find_capella_cluster_id_vpc(ctrl_c.clone(), name, &client, deadline)?;
-
-    let response =
-        client.capella_request(CapellaRequest::GetCluster { cluster_id }, deadline, ctrl_c)?;
+    let response = client.capella_request(
+        CapellaRequest::GetCluster {
+            cluster_id: cluster.id(),
+        },
+        deadline,
+        ctrl_c,
+    )?;
     if response.status() != 200 {
         return Err(ShellError::unexpected(response.content().to_string()));
     };

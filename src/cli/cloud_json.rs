@@ -2,59 +2,13 @@ use crate::cli::nodes::NodeService;
 use serde_derive::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
-pub(crate) struct JSONCloudClusterSummary {
-    id: String,
-    name: String,
-    #[serde(rename = "tenantId")]
-    tenant_id: String,
-    #[serde(rename = "cloudId")]
-    cloud_id: String,
-    #[serde(rename = "projectId")]
-    project_id: String,
-    services: Vec<String>,
-    nodes: i64,
-}
-
-impl JSONCloudClusterSummary {
-    pub fn id(&self) -> String {
-        self.id.clone()
-    }
-    pub fn name(&self) -> String {
-        self.name.clone()
-    }
-    // pub fn tenant_id(&self) -> String {
-    //     self.tenant_id.clone()
-    // }
-    // pub fn cloud_id(&self) -> String {
-    //     self.cloud_id.clone()
-    // }
-    // pub fn project_id(&self) -> String {
-    //     self.project_id.clone()
-    // }
-    pub fn services(&self) -> &Vec<String> {
-        &self.services
-    }
-    pub fn nodes(&self) -> i64 {
-        self.nodes
-    }
-}
-
-#[derive(Debug, Deserialize)]
-pub(crate) struct JSONCloudClustersSummaries {
-    data: Vec<JSONCloudClusterSummary>,
-}
-
-impl JSONCloudClustersSummaries {
-    pub fn items(&self) -> &Vec<JSONCloudClusterSummary> {
-        self.data.as_ref()
-    }
-}
-#[derive(Debug, Deserialize)]
 pub(crate) struct JSONCloudClusterSummaryV3 {
     id: String,
     name: String,
     #[serde(rename = "projectId")]
     project_id: String,
+    #[serde(rename = "cloudId", default)]
+    cloud_id: String,
     environment: String,
 }
 
@@ -65,19 +19,22 @@ impl JSONCloudClusterSummaryV3 {
     pub fn name(&self) -> String {
         self.name.clone()
     }
-    // pub fn tenant_id(&self) -> String {
-    //     self.tenant_id.clone()
-    // }
-    // pub fn cloud_id(&self) -> String {
-    //     self.cloud_id.clone()
-    // }
-    // pub fn project_id(&self) -> String {
-    //     self.project_id.clone()
-    // }
+    pub fn cloud_id(&self) -> String {
+        self.cloud_id.clone()
+    }
+    pub fn project_id(&self) -> String {
+        self.project_id.clone()
+    }
+    pub fn environment(&self) -> String {
+        self.project_id.clone()
+    }
 }
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct JSONCloudClustersSummariesItemsV3 {
+    #[serde(rename = "tenantId", default)]
+    tenant_id: String,
+    #[serde(default)]
     items: Vec<JSONCloudClusterSummaryV3>,
 }
 
@@ -89,6 +46,10 @@ pub(crate) struct JSONCloudClustersSummariesV3 {
 impl JSONCloudClustersSummariesV3 {
     pub fn items(&self) -> &Vec<JSONCloudClusterSummaryV3> {
         self.data.items.as_ref()
+    }
+
+    pub fn tenant_id(&self) -> String {
+        self.data.tenant_id.clone()
     }
 }
 

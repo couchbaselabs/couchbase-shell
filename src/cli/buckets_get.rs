@@ -1,6 +1,6 @@
 //! The `buckets get` command fetches buckets from the server.
 
-use crate::state::State;
+use crate::state::{CapellaEnvironment, State};
 
 use crate::cli::buckets_builder::{BucketSettings, JSONBucketSettings, JSONCloudBucketSettings};
 use crate::cli::util::cluster_identifiers_from;
@@ -73,13 +73,22 @@ fn buckets_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStre
 
         if let Some(plane) = cluster.capella_org() {
             let cloud = guard.capella_org_for_cluster(plane)?.client();
-            let cluster_id = cloud.find_cluster_id(
+            let cloud_cluster = cloud.find_cluster(
                 identifier.clone(),
                 Instant::now().add(cluster.timeouts().query_timeout()),
                 ctrl_c.clone(),
             )?;
+
+            if cloud_cluster.environment() == CapellaEnvironment::Hosted {
+                return Err(ShellError::unexpected(
+                    "buckets get cannot be run against hosted Capella clusters",
+                ));
+            }
+
             let response = cloud.capella_request(
-                CapellaRequest::GetBuckets { cluster_id },
+                CapellaRequest::GetBuckets {
+                    cluster_id: cloud_cluster.id(),
+                },
                 Instant::now().add(cluster.timeouts().query_timeout()),
                 ctrl_c.clone(),
             )?;

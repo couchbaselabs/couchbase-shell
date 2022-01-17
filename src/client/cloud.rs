@@ -1,6 +1,7 @@
 use crate::cli::CtrlcFuture;
 use crate::client::error::ClientError;
 use crate::client::http_handler::{HttpResponse, HttpVerb};
+use crate::state::CapellaEnvironment;
 use hmac::{Hmac, Mac, NewMac};
 use isahc::prelude::*;
 use isahc::ResponseFuture;
@@ -17,9 +18,22 @@ use tokio::{select, time::Instant};
 const CLOUD_URL: &str = "https://cloudapi.cloud.couchbase.com";
 
 #[derive(Debug, Deserialize)]
-struct LimitedClusterSummary {
+pub struct LimitedClusterSummary {
     id: String,
     name: String,
+    environment: CapellaEnvironment,
+}
+
+impl LimitedClusterSummary {
+    pub fn id(&self) -> String {
+        self.id.clone()
+    }
+    pub fn name(&self) -> String {
+        self.name.clone()
+    }
+    pub fn environment(&self) -> CapellaEnvironment {
+        self.environment
+    }
 }
 
 pub struct CapellaClient {
@@ -148,13 +162,13 @@ impl CapellaClient {
         self.http_do(HttpVerb::Put, path, payload, deadline, ctrl_c)
     }
 
-    pub fn find_cluster_id(
+    pub fn find_cluster(
         &self,
         cluster_name: String,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
-    ) -> Result<String, ClientError> {
-        let request = CapellaRequest::GetClusters {};
+    ) -> Result<LimitedClusterSummary, ClientError> {
+        let request = CapellaRequest::GetClustersV3 {};
         let (content, status) = self.http_get(request.path().as_str(), deadline, ctrl_c)?;
 
         if status != 200 {
@@ -165,12 +179,35 @@ impl CapellaClient {
         }
 
         let data: Value = serde_json::from_str(content.as_str())?;
-        let v = data.get("data").unwrap().to_string();
-        let clusters: Vec<LimitedClusterSummary> = serde_json::from_str(v.as_str())?;
+        let v = match data.get("data") {
+            Some(i) => i,
+            None => {
+                return Err(ClientError::RequestFailed {
+                    reason: Some(
+                        "Get clusters response payload unexpected format, missing items".into(),
+                    ),
+                    key: None,
+                })
+            }
+        };
+        let items = match v.get("items") {
+            Some(i) => i,
+            None => {
+                return Err(ClientError::RequestFailed {
+                    reason: Some(
+                        "Get clusters response payload unexpected format, missing items".into(),
+                    ),
+                    key: None,
+                })
+            }
+        };
+
+        let clusters: Vec<LimitedClusterSummary> =
+            serde_json::from_str(items.to_string().as_str())?;
 
         for c in clusters {
             if c.name == cluster_name {
-                return Ok(c.id);
+                return Ok(c);
             }
         }
 
