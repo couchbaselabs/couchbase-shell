@@ -94,3 +94,20 @@ jobs:
       with:
         name: ${{ runner.os }}
         path: artifacts/
+
+  cargo-deny:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        checks:
+          - advisories
+          - bans licenses sources
+
+    # This should maybe be false for releases.
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: EmbarkStudios/cargo-deny-action@v1
+        with:
+          command: check ${{ matrix.checks }}
