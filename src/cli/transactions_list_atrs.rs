@@ -52,7 +52,12 @@ impl nu_engine::WholeStreamCommand for TransactionsListAtrs {
         let ctrl_c = args.ctrl_c();
 
         let guard = self.state.lock().unwrap();
-        let active_cluster = guard.active_cluster();
+        let active_cluster = match guard.active_cluster() {
+            Some(c) => c,
+            None => {
+                return Err(ShellError::unexpected("An active cluster must be set"));
+            }
+        };
         let bucket = match args
             .get_flag("bucket")?
             .or_else(|| active_cluster.active_bucket())

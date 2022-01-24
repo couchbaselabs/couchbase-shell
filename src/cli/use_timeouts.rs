@@ -64,7 +64,12 @@ impl nu_engine::WholeStreamCommand for UseTimeouts {
 
     fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
         let guard = self.state.lock().unwrap();
-        let active = guard.active_cluster();
+        let active = match guard.active_cluster() {
+            Some(c) => c,
+            None => {
+                return Err(ShellError::unexpected("An active cluster must be set"));
+            }
+        };
 
         let analytics = args.get_flag("analytics-timeout")?;
         let search = args.get_flag("search-timeout")?;

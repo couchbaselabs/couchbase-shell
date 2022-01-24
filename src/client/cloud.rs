@@ -193,12 +193,11 @@ impl CapellaClient {
         let items = match v.get("items") {
             Some(i) => i,
             None => {
+                // No items entry means no clusters.
                 return Err(ClientError::RequestFailed {
-                    reason: Some(
-                        "Get clusters response payload unexpected format, missing items".into(),
-                    ),
+                    reason: Some("Cluster not found".into()),
                     key: None,
-                })
+                });
             }
         };
 

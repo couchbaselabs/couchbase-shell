@@ -20,7 +20,7 @@ pub struct ShellConfig {
     version: usize,
     /// Note: clusters is kept for backwards compatibility and
     /// convenience, docs should only mention cluster
-    #[serde(alias = "cluster")]
+    #[serde(alias = "cluster", default)]
     #[serde(alias = "clusters")]
     clusters: Vec<ClusterConfig>,
 
