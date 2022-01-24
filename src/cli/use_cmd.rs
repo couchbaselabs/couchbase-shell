@@ -51,7 +51,6 @@ fn use_cmd(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, 
     let show_timeouts = args.has_flag("timeouts");
 
     let guard = state.lock().unwrap();
-    let active = guard.active_cluster();
     let mut using_now = TaggedDictBuilder::new(Tag::default());
     if show_capella {
         let org = guard.active_capella_org()?;
@@ -70,51 +69,69 @@ fn use_cmd(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, 
             "project",
             org.active_project().unwrap_or_else(|| String::from("")),
         );
-    } else {
-        using_now.insert_value("username", active.username());
-        using_now.insert_value("cluster", guard.active());
-        using_now.insert_value(
-            "bucket",
-            active
-                .active_bucket()
-                .unwrap_or_else(|| String::from("<not set>")),
-        );
-        using_now.insert_value(
-            "scope",
-            active.active_scope().unwrap_or_else(|| String::from("")),
-        );
-        using_now.insert_value(
-            "collection",
-            active
-                .active_collection()
-                .unwrap_or_else(|| String::from("")),
-        );
-        if let Some(co) = active.capella_org() {
-            using_now.insert_value("capella-organization", co);
+        if show_timeouts {
+            using_now.insert_value(
+                "management-timeout (ms)",
+                UntaggedValue::int(org.timeout().as_millis() as i64),
+            );
         }
-    }
-    if show_timeouts {
-        let timeouts = active.timeouts();
-        using_now.insert_value(
-            "data-timeout (ms)",
-            UntaggedValue::int(timeouts.data_timeout().as_millis() as i64),
-        );
-        using_now.insert_value(
-            "management-timeout (ms)",
-            UntaggedValue::int(timeouts.management_timeout().as_millis() as i64),
-        );
-        using_now.insert_value(
-            "analytics-timeout (ms)",
-            UntaggedValue::int(timeouts.analytics_timeout().as_millis() as i64),
-        );
-        using_now.insert_value(
-            "query-timeout (ms)",
-            UntaggedValue::int(timeouts.query_timeout().as_millis() as i64),
-        );
-        using_now.insert_value(
-            "search-timeout (ms)",
-            UntaggedValue::int(timeouts.search_timeout().as_millis() as i64),
-        );
+    } else {
+        match guard.active_cluster() {
+            Some(active) => {
+                using_now.insert_value("username", active.username());
+                using_now.insert_value("cluster", guard.active());
+                using_now.insert_value(
+                    "bucket",
+                    active
+                        .active_bucket()
+                        .unwrap_or_else(|| String::from("<not set>")),
+                );
+                using_now.insert_value(
+                    "scope",
+                    active.active_scope().unwrap_or_else(|| String::from("")),
+                );
+                using_now.insert_value(
+                    "collection",
+                    active
+                        .active_collection()
+                        .unwrap_or_else(|| String::from("")),
+                );
+                if let Some(co) = active.capella_org() {
+                    using_now.insert_value("capella-organization", co);
+                }
+
+                if show_timeouts {
+                    let timeouts = active.timeouts();
+                    using_now.insert_value(
+                        "data-timeout (ms)",
+                        UntaggedValue::int(timeouts.data_timeout().as_millis() as i64),
+                    );
+                    using_now.insert_value(
+                        "management-timeout (ms)",
+                        UntaggedValue::int(timeouts.management_timeout().as_millis() as i64),
+                    );
+                    using_now.insert_value(
+                        "analytics-timeout (ms)",
+                        UntaggedValue::int(timeouts.analytics_timeout().as_millis() as i64),
+                    );
+                    using_now.insert_value(
+                        "query-timeout (ms)",
+                        UntaggedValue::int(timeouts.query_timeout().as_millis() as i64),
+                    );
+                    using_now.insert_value(
+                        "search-timeout (ms)",
+                        UntaggedValue::int(timeouts.search_timeout().as_millis() as i64),
+                    );
+                }
+            }
+            None => {
+                using_now.insert_value("username", String::from("<not set>"));
+                using_now.insert_value("cluster", String::from("<not set>"));
+                using_now.insert_value("bucket", String::from("<not set>"));
+                using_now.insert_value("scope", String::from("<not set>"));
+                using_now.insert_value("collection", String::from("<not set>"));
+            }
+        }
     }
     let clusters = vec![using_now.into_value()];
 

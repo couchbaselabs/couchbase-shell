@@ -42,7 +42,9 @@ impl State {
             capella_orgs,
             active_capella_org: Mutex::new(active_capella_org),
         };
-        state.set_active(active).unwrap();
+        if !active.is_empty() {
+            state.set_active(active).unwrap();
+        }
         state
     }
 
@@ -81,18 +83,22 @@ impl State {
             *guard = active.clone();
         }
 
-        let remote = self.active_cluster();
-        let _ = remote.cluster();
+        match self.active_cluster() {
+            Some(remote) => {
+                let _ = remote.cluster();
 
-        //if remote.active_bucket().is_some() {
-        //    let _ = remote.bucket(remote.active_bucket().unwrap().as_str());
-        //}
+                //if remote.active_bucket().is_some() {
+                //    let _ = remote.bucket(remote.active_bucket().unwrap().as_str());
+                //}
 
-        if let Some(s) = remote.active_scope().clone() {
-            let _ = remote.set_active_scope(s);
-        }
-        if let Some(c) = remote.active_collection().clone() {
-            let _ = remote.set_active_collection(c);
+                if let Some(s) = remote.active_scope().clone() {
+                    let _ = remote.set_active_scope(s);
+                }
+                if let Some(c) = remote.active_collection().clone() {
+                    let _ = remote.set_active_collection(c);
+                }
+            }
+            None => {}
         }
 
         for (k, v) in &self.clusters {
@@ -104,11 +110,9 @@ impl State {
         Ok(())
     }
 
-    pub fn active_cluster(&self) -> &RemoteCluster {
+    pub fn active_cluster(&self) -> Option<&RemoteCluster> {
         let active = self.active.lock().unwrap();
-        self.clusters
-            .get(&*active)
-            .expect("No active cluster, this is a bug :(")
+        self.clusters.get(&*active)
     }
 
     pub fn tutorial(&self) -> &Tutorial {

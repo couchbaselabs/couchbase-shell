@@ -37,7 +37,12 @@ impl nu_engine::WholeStreamCommand for UseCollection {
 
     fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
         let guard = self.state.lock().unwrap();
-        let active = guard.active_cluster();
+        let active = match guard.active_cluster() {
+            Some(c) => c,
+            None => {
+                return Err(ShellError::unexpected("An active cluster must be set"));
+            }
+        };
 
         if active.active_bucket().is_none() {
             return Err(ShellError::unexpected(

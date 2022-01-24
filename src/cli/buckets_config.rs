@@ -50,7 +50,12 @@ fn buckets(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, 
     let bucket_name = args.req(0)?;
 
     let guard = state.lock().unwrap();
-    let active_cluster = guard.active_cluster();
+    let active_cluster = match guard.active_cluster() {
+        Some(c) => c,
+        None => {
+            return Err(ShellError::unexpected("An active cluster must be set"));
+        }
+    };
     let cluster = active_cluster.cluster();
 
     validate_is_not_cloud(

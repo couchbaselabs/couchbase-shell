@@ -47,23 +47,27 @@ fn run_tutorial(
 ) -> Result<OutputStream, ShellError> {
     let guard = state.lock().unwrap();
     let tutorial = guard.tutorial();
-    let active_cluster = guard.active_cluster();
-    let exists = if active_cluster.capella_org().is_none() {
-        let resp = active_cluster.cluster().http_client().management_request(
-            ManagementRequest::GetBucket {
-                name: "travel-sample".into(),
-            },
-            Instant::now().add(active_cluster.timeouts().management_timeout()),
-            ctrl_c,
-        );
+    let exists = match guard.active_cluster() {
+        Some(active_cluster) => {
+            if active_cluster.capella_org().is_none() {
+                let resp = active_cluster.cluster().http_client().management_request(
+                    ManagementRequest::GetBucket {
+                        name: "travel-sample".into(),
+                    },
+                    Instant::now().add(active_cluster.timeouts().management_timeout()),
+                    ctrl_c,
+                );
 
-        match resp {
-            Ok(r) => matches!(r.status(), 200),
-            Err(_) => false,
+                match resp {
+                    Ok(r) => matches!(r.status(), 200),
+                    Err(_) => false,
+                }
+            } else {
+                // Bit of a hack, if the user is on cloud then they can't enable travel-sample
+                true
+            }
         }
-    } else {
-        // Bit of a hack, if the user is on cloud then they can't enable travel-sample
-        true
+        None => true,
     };
 
     Ok(OutputStream::one(

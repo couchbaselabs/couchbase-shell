@@ -68,7 +68,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
 
     let mut active_capella_org = None;
-    let active = if config.clusters().is_empty() {
+    let active = if config.clusters().is_empty() && config.capella_orgs().is_empty() {
         let hostnames = if let Some(hosts) = opt.hostnames {
             hosts
         } else {
@@ -237,7 +237,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             capella_orgs.insert(name, plane);
         }
 
-        active.unwrap()
+        active.unwrap_or_else(|| "".into())
     };
 
     let state = Arc::new(Mutex::new(State::new(
