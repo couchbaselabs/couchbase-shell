@@ -68,6 +68,12 @@ jobs:
     - name: Create artifact directory
       run: mkdir artifacts
 
+    - name: Cyclonedx
+      run: |
+        cargo install cargo-cyclonedx
+        cargo cyclonedx --all -q -f json
+        mv bom.json artifacts
+
     - name: Create archive for Linux
       run: 7z a -ttar -so -an ./target/release/${{ env.RELEASE_BIN }} ${{ env.RELEASE_ADDS }} | 7z a -si ./artifacts/${{ env.RELEASE_BIN }}-linux-x86_64.tar.gz
       if: matrix.os == 'ubuntu-18.04'
