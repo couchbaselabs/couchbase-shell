@@ -95,12 +95,6 @@ jobs:
     - name: Create artifact directory
       run: mkdir artifacts
 
-    - name: Cyclonedx
-      run: |
-        cargo install cargo-cyclonedx
-        cargo cyclonedx --all -q -f json
-        mv bom.json artifacts
-
     - name: Create archive for Linux
       run: 7z a -ttar -so -an ./target/debug/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }} | 7z a -si ./artifacts/${{ env.ARTIFACT_BIN }}-${{ env.SHA8 }}-linux-x86_64.tar.gz
       if: matrix.os == 'ubuntu-18.04'
@@ -136,20 +130,4 @@ jobs:
     - name: Install Rust
       run: rustup update stable && rustup default stable && rustup component add rustfmt
     - run: cargo fmt -- --check
-
-  cargo-deny:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        checks:
-          - advisories
-          - bans licenses sources
-
-    continue-on-error: true
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: EmbarkStudios/cargo-deny-action@v1
-        with:
-          command: check ${{ matrix.checks }}
 
