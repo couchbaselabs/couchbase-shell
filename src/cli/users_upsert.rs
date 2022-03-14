@@ -1,18 +1,22 @@
 use crate::cli::cloud_json::{JSONCloudCreateUserRequest, JSONCloudUser, JSONCloudUserRoles};
-use crate::cli::util::cluster_identifiers_from;
+use crate::cli::util::{
+    cant_run_against_hosted_capella_error, cluster_identifiers_from, cluster_not_found_error,
+    generic_labeled_error, map_serde_deserialize_error_to_shell_error,
+};
 use crate::client::{CapellaRequest, ManagementRequest};
 use crate::state::{CapellaEnvironment, State};
-use async_trait::async_trait;
 use log::debug;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape};
-use nu_stream::OutputStream;
 use std::collections::HashMap;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
+
+#[derive(Clone)]
 pub struct UsersUpsert {
     state: Arc<Mutex<State>>,
 }
@@ -23,8 +27,7 @@ impl UsersUpsert {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for UsersUpsert {
+impl Command for UsersUpsert {
     fn name(&self) -> &str {
         "users upsert"
     }
@@ -61,35 +64,50 @@ impl nu_engine::WholeStreamCommand for UsersUpsert {
                 "the clusters which should be contacted",
                 None,
             )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Upserts a user"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        users_upsert(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        users_upsert(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
-    let username: String = args.req(0)?;
-    let roles: String = args.req(1)?;
-    let password = args.get_flag("password")?;
-    let display_name = args.get_flag("display_name")?;
-    let groups = args.get_flag("groups")?;
+fn users_upsert(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let span = call.head;
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+
+    let username: String = call.req(engine_state, stack, 0)?;
+    let roles: String = call.req(engine_state, stack, 1)?;
+    let password = call.get_flag(engine_state, stack, "password")?;
+    let display_name = call.get_flag(engine_state, stack, "display_name")?;
+    let groups = call.get_flag(engine_state, stack, "groups")?;
 
     debug!("Running users upsert for user {}", &username);
 
-    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
+    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
     let guard = state.lock().unwrap();
 
     for identifier in cluster_identifiers {
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::unexpected("Cluster not found"));
+                return Err(cluster_not_found_error(identifier));
             }
         };
         let response = if let Some(plane) = active_cluster.capella_org() {
@@ -127,7 +145,8 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
             } else if all_access_roles.len() == 1 {
                 all_access_roles[0].clone()
             } else {
-                return Err(ShellError::unexpected(
+                return Err(generic_labeled_error(
+                    "Users with cluster scoped permissions can only be assigned one role",
                     "Users with cluster scoped permissions can only be assigned one role",
                 ));
             };
@@ -137,9 +156,7 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
             let cluster = cloud.find_cluster(identifier.clone(), deadline, ctrl_c.clone())?;
 
             if cluster.environment() == CapellaEnvironment::Hosted {
-                return Err(ShellError::unexpected(
-                    "users upsert cannot be run against hosted Capella clusters",
-                ));
+                return Err(cant_run_against_hosted_capella_error());
             }
 
             let response = cloud.capella_request(
@@ -150,10 +167,14 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
                 ctrl_c.clone(),
             )?;
             if response.status() != 200 {
-                return Err(ShellError::unexpected(response.content()));
-            }
+                return Err(generic_labeled_error(
+                    "Failed to get users",
+                    format!("Failed to get users {}", response.content()),
+                ));
+            };
 
-            let users: Vec<JSONCloudUser> = serde_json::from_str(response.content())?;
+            let users: Vec<JSONCloudUser> = serde_json::from_str(response.content())
+                .map_err(map_serde_deserialize_error_to_shell_error)?;
 
             let mut user_exists = false;
             for u in users {
@@ -173,7 +194,8 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
                 cloud.capella_request(
                     CapellaRequest::UpdateUser {
                         cluster_id: cluster.id(),
-                        payload: serde_json::to_string(&user)?,
+                        payload: serde_json::to_string(&user)
+                            .map_err(map_serde_deserialize_error_to_shell_error)?,
                         username: username.clone(),
                     },
                     deadline,
@@ -184,7 +206,8 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
                 let pass = match password.clone() {
                     Some(p) => p,
                     None => {
-                        return Err(ShellError::unexpected(
+                        return Err(generic_labeled_error(
+                            "Capella database user does not exist, password must be set",
                             "Capella database user does not exist, password must be set",
                         ));
                     }
@@ -199,7 +222,8 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
                 cloud.capella_request(
                     CapellaRequest::CreateUser {
                         cluster_id: cluster.id(),
-                        payload: serde_json::to_string(&user)?,
+                        payload: serde_json::to_string(&user)
+                            .map_err(map_serde_deserialize_error_to_shell_error)?,
                     },
                     deadline,
                     ctrl_c.clone(),
@@ -230,10 +254,13 @@ fn users_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStr
             202 => {}
             204 => {}
             _ => {
-                return Err(ShellError::unexpected(response.content()));
+                return Err(generic_labeled_error(
+                    "Failed to upsert user",
+                    format!("Failed to upsert user {}", response.content()),
+                ));
             }
         }
     }
 
-    Ok(OutputStream::empty())
+    Ok(PipelineData::new(span))
 }

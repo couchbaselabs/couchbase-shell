@@ -1,20 +1,19 @@
-use crate::cli::util::cluster_identifiers_from;
+use crate::cli::util::{cluster_identifiers_from, NuValueMap};
 use crate::state::State;
 
 use crate::cli::cloud_json::JSONCloudClusterHealthResponse;
 use crate::client::{CapellaRequest, ManagementRequest};
-use async_trait::async_trait;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
-use nu_source::Tag;
-use nu_stream::OutputStream;
 use serde::Deserialize;
 use std::fmt;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value};
+
+#[derive(Clone)]
 pub struct Nodes {
     state: Arc<Mutex<State>>,
 }
@@ -25,8 +24,7 @@ impl Nodes {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for Nodes {
+impl Command for Nodes {
     fn name(&self) -> &str {
         "nodes"
     }
@@ -44,15 +42,27 @@ impl nu_engine::WholeStreamCommand for Nodes {
         "Lists all nodes of the connected cluster"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        nodes(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        nodes(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn nodes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
+fn nodes(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
 
     let guard = state.lock().unwrap();
     let mut nodes = vec![];
@@ -60,7 +70,10 @@ fn nodes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Sh
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::unexpected("Cluster not found"));
+                return Err(ShellError::LabeledError(
+                    "Cluster not found".into(),
+                    "Cluster not found".into(),
+                ));
             }
         };
         if let Some(plane) = active_cluster.capella_org() {
@@ -76,17 +89,21 @@ fn nodes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Sh
                 ctrl_c.clone(),
             )?;
             if response.status() != 200 {
-                return Err(ShellError::unexpected(response.content()));
+                return Err(ShellError::LabeledError(
+                    response.content().into(),
+                    response.content().into(),
+                ));
             }
 
-            let resp: JSONCloudClusterHealthResponse = serde_json::from_str(response.content())?;
+            let resp: JSONCloudClusterHealthResponse = serde_json::from_str(response.content())
+                .map_err(|e| ShellError::LabeledError(e.to_string(), e.to_string()))?;
 
             let mut n = resp
                 .nodes()
                 .nodes()
                 .into_iter()
                 .map(|n| {
-                    let mut collected = TaggedDictBuilder::new(Tag::default());
+                    let mut collected = NuValueMap::default();
                     let services = n
                         .services()
                         .iter()
@@ -94,17 +111,17 @@ fn nodes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Sh
                         .collect::<Vec<_>>()
                         .join(",");
 
-                    collected.insert_value("cluster", identifier.clone());
-                    collected.insert_value("hostname", n.name());
-                    collected.insert_value("status", n.status());
-                    collected.insert_value("services", services);
-                    collected.insert_value("version", "");
-                    collected.insert_value("os", "");
-                    collected.insert_value("memory_total", "");
-                    collected.insert_value("memory_free", "");
-                    collected.insert_value("capella", true);
+                    collected.add_string("cluster", identifier.clone(), call.head);
+                    collected.add_string("hostname", n.name(), call.head);
+                    collected.add_string("status", n.status(), call.head);
+                    collected.add_string("services", services, call.head);
+                    collected.add_string("version", "", call.head);
+                    collected.add_string("os", "", call.head);
+                    collected.add_string("memory_total", "", call.head);
+                    collected.add_string("memory_free", "", call.head);
+                    collected.add_bool("capella", true, call.head);
 
-                    collected.into_value()
+                    collected.into_value(call.head)
                 })
                 .collect::<Vec<_>>();
 
@@ -120,17 +137,17 @@ fn nodes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Sh
                 200 => match serde_json::from_str(response.content()) {
                     Ok(m) => m,
                     Err(e) => {
-                        return Err(ShellError::unexpected(format!(
-                            "Failed to decode response body {}",
-                            e,
-                        )));
+                        return Err(ShellError::LabeledError(
+                            format!("Failed to decode response body {}", e,),
+                            format!("Failed to decode response body {}", e,),
+                        ));
                     }
                 },
                 _ => {
-                    return Err(ShellError::unexpected(format!(
-                        "Request failed {}",
-                        response.content(),
-                    )));
+                    return Err(ShellError::LabeledError(
+                        format!("Request failed {}", response.content(),),
+                        "".into(),
+                    ));
                 }
             };
 
@@ -138,7 +155,7 @@ fn nodes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Sh
                 .nodes
                 .into_iter()
                 .map(|n| {
-                    let mut collected = TaggedDictBuilder::new(Tag::default());
+                    let mut collected = NuValueMap::default();
                     let services = n
                         .services
                         .iter()
@@ -146,17 +163,17 @@ fn nodes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Sh
                         .collect::<Vec<_>>()
                         .join(",");
 
-                    collected.insert_value("cluster", identifier.clone());
-                    collected.insert_value("hostname", n.hostname);
-                    collected.insert_value("status", n.status);
-                    collected.insert_value("services", services);
-                    collected.insert_value("version", n.version);
-                    collected.insert_value("os", n.os);
-                    collected.insert_value("memory_total", UntaggedValue::filesize(n.memory_total));
-                    collected.insert_value("memory_free", UntaggedValue::filesize(n.memory_free));
-                    collected.insert_value("capella", false);
+                    collected.add_string("cluster", identifier.clone(), call.head);
+                    collected.add_string("hostname", n.hostname, call.head);
+                    collected.add_string("status", n.status, call.head);
+                    collected.add_string("services", services, call.head);
+                    collected.add_string("version", n.version, call.head);
+                    collected.add_string("os", n.os, call.head);
+                    collected.add_i64("memory_total", n.memory_total as i64, call.head);
+                    collected.add_i64("memory_free", n.memory_free as i64, call.head);
+                    collected.add_bool("capella", false, call.head);
 
-                    collected.into_value()
+                    collected.into_value(call.head)
                 })
                 .collect::<Vec<_>>();
 
@@ -164,7 +181,11 @@ fn nodes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Sh
         }
     }
 
-    Ok(nodes.into())
+    Ok(Value::List {
+        vals: nodes,
+        span: call.head,
+    }
+    .into_pipeline_data())
 }
 
 #[derive(Debug, Deserialize)]

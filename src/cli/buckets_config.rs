@@ -1,16 +1,19 @@
-use crate::cli::util::{convert_json_value_to_nu_value, validate_is_not_cloud};
+use crate::cli::util::{
+    convert_json_value_to_nu_value, generic_labeled_error,
+    map_serde_deserialize_error_to_shell_error, no_active_cluster_error, validate_is_not_cloud,
+};
 use crate::client::ManagementRequest;
 use crate::state::State;
-use async_trait::async_trait;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape};
-use nu_source::Tag;
-use nu_stream::OutputStream;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape};
+
+#[derive(Clone)]
 pub struct BucketsConfig {
     state: Arc<Mutex<State>>,
 }
@@ -21,39 +24,49 @@ impl BucketsConfig {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for BucketsConfig {
+impl Command for BucketsConfig {
     fn name(&self) -> &str {
         "buckets config"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("buckets config").required(
-            "name",
-            SyntaxShape::String,
-            "the name of the bucket",
-        )
+        Signature::build("buckets config")
+            .required("name", SyntaxShape::String, "the name of the bucket")
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Shows the bucket config (low level)"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        buckets(args, self.state.clone())
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        buckets(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn buckets(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
+fn buckets(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let span = call.head;
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let bucket_name = args.req(0)?;
+    let bucket_name = call.req(engine_state, stack, 0)?;
 
     let guard = state.lock().unwrap();
     let active_cluster = match guard.active_cluster() {
         Some(c) => c,
         None => {
-            return Err(ShellError::unexpected("An active cluster must be set"));
+            return Err(no_active_cluster_error());
         }
     };
     let cluster = active_cluster.cluster();
@@ -69,8 +82,22 @@ fn buckets(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, 
         ctrl_c,
     )?;
 
-    let content = serde_json::from_str(response.content())?;
-    let converted = convert_json_value_to_nu_value(&content, Tag::default())?;
+    match response.status() {
+        200 => {}
+        _ => {
+            return Err(generic_labeled_error(
+                "Failed to get bucket config",
+                format!(
+                    "Failed to get bucket config {}",
+                    response.content().to_string()
+                ),
+            ))
+        }
+    }
 
-    Ok(vec![converted].into())
+    let content = serde_json::from_str(response.content())
+        .map_err(map_serde_deserialize_error_to_shell_error)?;
+    let converted = convert_json_value_to_nu_value(&content, span)?;
+
+    Ok(converted.into_pipeline_data())
 }

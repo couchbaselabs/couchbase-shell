@@ -9,7 +9,7 @@ When using <<_management_commands>> with Couchbase Capella and Couchbase Shell w
 You can use the `use --capella` command to see which cloud resources are current active:
 
 ```
-> use --capella
+> cb-env--capella
 ──────────────────────┬──────────────────
  capella-organization │ mycapellaorg
  cloud                │
@@ -20,20 +20,20 @@ You can use the `use --capella` command to see which cloud resources are current
 The active resource can be changed with the `use` command:
 
 ```
-> use -h
+> cb-env -h
 Modify the default execution environment of commands
 
 Usage:
-  > use <subcommand> {flags}
+  > cb-env <subcommand> {flags}
 
 Subcommands:
-  use bucket - Sets the active bucket based on its name
-  use cloud - Sets the active cloud based on its identifier
-  use capella-organization - Sets the active capella organization based on its identifier
-  use cluster - Sets the active cluster based on its identifier
-  use collection - Sets the active collection based on its name
-  use project - Sets the active project based on its name
-  use scope - Sets the active scope based on its name
+  cb-env bucket - Sets the active bucket based on its name
+  cb-env cloud - Sets the active cloud based on its identifier
+  cb-env capella-organization - Sets the active capella organization based on its identifier
+  cb-env cluster - Sets the active cluster based on its identifier
+  cb-env collection - Sets the active collection based on its name
+  cb-env project - Sets the active project based on its name
+  cb-env scope - Sets the active scope based on its name
 ```
 
 === Document Level Commands

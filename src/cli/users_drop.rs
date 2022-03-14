@@ -1,16 +1,20 @@
-use crate::cli::util::cluster_identifiers_from;
+use crate::cli::util::{
+    cant_run_against_hosted_capella_error, cluster_identifiers_from, cluster_not_found_error,
+    generic_labeled_error,
+};
 use crate::client::{CapellaRequest, ManagementRequest};
 use crate::state::{CapellaEnvironment, State};
-use async_trait::async_trait;
 use log::debug;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape};
-use nu_stream::OutputStream;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
+
+#[derive(Clone)]
 pub struct UsersDrop {
     state: Arc<Mutex<State>>,
 }
@@ -21,8 +25,7 @@ impl UsersDrop {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for UsersDrop {
+impl Command for UsersDrop {
     fn name(&self) -> &str {
         "users drop"
     }
@@ -36,31 +39,45 @@ impl nu_engine::WholeStreamCommand for UsersDrop {
                 "the clusters which should be contacted",
                 None,
             )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Deletes a user"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        users_drop(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        users_drop(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn users_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
-    let username: String = args.req(0)?;
+fn users_drop(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let span = call.head;
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let username: String = call.req(engine_state, stack, 0)?;
 
     debug!("Running users drop {}", username);
 
-    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
+    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
     let guard = state.lock().unwrap();
 
     for identifier in cluster_identifiers {
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::unexpected("Cluster not found"));
+                return Err(cluster_not_found_error(identifier));
             }
         };
         let response = if let Some(plane) = active_cluster.capella_org() {
@@ -70,9 +87,7 @@ fn users_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
                 cloud.find_cluster(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
 
             if cluster.environment() == CapellaEnvironment::Hosted {
-                return Err(ShellError::unexpected(
-                    "users drop cannot be run against hosted Capella clusters",
-                ));
+                return Err(cant_run_against_hosted_capella_error());
             }
 
             cloud.capella_request(
@@ -97,10 +112,13 @@ fn users_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
             200 => {}
             204 => {}
             _ => {
-                return Err(ShellError::unexpected(response.content()));
+                return Err(generic_labeled_error(
+                    "Failed to drop user",
+                    format!("Failed to drop user {}", response.content()),
+                ));
             }
         }
     }
 
-    Ok(OutputStream::empty())
+    Ok(PipelineData::new(span))
 }

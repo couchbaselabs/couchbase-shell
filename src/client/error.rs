@@ -1,4 +1,4 @@
-use nu_errors::ShellError;
+use nu_protocol::ShellError;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -86,7 +86,7 @@ impl fmt::Display for ClientError {
 impl From<ClientError> for ShellError {
     fn from(ce: ClientError) -> Self {
         // todo: this can definitely be improved with more detail and reporting specifics
-        ShellError::untagged_runtime_error(ce.to_string())
+        ShellError::LabeledError(ce.to_string(), "".into())
     }
 }
 

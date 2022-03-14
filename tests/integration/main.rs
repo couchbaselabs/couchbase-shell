@@ -1,3 +1,4 @@
+pub mod support;
 mod test_functions;
 pub mod tests;
 pub mod util;
@@ -6,7 +7,7 @@ use crate::util::config::{ClusterType, Config};
 use crate::util::mock::MockCluster;
 use crate::util::standalone::StandaloneCluster;
 use env_logger::Env;
-use nu_errors::ShellError;
+use nu_protocol::ShellError;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::io::ErrorKind;

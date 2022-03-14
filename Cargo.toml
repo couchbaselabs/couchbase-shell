@@ -13,6 +13,7 @@ base64 = "0.13.0"
 bytes = "1.0"
 chrono = { version = "0.4.11", features = ["serde"] }
 crc = "1.8.1"
+ctrlc = "3.2.1"
 dirs = "2.0"
 env_logger = "0.8"
 fake = { version = "2.4", features = ["chrono"] }
@@ -21,21 +22,18 @@ hmac = "0.11.0"
 http = "0.2"
 http-types = "2.5"
 humantime-serde = "1.0"
-isahc = "1.3"
+isahc = "1.6"
 lazy_static = "1.4.0"
 log = "0.4"
 mime_guess = "2.0"
-nu = { version = "0.42.0", features = ["extra"] }
-nu-protocol = { version = "0.42.0" }
-nu-data = { version = "0.42.0" }
-nu-errors = { version = "0.42.0" }
-nu-stream = { version = "0.42.0" }
-nu-source = { version = "0.42.0" }
-nu-cli = { version = "0.42.0" }
-nu-engine = { version = "0.42.0" }
-nu-plugin = { version = "0.42.0" }
-nu_plugin_from_bson = { version = "0.42.0" }
-nu-value-ext = { version = "0.42.0" }
+nu = { git = "https://github.com/nushell/nushell", rev="1a16b9a2c4d3cb263fa5f0a11a4d41210f2cd300", features = ["extra"] }
+nu-protocol = { git = "https://github.com/nushell/nushell", rev="1a16b9a2c4d3cb263fa5f0a11a4d41210f2cd300"  }
+nu-command = { git = "https://github.com/nushell/nushell", rev="1a16b9a2c4d3cb263fa5f0a11a4d41210f2cd300"  }
+nu-parser = { git = "https://github.com/nushell/nushell", rev="1a16b9a2c4d3cb263fa5f0a11a4d41210f2cd300"  }
+nu-path = { git = "https://github.com/nushell/nushell", rev="1a16b9a2c4d3cb263fa5f0a11a4d41210f2cd300"  }
+nu-cli = { git = "https://github.com/nushell/nushell", rev="1a16b9a2c4d3cb263fa5f0a11a4d41210f2cd300"  }
+nu-engine = { git = "https://github.com/nushell/nushell", rev="1a16b9a2c4d3cb263fa5f0a11a4d41210f2cd300"  }
+nu-plugin = { git = "https://github.com/nushell/nushell", rev="1a16b9a2c4d3cb263fa5f0a11a4d41210f2cd300" }
 num-bigint = "0.4"
 num-traits = "0.2.14"
 pretty_env_logger = "0.3"
@@ -61,8 +59,9 @@ url = "2.1"
 uuid = { version = "0.8", features = ["v4"] }
 
 [dev-dependencies]
-nu-test-support = "0.29.0"
+nu-test-support = { git = "https://github.com/nushell/nushell", rev="1a16b9a2c4d3cb263fa5f0a11a4d41210f2cd300" }
 dunce = "1.0.1"
+itertools = "0.10.3"
 lazy_static = "1.4.0"
 strum = "0.22.0"
 strum_macros = "0.22"

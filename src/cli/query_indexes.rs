@@ -1,20 +1,24 @@
 use crate::cli::util::{
-    cluster_identifiers_from, convert_row_to_nu_value, duration_to_golang_string,
+    cluster_identifiers_from, cluster_not_found_error, convert_row_to_nu_value,
+    duration_to_golang_string, generic_labeled_error, map_serde_deserialize_error_to_shell_error,
+    NuValueMap,
 };
 use crate::client::{ManagementRequest, QueryRequest};
 use crate::state::{RemoteCluster, State};
 use log::debug;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Value};
-use nu_source::Tag;
-use nu_stream::OutputStream;
 use serde::Deserialize;
 use std::ops::Add;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape, Value,
+};
+
+#[derive(Clone)]
 pub struct QueryIndexes {
     state: Arc<Mutex<State>>,
 }
@@ -25,7 +29,7 @@ impl QueryIndexes {
     }
 }
 
-impl nu_engine::WholeStreamCommand for QueryIndexes {
+impl Command for QueryIndexes {
     fn name(&self) -> &str {
         "query indexes"
     }
@@ -44,25 +48,39 @@ impl nu_engine::WholeStreamCommand for QueryIndexes {
                 None,
             )
             .switch("with-meta", "Includes related metadata in the result", None)
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Lists all query indexes"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        indexes(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        query(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn indexes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
-    let with_meta = args.has_flag("with-meta");
+fn query(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let span = call.head;
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let with_meta = call.has_flag("with-meta");
 
-    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
+    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
     let guard = state.lock().unwrap();
 
-    let fetch_defs = args.has_flag("definitions");
+    let fetch_defs = call.has_flag("definitions");
 
     let statement = "select keyspace_id as `bucket`, name, state, `using` as `type`, ifmissing(condition, null) as condition, ifmissing(is_primary, false) as `primary`, index_key from system:indexes";
 
@@ -73,12 +91,13 @@ fn indexes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, 
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::unexpected("Cluster not found"));
+                return Err(cluster_not_found_error(identifier));
             }
         };
 
         if fetch_defs {
-            let mut defs = index_definitions(active_cluster, ctrl_c.clone(), identifier.clone())?;
+            let mut defs =
+                index_definitions(active_cluster, ctrl_c.clone(), identifier.clone(), span)?;
             results.append(&mut defs);
             continue;
         }
@@ -93,31 +112,41 @@ fn indexes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, 
             ctrl_c.clone(),
         )?;
 
-        let content: serde_json::Value = serde_json::from_str(response.content())?;
+        let content: serde_json::Value = serde_json::from_str(response.content())
+            .map_err(map_serde_deserialize_error_to_shell_error)?;
         if with_meta {
-            let converted = convert_row_to_nu_value(&content, Tag::default(), identifier.clone())?;
+            let converted = convert_row_to_nu_value(&content, span, identifier.clone())?;
             results.push(converted);
         } else if let Some(content_results) = content.get("results") {
             if let Some(arr) = content_results.as_array() {
                 for result in arr {
-                    results.push(convert_row_to_nu_value(
-                        result,
-                        Tag::default(),
-                        identifier.clone(),
-                    )?);
+                    results.push(convert_row_to_nu_value(result, span, identifier.clone())?);
                 }
             } else {
-                return Err(ShellError::unexpected(
-                    "Query result not an array - malformed response",
+                return Err(generic_labeled_error(
+                    "Query results not an array - malformed response",
+                    format!(
+                        "Query results not an array - {}",
+                        content_results.to_string(),
+                    ),
                 ));
             }
         } else {
-            return Err(ShellError::unexpected(
-                "Query toplevel result not  an object - malformed response",
+            return Err(generic_labeled_error(
+                "Query toplevel result not  an object- malformed response",
+                format!(
+                    "Query toplevel result not  an object - {}",
+                    content.to_string(),
+                ),
             ));
         }
     }
-    Ok(OutputStream::from(results))
+
+    Ok(Value::List {
+        vals: results,
+        span: call.head,
+    }
+    .into_pipeline_data())
 }
 
 #[derive(Debug, Deserialize)]
@@ -144,6 +173,7 @@ fn index_definitions(
     cluster: &RemoteCluster,
     ctrl_c: Arc<AtomicBool>,
     identifier: String,
+    span: Span,
 ) -> Result<Vec<Value>, ShellError> {
     debug!("Running fetch n1ql indexes");
 
@@ -153,23 +183,28 @@ fn index_definitions(
         ctrl_c,
     )?;
 
-    let defs: IndexStatus = serde_json::from_str(response.content())?;
+    let defs: IndexStatus = serde_json::from_str(response.content())
+        .map_err(map_serde_deserialize_error_to_shell_error)?;
     let n = defs
         .indexes
         .into_iter()
         .map(|d| {
-            let mut collected = TaggedDictBuilder::new(Tag::default());
-            collected.insert_value("bucket", d.bucket);
-            collected.insert_value("scope", d.scope.unwrap_or_else(|| "".into()));
-            collected.insert_value("collection", d.collection.unwrap_or_else(|| "".into()));
-            collected.insert_value("name", d.index_name);
-            collected.insert_value("status", d.status);
-            collected.insert_value("storage_mode", d.storage_mode);
-            collected.insert_value("replicas", UntaggedValue::int(d.replicas));
-            collected.insert_value("definition", d.definition);
-            collected.insert_value("cluster", identifier.clone());
+            let mut collected = NuValueMap::default();
+            collected.add_string("bucket", d.bucket, span);
+            collected.add_string("scope", d.scope.unwrap_or_else(|| "".into()), span);
+            collected.add_string(
+                "collection",
+                d.collection.unwrap_or_else(|| "".into()),
+                span,
+            );
+            collected.add_string("name", d.index_name, span);
+            collected.add_string("status", d.status, span);
+            collected.add_string("storage_mode", d.storage_mode, span);
+            collected.add_i64("replicas", d.replicas as i64, span);
+            collected.add_string("definition", d.definition, span);
+            collected.add_string("cluster", identifier.clone(), span);
 
-            collected.into_value()
+            collected.into_value(span)
         })
         .collect::<Vec<_>>();
 

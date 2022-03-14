@@ -4,16 +4,13 @@ use super::util::convert_nu_value_to_json_value;
 
 use crate::state::State;
 
-use crate::cli::util::{cluster_identifiers_from, namespace_from_args};
+use crate::cli::util::{
+    cluster_identifiers_from, cluster_not_found_error, generic_labeled_error, namespace_from_args,
+    NuValueMap,
+};
 use crate::client::{ClientError, KeyValueRequest, KvClient, KvResponse};
-use async_trait::async_trait;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{MaybeOwned, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Value};
-use nu_source::Tag;
-use nu_stream::OutputStream;
 use std::collections::HashSet;
 use std::future::Future;
 use std::ops::Add;
@@ -22,6 +19,14 @@ use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 use tokio::time::Instant;
 
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+};
+
+#[derive(Clone)]
 pub struct DocUpsert {
     state: Arc<Mutex<State>>,
 }
@@ -32,8 +37,7 @@ impl DocUpsert {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for DocUpsert {
+impl Command for DocUpsert {
     fn name(&self) -> &str {
         "doc upsert"
     }
@@ -41,7 +45,7 @@ impl nu_engine::WholeStreamCommand for DocUpsert {
     fn signature(&self) -> Signature {
         Signature::build("doc upsert")
             .optional("id", SyntaxShape::String, "the document id")
-            .optional("content", SyntaxShape::String, "the document content")
+            .optional("content", SyntaxShape::Any, "the document content")
             .named(
                 "id-column",
                 SyntaxShape::String,
@@ -85,14 +89,21 @@ impl nu_engine::WholeStreamCommand for DocUpsert {
                 "the maximum number of items to batch send at a time",
                 None,
             )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Upsert (insert or override) a document through the data service"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        run_upsert(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        run_upsert(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
@@ -100,41 +111,55 @@ fn build_req(key: String, value: Vec<u8>, expiry: u32) -> KeyValueRequest {
     KeyValueRequest::Set { key, value, expiry }
 }
 
-fn run_upsert(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let results = run_kv_store_ops(state, args, build_req)?;
+fn run_upsert(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let results = run_kv_store_ops(state, engine_state, stack, call, input, build_req)?;
 
-    Ok(OutputStream::from(results))
+    Ok(Value::List {
+        vals: results,
+        span: call.head,
+    }
+    .into_pipeline_data())
 }
 
 pub(crate) fn run_kv_store_ops(
     state: Arc<Mutex<State>>,
-    args: CommandArgs,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    input: PipelineData,
     req_builder: fn(String, Vec<u8>, u32) -> KeyValueRequest,
 ) -> Result<Vec<Value>, ShellError> {
-    let ctrl_c = args.ctrl_c();
+    let span = call.head;
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let id_column = args
-        .get_flag("id-column")?
+    let id_column = call
+        .get_flag(engine_state, stack, "id-column")?
         .unwrap_or_else(|| String::from("id"));
 
-    let content_column = args
-        .get_flag("content-column")?
+    let content_column = call
+        .get_flag(engine_state, stack, "content-column")?
         .unwrap_or_else(|| String::from("content"));
 
-    let expiry: i32 = args.get_flag("expiry")?.unwrap_or(0);
-    let batch_size: Option<i32> = args.get_flag("batch-size")?;
+    let expiry: i64 = call.get_flag(engine_state, stack, "expiry")?.unwrap_or(0);
+    let batch_size: Option<i64> = call.get_flag(engine_state, stack, "batch-size")?;
 
-    let bucket_flag = args.get_flag("bucket")?;
-    let scope_flag = args.get_flag("scope")?;
-    let collection_flag = args.get_flag("collection")?;
+    let bucket_flag = call.get_flag(engine_state, stack, "bucket")?;
+    let scope_flag = call.get_flag(engine_state, stack, "scope")?;
+    let collection_flag = call.get_flag(engine_state, stack, "collection")?;
 
-    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
+    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
 
     let guard = state.lock().unwrap();
 
-    let input_args = if let Some(id) = args.opt::<String>(0)? {
-        if let Some(content) = args.opt::<String>(1)? {
-            let content = serde_json::from_str(&content)?;
+    let input_args = if let Some(id) = call.opt::<String>(engine_state, stack, 0)? {
+        if let Some(v) = call.opt::<Value>(engine_state, stack, 1)? {
+            let content = convert_nu_value_to_json_value(&v, span)?;
             vec![(id, content)]
         } else {
             vec![]
@@ -143,18 +168,20 @@ pub(crate) fn run_kv_store_ops(
         vec![]
     };
 
-    let filtered = args.input.filter_map(move |i| {
+    let filtered = input.into_iter().filter_map(move |i| {
         let id_column = id_column.clone();
         let content_column = content_column.clone();
 
-        if let UntaggedValue::Row(dict) = i.value {
+        if let Value::Record { cols, vals, .. } = i {
             let mut id = None;
             let mut content = None;
-            if let MaybeOwned::Borrowed(d) = dict.get_data(id_column.as_ref()) {
-                id = d.as_string().ok();
-            }
-            if let MaybeOwned::Borrowed(d) = dict.get_data(content_column.as_ref()) {
-                content = convert_nu_value_to_json_value(d).ok();
+            for (k, v) in cols.iter().zip(vals) {
+                if k.clone() == id_column {
+                    id = v.as_string().ok();
+                }
+                if k.clone() == content_column {
+                    content = convert_nu_value_to_json_value(&v, span).ok();
+                }
             }
             if let Some(i) = id {
                 if let Some(c) = content {
@@ -170,7 +197,10 @@ pub(crate) fn run_kv_store_ops(
         let value = match serde_json::to_vec(&item.1) {
             Ok(v) => v,
             Err(e) => {
-                return Err(ShellError::unexpected(e.to_string()));
+                return Err(generic_labeled_error(
+                    "Failed to serialize value to JSON",
+                    format!("Failed to serialize value to JSON {}", e.to_string()),
+                ));
             }
         };
 
@@ -189,7 +219,7 @@ pub(crate) fn run_kv_store_ops(
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::unexpected("Cluster not found"));
+                return Err(cluster_not_found_error(identifier));
             }
         };
 
@@ -198,6 +228,7 @@ pub(crate) fn run_kv_store_ops(
             scope_flag.clone(),
             collection_flag.clone(),
             active_cluster,
+            span,
         )?;
         let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
         let mut client = rt.block_on(active_cluster.cluster().key_value_client(
@@ -255,24 +286,29 @@ pub(crate) fn run_kv_store_ops(
             workers = FuturesUnordered::new()
         }
 
-        let tag = Tag::default();
-        let mut collected = TaggedDictBuilder::new(&tag);
-        collected.insert_untagged("processed", UntaggedValue::int(success + failed));
-        collected.insert_untagged("success", UntaggedValue::int(success));
-        collected.insert_untagged("failed", UntaggedValue::int(failed));
+        let mut collected = NuValueMap::default();
+        collected.add_i64("processed", (success + failed) as i64, span);
+        collected.add_i64("success", success as i64, span);
+        collected.add_i64("failed", failed as i64, span);
 
         let reasons = fail_reasons
             .iter()
             .map(|v| {
-                let mut collected_fails = TaggedDictBuilder::new(&tag);
-                collected_fails.insert_untagged("fail reason", UntaggedValue::string(v));
-                collected_fails.into()
+                let mut collected_fails = NuValueMap::default();
+                collected_fails.add_string("fail reason", v, span);
+                collected_fails.into_value(span)
             })
             .collect();
-        collected.insert_untagged("failures", UntaggedValue::Table(reasons));
-        collected.insert_value("cluster", identifier.clone());
+        collected.add(
+            "failures",
+            Value::List {
+                vals: reasons,
+                span,
+            },
+        );
+        collected.add_string("cluster", identifier.clone(), span);
 
-        results.push(collected.into_value());
+        results.push(collected.into_value(span));
     }
 
     Ok(results)
@@ -344,7 +380,12 @@ pub(crate) fn prime_manifest_if_required(
 ) -> Result<(), ShellError> {
     if KvClient::is_non_default_scope_collection(scope, collection) {
         rt.block_on(client.fetch_collections_manifest(deadline, ctrl_c))
-            .map_err(|e| ShellError::unexpected(e.to_string()))?;
+            .map_err(|e| {
+                generic_labeled_error(
+                    "Failed to fetch collections manifest",
+                    format!("Failed to fetch collections manifest {}", e.to_string()),
+                )
+            })?;
     }
 
     Ok(())

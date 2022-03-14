@@ -6,21 +6,25 @@ use crate::cli::doc_get::ids_from_input;
 use crate::cli::doc_upsert::{
     build_batched_kv_items, prime_manifest_if_required, process_kv_workers,
 };
-use crate::cli::util::{cluster_identifiers_from, namespace_from_args};
+use crate::cli::util::{
+    cluster_identifiers_from, cluster_not_found_error, namespace_from_args, NuValueMap,
+};
 use crate::client::KeyValueRequest;
-use async_trait::async_trait;
 use futures::stream::FuturesUnordered;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
-use nu_source::Tag;
-use nu_stream::OutputStream;
 use std::collections::HashSet;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 use tokio::time::Instant;
 
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+};
+
+#[derive(Clone)]
 pub struct DocRemove {
     state: Arc<Mutex<State>>,
 }
@@ -31,8 +35,7 @@ impl DocRemove {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for DocRemove {
+impl Command for DocRemove {
     fn name(&self) -> &str {
         "doc remove"
     }
@@ -71,36 +74,50 @@ impl nu_engine::WholeStreamCommand for DocRemove {
                 "the maximum number of items to batch send at a time",
                 None,
             )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Removes a document through the data service"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        run_get(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        run_get(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn run_get(state: Arc<Mutex<State>>, mut args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
+fn run_get(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let span = call.head;
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let id_column = args
-        .get_flag("id-column")?
+    let id_column = call
+        .get_flag(engine_state, stack, "id-column")?
         .unwrap_or_else(|| String::from("id"));
 
-    let ids = ids_from_input(&mut args, id_column)?;
-    let batch_size: Option<i32> = args.get_flag("batch-size")?;
+    let ids = ids_from_input(call, input, id_column, ctrl_c.clone())?;
+    let batch_size: Option<i64> = call.get_flag(engine_state, stack, "batch-size")?;
     let mut all_ids: Vec<Vec<String>> = vec![];
     if let Some(size) = batch_size {
         all_ids = build_batched_kv_items(size as u32, ids.clone());
     }
 
-    let bucket_flag = args.get_flag("bucket")?;
-    let scope_flag = args.get_flag("scope")?;
-    let collection_flag = args.get_flag("collection")?;
+    let bucket_flag = call.get_flag(engine_state, stack, "bucket")?;
+    let scope_flag = call.get_flag(engine_state, stack, "scope")?;
+    let collection_flag = call.get_flag(engine_state, stack, "collection")?;
 
-    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
+    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
 
     let guard = state.lock().unwrap();
 
@@ -109,7 +126,7 @@ fn run_get(state: Arc<Mutex<State>>, mut args: CommandArgs) -> Result<OutputStre
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::unexpected("Cluster not found"));
+                return Err(cluster_not_found_error(identifier));
             }
         };
 
@@ -118,6 +135,7 @@ fn run_get(state: Arc<Mutex<State>>, mut args: CommandArgs) -> Result<OutputStre
             scope_flag.clone(),
             collection_flag.clone(),
             active_cluster,
+            span,
         )?;
 
         let rt = Runtime::new().unwrap();
@@ -177,23 +195,34 @@ fn run_get(state: Arc<Mutex<State>>, mut args: CommandArgs) -> Result<OutputStre
             workers = FuturesUnordered::new()
         }
 
-        let tag = Tag::default();
-        let mut collected = TaggedDictBuilder::new(&tag);
-        collected.insert_untagged("processed", UntaggedValue::int(success + failed));
-        collected.insert_untagged("success", UntaggedValue::int(success));
-        collected.insert_untagged("failed", UntaggedValue::int(failed));
+        let mut collected = NuValueMap::default();
+        collected.add_i64("processed", (success + failed) as i64, span);
+        collected.add_i64("success", success as i64, span);
+        collected.add_i64("failed", failed as i64, span);
 
         let reasons = fail_reasons
             .iter()
             .map(|v| {
-                let mut collected_fails = TaggedDictBuilder::new(&tag);
-                collected_fails.insert_untagged("fail reason", UntaggedValue::string(v));
-                collected_fails.into()
+                let mut collected_fails = NuValueMap::default();
+                collected_fails.add_string("fail reason", v, span);
+                collected_fails.into_value(span)
             })
             .collect();
-        collected.insert_untagged("failures", UntaggedValue::Table(reasons));
-        collected.insert_value("cluster", identifier.clone());
-        results.push(collected.into_value());
+        collected.add(
+            "failures",
+            Value::List {
+                vals: reasons,
+                span,
+            },
+        );
+        collected.add_string("cluster", identifier.clone(), span);
+
+        results.push(collected.into_value(span));
     }
-    Ok(OutputStream::from(results))
+
+    Ok(Value::List {
+        vals: results,
+        span,
+    }
+    .into_pipeline_data())
 }

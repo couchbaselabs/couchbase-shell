@@ -1,38 +1,38 @@
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, TaggedDictBuilder};
-use nu_source::Tag;
-use nu_stream::OutputStream;
+use crate::cli::util::NuValueMap;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{Category, PipelineData, ShellError, Signature};
 
-pub struct Version {}
+#[derive(Clone)]
+pub struct Version;
 
-impl Version {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
-impl nu_engine::WholeStreamCommand for Version {
+impl Command for Version {
     fn name(&self) -> &str {
         "version"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("version")
+        Signature::build("version").category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "The cbsh version"
     }
 
-    fn run(&self, _args: CommandArgs) -> Result<OutputStream, ShellError> {
-        let mut collected = TaggedDictBuilder::new(Tag::default());
-        collected.insert_value(
+    fn run(
+        &self,
+        _engine_state: &EngineState,
+        _stack: &mut Stack,
+        call: &Call,
+        _input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        let mut collected = NuValueMap::default();
+        collected.add_string(
             "version",
             option_env!("CARGO_PKG_VERSION").unwrap_or("0.0.0"),
+            call.head,
         );
-        let result = collected.into_value();
 
-        Ok(vec![result].into())
+        Ok(collected.into_pipeline_data(call.head))
     }
 }

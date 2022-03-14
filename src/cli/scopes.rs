@@ -1,18 +1,23 @@
 use crate::cli::collections::Manifest;
-use crate::cli::util::{cluster_identifiers_from, validate_is_not_cloud};
+use crate::cli::util::{
+    cluster_identifiers_from, cluster_not_found_error, generic_labeled_error,
+    map_serde_deserialize_error_to_shell_error, validate_is_not_cloud, NuValueMap,
+};
 use crate::client::ManagementRequest;
 use crate::state::State;
-use async_trait::async_trait;
 use log::debug;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, Value};
-use nu_source::Tag;
-use nu_stream::OutputStream;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+};
+
+#[derive(Clone)]
 pub struct Scopes {
     state: Arc<Mutex<State>>,
 }
@@ -23,8 +28,7 @@ impl Scopes {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for Scopes {
+impl Command for Scopes {
     fn name(&self) -> &str {
         "scopes"
     }
@@ -43,20 +47,35 @@ impl nu_engine::WholeStreamCommand for Scopes {
                 "the clusters to query against",
                 None,
             )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Fetches scopes through the HTTP API"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        scopes_get(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        run(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn scopes_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
-    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
+fn run(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let span = call.head;
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+
+    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
 
     let guard = state.lock().unwrap();
 
@@ -65,7 +84,7 @@ fn scopes_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::unexpected("Cluster not found"));
+                return Err(cluster_not_found_error(identifier));
             }
         };
         validate_is_not_cloud(
@@ -73,13 +92,14 @@ fn scopes_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
             "scopes get cannot be run against Capella clusters",
         )?;
 
-        let bucket = match args.get_flag("bucket")? {
+        let bucket = match call.get_flag(engine_state, stack, "bucket")? {
             Some(v) => v,
             None => match active_cluster.active_bucket() {
                 Some(s) => s,
                 None => {
-                    return Err(ShellError::unexpected(
+                    return Err(ShellError::MissingParameter(
                         "Could not auto-select a bucket - please use --bucket instead".to_string(),
+                        span,
                     ));
                 }
             },
@@ -94,27 +114,27 @@ fn scopes_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStrea
         )?;
 
         let manifest: Manifest = match response.status() {
-            200 => match serde_json::from_str(response.content()) {
-                Ok(m) => m,
-                Err(e) => {
-                    return Err(ShellError::unexpected(format!(
-                        "Failed to decode response body {}",
-                        e,
-                    )));
-                }
-            },
+            200 => serde_json::from_str(response.content())
+                .map_err(map_serde_deserialize_error_to_shell_error)?,
             _ => {
-                return Err(ShellError::unexpected(response.content()));
+                return Err(generic_labeled_error(
+                    "Failed to get scopes",
+                    format!("Failed to get scopes {}", response.content()),
+                ));
             }
         };
 
         for scope in manifest.scopes {
-            let mut collected = TaggedDictBuilder::new(Tag::default());
-            collected.insert_value("scope", scope.name);
-            collected.insert_value("cluster", identifier.clone());
-            results.push(collected.into_value());
+            let mut collected = NuValueMap::default();
+            collected.add_string("scope", scope.name, span);
+            collected.add_string("cluster", identifier.clone(), span);
+            results.push(collected.into_value(span));
         }
     }
 
-    Ok(OutputStream::from(results))
+    Ok(Value::List {
+        vals: results,
+        span: call.head,
+    }
+    .into_pipeline_data())
 }

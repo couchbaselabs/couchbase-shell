@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use nu_errors::ShellError;
+use nu_protocol::ShellError;
 use std::collections::HashMap;
 use std::sync::Mutex;
 
@@ -58,7 +58,12 @@ impl Tutorial {
     pub fn goto_step(&self, name: String) -> Result<String, ShellError> {
         let index = match STEPS_ORDER.iter().position(|&s| s == name) {
             Some(i) => i,
-            None => return Err(ShellError::untagged_runtime_error("invalid tutorial step")),
+            None => {
+                return Err(ShellError::LabeledError(
+                    "invalid tutorial step".into(),
+                    "".into(),
+                ))
+            }
         };
         let mut current_step = self.current_step.lock().unwrap();
         *current_step = index as i8;

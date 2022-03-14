@@ -1,19 +1,20 @@
 use crate::cli::cloud_json::JSONCloudUser;
 use crate::cli::user_builder::UserAndMetadata;
-use crate::cli::util::cluster_identifiers_from;
+use crate::cli::util::{cluster_identifiers_from, NuValueMap};
 use crate::client::{CapellaRequest, ManagementRequest};
 use crate::state::{CapellaEnvironment, State};
-use async_trait::async_trait;
 use log::debug;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, Value};
-use nu_source::Tag;
-use nu_stream::OutputStream;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+};
+
+#[derive(Clone)]
 pub struct Users {
     state: Arc<Mutex<State>>,
 }
@@ -24,35 +25,48 @@ impl Users {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for Users {
+impl Command for Users {
     fn name(&self) -> &str {
         "users"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("users").named(
-            "clusters",
-            SyntaxShape::String,
-            "the clusters which should be contacted",
-            None,
-        )
+        Signature::build("users")
+            .named(
+                "clusters",
+                SyntaxShape::String,
+                "the clusters which should be contacted",
+                None,
+            )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Lists all users"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        users_get_all(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        users_get_all(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn users_get_all(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
+fn users_get_all(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
     debug!("Running users get all");
 
-    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let guard = state.lock().unwrap();
 
     let mut results = vec![];
@@ -60,7 +74,10 @@ fn users_get_all(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::unexpected("Cluster not found"));
+                return Err(ShellError::LabeledError(
+                    "Cluster not found".into(),
+                    "Cluster not found".into(),
+                ));
             }
         };
         let mut stream: Vec<Value> = if let Some(plane) = active_cluster.capella_org() {
@@ -70,8 +87,9 @@ fn users_get_all(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
                 cloud.find_cluster(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
 
             if cluster.environment() == CapellaEnvironment::Hosted {
-                return Err(ShellError::unexpected(
-                    "users cannot be run against hosted Capella clusters",
+                return Err(ShellError::IncompatibleParametersSingle(
+                    "users cannot be run against hosted Capella clusters".into(),
+                    call.head,
                 ));
             }
 
@@ -83,10 +101,14 @@ fn users_get_all(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
                 ctrl_c.clone(),
             )?;
             if response.status() != 200 {
-                return Err(ShellError::unexpected(response.content()));
+                return Err(ShellError::LabeledError(
+                    response.content().to_string(),
+                    response.content().to_string(),
+                ));
             }
 
-            let users: Vec<JSONCloudUser> = serde_json::from_str(response.content())?;
+            let users: Vec<JSONCloudUser> = serde_json::from_str(response.content())
+                .map_err(|e| ShellError::LabeledError(e.to_string(), e.to_string()))?;
 
             users
                 .into_iter()
@@ -98,14 +120,14 @@ fn users_get_all(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
                         }
                     }
 
-                    let mut collected = TaggedDictBuilder::new(Tag::default());
-                    collected.insert_value("username", user.username());
-                    collected.insert_value("display name", "");
-                    collected.insert_value("groups", "");
-                    collected.insert_value("roles", roles.join(","));
-                    collected.insert_value("password_last_changed", "");
-                    collected.insert_value("cluster", identifier.clone());
-                    collected.into_value()
+                    let mut collected = NuValueMap::default();
+                    collected.add_string("username", user.username(), call.head);
+                    collected.add_string("display name", "", call.head);
+                    collected.add_string("groups", "", call.head);
+                    collected.add_string("roles", roles.join(","), call.head);
+                    collected.add_string("password_last_changed", "", call.head);
+                    collected.add_string("cluster", identifier.clone(), call.head);
+                    collected.into_value(call.head)
                 })
                 .collect()
         } else {
@@ -119,17 +141,17 @@ fn users_get_all(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
                 200 => match serde_json::from_str(response.content()) {
                     Ok(m) => m,
                     Err(e) => {
-                        return Err(ShellError::unexpected(format!(
-                            "Failed to decode response body {}",
-                            e,
-                        )));
+                        return Err(ShellError::LabeledError(
+                            format!("Failed to decode response body {}", e,),
+                            "".into(),
+                        ));
                     }
                 },
                 _ => {
-                    return Err(ShellError::unexpected(format!(
-                        "Request failed {}",
-                        response.content(),
-                    )));
+                    return Err(ShellError::LabeledError(
+                        format!("Request failed {}", response.content(),),
+                        "".into(),
+                    ));
                 }
             };
 
@@ -146,22 +168,26 @@ fn users_get_all(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
                         })
                         .collect();
 
-                    let mut collected = TaggedDictBuilder::new(Tag::default());
-                    collected.insert_value("username", user.username());
-                    collected.insert_value("display name", user.display_name().unwrap_or_default());
+                    let mut collected = NuValueMap::default();
+                    collected.add_string("username", user.username(), call.head);
+                    collected.add_string(
+                        "display name",
+                        user.display_name().unwrap_or_default(),
+                        call.head,
+                    );
                     if let Some(groups) = user.groups() {
-                        collected.insert_value("groups", groups.join(","))
+                        collected.add_string("groups", groups.join(","), call.head)
                     } else {
-                        collected.insert_value("groups", "")
+                        collected.add_string("groups", "", call.head)
                     }
-                    collected.insert_value("roles", roles.join(","));
+                    collected.add_string("roles", roles.join(","), call.head);
                     if let Some(changed) = v.password_changed() {
-                        collected.insert_value("password_last_changed", changed)
+                        collected.add_string("password_last_changed", changed, call.head)
                     } else {
-                        collected.insert_value("password_last_changed", "")
+                        collected.add_string("password_last_changed", "", call.head)
                     }
-                    collected.insert_value("cluster", identifier.clone());
-                    collected.into_value()
+                    collected.add_string("cluster", identifier.clone(), call.head);
+                    collected.into_value(call.head)
                 })
                 .collect()
         };
@@ -169,5 +195,9 @@ fn users_get_all(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
         results.append(&mut stream);
     }
 
-    Ok(OutputStream::from(results))
+    Ok(Value::List {
+        vals: results,
+        span: call.head,
+    }
+    .into_pipeline_data())
 }

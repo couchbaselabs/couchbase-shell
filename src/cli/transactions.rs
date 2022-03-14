@@ -1,29 +1,43 @@
-use nu_engine::{get_full_help, CommandArgs};
-use nu_errors::ShellError;
-use nu_protocol::{Signature, UntaggedValue};
-use nu_source::Tag;
-use nu_stream::OutputStream;
+use nu_engine::get_full_help;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{
+    Category, Example, IntoPipelineData, PipelineData, ShellError, Signature, Value,
+};
 
+#[derive(Clone)]
 pub struct Transactions;
 
-impl nu_engine::WholeStreamCommand for Transactions {
+impl Command for Transactions {
     fn name(&self) -> &str {
         "transactions"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("transactions")
+        Signature::build("transactions").category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Perform transaction-related operations and tasks"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        Ok(OutputStream::one(
-            UntaggedValue::string(get_full_help(&Transactions, args.scope()))
-                .into_value(Tag::unknown()),
-        ))
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        _input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        Ok(Value::String {
+            val: get_full_help(
+                &Transactions.signature(),
+                &Vec::<Example>::new(),
+                engine_state,
+                stack,
+            ),
+            span: call.head,
+        }
+        .into_pipeline_data())
     }
 }
 

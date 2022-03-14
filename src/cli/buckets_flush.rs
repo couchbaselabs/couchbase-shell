@@ -2,18 +2,21 @@
 
 use crate::state::State;
 
-use crate::cli::util::{cluster_identifiers_from, validate_is_not_cloud};
+use crate::cli::util::{
+    cluster_identifiers_from, cluster_not_found_error, generic_labeled_error, validate_is_not_cloud,
+};
 use crate::client::ManagementRequest;
-use async_trait::async_trait;
 use log::debug;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape};
-use nu_stream::OutputStream;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
+
+#[derive(Clone)]
 pub struct BucketsFlush {
     state: Arc<Mutex<State>>,
 }
@@ -24,8 +27,7 @@ impl BucketsFlush {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for BucketsFlush {
+impl Command for BucketsFlush {
     fn name(&self) -> &str {
         "buckets flush"
     }
@@ -39,23 +41,39 @@ impl nu_engine::WholeStreamCommand for BucketsFlush {
                 "the clusters which should be contacted",
                 None,
             )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Flushes buckets through the HTTP API"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        buckets_flush(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        buckets_flush(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn buckets_flush(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
+fn buckets_flush(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let span = call.head;
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
-    let name: String = args.req(0)?;
-    let bucket: String = args.get_flag("bucket")?.unwrap_or_else(|| "".into());
+    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
+    let name: String = call.req(engine_state, stack, 0)?;
+    let bucket: String = call
+        .get_flag(engine_state, stack, "bucket")?
+        .unwrap_or_else(|| "".into());
 
     debug!("Running buckets flush for bucket {:?}", &bucket);
 
@@ -64,7 +82,7 @@ fn buckets_flush(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
         let cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::unexpected("Cluster not found"));
+                return Err(cluster_not_found_error(identifier));
             }
         };
         validate_is_not_cloud(
@@ -81,10 +99,13 @@ fn buckets_flush(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
         match result.status() {
             200 => {}
             _ => {
-                return Err(ShellError::unexpected(result.content()));
+                return Err(generic_labeled_error(
+                    "Failed to flush bucket",
+                    format!("Failed to flush bucket {}", result.content()),
+                ));
             }
         }
     }
 
-    Ok(OutputStream::empty())
+    Ok(PipelineData::new(span))
 }

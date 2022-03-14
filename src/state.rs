@@ -1,7 +1,7 @@
 use crate::client::{CapellaClient, Client};
 use crate::config::ClusterTlsConfig;
 use crate::tutorial::Tutorial;
-use nu_errors::ShellError;
+use nu_protocol::ShellError;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 use std::path::PathBuf;
@@ -50,8 +50,9 @@ impl State {
 
     pub fn add_cluster(&mut self, alias: String, cluster: RemoteCluster) -> Result<(), ShellError> {
         if self.clusters.contains_key(alias.as_str()) {
-            return Err(ShellError::unexpected(
-                "identifier is already registered for a cluster",
+            return Err(ShellError::LabeledError(
+                "identifier is already registered for a cluster".into(),
+                "".into(),
             ));
         }
         self.clusters.insert(alias, cluster);
@@ -72,10 +73,10 @@ impl State {
 
     pub fn set_active(&self, active: String) -> Result<(), ShellError> {
         if !self.clusters.contains_key(&active) {
-            return Err(ShellError::unexpected(format!(
-                "Cluster not known: {}",
-                active
-            )));
+            return Err(ShellError::LabeledError(
+                format!("Cluster not known: {}", active),
+                "".into(),
+            ));
         }
 
         {
@@ -132,12 +133,17 @@ impl State {
 
         let active = match guard.deref() {
             Some(a) => a,
-            None => return Err(ShellError::unexpected("No Capella organization set")),
+            None => {
+                return Err(ShellError::LabeledError(
+                    "No Capella organization set".into(),
+                    "".into(),
+                ))
+            }
         };
 
-        self.capella_orgs
-            .get(&*active)
-            .ok_or_else(|| ShellError::unexpected("Active Capella organization not known"))
+        self.capella_orgs.get(&*active).ok_or_else(|| {
+            ShellError::LabeledError("Active Capella organization not known".into(), "".into())
+        })
     }
 
     pub fn active_capella_org_name(&self) -> Option<String> {
@@ -146,10 +152,10 @@ impl State {
 
     pub fn set_active_capella_org(&self, active: String) -> Result<(), ShellError> {
         if !self.capella_orgs.contains_key(&active) {
-            return Err(ShellError::unexpected(format!(
-                "Capella organization not known: {}",
-                active
-            )));
+            return Err(ShellError::LabeledError(
+                format!("Capella organization not known: {}", active),
+                "".into(),
+            ));
         }
 
         {
@@ -168,10 +174,13 @@ impl State {
         if let Some(c) = org {
             Ok(c)
         } else {
-            Err(ShellError::unexpected(format!(
-                "No cloud organization registered for cluster name {}",
-                identifier,
-            )))
+            Err(ShellError::LabeledError(
+                format!(
+                    "No cloud organization registered for cluster name {}",
+                    identifier,
+                ),
+                "".into(),
+            ))
         }
     }
 }

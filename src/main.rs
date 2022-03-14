@@ -3,6 +3,8 @@
 mod cli;
 mod client;
 mod config;
+mod config_files;
+mod default_context;
 mod state;
 mod tutorial;
 
@@ -10,6 +12,8 @@ use crate::config::{
     ShellConfig, DEFAULT_ANALYTICS_TIMEOUT, DEFAULT_DATA_TIMEOUT, DEFAULT_KV_BATCH_SIZE,
     DEFAULT_MANAGEMENT_TIMEOUT, DEFAULT_QUERY_TIMEOUT, DEFAULT_SEARCH_TIMEOUT,
 };
+use crate::config_files::{read_nu_config_file, CBSHELL_FOLDER};
+use crate::default_context::create_default_context;
 use crate::state::{RemoteCapellaOrganization, RemoteCluster};
 use crate::{cli::*, state::ClusterTimeouts};
 use config::ClusterTlsConfig;
@@ -17,15 +21,25 @@ use env_logger::Env;
 use isahc::{prelude::*, Request};
 use log::{debug, warn, LevelFilter};
 use log::{error, info};
-use nu_cli::app::NuScript;
+use nu_cli::{add_plugin_file, gather_parent_env_vars, read_plugin_file, report_error};
+use nu_command::BufferedReader;
+use nu_engine::{get_full_help, CallExt};
+use nu_parser::parse;
+use nu_protocol::ast::{Call, Expr, Expression};
+use nu_protocol::engine::{Command, EngineState, Stack, StateWorkingSet};
+use nu_protocol::{
+    Category, Example, IntoPipelineData, PipelineData, RawStream, ShellError, Signature, Span,
+    Spanned, SyntaxShape, Value, CONFIG_VARIABLE_ID,
+};
 use serde::Deserialize;
 use state::State;
 use std::collections::HashMap;
 use std::error::Error;
-use std::io::Write;
+use std::io::{BufReader, Write};
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use structopt::StructOpt;
 use temp_dir::TempDir;
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -44,11 +58,79 @@ fn main() -> Result<(), Box<dyn Error>> {
         )
     });
 
-    const DEFAULT_PASSWORD: &str = "password";
-    const DEFAULT_HOSTNAME: &str = "localhost";
-    const DEFAULT_USERNAME: &str = "Administrator";
+    let init_cwd = match std::env::current_dir() {
+        Ok(cwd) => cwd,
+        Err(_) => match std::env::var("PWD") {
+            Ok(cwd) => PathBuf::from(cwd),
+            Err(_) => match nu_path::home_dir() {
+                Some(cwd) => cwd,
+                None => PathBuf::new(),
+            },
+        },
+    };
+    let mut context = create_default_context(&init_cwd);
 
-    let opt = CliOptions::from_args();
+    gather_parent_env_vars(&mut context);
+    let mut stack = nu_protocol::engine::Stack::new();
+
+    stack.vars.insert(
+        CONFIG_VARIABLE_ID,
+        Value::Record {
+            cols: vec![],
+            vals: vec![],
+            span: Span::new(0, 0),
+        },
+    );
+
+    let mut args_to_cbshell = vec![];
+    let mut args_to_script = vec![];
+
+    let mut collect_arg_script = false;
+    let mut collect_arg_filename = false;
+    for arg in std::env::args().skip(1) {
+        if collect_arg_script {
+            if collect_arg_filename {
+                args_to_cbshell.push(if arg.contains(' ') {
+                    format!("'{}'", arg)
+                } else {
+                    arg
+                });
+                collect_arg_filename = false;
+            } else {
+                args_to_script.push(if arg.contains(' ') {
+                    format!("'{}'", arg)
+                } else {
+                    arg
+                });
+            }
+        } else if arg == "--script" {
+            collect_arg_script = true;
+            collect_arg_filename = true;
+            args_to_cbshell.push(if arg.contains(' ') {
+                format!("'{}'", arg)
+            } else {
+                arg
+            });
+        } else if arg == "-c" || arg == "--command" {
+            args_to_cbshell.push(arg);
+        } else {
+            args_to_cbshell.push(if arg.contains(' ') {
+                format!("'{}'", arg)
+            } else {
+                arg
+            });
+        }
+    }
+
+    args_to_cbshell.insert(0, "cbsh".into());
+
+    let shell_commandline_args = args_to_cbshell.join(" ");
+
+    let opt = match parse_commandline_args(&shell_commandline_args, &init_cwd, &mut context) {
+        Ok(o) => o,
+        Err(_) => std::process::exit(1),
+    };
+
     if opt.silent {
         logger_builder.filter_level(LevelFilter::Error);
     }
@@ -58,6 +140,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let config = ShellConfig::new();
     debug!("Config {:?}", config);
+
+    const DEFAULT_PASSWORD: &str = "password";
+    const DEFAULT_HOSTNAME: &str = "localhost";
+    const DEFAULT_USERNAME: &str = "Administrator";
 
     let mut clusters = HashMap::new();
     let mut capella_orgs = HashMap::new();
@@ -252,127 +338,160 @@ fn main() -> Result<(), Box<dyn Error>> {
         fetch_and_print_motd();
     }
 
-    let context = nu_cli::create_default_context(true)?;
-    context.add_commands(vec![
-        nu_engine::whole_stream_command(AllowLists::new(state.clone())),
-        nu_engine::whole_stream_command(AllowListsAdd::new(state.clone())),
-        nu_engine::whole_stream_command(AllowListsDrop::new(state.clone())),
-        nu_engine::whole_stream_command(Analytics::new(state.clone())),
-        nu_engine::whole_stream_command(AnalyticsDatasets::new(state.clone())),
-        nu_engine::whole_stream_command(AnalyticsDataverses::new(state.clone())),
-        nu_engine::whole_stream_command(AnalyticsIndexes::new(state.clone())),
-        nu_engine::whole_stream_command(AnalyticsLinks::new(state.clone())),
-        nu_engine::whole_stream_command(AnalyticsBuckets::new(state.clone())),
-        nu_engine::whole_stream_command(AnalyticsPendingMutations::new(state.clone())),
-        nu_engine::whole_stream_command(Buckets::new(state.clone())),
-        nu_engine::whole_stream_command(BucketsConfig::new(state.clone())),
-        nu_engine::whole_stream_command(BucketsCreate::new(state.clone())),
-        nu_engine::whole_stream_command(BucketsDrop::new(state.clone())),
-        nu_engine::whole_stream_command(BucketsFlush::new(state.clone())),
-        nu_engine::whole_stream_command(BucketsGet::new(state.clone())),
-        nu_engine::whole_stream_command(BucketsSample::new(state.clone())),
-        nu_engine::whole_stream_command(BucketsUpdate::new(state.clone())),
-        nu_engine::whole_stream_command(Clouds::new(state.clone())),
-        nu_engine::whole_stream_command(ClustersCreate::new(state.clone())),
-        nu_engine::whole_stream_command(ClustersDrop::new(state.clone())),
-        nu_engine::whole_stream_command(ClustersGet::new(state.clone())),
-        nu_engine::whole_stream_command(Clusters::new(state.clone())),
-        nu_engine::whole_stream_command(ClustersHealth::new(state.clone())),
-        nu_engine::whole_stream_command(ClustersManaged::new(state.clone())),
-        nu_engine::whole_stream_command(ClustersRegister::new(state.clone())),
-        nu_engine::whole_stream_command(ClustersUnregister::new(state.clone())),
-        nu_engine::whole_stream_command(CollectionsCreate::new(state.clone())),
-        nu_engine::whole_stream_command(CollectionsDrop::new(state.clone())),
-        nu_engine::whole_stream_command(Collections::new(state.clone())),
-        nu_engine::whole_stream_command(Doc {}),
-        nu_engine::whole_stream_command(DocGet::new(state.clone())),
-        nu_engine::whole_stream_command(DocInsert::new(state.clone())),
-        nu_engine::whole_stream_command(DocRemove::new(state.clone())),
-        nu_engine::whole_stream_command(DocReplace::new(state.clone())),
-        nu_engine::whole_stream_command(DocUpsert::new(state.clone())),
-        nu_engine::whole_stream_command(FakeData::new(state.clone())),
-        nu_engine::whole_stream_command(Help {}),
-        nu_engine::whole_stream_command(Nodes::new(state.clone())),
-        nu_engine::whole_stream_command(Ping::new(state.clone())),
-        nu_engine::whole_stream_command(PluginFromBson::new()),
-        nu_engine::whole_stream_command(Projects::new(state.clone())),
-        nu_engine::whole_stream_command(ProjectsCreate::new(state.clone())),
-        nu_engine::whole_stream_command(ProjectsDrop::new(state.clone())),
-        nu_engine::whole_stream_command(Query::new(state.clone())),
-        nu_engine::whole_stream_command(QueryAdvise::new(state.clone())),
-        nu_engine::whole_stream_command(QueryIndexes::new(state.clone())),
-        nu_engine::whole_stream_command(ScopesCreate::new(state.clone())),
-        nu_engine::whole_stream_command(ScopesDrop::new(state.clone())),
-        nu_engine::whole_stream_command(Scopes::new(state.clone())),
-        nu_engine::whole_stream_command(Search::new(state.clone())),
-        nu_engine::whole_stream_command(Transactions {}),
-        nu_engine::whole_stream_command(TransactionsListAtrs::new(state.clone())),
-        nu_engine::whole_stream_command(Tutorial::new(state.clone())),
-        nu_engine::whole_stream_command(TutorialNext::new(state.clone())),
-        nu_engine::whole_stream_command(TutorialPage::new(state.clone())),
-        nu_engine::whole_stream_command(TutorialPrev::new(state.clone())),
-        nu_engine::whole_stream_command(Users::new(state.clone())),
-        nu_engine::whole_stream_command(UsersDrop::new(state.clone())),
-        nu_engine::whole_stream_command(UsersGet::new(state.clone())),
-        nu_engine::whole_stream_command(UsersRoles::new(state.clone())),
-        nu_engine::whole_stream_command(UsersUpsert::new(state.clone())),
-        nu_engine::whole_stream_command(UseBucket::new(state.clone())),
-        nu_engine::whole_stream_command(UseCloud::new(state.clone())),
-        nu_engine::whole_stream_command(UseCapellaOrganization::new(state.clone())),
-        nu_engine::whole_stream_command(UseCluster::new(state.clone())),
-        nu_engine::whole_stream_command(UseCmd::new(state.clone())),
-        nu_engine::whole_stream_command(UseCollection::new(state.clone())),
-        nu_engine::whole_stream_command(UseProject::new(state.clone())),
-        nu_engine::whole_stream_command(UseScope::new(state.clone())),
-        nu_engine::whole_stream_command(UseTimeouts::new(state.clone())),
-        nu_engine::whole_stream_command(Whoami::new(state)),
-        nu_engine::whole_stream_command(Version::new()),
-        /*
-        nu_engine::whole_stream_command(DataStats::new(state.clone())),
-        nu_engine::whole_stream_command(Data {}),
-        */
-    ]);
+    let ctrlc = Arc::new(AtomicBool::new(false));
+    let handler_ctrlc = ctrlc.clone();
+    let context_ctrlc = ctrlc.clone();
 
-    let mut options = nu_cli::app::CliOptions::new();
+    ctrlc::set_handler(move || {
+        handler_ctrlc.store(true, Ordering::SeqCst);
+    })
+    .expect("Error setting Ctrl-C handler");
 
-    let d = TempDir::new().unwrap();
-    let f = d.child("config.toml");
+    context.ctrlc = Some(context_ctrlc);
 
-    let history_path: String = if let Some(p) = config.location() {
-        let mut p = p.clone();
-        p.pop();
-        p.push("history.txt");
-        format!("history-path = '{}'", p.to_str().unwrap())
-    } else {
-        "".into()
+    let delta = {
+        let mut working_set = nu_protocol::engine::StateWorkingSet::new(&context);
+        working_set.add_decl(Box::new(AllowLists::new(state.clone())));
+        working_set.add_decl(Box::new(AllowListsAdd::new(state.clone())));
+        working_set.add_decl(Box::new(AllowListsDrop::new(state.clone())));
+        working_set.add_decl(Box::new(Analytics::new(state.clone())));
+        working_set.add_decl(Box::new(AnalyticsBuckets::new(state.clone())));
+        working_set.add_decl(Box::new(AnalyticsDatasets::new(state.clone())));
+        working_set.add_decl(Box::new(AnalyticsDataverses::new(state.clone())));
+        working_set.add_decl(Box::new(AnalyticsIndexes::new(state.clone())));
+        working_set.add_decl(Box::new(AnalyticsLinks::new(state.clone())));
+        working_set.add_decl(Box::new(AnalyticsPendingMutations::new(state.clone())));
+        working_set.add_decl(Box::new(Buckets::new(state.clone())));
+        working_set.add_decl(Box::new(BucketsConfig::new(state.clone())));
+        working_set.add_decl(Box::new(BucketsCreate::new(state.clone())));
+        working_set.add_decl(Box::new(BucketsDrop::new(state.clone())));
+        working_set.add_decl(Box::new(BucketsFlush::new(state.clone())));
+        working_set.add_decl(Box::new(BucketsGet::new(state.clone())));
+        working_set.add_decl(Box::new(BucketsSample::new(state.clone())));
+        working_set.add_decl(Box::new(BucketsUpdate::new(state.clone())));
+        working_set.add_decl(Box::new(Clouds::new(state.clone())));
+        working_set.add_decl(Box::new(Clusters::new(state.clone())));
+        working_set.add_decl(Box::new(ClustersCreate::new(state.clone())));
+        working_set.add_decl(Box::new(ClustersDrop::new(state.clone())));
+        working_set.add_decl(Box::new(ClustersGet::new(state.clone())));
+        working_set.add_decl(Box::new(ClustersHealth::new(state.clone())));
+        working_set.add_decl(Box::new(ClustersManaged::new(state.clone())));
+        working_set.add_decl(Box::new(ClustersRegister::new(state.clone())));
+        working_set.add_decl(Box::new(ClustersUnregister::new(state.clone())));
+        working_set.add_decl(Box::new(Collections::new(state.clone())));
+        working_set.add_decl(Box::new(CollectionsCreate::new(state.clone())));
+        working_set.add_decl(Box::new(CollectionsDrop::new(state.clone())));
+        working_set.add_decl(Box::new(Doc));
+        working_set.add_decl(Box::new(DocGet::new(state.clone())));
+        working_set.add_decl(Box::new(DocInsert::new(state.clone())));
+        working_set.add_decl(Box::new(DocReplace::new(state.clone())));
+        working_set.add_decl(Box::new(DocRemove::new(state.clone())));
+        working_set.add_decl(Box::new(DocUpsert::new(state.clone())));
+        working_set.add_decl(Box::new(Help));
+        working_set.add_decl(Box::new(FakeData::new(state.clone())));
+        working_set.add_decl(Box::new(Nodes::new(state.clone())));
+        working_set.add_decl(Box::new(Ping::new(state.clone())));
+        working_set.add_decl(Box::new(Projects::new(state.clone())));
+        working_set.add_decl(Box::new(ProjectsCreate::new(state.clone())));
+        working_set.add_decl(Box::new(ProjectsDrop::new(state.clone())));
+        working_set.add_decl(Box::new(Query::new(state.clone())));
+        working_set.add_decl(Box::new(QueryAdvise::new(state.clone())));
+        working_set.add_decl(Box::new(QueryIndexes::new(state.clone())));
+        working_set.add_decl(Box::new(Scopes::new(state.clone())));
+        working_set.add_decl(Box::new(ScopesCreate::new(state.clone())));
+        working_set.add_decl(Box::new(ScopesDrop::new(state.clone())));
+        working_set.add_decl(Box::new(Search::new(state.clone())));
+        working_set.add_decl(Box::new(Transactions));
+        working_set.add_decl(Box::new(TransactionsListAtrs::new(state.clone())));
+        working_set.add_decl(Box::new(Tutorial::new(state.clone())));
+        working_set.add_decl(Box::new(TutorialNext::new(state.clone())));
+        working_set.add_decl(Box::new(TutorialPage::new(state.clone())));
+        working_set.add_decl(Box::new(TutorialPrev::new(state.clone())));
+        working_set.add_decl(Box::new(UseBucket::new(state.clone())));
+        working_set.add_decl(Box::new(UseCapellaOrganization::new(state.clone())));
+        working_set.add_decl(Box::new(UseCloud::new(state.clone())));
+        working_set.add_decl(Box::new(UseCluster::new(state.clone())));
+        working_set.add_decl(Box::new(UseCmd::new(state.clone())));
+        working_set.add_decl(Box::new(UseCollection::new(state.clone())));
+        working_set.add_decl(Box::new(UseProject::new(state.clone())));
+        working_set.add_decl(Box::new(UseScope::new(state.clone())));
+        working_set.add_decl(Box::new(UseTimeouts::new(state.clone())));
+        working_set.add_decl(Box::new(Users::new(state.clone())));
+        working_set.add_decl(Box::new(Users::new(state.clone())));
+        working_set.add_decl(Box::new(UsersDrop::new(state.clone())));
+        working_set.add_decl(Box::new(UsersRoles::new(state.clone())));
+        working_set.add_decl(Box::new(UsersUpsert::new(state.clone())));
+        working_set.add_decl(Box::new(Version));
+        working_set.add_decl(Box::new(Whoami::new(state.clone())));
+
+        working_set.render()
     };
+    let _ = context.merge_delta(delta, None, &init_cwd);
 
-    let prompt = if cfg!(windows) {
-        r##"prompt = "build-string (ansi ub) (use | get username) (ansi reset) ' at ' (ansi yb) (use | get cluster) (ansi reset) ' in ' (ansi wb) (use | get bucket) (use | select scope collection | each { if $it.scope == \"\" && $it.collection == \"\" { } { build-string (if $it.scope == \"\" { build-string \".<notset>\" } {build-string \".\" $it.scope}) (if $it.collection == \"\" { build-string \".<notset>\"} {build-string \".\" $it.collection})}}) (ansi reset) '\n' '> '""##
+    let input = if opt.stdin {
+        let stdin = std::io::stdin();
+        let buf_reader = BufReader::new(stdin);
+
+        PipelineData::ExternalStream {
+            stdout: Some(RawStream::new(
+                Box::new(BufferedReader::new(buf_reader)),
+                Some(ctrlc),
+                Span::new(0, 0),
+            )),
+            stderr: None,
+            exit_code: None,
+            span: Span::new(0, 0),
+            metadata: None,
+        }
     } else {
-        r##"prompt = "build-string '👤 ' (ansi ub) (use | get username) (ansi reset) ' 🏠 ' (ansi yb) (use | get cluster) (ansi reset) ' in 🗄 ' (ansi wb) (use | get bucket) (use | select scope collection | each { if $it.scope == \"\" && $it.collection == \"\" { } { build-string (if $it.scope == \"\" { build-string \".<notset>\" } {build-string \".\" $it.scope}) (if $it.collection == \"\" { build-string \".<notset>\"} {build-string \".\" $it.collection})}}) (ansi reset) '\n' '> '""##
+        PipelineData::new(Span::new(0, 0))
     };
-
-    let config = format!("skip_welcome_message = true\n{}\n{}", history_path, prompt);
-
-    std::fs::write(&f, config.as_bytes()).unwrap();
-
-    options.config = Some(std::ffi::OsString::from(f));
 
     if let Some(c) = opt.command {
-        options.scripts = vec![NuScript::code(c.as_str())?];
-        nu_cli::run_script_file(context, options)?;
+        add_plugin_file(&mut context, CBSHELL_FOLDER);
+        nu_cli::evaluate_commands(&c, &init_cwd, &mut context, &mut stack, input, false)
+            .expect("Failed to run command");
         return Ok(());
     }
 
     if let Some(filepath) = opt.script {
-        let filepath = std::ffi::OsString::from(filepath);
-        options.scripts = vec![NuScript::source_file(filepath.as_os_str())?];
-        nu_cli::run_script_file(context, options)?;
+        add_plugin_file(&mut context, CBSHELL_FOLDER);
+        let _ret_val = nu_cli::evaluate_file(
+            filepath,
+            &args_to_script,
+            &mut context,
+            &mut stack,
+            input,
+            false,
+        )
+        .expect("Failed to run script");
+
         return Ok(());
     }
 
-    nu_cli::cli(context, options)?;
+    let d = TempDir::new().unwrap();
+    let f = d.child("config.nu");
+
+    let prompt = if cfg!(windows) {
+        r##"let-env PROMPT_COMMAND = {build-string (ansi ub) (cb-env | get username) (ansi reset) (ansi yb) (cb-env | get cluster) (ansi reset) ' in  (ansi wb) (cb-env | get bucket) (cb-env | select scope collection | each { |it| if $it.scope == "" && $it.collection == "" { } else { build-string (if $it.scope == "" { build-string ".<notset>" } else {build-string "." $it.scope}) (if $it.collection == "" { build-string ".<notset>"} else {build-string "." $it.collection})}}) (ansi reset)}"##
+    } else {
+        r##"let-env PROMPT_COMMAND = {build-string '👤 ' (ansi ub) (cb-env | get username) (ansi reset) ' 🏠 ' (ansi yb) (cb-env | get cluster) (ansi reset) ' in 🗄 ' (ansi wb) (cb-env | get bucket) (cb-env | select scope collection | each { |it| if $it.scope == "" && $it.collection == "" { } else { build-string (if $it.scope == "" { build-string ".<notset>" } else {build-string "." $it.scope}) (if $it.collection == "" { build-string ".<notset>"} else {build-string "." $it.collection})}}) (ansi reset)}"##
+    };
+
+    let config_string = format!(
+        "{}\nlet-env PROMPT_INDICATOR = \"\r\n> \"\nlet-env PROMPT_COMMAND_RIGHT = \"\"",
+        prompt
+    );
+
+    std::fs::write(&f, config_string.as_bytes()).unwrap();
+
+    read_plugin_file(&mut context, &mut stack, CBSHELL_FOLDER, false);
+    read_nu_config_file(&mut context, &mut stack, f);
+    let history_path = config_files::create_history_path(config);
+
+    nu_cli::evaluate_repl(&mut context, &mut stack, history_path, false)
+        .expect("evaluate loop failed");
+    // nu_cli::evaluate_repl(&mut context, None, false).expect("evaluate loop failed");
     Ok(())
 }
 
@@ -425,42 +544,264 @@ struct Motd {
     msg: String,
 }
 
-#[derive(Debug, StructOpt)]
-#[structopt(
-    name = "The Couchbase Shell",
-    about = "Alternative Shell and UI for Couchbase Server and Cloud"
-)]
+#[derive(Clone, Debug)]
 struct CliOptions {
-    #[structopt(long = "hostnames")]
     hostnames: Option<String>,
-    #[structopt(short = "u", long = "username")]
     username: Option<String>,
-    #[structopt(short = "p", long = "password")]
     password: bool,
-    #[structopt(long = "cluster")]
     cluster: Option<String>,
-    #[structopt(long = "bucket")]
     bucket: Option<String>,
-    #[structopt(long = "scope")]
     scope: Option<String>,
-    #[structopt(long = "collection")]
     collection: Option<String>,
-    #[structopt(long = "command", short = "c")]
-    command: Option<String>,
-    #[structopt(long = "script")]
+    command: Option<Spanned<String>>,
     script: Option<String>,
-    #[structopt(long = "stdin")]
     stdin: bool,
-    #[structopt(long = "no-motd")]
     no_motd: bool,
-    #[structopt(long = "disable-tls")]
     disable_tls: bool,
-    #[structopt(long = "dont-validate-hostnames")]
     dont_validate_hostnames: bool,
-    #[structopt(long = "tls-cert-path")]
     tls_cert_path: Option<String>,
-    #[structopt(short = "s", long = "silent")]
     silent: bool,
+}
+
+#[derive(Clone)]
+struct Cbsh;
+
+impl Command for Cbsh {
+    fn name(&self) -> &str {
+        "cbsh"
+    }
+
+    fn signature(&self) -> Signature {
+        Signature::build("cbsh")
+            .desc("The Couchbase Shell.")
+            .named(
+                "hostnames",
+                SyntaxShape::String,
+                "hostnames to connect to",
+                None,
+            )
+            .named(
+                "username",
+                SyntaxShape::String,
+                "username to authenticate as",
+                Some('u'),
+            )
+            .switch(
+                "password",
+                "use to specify a password to use for authentication",
+                Some('p'),
+            )
+            .named(
+                "cluster",
+                SyntaxShape::String,
+                "name to give to this configuration",
+                None,
+            )
+            .named(
+                "bucket",
+                SyntaxShape::String,
+                "name of the bucket to run operations against",
+                None,
+            )
+            .named(
+                "scope",
+                SyntaxShape::String,
+                "name of the scope to run operations against",
+                None,
+            )
+            .named(
+                "collection",
+                SyntaxShape::String,
+                "name of the collection to run operations against",
+                None,
+            )
+            .named(
+                "command",
+                SyntaxShape::String,
+                "command to run without starting an interactive shell session",
+                Some('c'),
+            )
+            .named(
+                "script",
+                SyntaxShape::String,
+                "filename of script to run without starting an interactive shell session",
+                None,
+            )
+            .switch("stdin", "redirect stdin", None)
+            .switch("no-motd", "disable message of the day", None)
+            .switch("disable-tls", "disable TLS", None)
+            .switch(
+                "dont-validate-hostnames",
+                "disable validation of hostnames for TLS certificates",
+                None,
+            )
+            .named(
+                "tls-cert-path",
+                SyntaxShape::String,
+                "path to certificate to use for TLS",
+                None,
+            )
+            .switch("silent", "run in silent mode", Some('s'))
+            .switch("version", "print the version", Some('v'))
+            .category(Category::Custom("couchbase".into()))
+    }
+
+    fn usage(&self) -> &str {
+        "Alternative Shell and UI for Couchbase Server and Capella."
+    }
+
+    fn run(
+        &self,
+        context: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        _input: PipelineData,
+    ) -> Result<nu_protocol::PipelineData, nu_protocol::ShellError> {
+        Ok(Value::String {
+            val: get_full_help(&Cbsh.signature(), &Cbsh.examples(), context, stack),
+            span: call.head,
+        }
+        .into_pipeline_data())
+    }
+
+    fn examples(&self) -> Vec<nu_protocol::Example> {
+        vec![
+            Example {
+                description: "Run a script",
+                example: "cbsh myfile.nu",
+                result: None,
+            },
+            Example {
+                description: "Run cbshell interactively (as a shell or REPL)",
+                example: "cbsh",
+                result: None,
+            },
+        ]
+    }
+}
+
+fn parse_commandline_args(
+    commandline_args: &str,
+    init_cwd: &Path,
+    context: &mut EngineState,
+) -> Result<CliOptions, ShellError> {
+    let (block, delta) = {
+        let mut working_set = StateWorkingSet::new(context);
+        working_set.add_decl(Box::new(Cbsh));
+
+        let (output, err) = parse(&mut working_set, None, commandline_args.as_bytes(), false);
+        if let Some(err) = err {
+            report_error(&working_set, &err);
+
+            std::process::exit(1);
+        }
+
+        working_set.hide_decl(b"cbsh");
+        (output, working_set.render())
+    };
+
+    let _ = context.merge_delta(delta, None, init_cwd);
+
+    let mut stack = Stack::new();
+    stack.add_var(
+        CONFIG_VARIABLE_ID,
+        Value::Record {
+            cols: vec![],
+            vals: vec![],
+            span: Span::new(0, 0),
+        },
+    );
+
+    // We should have a successful parse now
+    if let Some(pipeline) = block.pipelines.get(0) {
+        if let Some(Expression {
+            expr: Expr::Call(call),
+            ..
+        }) = pipeline.expressions.get(0)
+        {
+            let hostnames: Option<String> = call.get_flag(context, &mut stack, "hostnames")?;
+            let username: Option<String> = call.get_flag(context, &mut stack, "username")?;
+            let password = call.has_flag("password");
+            let cluster: Option<String> = call.get_flag(context, &mut stack, "cluster")?;
+            let bucket: Option<String> = call.get_flag(context, &mut stack, "bucket")?;
+            let scope: Option<String> = call.get_flag(context, &mut stack, "scope")?;
+            let collection: Option<String> = call.get_flag(context, &mut stack, "collection")?;
+            let command: Option<Expression> = call.get_flag_expr("command");
+            let script: Option<String> = call.get_flag(context, &mut stack, "script")?;
+            let stdin = call.has_flag("stdin");
+            let no_motd = call.has_flag("no-motd");
+            let disable_tls = call.has_flag("disable-tls");
+            let dont_validate_hostnames = call.has_flag("dont-validate-hostnames");
+            let tls_cert_path: Option<String> =
+                call.get_flag(context, &mut stack, "tls-cert-path")?;
+            let silent = call.has_flag("silent");
+
+            fn extract_contents(
+                expression: Option<Expression>,
+                context: &mut EngineState,
+            ) -> Option<Spanned<String>> {
+                expression.map(|expr| {
+                    let contents = context.get_span_contents(&expr.span);
+
+                    Spanned {
+                        item: String::from_utf8_lossy(contents).to_string(),
+                        span: expr.span,
+                    }
+                })
+            }
+
+            let command = extract_contents(command, context);
+
+            let help = call.has_flag("help");
+
+            if help {
+                let full_help =
+                    get_full_help(&Cbsh.signature(), &Cbsh.examples(), context, &mut stack);
+
+                let _ = std::panic::catch_unwind(move || {
+                    let stdout = std::io::stdout();
+                    let mut stdout = stdout.lock();
+                    let _ = stdout.write_all(full_help.as_bytes());
+                });
+
+                std::process::exit(1);
+            }
+
+            if call.has_flag("version") {
+                let version = env!("CARGO_PKG_VERSION").to_string();
+                let _ = std::panic::catch_unwind(move || {
+                    let stdout = std::io::stdout();
+                    let mut stdout = stdout.lock();
+                    let _ = stdout.write_all(format!("{}\n", version).as_bytes());
+                });
+
+                std::process::exit(0);
+            }
+
+            return Ok(CliOptions {
+                hostnames,
+                username,
+                password,
+                cluster,
+                bucket,
+                scope,
+                collection,
+                command,
+                script,
+                stdin,
+                no_motd,
+                disable_tls,
+                dont_validate_hostnames,
+                tls_cert_path,
+                silent,
+            });
+        }
+    }
+
+    // Just give the help and exit if the above fails
+    let full_help = get_full_help(&Cbsh.signature(), &Cbsh.examples(), context, &mut stack);
+    print!("{}", full_help);
+    std::process::exit(1);
 }
 
 fn validate_hostnames(hostnames: Vec<String>) -> Vec<String> {

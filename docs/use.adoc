@@ -29,26 +29,26 @@ You can also change the active resources with the `use` command.
 (Note there are extra resources listed here, see <<cloud.adoc#_use_and_the_environment>> for more information on these)
 
 ```
-> use -h
+> cb-env -h
 Modify the default execution environment of commands
 
 Usage:
-  > use <subcommand> {flags}
+  > cb-env <subcommand> {flags}
 
 Subcommands:
-  use bucket - Sets the active bucket based on its name
-  use cloud - Sets the active cloud based on its identifier
-  use capella-organization - Sets the active capella organization based on its identifier
-  use cluster - Sets the active cluster based on its identifier
-  use collection - Sets the active collection based on its name
-  use project - Sets the active project based on its name
-  use scope - Sets the active scope based on its name
+  cb-env bucket - Sets the active bucket based on its name
+  cb-env cloud - Sets the active cloud based on its identifier
+  cb-env capella-organization - Sets the active capella organization based on its identifier
+  cb-env cluster - Sets the active cluster based on its identifier
+  cb-env collection - Sets the active collection based on its name
+  cb-env project - Sets the active project based on its name
+  cb-env scope - Sets the active scope based on its name
 ```
 
 For example if you change the active bucket:
 
 ```
-> use bucket beer-sample
+> cb-env bucket beer-sample
 ────────┬─────────────
  bucket │ beer-sample
 ────────┴─────────────

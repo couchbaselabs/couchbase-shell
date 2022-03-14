@@ -1,6 +1,5 @@
 pub mod config;
 pub mod features;
-mod fs;
 pub mod mock;
 mod node_version;
 pub mod playground;

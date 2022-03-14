@@ -2,13 +2,16 @@ use crate::config::{
     CapellaOrganizationConfig, ClusterConfig, ClusterTlsConfig, ShellConfig, DEFAULT_KV_BATCH_SIZE,
 };
 use crate::state::{ClusterTimeouts, RemoteCluster, State};
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape};
-use nu_stream::OutputStream;
 use std::fs;
 use std::sync::{Arc, Mutex, MutexGuard};
 
+use crate::cli::util::generic_labeled_error;
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
+
+#[derive(Clone)]
 pub struct ClustersRegister {
     state: Arc<Mutex<State>>,
 }
@@ -19,7 +22,7 @@ impl ClustersRegister {
     }
 }
 
-impl nu_engine::WholeStreamCommand for ClustersRegister {
+impl Command for ClustersRegister {
     fn name(&self) -> &str {
         "clusters register"
     }
@@ -99,39 +102,55 @@ impl nu_engine::WholeStreamCommand for ClustersRegister {
                 "capella organization that this cluster belongs to",
                 None,
             )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Registers a cluster for use with the shell"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        clusters_register(args, self.state.clone())
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        clusters_register(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
 fn clusters_register(
-    args: CommandArgs,
     state: Arc<Mutex<State>>,
-) -> Result<OutputStream, ShellError> {
-    let identifier: String = args.req(0)?;
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let identifier: String = call.req(engine_state, stack, 0)?;
 
-    let hostnames = args
-        .req::<String>(1)?
+    let hostnames = call
+        .req::<String>(engine_state, stack, 1)?
         .split(',')
         .map(|v| v.to_owned())
         .collect();
-    let username = args.req(2)?;
-    let password = args.req(3)?;
-    let bucket = args.get_flag("default-bucket")?;
-    let scope = args.get_flag("default-scope")?;
-    let collection = args.get_flag("default-collection")?;
-    let tls_enabled = args.get_flag("tls-enabled")?.unwrap_or(true);
-    let tls_accept_all_certs = args.get_flag("tls-accept-all-certs")?.unwrap_or(true);
-    let tls_accept_all_hosts = args.get_flag("tls-validate-hosts")?.unwrap_or(true);
-    let cert_path = args.get_flag("tls-cert-path")?;
-    let save = args.get_flag("save")?.unwrap_or(false);
-    let capella = args.get_flag("capella-organization")?;
+    let username = call.req(engine_state, stack, 2)?;
+    let password = call.req(engine_state, stack, 3)?;
+    let bucket = call.get_flag(engine_state, stack, "default-bucket")?;
+    let scope = call.get_flag(engine_state, stack, "default-scope")?;
+    let collection = call.get_flag(engine_state, stack, "default-collection")?;
+    let tls_enabled = call
+        .get_flag(engine_state, stack, "tls-enabled")?
+        .unwrap_or(true);
+    let tls_accept_all_certs = call
+        .get_flag(engine_state, stack, "tls-accept-all-certs")?
+        .unwrap_or(true);
+    let tls_accept_all_hosts = call
+        .get_flag(engine_state, stack, "tls-validate-hosts")?
+        .unwrap_or(true);
+    let cert_path = call.get_flag(engine_state, stack, "tls-cert-path")?;
+    let save = call.get_flag(engine_state, stack, "save")?.unwrap_or(false);
+    let capella = call.get_flag(engine_state, stack, "capella-organization")?;
 
     let cluster = RemoteCluster::new(
         hostnames,
@@ -158,14 +177,15 @@ fn clusters_register(
         update_config_file(&mut guard)?;
     }
 
-    Ok(OutputStream::empty())
+    Ok(PipelineData::new(call.head))
 }
 
 pub fn update_config_file(guard: &mut MutexGuard<State>) -> Result<(), ShellError> {
     let path = match guard.config_path() {
         Some(p) => p,
         None => {
-            return Err(ShellError::unexpected(
+            return Err(generic_labeled_error(
+                "A config path must be discoverable to save config",
                 "A config path must be discoverable to save config",
             ));
         }
@@ -190,11 +210,19 @@ pub fn update_config_file(guard: &mut MutexGuard<State>) -> Result<(), ShellErro
 
     fs::write(
         path,
-        config
-            .to_str()
-            .map_err(|e| ShellError::unexpected(e.to_string()))?,
+        config.to_str().map_err(|e| {
+            generic_labeled_error(
+                "Failed to write config file",
+                format!("Failed to write config file {}", e.to_string()),
+            )
+        })?,
     )
-    .map_err(|e| ShellError::unexpected(e.to_string()))?;
+    .map_err(|e| {
+        generic_labeled_error(
+            "Failed to write config file",
+            format!("Failed to write config file {}", e.to_string()),
+        )
+    })?;
 
     Ok(())
 }

@@ -1,20 +1,25 @@
 use crate::cli::buckets_builder::{
     BucketSettings, DurabilityLevel, JSONBucketSettings, JSONCloudBucketSettings,
 };
-use crate::cli::util::cluster_identifiers_from;
+use crate::cli::util::{
+    cant_run_against_hosted_capella_error, cluster_identifiers_from, cluster_not_found_error,
+    generic_labeled_error, map_serde_deserialize_error_to_shell_error,
+    map_serde_serialize_error_to_shell_error,
+};
 use crate::client::{CapellaRequest, HttpResponse, ManagementRequest};
 use crate::state::{CapellaEnvironment, State};
-use async_trait::async_trait;
 use log::debug;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape};
-use nu_stream::OutputStream;
 use std::convert::TryFrom;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::{Duration, Instant};
 
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
+
+#[derive(Clone)]
 pub struct BucketsUpdate {
     state: Arc<Mutex<State>>,
 }
@@ -25,8 +30,7 @@ impl BucketsUpdate {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for BucketsUpdate {
+impl Command for BucketsUpdate {
     fn name(&self) -> &str {
         "buckets update"
     }
@@ -70,44 +74,61 @@ impl nu_engine::WholeStreamCommand for BucketsUpdate {
                 "the clusters which should be contacted",
                 None,
             )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Updates a bucket"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        buckets_update(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        buckets_update(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
+fn buckets_update(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let span = call.head;
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let name: String = args.req(0)?;
-    let ram = args.get_flag("ram")?;
-    let replicas = args.get_flag("replicas")?;
-    let flush = args.get_flag("flush")?.unwrap_or(false);
-    let durability = args.get_flag("durability")?;
-    let expiry = args.get_flag("expiry")?;
+    let name: String = call.req(engine_state, stack, 0)?;
+    let ram: Option<i64> = call.get_flag(engine_state, stack, "ram")?;
+    let replicas: Option<i64> = call.get_flag(engine_state, stack, "replicas")?;
+    let flush = call
+        .get_flag(engine_state, stack, "flush")?
+        .unwrap_or(false);
+    let durability = call.get_flag(engine_state, stack, "durability")?;
+    let expiry: Option<i64> = call.get_flag(engine_state, stack, "expiry")?;
 
     debug!("Running buckets update for bucket {}", &name);
 
-    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
+    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
     let guard = state.lock().unwrap();
 
     for identifier in cluster_identifiers {
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::unexpected("Cluster not found"));
+                return Err(cluster_not_found_error(identifier));
             }
         };
 
         if active_cluster.capella_org().is_some()
             && (flush || durability.is_some() || expiry.is_some())
         {
-            return Err(ShellError::unexpected(
+            return Err(generic_labeled_error(
+                "Capella flag cannot be used with type, flush, durability, or expiry",
                 "Capella flag cannot be used with type, flush, durability, or expiry",
             ));
         }
@@ -120,9 +141,7 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
             let cluster = cloud.find_cluster(identifier.clone(), deadline, ctrl_c.clone())?;
 
             if cluster.environment() == CapellaEnvironment::Hosted {
-                return Err(ShellError::unexpected(
-                    "buckets update cannot be run against hosted Capella clusters",
-                ));
+                return Err(cant_run_against_hosted_capella_error());
             }
 
             let buckets_response = cloud.capella_request(
@@ -133,11 +152,15 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
                 ctrl_c.clone(),
             )?;
             if buckets_response.status() != 200 {
-                return Err(ShellError::unexpected(buckets_response.content()));
+                return Err(generic_labeled_error(
+                    "Failed to get buckets",
+                    format!("Failed to get buckets: {}", buckets_response.content()),
+                ));
             }
 
             let mut buckets: Vec<JSONCloudBucketSettings> =
-                serde_json::from_str(buckets_response.content())?;
+                serde_json::from_str(buckets_response.content())
+                    .map_err(map_serde_deserialize_error_to_shell_error)?;
 
             // Cloud requires that updates are performed on an array of buckets, and we have to include all
             // of the buckets that we want to keep so we need to pull out, change and reinsert the bucket that
@@ -145,18 +168,21 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
             let idx = match buckets.iter().position(|b| b.name() == name.clone()) {
                 Some(i) => i,
                 None => {
-                    return Err(ShellError::unexpected("Bucket not found"));
+                    return Err(ShellError::LabeledError(
+                        "Bucket not found".into(),
+                        format!("Bucket named {} is not known", name),
+                    ));
                 }
             };
 
             let mut settings = BucketSettings::try_from(buckets.swap_remove(idx))?;
             update_bucket_settings(
                 &mut settings,
-                ram,
-                replicas,
+                ram.map(|v| v as u64),
+                replicas.map(|v| v as u64),
                 flush,
                 durability.clone(),
-                expiry,
+                expiry.map(|v| v as u64),
             )?;
 
             buckets.push(JSONCloudBucketSettings::try_from(&settings)?);
@@ -164,7 +190,8 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
             response = cloud.capella_request(
                 CapellaRequest::UpdateBucket {
                     cluster_id: cluster.id(),
-                    payload: serde_json::to_string(&buckets)?,
+                    payload: serde_json::to_string(&buckets)
+                        .map_err(map_serde_serialize_error_to_shell_error)?,
                 },
                 deadline.clone(),
                 ctrl_c.clone(),
@@ -177,16 +204,17 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
                 ctrl_c.clone(),
             )?;
 
-            let content: JSONBucketSettings = serde_json::from_str(get_response.content())?;
+            let content: JSONBucketSettings = serde_json::from_str(get_response.content())
+                .map_err(map_serde_deserialize_error_to_shell_error)?;
             let mut settings = BucketSettings::try_from(content)?;
 
             update_bucket_settings(
                 &mut settings,
-                ram,
-                replicas,
+                ram.map(|v| v as u64),
+                replicas.map(|v| v as u64),
                 flush,
                 durability.clone(),
-                expiry,
+                expiry.map(|v| v as u64),
             )?;
 
             let form = settings.as_form(true)?;
@@ -207,12 +235,15 @@ fn buckets_update(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
             201 => {}
             202 => {}
             _ => {
-                return Err(ShellError::unexpected(response.content()));
+                return Err(generic_labeled_error(
+                    "Failed to update bucket",
+                    format!("Failed to update bucket: {}", response.content()),
+                ));
             }
         }
     }
 
-    Ok(OutputStream::empty())
+    Ok(PipelineData::new(span))
 }
 
 fn update_bucket_settings(
@@ -230,10 +261,10 @@ fn update_bucket_settings(
         settings.set_num_replicas(match u32::try_from(r) {
             Ok(bt) => bt,
             Err(e) => {
-                return Err(ShellError::unexpected(format!(
-                    "Failed to parse durability level {}",
-                    e
-                )));
+                return Err(generic_labeled_error(
+                    "Failed to parse num replicas",
+                    format!("Failed to parse num replicas {}", e.to_string()),
+                ));
             }
         });
     }
@@ -244,10 +275,10 @@ fn update_bucket_settings(
         settings.set_minimum_durability_level(match DurabilityLevel::try_from(d.as_str()) {
             Ok(bt) => bt,
             Err(e) => {
-                return Err(ShellError::unexpected(format!(
-                    "Failed to parse durability level {}",
-                    e
-                )));
+                return Err(generic_labeled_error(
+                    "Failed to parse durability level",
+                    format!("Failed to parse durability level {}", e.to_string()),
+                ));
             }
         });
     }

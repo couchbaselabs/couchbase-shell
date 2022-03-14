@@ -1,20 +1,24 @@
 use crate::cli::buckets_builder::{
     BucketSettingsBuilder, BucketType, DurabilityLevel, JSONCloudBucketSettings,
 };
-use crate::cli::util::cluster_identifiers_from;
+use crate::cli::util::{
+    cant_run_against_hosted_capella_error, cluster_identifiers_from, cluster_not_found_error,
+    generic_labeled_error, map_serde_serialize_error_to_shell_error,
+};
 use crate::client::{CapellaRequest, HttpResponse, ManagementRequest};
 use crate::state::{CapellaEnvironment, State};
-use async_trait::async_trait;
 use log::debug;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape};
-use nu_stream::OutputStream;
 use std::convert::TryFrom;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::{Duration, Instant};
 
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
+
+#[derive(Clone)]
 pub struct BucketsCreate {
     state: Arc<Mutex<State>>,
 }
@@ -25,8 +29,7 @@ impl BucketsCreate {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for BucketsCreate {
+impl Command for BucketsCreate {
     fn name(&self) -> &str {
         "buckets create"
     }
@@ -65,42 +68,56 @@ impl nu_engine::WholeStreamCommand for BucketsCreate {
                 "the clusters which should be contacted",
                 None,
             )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Creates a bucket"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        buckets_create(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        buckets_create(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
-    let name: String = args.req(0)?;
-    let ram = args.req(1)?;
+fn buckets_create(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let span = call.head;
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let bucket_type: Option<String> = args.get_flag("type")?;
-    let replicas: Option<i32> = args.get_flag("replicas")?;
-    let flush = args.get_flag("flush")?.unwrap_or(false);
-    let durability: Option<String> = args.get_flag("durability")?;
-    let expiry = args.get_flag("expiry")?;
+    let name: String = call.req(engine_state, stack, 0)?;
+    let ram: i64 = call.req(engine_state, stack, 1)?;
+
+    let bucket_type: Option<String> = call.get_flag(engine_state, stack, "type")?;
+    let replicas: Option<i64> = call.get_flag(engine_state, stack, "replicas")?;
+    let flush = call
+        .get_flag(engine_state, stack, "flush")?
+        .unwrap_or(false);
+    let durability: Option<String> = call.get_flag(engine_state, stack, "durability")?;
+    let expiry: Option<i64> = call.get_flag(engine_state, stack, "expiry")?;
 
     debug!("Running buckets create for bucket {}", &name);
 
-    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
+    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
     let guard = state.lock().unwrap();
 
-    let mut builder = BucketSettingsBuilder::new(name).ram_quota_mb(ram);
+    let mut builder = BucketSettingsBuilder::new(name).ram_quota_mb(ram as u64);
     if let Some(ref t) = bucket_type {
         builder = builder.bucket_type(match BucketType::try_from(t.as_str()) {
             Ok(bt) => bt,
-            Err(e) => {
-                return Err(ShellError::unexpected(format!(
-                    "Failed to parse bucket type {}",
-                    e
-                )));
+            Err(_e) => {
+                return Err(generic_labeled_error("Failed to parse bucket type", format!("Failed to parse bucket type {}, allow values are couchbase, membase, memcached, ephemeral", t )));
             }
         });
     }
@@ -108,10 +125,10 @@ fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
         builder = builder.num_replicas(match u32::try_from(r) {
             Ok(bt) => bt,
             Err(e) => {
-                return Err(ShellError::unexpected(format!(
-                    "Failed to parse durability level {}",
-                    e
-                )));
+                return Err(generic_labeled_error(
+                    "Failed to parse num replicas",
+                    format!("Failed to parse num replicas {}", e),
+                ));
             }
         });
     }
@@ -121,16 +138,14 @@ fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
     if let Some(ref d) = durability {
         builder = builder.minimum_durability_level(match DurabilityLevel::try_from(d.as_str()) {
             Ok(bt) => bt,
-            Err(e) => {
-                return Err(ShellError::unexpected(format!(
-                    "Failed to parse durability level {}",
-                    e
-                )));
+            Err(_e) => {
+                return Err(generic_labeled_error("Failed to parse durability level",
+                                             format!("Failed to parse durability level {}, allow values are one, majority, majorityAndPersistActive, persistToMajority", d )));
             }
         });
     }
     if let Some(e) = expiry {
-        builder = builder.max_expiry(Duration::from_secs(e));
+        builder = builder.max_expiry(Duration::from_secs(e as u64));
     }
 
     let settings = builder.build();
@@ -139,7 +154,7 @@ fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::unexpected("Cluster not found"));
+                return Err(cluster_not_found_error(identifier));
             }
         };
 
@@ -149,7 +164,8 @@ fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
                 || durability.clone().is_some()
                 || expiry.is_some())
         {
-            return Err(ShellError::unexpected(
+            return Err(generic_labeled_error(
+                "Capella flag cannot be used with type, flush, durability, or expiry",
                 "Capella flag cannot be used with type, flush, durability, or expiry",
             ));
         }
@@ -162,16 +178,15 @@ fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
                 cloud.find_cluster(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
 
             if cluster.environment() == CapellaEnvironment::Hosted {
-                return Err(ShellError::unexpected(
-                    "buckets create cannot be run against hosted Capella clusters",
-                ));
+                return Err(cant_run_against_hosted_capella_error());
             }
 
             let json_settings = JSONCloudBucketSettings::try_from(&settings)?;
             response = cloud.capella_request(
                 CapellaRequest::CreateBucket {
                     cluster_id: cluster.id(),
-                    payload: serde_json::to_string(&json_settings)?,
+                    payload: serde_json::to_string(&json_settings)
+                        .map_err(map_serde_serialize_error_to_shell_error)?,
                 },
                 deadline,
                 ctrl_c.clone(),
@@ -194,10 +209,13 @@ fn buckets_create(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
             201 => {}
             202 => {}
             _ => {
-                return Err(ShellError::unexpected(response.content()));
+                return Err(generic_labeled_error(
+                    "Failed to create bucket",
+                    format!("Failed to create bucket: {}", response.content()),
+                ));
             }
         }
     }
 
-    Ok(OutputStream::empty())
+    Ok(PipelineData::new(span))
 }

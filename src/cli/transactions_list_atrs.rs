@@ -1,18 +1,24 @@
-use crate::cli::util::{convert_json_value_to_nu_value, duration_to_golang_string};
+use crate::cli::util::{
+    convert_json_value_to_nu_value, duration_to_golang_string,
+    map_serde_deserialize_error_to_shell_error, no_active_cluster_error,
+};
 use crate::client::QueryRequest;
 use crate::state::State;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape};
-use nu_source::Tag;
-use nu_stream::OutputStream;
 use std::collections::HashMap;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+};
+
 // For now you need a covered index like
 // create index id3 on `travel-sample`(meta().id, meta().xattrs.attempts);
+#[derive(Clone)]
 pub struct TransactionsListAtrs {
     state: Arc<Mutex<State>>,
 }
@@ -23,18 +29,20 @@ impl TransactionsListAtrs {
     }
 }
 
-impl nu_engine::WholeStreamCommand for TransactionsListAtrs {
+impl Command for TransactionsListAtrs {
     fn name(&self) -> &str {
         "transactions list-atrs"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("transactions list-atrs").named(
-            "bucket",
-            SyntaxShape::String,
-            "the name of the bucket",
-            None,
-        )
+        Signature::build("transactions list-atrs")
+            .named(
+                "bucket",
+                SyntaxShape::String,
+                "the name of the bucket",
+                None,
+            )
+            .category(Category::Custom("couchbase".into()))
         /* .named("scope", SyntaxShape::String, "the name of the scope", None)
         .named(
             "collection",
@@ -48,23 +56,31 @@ impl nu_engine::WholeStreamCommand for TransactionsListAtrs {
         "Lists all active transaction records"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        let ctrl_c = args.ctrl_c();
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        _input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        let span = call.head;
+        let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
         let guard = self.state.lock().unwrap();
         let active_cluster = match guard.active_cluster() {
             Some(c) => c,
             None => {
-                return Err(ShellError::unexpected("An active cluster must be set"));
+                return Err(no_active_cluster_error());
             }
         };
-        let bucket = match args
-            .get_flag("bucket")?
+        let bucket = match call
+            .get_flag(engine_state, stack, "bucket")?
             .or_else(|| active_cluster.active_bucket())
         {
             Some(v) => Ok(v),
-            None => Err(ShellError::unexpected(
+            None => Err(ShellError::MissingParameter(
                 "Could not auto-select a bucket - please use --bucket instead".to_string(),
+                span,
             )),
         }?;
 
@@ -99,7 +115,8 @@ impl nu_engine::WholeStreamCommand for TransactionsListAtrs {
             ctrl_c,
         )?;
         let mut content: HashMap<String, serde_json::Value> =
-            serde_json::from_str(response.content())?;
+            serde_json::from_str(response.content())
+                .map_err(map_serde_deserialize_error_to_shell_error)?;
         let removed = if content.contains_key("errors") {
             content.remove("errors").unwrap()
         } else {
@@ -110,8 +127,9 @@ impl nu_engine::WholeStreamCommand for TransactionsListAtrs {
             .as_array()
             .unwrap()
             .iter()
-            .map(|a| convert_json_value_to_nu_value(a, Tag::default()).unwrap())
+            .map(|a| convert_json_value_to_nu_value(a, span).unwrap())
             .collect::<Vec<_>>();
-        Ok(OutputStream::from(values))
+
+        Ok(Value::List { vals: values, span }.into_pipeline_data())
     }
 }

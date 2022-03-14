@@ -3,13 +3,15 @@
 use crate::cli::doc_upsert::run_kv_store_ops;
 use crate::client::KeyValueRequest;
 use crate::state::State;
-use async_trait::async_trait;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape};
-use nu_stream::OutputStream;
 use std::sync::{Arc, Mutex};
 
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+};
+
+#[derive(Clone)]
 pub struct DocReplace {
     state: Arc<Mutex<State>>,
 }
@@ -20,8 +22,7 @@ impl DocReplace {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for DocReplace {
+impl Command for DocReplace {
     fn name(&self) -> &str {
         "doc replace"
     }
@@ -73,14 +74,21 @@ impl nu_engine::WholeStreamCommand for DocReplace {
                 "the maximum number of items to batch send at a time",
                 None,
             )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Replace a document through the data service"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        run_replace(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        run_replace(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
@@ -88,8 +96,18 @@ fn build_req(key: String, value: Vec<u8>, expiry: u32) -> KeyValueRequest {
     KeyValueRequest::Replace { key, value, expiry }
 }
 
-fn run_replace(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let results = run_kv_store_ops(state, args, build_req)?;
+fn run_replace(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let results = run_kv_store_ops(state, engine_state, stack, call, input, build_req)?;
 
-    Ok(OutputStream::from(results))
+    Ok(Value::List {
+        vals: results,
+        span: call.head,
+    }
+    .into_pipeline_data())
 }

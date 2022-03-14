@@ -1,17 +1,19 @@
 use crate::cli::cloud_json::{JSONCloudCreateClusterRequest, JSONCloudCreateClusterRequestV3};
-use crate::cli::util::{find_cloud_id, find_project_id};
+use crate::cli::util::generic_labeled_error;
+use crate::cli::util::{find_cloud_id, find_project_id, map_serde_serialize_error_to_shell_error};
 use crate::client::CapellaRequest;
 use crate::state::State;
-use async_trait::async_trait;
 use log::debug;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape};
-use nu_stream::OutputStream;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
+
+#[derive(Clone)]
 pub struct ClustersCreate {
     state: Arc<Mutex<State>>,
 }
@@ -22,8 +24,7 @@ impl ClustersCreate {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for ClustersCreate {
+impl Command for ClustersCreate {
     fn name(&self) -> &str {
         "clusters create"
     }
@@ -47,25 +48,39 @@ impl nu_engine::WholeStreamCommand for ClustersCreate {
                 "the Capella environment to use (\"hosted\" or \"vpc\")",
                 None,
             )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Creates a new cluster against the active Capella organization"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        clusters_create(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        clusters_create(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
 fn clusters_create(
     state: Arc<Mutex<State>>,
-    args: CommandArgs,
-) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
-    let definition: String = args.req(0)?;
-    let capella = args.get_flag("capella")?;
-    let environment = args.get_flag("capella")?.unwrap_or("hosted".to_string());
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let span = call.head;
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+
+    let definition: String = call.req(engine_state, stack, 0)?;
+    let capella = call.get_flag(engine_state, stack, "capella")?;
+    let environment = call
+        .get_flag(engine_state, stack, "capella")?
+        .unwrap_or("hosted".to_string());
 
     debug!("Running clusters create for {}", &definition);
 
@@ -80,51 +95,69 @@ fn clusters_create(
 
     let project_name = match control.active_project() {
         Some(p) => p,
-        None => return Err(ShellError::unexpected("Could not auto-select a project")),
+        None => {
+            return Err(ShellError::MissingParameter(
+                "Could not auto-select a project".into(),
+                span,
+            ))
+        }
     };
     let project_id = find_project_id(ctrl_c.clone(), project_name, &client, deadline)?;
 
     if environment == "hosted".to_string() {
         let mut json: JSONCloudCreateClusterRequestV3 =
             serde_json::from_str(definition.as_str())
-                .map_err(|e| ShellError::unexpected(e.to_string()))?;
+                .map_err(map_serde_serialize_error_to_shell_error)?;
         json.set_project_id(project_id);
 
         let response = client.capella_request(
             CapellaRequest::CreateClusterV3 {
-                payload: serde_json::to_string(&json)?,
+                payload: serde_json::to_string(&json)
+                    .map_err(map_serde_serialize_error_to_shell_error)?,
             },
             Instant::now().add(control.timeout()),
             ctrl_c,
         )?;
         if response.status() != 202 {
-            return Err(ShellError::unexpected(response.content().to_string()));
+            return Err(generic_labeled_error(
+                "Failed to create cluster",
+                format!("Failed to create cluster {}", response.content()),
+            ));
         };
 
-        return Ok(OutputStream::empty());
+        return Ok(PipelineData::new(span));
     }
 
     let cloud_name = match control.active_cloud() {
         Some(p) => p,
-        None => return Err(ShellError::unexpected("Could not auto-select a cloud")),
+        None => {
+            return Err(ShellError::MissingParameter(
+                "Could not auto-select a cloud".into(),
+                span,
+            ))
+        }
     };
     let cloud_id = find_cloud_id(ctrl_c.clone(), cloud_name, &client, deadline)?;
 
     let mut json: JSONCloudCreateClusterRequest = serde_json::from_str(definition.as_str())
-        .map_err(|e| ShellError::unexpected(e.to_string()))?;
+        .map_err(map_serde_serialize_error_to_shell_error)?;
     json.set_cloud_id(cloud_id);
     json.set_project_id(project_id);
 
     let response = client.capella_request(
         CapellaRequest::CreateCluster {
-            payload: serde_json::to_string(&json)?,
+            payload: serde_json::to_string(&json)
+                .map_err(map_serde_serialize_error_to_shell_error)?,
         },
         Instant::now().add(control.timeout()),
         ctrl_c,
     )?;
     if response.status() != 202 {
-        return Err(ShellError::unexpected(response.content().to_string()));
+        return Err(generic_labeled_error(
+            "Failed to create cluster",
+            format!("Failed to create cluster {}", response.content()),
+        ));
     };
 
-    Ok(OutputStream::empty())
+    Ok(PipelineData::new(span))
 }
