@@ -1,12 +1,15 @@
 use crate::state::State;
-use async_trait::async_trait;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Value};
-use nu_source::Tag;
-use nu_stream::OutputStream;
+use nu_engine::CallExt;
 use std::sync::{Arc, Mutex};
 
+use crate::cli::util::NuValueMap;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+};
+
+#[derive(Clone)]
 pub struct TutorialPage {
     state: Arc<Mutex<State>>,
 }
@@ -17,53 +20,65 @@ impl TutorialPage {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for TutorialPage {
+impl Command for TutorialPage {
     fn name(&self) -> &str {
         "tutorial page"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("tutorial page").optional(
-            "name",
-            SyntaxShape::String,
-            "the name of the page to go to",
-        )
+        Signature::build("tutorial page")
+            .optional("name", SyntaxShape::String, "the name of the page to go to")
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Step to a specific page in the Couchbase Shell tutorial"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        run_tutorial_page(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        _input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        run_tutorial_page(self.state.clone(), engine_state, stack, call)
     }
 }
 
 fn run_tutorial_page(
     state: Arc<Mutex<State>>,
-    args: CommandArgs,
-) -> Result<OutputStream, ShellError> {
-    let name = args.opt(0)?;
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+) -> Result<PipelineData, ShellError> {
+    let name: Option<String> = call.opt(engine_state, stack, 0)?;
 
     let guard = state.lock().unwrap();
     let tutorial = guard.tutorial();
     if let Some(n) = name {
-        Ok(OutputStream::one(
-            UntaggedValue::string(tutorial.goto_step(n)?).into_value(Tag::unknown()),
-        ))
+        Ok(Value::String {
+            val: tutorial.goto_step(n)?,
+            span: call.head,
+        }
+        .into_pipeline_data())
     } else {
         let mut results: Vec<Value> = vec![];
         let (current_step, steps) = tutorial.step_names();
         for s in steps {
-            let mut collected = TaggedDictBuilder::new(Tag::default());
+            let mut collected = NuValueMap::default();
             let mut step_name = s.clone();
             if s == current_step {
                 step_name += " (active)";
             }
-            collected.insert_value("page_name", step_name);
-            results.push(collected.into_value());
+            collected.add_string("page_name", step_name, call.head);
+            results.push(collected.into_value(call.head));
         }
-        Ok(OutputStream::from(results))
+
+        Ok(Value::List {
+            vals: results,
+            span: call.head,
+        }
+        .into_pipeline_data())
     }
 }

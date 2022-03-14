@@ -1,20 +1,22 @@
 //! The `ping` command performs a ping operation.
 
-use crate::cli::util::cluster_identifiers_from;
+use crate::cli::util::{cluster_identifiers_from, NuValueMap};
 use crate::state::State;
 
-use async_trait::async_trait;
 use log::debug;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue};
-use nu_source::Tag;
-use nu_stream::OutputStream;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 use tokio::time::Instant;
 
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+};
+
+#[derive(Clone)]
 pub struct Ping {
     state: Arc<Mutex<State>>,
 }
@@ -25,8 +27,7 @@ impl Ping {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for Ping {
+impl Command for Ping {
     fn name(&self) -> &str {
         "ping"
     }
@@ -45,21 +46,35 @@ impl nu_engine::WholeStreamCommand for Ping {
                 "the clusters which should be contacted",
                 None,
             )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Ping available services in the cluster"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        run_ping(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        run_ping(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn run_ping(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
+fn run_ping(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let span = call.head;
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
+    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
 
     let guard = state.lock().unwrap();
 
@@ -80,35 +95,41 @@ fn run_ping(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream,
         match result {
             Ok(res) => {
                 for ping in res {
-                    let tag = Tag::default();
-                    let mut collected = TaggedDictBuilder::new(&tag);
+                    let mut collected = NuValueMap::default();
                     if clusters_len > 1 {
-                        collected.insert_value("cluster", identifier.clone());
+                        collected.add_string("cluster", identifier.clone(), span);
                     }
-                    collected.insert_value("service", ping.service().as_string());
-                    collected.insert_value("remote", ping.address().to_string());
-                    collected.insert_value(
+                    collected.add_string("service", ping.service().as_string(), span);
+                    collected.add_string("remote", ping.address().to_string(), span);
+                    collected.add(
                         "latency",
-                        UntaggedValue::duration(ping.latency().as_nanos()).into_untagged_value(),
+                        Value::Duration {
+                            val: ping.latency().as_nanos() as i64,
+                            span,
+                        },
                     );
-                    collected.insert_value("state", ping.state().to_string());
+                    collected.add_string("state", ping.state().to_string(), span);
 
                     let error = match ping.error() {
                         Some(e) => e.to_string(),
                         None => "".into(),
                     };
 
-                    collected.insert_value("error", error);
-                    results.push(collected.into_value());
+                    collected.add_string("error", error, span);
+                    results.push(collected.into_value(span));
                 }
             }
             Err(_e) => {}
         };
-        let bucket_name = match args.get_flag("bucket")?.or_else(|| cluster.active_bucket()) {
+        let bucket_name = match call
+            .get_flag(engine_state, stack, "bucket")?
+            .or_else(|| cluster.active_bucket())
+        {
             Some(v) => v,
             None => {
-                return Err(ShellError::unexpected(
+                return Err(ShellError::MissingParameter(
                     "Could not auto-select a bucket - please use --bucket instead".to_string(),
+                    span,
                 ))
             }
         };
@@ -125,30 +146,37 @@ fn run_ping(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream,
         match kv_result {
             Ok(res) => {
                 for ping in res {
-                    let tag = Tag::default();
-                    let mut collected = TaggedDictBuilder::new(&tag);
+                    let mut collected = NuValueMap::default();
                     if clusters_len > 1 {
-                        collected.insert_value("cluster", identifier.clone());
+                        collected.add_string("cluster", identifier.clone(), span);
                     }
-                    collected.insert_value("service", ping.service().as_string());
-                    collected.insert_value("remote", ping.address().to_string());
-                    collected.insert_value(
+                    collected.add_string("service", ping.service().as_string(), span);
+                    collected.add_string("remote", ping.address().to_string(), span);
+                    collected.add(
                         "latency",
-                        UntaggedValue::duration(ping.latency().as_nanos()).into_untagged_value(),
+                        Value::Duration {
+                            val: ping.latency().as_nanos() as i64,
+                            span,
+                        },
                     );
-                    collected.insert_value("state", ping.state().to_string());
+                    collected.add_string("state", ping.state().to_string(), span);
 
                     let error = match ping.error() {
                         Some(e) => e.to_string(),
                         None => "".into(),
                     };
 
-                    collected.insert_value("error", error);
-                    results.push(collected.into_value());
+                    collected.add_string("error", error, span);
+                    results.push(collected.into_value(span));
                 }
             }
             Err(_e) => {}
         };
     }
-    Ok(OutputStream::from(results))
+
+    Ok(Value::List {
+        vals: results,
+        span: call.head,
+    }
+    .into_pipeline_data())
 }

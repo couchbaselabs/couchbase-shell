@@ -1,16 +1,21 @@
-use crate::cli::util::{cluster_identifiers_from, validate_is_not_cloud};
+use crate::cli::util::{
+    cluster_identifiers_from, cluster_not_found_error, generic_labeled_error,
+    map_serde_deserialize_error_to_shell_error, validate_is_not_cloud, NuValueMap,
+};
 use crate::client::ManagementRequest;
 use crate::state::State;
-use async_trait::async_trait;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, Value};
-use nu_source::Tag;
-use nu_stream::OutputStream;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+};
+
+#[derive(Clone)]
 pub struct BucketsSample {
     state: Arc<Mutex<State>>,
 }
@@ -21,8 +26,7 @@ impl BucketsSample {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for BucketsSample {
+impl Command for BucketsSample {
     fn name(&self) -> &str {
         "buckets load-sample"
     }
@@ -40,25 +44,36 @@ impl nu_engine::WholeStreamCommand for BucketsSample {
                 "the clusters which should be contacted",
                 None,
             )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Load a sample bucket"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        load_sample_bucket(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        load_sample_bucket(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
 fn load_sample_bucket(
     state: Arc<Mutex<State>>,
-    args: CommandArgs,
-) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let span = call.head;
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
-    let bucket_name: String = args.req(0)?;
+    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
+    let bucket_name: String = call.req(engine_state, stack, 0)?;
 
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
@@ -66,7 +81,7 @@ fn load_sample_bucket(
         let cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::unexpected("Cluster not found"));
+                return Err(cluster_not_found_error(identifier));
             }
         };
 
@@ -85,17 +100,30 @@ fn load_sample_bucket(
 
         match response.status() {
             202 => {}
-            _ => return Err(ShellError::unexpected(response.content().to_string())),
+            _ => {
+                return Err(generic_labeled_error(
+                    "Failed to load sample bucket",
+                    format!(
+                        "Failed to load sample bucket {}",
+                        response.content().to_string()
+                    ),
+                ))
+            }
         }
 
-        let resp: Vec<String> = serde_json::from_str(response.content())?;
+        let resp: Vec<String> = serde_json::from_str(response.content())
+            .map_err(map_serde_deserialize_error_to_shell_error)?;
         for r in resp {
-            let mut collected = TaggedDictBuilder::new(Tag::default());
-            collected.insert_value("cluster", identifier.clone());
-            collected.insert_value("results", r);
-            results.push(collected.into_value());
+            let mut collected = NuValueMap::default();
+            collected.add_string("cluster", identifier.clone(), span);
+            collected.add_string("results", r, span);
+            results.push(collected.into_value(span));
         }
     }
 
-    Ok(OutputStream::from(results))
+    Ok(Value::List {
+        vals: results,
+        span: call.head,
+    }
+    .into_pipeline_data())
 }

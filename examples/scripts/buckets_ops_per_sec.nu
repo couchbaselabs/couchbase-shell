@@ -26,4 +26,4 @@ let opsPerSec = ($bucket_names | each { |name|
 })
 
 # Print the table, but sort by opsPerSec and make sure highest is on top
-echo $opsPerSec | sort-by opsPerSec -r
+echo $opsPerSec | sort-by opsPerSec -r | flatten

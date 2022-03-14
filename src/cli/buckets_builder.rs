@@ -1,4 +1,5 @@
-use nu_errors::ShellError;
+use crate::cli::util::generic_labeled_error;
+use nu_protocol::ShellError;
 use serde_derive::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use std::fmt;
@@ -41,7 +42,10 @@ impl TryFrom<&str> for DurabilityLevel {
             "majority" => Ok(DurabilityLevel::Majority),
             "majorityAndPersistActive" => Ok(DurabilityLevel::MajorityAndPersistOnMaster),
             "persistToMajority" => Ok(DurabilityLevel::PersistToMajority),
-            _ => Err(ShellError::unexpected("invalid durability mode")),
+            _ => Err(generic_labeled_error(
+                "invalid durability mode",
+                "invalid durability mode",
+            )),
         }
     }
 }
@@ -62,7 +66,10 @@ impl TryFrom<&str> for BucketType {
             "membase" => Ok(BucketType::Couchbase),
             "memcached" => Ok(BucketType::Memcached),
             "ephemeral" => Ok(BucketType::Ephemeral),
-            _ => Err(ShellError::unexpected("invalid bucket type")),
+            _ => Err(generic_labeled_error(
+                "invalid bucket type",
+                "invalid bucket type",
+            )),
         }
     }
 }
@@ -92,7 +99,10 @@ impl TryFrom<&str> for ConflictResolutionType {
         match alias {
             "lww" => Ok(ConflictResolutionType::Timestamp),
             "seqno" => Ok(ConflictResolutionType::SequenceNumber),
-            _ => Err(ShellError::unexpected("invalid conflict resolution policy")),
+            _ => Err(generic_labeled_error(
+                "invalid conflict resolution policy",
+                "invalid conflict resolution policy",
+            )),
         }
     }
 }
@@ -124,7 +134,10 @@ impl TryFrom<&str> for EvictionPolicy {
             "valueOnly" => Ok(EvictionPolicy::ValueOnly),
             "nruEviction" => Ok(EvictionPolicy::NotRecentlyUsed),
             "noEviction" => Ok(EvictionPolicy::NoEviction),
-            _ => Err(ShellError::unexpected("invalid eviction policy")),
+            _ => Err(generic_labeled_error(
+                "invalid eviction policy",
+                "invalid eviction policy",
+            )),
         }
     }
 }
@@ -157,7 +170,10 @@ impl TryFrom<&str> for CompressionMode {
             "off" => Ok(CompressionMode::Off),
             "passive" => Ok(CompressionMode::Passive),
             "active" => Ok(CompressionMode::Active),
-            _ => Err(ShellError::unexpected("invalid compression mode")),
+            _ => Err(generic_labeled_error(
+                "invalid compression mode",
+                "invalid compression mode",
+            )),
         }
     }
 }
@@ -396,7 +412,10 @@ impl TryFrom<JSONCloudBucketSettings> for BucketSettings {
 impl BucketSettings {
     pub fn as_form(&self, is_update: bool) -> Result<Vec<(&str, String)>, ShellError> {
         if self.ram_quota_mb < 100 {
-            return Err(ShellError::unexpected("ram quota must be more than 100mb"));
+            return Err(generic_labeled_error(
+                "ram quota must be more than 100mb",
+                "ram quota must be more than 100mb",
+            ));
         }
         let flush_enabled = match self.flush_enabled {
             true => "1",
@@ -432,12 +451,14 @@ impl BucketSettings {
                 if let Some(eviction_policy) = self.eviction_policy {
                     match eviction_policy {
                         EvictionPolicy::NoEviction => {
-                            return Err(ShellError::unexpected(
+                            return Err(generic_labeled_error(
+                                "specified eviction policy cannot be used with couchbase buckets",
                                 "specified eviction policy cannot be used with couchbase buckets",
                             ));
                         }
                         EvictionPolicy::NotRecentlyUsed => {
-                            return Err(ShellError::unexpected(
+                            return Err(generic_labeled_error(
+                                "specified eviction policy cannot be used with couchbase buckets",
                                 "specified eviction policy cannot be used with couchbase buckets",
                             ));
                         }
@@ -453,12 +474,14 @@ impl BucketSettings {
                 if let Some(eviction_policy) = self.eviction_policy {
                     match eviction_policy {
                         EvictionPolicy::Full => {
-                            return Err(ShellError::unexpected(
+                            return Err(generic_labeled_error(
+                                "specified eviction policy cannot be used with ephemeral buckets",
                                 "specified eviction policy cannot be used with ephemeral buckets",
                             ));
                         }
                         EvictionPolicy::ValueOnly => {
-                            return Err(ShellError::unexpected(
+                            return Err(generic_labeled_error(
+                                "specified eviction policy cannot be used with ephemeral buckets",
                                 "specified eviction policy cannot be used with ephemeral buckets",
                             ));
                         }
@@ -471,13 +494,15 @@ impl BucketSettings {
             }
             BucketType::Memcached => {
                 if self.num_replicas > 0 {
-                    return Err(ShellError::unexpected(
-                        "field cannot be used with memcached buckets",
+                    return Err(generic_labeled_error(
+                        "num replicas cannot be used with memcached buckets",
+                        "num replicas cannot be used with memcached buckets",
                     ));
                 }
                 if self.eviction_policy.is_some() {
-                    return Err(ShellError::unexpected(
-                        "field cannot be used with memcached buckets",
+                    return Err(generic_labeled_error(
+                        "eviction policy cannot be used with memcached buckets",
+                        "eviction policy cannot be used with memcached buckets",
                     ));
                 }
                 form.push(("replicaIndex", replica_index_enabled.into()));

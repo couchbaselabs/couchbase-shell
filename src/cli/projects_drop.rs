@@ -1,16 +1,17 @@
-use crate::cli::util::find_project_id;
+use crate::cli::util::{find_project_id, generic_labeled_error};
 use crate::client::CapellaRequest;
 use crate::state::State;
-use async_trait::async_trait;
 use log::debug;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape};
-use nu_stream::OutputStream;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
+
+#[derive(Clone)]
 pub struct ProjectsDrop {
     state: Arc<Mutex<State>>,
 }
@@ -21,35 +22,43 @@ impl ProjectsDrop {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for ProjectsDrop {
+impl Command for ProjectsDrop {
     fn name(&self) -> &str {
         "projects drop"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("projects drop").required(
-            "name",
-            SyntaxShape::String,
-            "the name of the project",
-        )
+        Signature::build("projects drop")
+            .required("name", SyntaxShape::String, "the name of the project")
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Deletes a Capella project"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        projects_create(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        projects_drop(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn projects_create(
+fn projects_drop(
     state: Arc<Mutex<State>>,
-    args: CommandArgs,
-) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
-    let name: String = args.req(0)?;
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let span = call.head;
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+
+    let name: String = call.req(engine_state, stack, 0)?;
 
     debug!("Running projects drop for {}", &name);
 
@@ -67,8 +76,11 @@ fn projects_create(
         ctrl_c,
     )?;
     if response.status() != 204 {
-        return Err(ShellError::unexpected(response.content().to_string()));
+        return Err(generic_labeled_error(
+            "Failed to drop project",
+            format!("Failed to drop project {}", response.content()),
+        ));
     };
 
-    Ok(OutputStream::empty())
+    return Ok(PipelineData::new(span));
 }

@@ -1,16 +1,20 @@
-use crate::cli::util::{cluster_identifiers_from, convert_row_to_nu_value, validate_is_not_cloud};
+use crate::cli::util::{
+    cluster_identifiers_from, cluster_not_found_error, convert_row_to_nu_value,
+    map_serde_deserialize_error_to_shell_error, validate_is_not_cloud,
+};
 use crate::client::AnalyticsQueryRequest;
 use crate::state::State;
-use async_trait::async_trait;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, Value};
-use nu_source::Tag;
-use nu_stream::OutputStream;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+};
+
+#[derive(Clone)]
 pub struct AnalyticsPendingMutations {
     state: Arc<Mutex<State>>,
 }
@@ -21,37 +25,47 @@ impl AnalyticsPendingMutations {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for AnalyticsPendingMutations {
+impl Command for AnalyticsPendingMutations {
     fn name(&self) -> &str {
         "analytics pending-mutations"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("analytics pending-mutations").named(
-            "clusters",
-            SyntaxShape::String,
-            "the clusters which should be contacted",
-            None,
-        )
+        Signature::build("analytics pending-mutations")
+            .named(
+                "clusters",
+                SyntaxShape::String,
+                "the clusters which should be contacted",
+                None,
+            )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Lists all analytics pending mutations"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        pending_mutations(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        pending_mutations(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
 fn pending_mutations(
     state: Arc<Mutex<State>>,
-    args: CommandArgs,
-) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let guard = state.lock().unwrap();
 
     let mut results: Vec<Value> = vec![];
@@ -59,7 +73,7 @@ fn pending_mutations(
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::unexpected("Cluster not found"));
+                return Err(cluster_not_found_error(identifier));
             }
         };
         validate_is_not_cloud(
@@ -76,9 +90,15 @@ fn pending_mutations(
                 ctrl_c.clone(),
             )?;
 
-        let content: serde_json::Value = serde_json::from_str(response.content())?;
-        let converted = convert_row_to_nu_value(&content, Tag::default(), identifier.clone())?;
+        let content: serde_json::Value = serde_json::from_str(response.content())
+            .map_err(map_serde_deserialize_error_to_shell_error)?;
+        let converted = convert_row_to_nu_value(&content, call.head, identifier.clone())?;
         results.push(converted);
     }
-    Ok(OutputStream::from(results))
+
+    Ok(Value::List {
+        vals: results,
+        span: call.head,
+    }
+    .into_pipeline_data())
 }

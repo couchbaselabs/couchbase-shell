@@ -1,18 +1,21 @@
 use crate::cli::cloud_json::JSONCloudGetAllowListResponse;
-use crate::cli::util::{cluster_identifiers_from, validate_is_cloud};
+use crate::cli::util::{
+    cluster_identifiers_from, cluster_not_found_error, validate_is_cloud, NuValueMap,
+};
 use crate::client::CapellaRequest;
 use crate::state::{CapellaEnvironment, State};
-use async_trait::async_trait;
 use log::debug;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder};
-use nu_source::Tag;
-use nu_stream::OutputStream;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+};
+
+#[derive(Clone)]
 pub struct AllowLists {
     state: Arc<Mutex<State>>,
 }
@@ -23,45 +26,59 @@ impl AllowLists {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for AllowLists {
+impl Command for AllowLists {
     fn name(&self) -> &str {
         "allowlists"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("allowlists").named(
-            "clusters",
-            SyntaxShape::String,
-            "the clusters which should be contacted",
-            None,
-        )
+        Signature::build("allowlists")
+            .named(
+                "clusters",
+                SyntaxShape::String,
+                "the clusters which should be contacted",
+                None,
+            )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Displays allow list for Capella cluster access"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        addresses(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        addresses(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn addresses(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
+fn addresses(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
     debug!("Running allowlists");
 
-    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let guard = state.lock().unwrap();
     let mut results = vec![];
     for identifier in cluster_identifiers {
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::untagged_runtime_error("Cluster not found"));
+                return Err(cluster_not_found_error(identifier));
             }
         };
+
         validate_is_cloud(
             active_cluster,
             "allowlists can only be used with clusters registered to a Capella organisation",
@@ -77,8 +94,9 @@ fn addresses(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream
         )?;
 
         if cluster.environment() == CapellaEnvironment::Hosted {
-            return Err(ShellError::unexpected(
-                "allowlists cannot be run against hosted Capella clusters",
+            return Err(ShellError::LabeledError(
+                "Unsupported".into(),
+                "allowlists cannot be run against hosted Capella clusters".into(),
             ));
         }
 
@@ -90,31 +108,39 @@ fn addresses(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream
             ctrl_c.clone(),
         )?;
         if response.status() != 200 {
-            return Err(ShellError::untagged_runtime_error(
+            return Err(ShellError::LabeledError(
+                response.content().to_string(),
                 response.content().to_string(),
             ));
         };
 
-        let content: Vec<JSONCloudGetAllowListResponse> = serde_json::from_str(response.content())?;
+        let content: Vec<JSONCloudGetAllowListResponse> = serde_json::from_str(response.content())
+            .map_err(|e| ShellError::LabeledError(e.to_string(), e.to_string()))?;
 
         let mut entries = content
             .into_iter()
             .map(|entry| {
-                let mut collected = TaggedDictBuilder::new(Tag::default());
-                collected.insert_value("address", entry.address());
-                collected.insert_value("type", entry.rule_type());
-                collected.insert_value("state", entry.state());
-                collected.insert_value(
+                let mut collected = NuValueMap::default();
+                collected.add_string("address", entry.address(), call.head);
+                collected.add_string("type", entry.rule_type(), call.head);
+                collected.add_string("state", entry.state(), call.head);
+                collected.add_string(
                     "duration",
                     entry.duration().unwrap_or_else(|| "-".to_string()),
+                    call.head,
                 );
-                collected.insert_value("created", entry.created_at());
-                collected.insert_value("updated", entry.updated_at());
-                collected.into_value()
+                collected.add_string("created", entry.created_at(), call.head);
+                collected.add_string("updated", entry.updated_at(), call.head);
+                collected.into_value(call.head)
             })
             .collect();
 
         results.append(&mut entries);
     }
-    Ok(OutputStream::from(results))
+
+    Ok(Value::List {
+        vals: results,
+        span: call.head,
+    }
+    .into_pipeline_data())
 }

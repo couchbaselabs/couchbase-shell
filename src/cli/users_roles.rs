@@ -1,18 +1,22 @@
-use crate::cli::util::{cluster_identifiers_from, validate_is_not_cloud};
+use crate::cli::user_builder::RoleAndDescription;
+use crate::cli::util::{
+    cluster_identifiers_from, cluster_not_found_error, generic_labeled_error,
+    map_serde_deserialize_error_to_shell_error, validate_is_not_cloud, NuValueMap,
+};
+use crate::client::ManagementRequest;
 use crate::state::State;
-use async_trait::async_trait;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder};
 use std::ops::Add;
+use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
-use crate::cli::user_builder::RoleAndDescription;
-use crate::client::ManagementRequest;
-use nu_source::Tag;
-use nu_stream::OutputStream;
-use std::sync::{Arc, Mutex};
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+};
 
+#[derive(Clone)]
 pub struct UsersRoles {
     state: Arc<Mutex<State>>,
 }
@@ -23,8 +27,7 @@ impl UsersRoles {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for UsersRoles {
+impl Command for UsersRoles {
     fn name(&self) -> &str {
         "users roles"
     }
@@ -43,23 +46,37 @@ impl nu_engine::WholeStreamCommand for UsersRoles {
                 "filter roles based on the permission string",
                 None,
             )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Shows all roles available on the cluster"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        run_async(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        run_async(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn run_async(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
+fn run_async(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let span = call.head;
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
+    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
 
-    let permission = args.get_flag("permission")?;
+    let permission = call.get_flag(engine_state, stack, "permission")?;
 
     let mut entries = vec![];
     for identifier in cluster_identifiers {
@@ -67,7 +84,7 @@ fn run_async(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::unexpected("Cluster not found"));
+                return Err(cluster_not_found_error(identifier));
             }
         };
         validate_is_not_cloud(
@@ -84,39 +101,36 @@ fn run_async(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream
         )?;
 
         let roles: Vec<RoleAndDescription> = match response.status() {
-            200 => match serde_json::from_str(response.content()) {
-                Ok(m) => m,
-                Err(e) => {
-                    return Err(ShellError::unexpected(format!(
-                        "Failed to decode response body {}",
-                        e,
-                    )));
-                }
-            },
+            200 => serde_json::from_str(response.content())
+                .map_err(map_serde_deserialize_error_to_shell_error)?,
             _ => {
-                return Err(ShellError::unexpected(format!(
-                    "Request failed {}",
-                    response.content(),
-                )));
+                return Err(generic_labeled_error(
+                    "Failed to get roles",
+                    format!("Failed to get roles {}", response.content()),
+                ));
             }
         };
 
         for role_and_desc in roles {
-            let mut collected = TaggedDictBuilder::new(Tag::default());
+            let mut collected = NuValueMap::default();
 
-            collected.insert_value("cluster", identifier.clone());
+            collected.add_string("cluster", identifier.clone(), span);
 
             let role = role_and_desc.role();
-            collected.insert_value("name", role_and_desc.display_name());
-            collected.insert_value("role", role.name());
-            collected.insert_value("bucket", role.bucket().unwrap_or_default());
-            collected.insert_value("scope", role.scope().unwrap_or_default());
-            collected.insert_value("collection", role.collection().unwrap_or_default());
-            collected.insert_value("description", role_and_desc.description());
+            collected.add_string("name", role_and_desc.display_name(), span);
+            collected.add_string("role", role.name(), span);
+            collected.add_string("bucket", role.bucket().unwrap_or_default(), span);
+            collected.add_string("scope", role.scope().unwrap_or_default(), span);
+            collected.add_string("collection", role.collection().unwrap_or_default(), span);
+            collected.add_string("description", role_and_desc.description(), span);
 
-            entries.push(collected.into_value());
+            entries.push(collected.into_value(span));
         }
     }
 
-    Ok(entries.into())
+    Ok(Value::List {
+        vals: entries,
+        span,
+    }
+    .into_pipeline_data())
 }

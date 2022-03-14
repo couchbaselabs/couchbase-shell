@@ -1,18 +1,23 @@
-use crate::cli::util::{cluster_identifiers_from, duration_to_golang_string};
+use crate::cli::util::{
+    cluster_identifiers_from, cluster_not_found_error, duration_to_golang_string,
+    generic_labeled_error, map_serde_deserialize_error_to_shell_error, NuValueMap,
+};
 use crate::client::SearchQueryRequest;
 use crate::state::State;
-use async_trait::async_trait;
 use log::debug;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder};
-use nu_source::Tag;
-use nu_stream::OutputStream;
 use serde_derive::Deserialize;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+};
+
+#[derive(Clone)]
 pub struct Search {
     state: Arc<Mutex<State>>,
 }
@@ -23,8 +28,7 @@ impl Search {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for Search {
+impl Command for Search {
     fn name(&self) -> &str {
         "search"
     }
@@ -43,25 +47,40 @@ impl nu_engine::WholeStreamCommand for Search {
                 "the clusters which should be contacted",
                 None,
             )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Performs a search query"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        run(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        run(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
-    let index: String = args.req(0)?;
-    let query: String = args.req(1)?;
+fn run(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let span = call.head;
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+
+    let index: String = call.req(engine_state, stack, 0)?;
+    let query: String = call.req(engine_state, stack, 1)?;
 
     debug!("Running search query {} against {}", &query, &index);
 
-    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
+    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
     let guard = state.lock().unwrap();
 
     let mut results = vec![];
@@ -69,7 +88,7 @@ fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Shel
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::unexpected("Cluster not found"));
+                return Err(cluster_not_found_error(identifier));
             }
         };
         let response = active_cluster
@@ -86,34 +105,32 @@ fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Shel
             )?;
 
         let rows: SearchResultData = match response.status() {
-            200 => match serde_json::from_str(response.content()) {
-                Ok(m) => m,
-                Err(e) => {
-                    return Err(ShellError::unexpected(format!(
-                        "Failed to decode response body {}",
-                        e,
-                    )));
-                }
-            },
+            200 => serde_json::from_str(response.content())
+                .map_err(map_serde_deserialize_error_to_shell_error)?,
             _ => {
-                return Err(ShellError::unexpected(format!(
-                    "Request failed {}",
-                    response.content(),
-                )));
+                return Err(generic_labeled_error(
+                    "Failed to perform search",
+                    format!("Failed to perform search {}", response.content()),
+                ));
             }
         };
 
         for row in rows.hits {
-            let mut collected = TaggedDictBuilder::new(Tag::default());
-            collected.insert_value("id", row.id);
-            collected.insert_value("score", format!("{}", row.score));
-            collected.insert_value("index", row.index);
-            collected.insert_value("cluster", identifier.clone());
+            let mut collected = NuValueMap::default();
+            collected.add_string("id", row.id, span);
+            collected.add_string("score", format!("{}", row.score), span);
+            collected.add_string("index", row.index, span);
+            collected.add_string("cluster", identifier.clone(), span);
 
-            results.push(collected.into_value());
+            results.push(collected.into_value(span));
         }
     }
-    Ok(OutputStream::from(results))
+
+    Ok(Value::List {
+        vals: results,
+        span: call.head,
+    }
+    .into_pipeline_data())
 }
 
 #[derive(Debug, Deserialize)]

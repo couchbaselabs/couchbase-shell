@@ -1,6 +1,5 @@
 use super::util::convert_json_value_to_nu_value;
 use crate::state::State;
-use async_trait::async_trait;
 use fake::faker::address::raw::*;
 use fake::faker::boolean::raw::*;
 use fake::faker::chrono::raw::*;
@@ -14,18 +13,23 @@ use fake::faker::number::raw::*;
 use fake::faker::phone_number::raw::*;
 use fake::locales::*;
 use fake::Fake;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{ReturnSuccess, Signature, SyntaxShape};
-use nu_source::Tag;
-use nu_stream::ActionStream;
-use serde_json::{from_value, Value};
+use serde_json::from_value;
+use serde_json::Value as JSONValue;
 use std::collections::HashMap;
 use std::fs;
 use std::sync::{Arc, Mutex};
 use tera::{Context, Tera};
 use uuid::Uuid;
 
+use crate::cli::util::{generic_labeled_error, map_serde_serialize_error_to_shell_error};
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+};
+
+#[derive(Clone)]
 pub struct FakeData {
     state: Arc<Mutex<State>>,
 }
@@ -36,8 +40,7 @@ impl FakeData {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for FakeData {
+impl Command for FakeData {
     fn name(&self) -> &str {
         "fake"
     }
@@ -46,7 +49,7 @@ impl nu_engine::WholeStreamCommand for FakeData {
         Signature::build("fake")
             .named(
                 "template",
-                SyntaxShape::FilePath,
+                SyntaxShape::String,
                 "path to the template",
                 None,
             )
@@ -61,19 +64,33 @@ impl nu_engine::WholeStreamCommand for FakeData {
                 "List all functions currently registered",
                 None,
             )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Creates fake data from a template"
     }
 
-    fn run_with_actions(&self, args: CommandArgs) -> Result<ActionStream, ShellError> {
-        run_fake(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        run_fake(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn run_fake(_state: Arc<Mutex<State>>, args: CommandArgs) -> Result<ActionStream, ShellError> {
-    let list_functions = args.has_flag("list-functions");
+fn run_fake(
+    _state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let span = call.head;
+    let list_functions = call.has_flag("list-functions");
 
     let ctx = Context::new();
     let mut tera = Tera::default();
@@ -83,92 +100,127 @@ fn run_fake(_state: Arc<Mutex<State>>, args: CommandArgs) -> Result<ActionStream
     if list_functions {
         let generated = tera
             .render_str(LIST_FUNCTIONS, &ctx)
-            .map_err(|e| ShellError::unexpected(format!("{}", e)))?;
+            .map_err(|e| generic_labeled_error("Failed to render functions", format!("{}", e)))?;
         let content = serde_json::from_str(&generated)
-            .map_err(|e| ShellError::unexpected(format!("{}", e)))?;
+            .map_err(|e| generic_labeled_error("Failed to render functions", format!("{}", e)))?;
         match content {
             serde_json::Value::Array(values) => {
-                let converted = values.into_iter().map(|v| {
-                    match convert_json_value_to_nu_value(&v, Tag::default()) {
-                        Ok(c) => Ok(ReturnSuccess::Value(c)),
+                let converted: Vec<Value> = values
+                    .into_iter()
+                    .map(|v| match convert_json_value_to_nu_value(&v, span) {
+                        Ok(c) => Ok(c),
                         Err(e) => Err(e),
-                    }
-                });
-                Ok(ActionStream::new(converted))
+                    })
+                    .collect::<Result<Vec<Value>, ShellError>>()?;
+
+                Ok(Value::List {
+                    vals: converted,
+                    span: call.head,
+                }
+                .into_pipeline_data())
             }
             _ => unimplemented!(),
         }
     } else {
-        let path: String = args.req_named("template")?;
+        let path: String = match call.get_flag(engine_state, stack, "template")? {
+            Some(p) => p,
+            None => {
+                return Err(generic_labeled_error(
+                    "Template named parameter is required",
+                    "Template named parameter is required",
+                ))
+            }
+        };
 
-        let num_rows = args.get_flag("num-rows")?.unwrap_or(1);
+        let num_rows: i64 = call.get_flag(engine_state, stack, "num-rows")?.unwrap_or(1);
 
-        let template =
-            fs::read_to_string(path).map_err(|e| ShellError::unexpected(format!("{}", e)))?;
+        let template = fs::read_to_string(path).map_err(|e| {
+            generic_labeled_error(
+                "Failed to read template file",
+                format!("Failed to read template file {}", e.to_string()),
+            )
+        })?;
 
         let converted = std::iter::repeat_with(move || {
-            return match tera.render_str(&template, &ctx) {
-                Ok(generated) => match serde_json::from_str(&generated) {
-                    Ok(content) => match convert_json_value_to_nu_value(&content, Tag::default()) {
-                        Ok(c) => Ok(ReturnSuccess::Value(c)),
-                        Err(e) => Err(e),
-                    },
-                    Err(e) => Err(ShellError::unexpected(format!("{}", e))),
-                },
-                Err(e) => Err(ShellError::unexpected(format!("{}", e))),
-            };
+            let rendered = tera.render_str(&template, &ctx).map_err(|e| {
+                generic_labeled_error(
+                    "Failed to render template",
+                    format!("Failed to render template {}", e.to_string()),
+                )
+            })?;
+            let generated = serde_json::from_str(&rendered)
+                .map_err(map_serde_serialize_error_to_shell_error)?;
+            let converted = convert_json_value_to_nu_value(&generated, span)?;
+
+            Ok(converted)
+            // return match tera.render_str(&template, &ctx) {
+            //     Ok(generated) => match serde_json::from_str(&generated) {
+            //         Ok(content) => match convert_json_value_to_nu_value(&content, span) {
+            //             Ok(c) => Ok(ReturnSuccess::Value(c)),
+            //             Err(e) => Err(e),
+            //         },
+            //         Err(e) => Err(ShellError::unexpected(format!("{}", e))),
+            //     },
+            //     Err(e) => Err(ShellError::unexpected(format!("{}", e))),
+            // };
         })
-        .take(num_rows as usize);
-        Ok(ActionStream::new(converted))
+        .take(num_rows as usize)
+        .collect::<Result<Vec<Value>, ShellError>>()?;
+
+        Ok(Value::List {
+            vals: converted,
+            span: call.head,
+        }
+        .into_pipeline_data())
     }
 }
 
 fn register_functions(tera: &mut Tera) {
     // Group "misc"
-    tera.register_function("uuid", |_: &HashMap<String, Value>| {
-        Ok(Value::from(format!("{}", Uuid::new_v4())))
+    tera.register_function("uuid", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(format!("{}", Uuid::new_v4())))
     });
 
     // Group "name"
-    tera.register_function("name", |_: &HashMap<String, Value>| {
-        Ok(Value::from(Name(EN).fake::<String>()))
+    tera.register_function("name", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(Name(EN).fake::<String>()))
     });
-    tera.register_function("firstName", |_: &HashMap<String, Value>| {
-        Ok(Value::from(FirstName(EN).fake::<String>()))
+    tera.register_function("firstName", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(FirstName(EN).fake::<String>()))
     });
-    tera.register_function("lastName", |_: &HashMap<String, Value>| {
-        Ok(Value::from(LastName(EN).fake::<String>()))
+    tera.register_function("lastName", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(LastName(EN).fake::<String>()))
     });
-    tera.register_function("title", |_: &HashMap<String, Value>| {
-        Ok(Value::from(Title(EN).fake::<String>()))
+    tera.register_function("title", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(Title(EN).fake::<String>()))
     });
-    tera.register_function("nameWithTitle", |_: &HashMap<String, Value>| {
-        Ok(Value::from(NameWithTitle(EN).fake::<String>()))
+    tera.register_function("nameWithTitle", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(NameWithTitle(EN).fake::<String>()))
     });
-    tera.register_function("suffix", |_: &HashMap<String, Value>| {
-        Ok(Value::from(Suffix(EN).fake::<String>()))
+    tera.register_function("suffix", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(Suffix(EN).fake::<String>()))
     });
 
     // Group "internet"
-    tera.register_function("color", |_: &HashMap<String, Value>| {
-        Ok(Value::from(Color(EN).fake::<String>()))
+    tera.register_function("color", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(Color(EN).fake::<String>()))
     });
-    tera.register_function("domainSuffix", |_: &HashMap<String, Value>| {
-        Ok(Value::from(DomainSuffix(EN).fake::<String>()))
+    tera.register_function("domainSuffix", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(DomainSuffix(EN).fake::<String>()))
     });
-    tera.register_function("freeEmail", |_: &HashMap<String, Value>| {
-        Ok(Value::from(FreeEmail(EN).fake::<String>()))
+    tera.register_function("freeEmail", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(FreeEmail(EN).fake::<String>()))
     });
-    tera.register_function("freeEmailProvider", |_: &HashMap<String, Value>| {
-        Ok(Value::from(FreeEmailProvider(EN).fake::<String>()))
+    tera.register_function("freeEmailProvider", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(FreeEmailProvider(EN).fake::<String>()))
     });
-    tera.register_function("ipV4", |_: &HashMap<String, Value>| {
-        Ok(Value::from(IPv4(EN).fake::<String>()))
+    tera.register_function("ipV4", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(IPv4(EN).fake::<String>()))
     });
-    tera.register_function("ipV6", |_: &HashMap<String, Value>| {
-        Ok(Value::from(IPv6(EN).fake::<String>()))
+    tera.register_function("ipV6", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(IPv6(EN).fake::<String>()))
     });
-    tera.register_function("password", |args: &HashMap<String, Value>| {
+    tera.register_function("password", |args: &HashMap<String, JSONValue>| {
         let length = match args.get("length") {
             Some(val) => match from_value::<usize>(val.clone()) {
                 Ok(v) => v,
@@ -181,25 +233,25 @@ fn register_functions(tera: &mut Tera) {
             },
             None => 10,
         };
-        Ok(Value::from(
+        Ok(JSONValue::from(
             Password(EN, length..length + 1).fake::<String>(),
         ))
     });
-    tera.register_function("safeEmail", |_: &HashMap<String, Value>| {
-        Ok(Value::from(SafeEmail(EN).fake::<String>()))
+    tera.register_function("safeEmail", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(SafeEmail(EN).fake::<String>()))
     });
-    tera.register_function("userAgent", |_: &HashMap<String, Value>| {
-        Ok(Value::from(UserAgent(EN).fake::<String>()))
+    tera.register_function("userAgent", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(UserAgent(EN).fake::<String>()))
     });
-    tera.register_function("userName", |_: &HashMap<String, Value>| {
-        Ok(Value::from(Username(EN).fake::<String>()))
+    tera.register_function("userName", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(Username(EN).fake::<String>()))
     });
 
     // Group "number"
-    tera.register_function("digit", |_: &HashMap<String, Value>| {
-        Ok(Value::from(Digit(EN).fake::<String>()))
+    tera.register_function("digit", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(Digit(EN).fake::<String>()))
     });
-    tera.register_function("numberWithFormat", |args: &HashMap<String, Value>| {
+    tera.register_function("numberWithFormat", |args: &HashMap<String, JSONValue>| {
         let format = match args.get("format") {
             Some(val) => match from_value::<String>(val.clone()) {
                 Ok(v) => v,
@@ -215,11 +267,11 @@ fn register_functions(tera: &mut Tera) {
         // We need to convert String to &'static str here so we need to use a leak.
         // This is a known leak which should only be called once and is small.
         let format_str = Box::leak(format.into_boxed_str());
-        Ok(Value::from(NumberWithFormat(EN, format_str).fake::<String>()))
+        Ok(JSONValue::from(NumberWithFormat(EN, format_str).fake::<String>()))
     });
 
     // Group "boolean"
-    tera.register_function("bool", |args: &HashMap<String, Value>| {
+    tera.register_function("bool", |args: &HashMap<String, JSONValue>| {
         let ratio = match args.get("ratio") {
             Some(val) => match from_value::<u8>(val.clone()) {
                 Ok(v) => v,
@@ -232,140 +284,140 @@ fn register_functions(tera: &mut Tera) {
             },
             None => 50,
         };
-        Ok(Value::from(Boolean(EN, ratio).fake::<bool>()))
+        Ok(JSONValue::from(Boolean(EN, ratio).fake::<bool>()))
     });
 
     // Group "company"
-    tera.register_function("companySuffix", |_: &HashMap<String, Value>| {
-        Ok(Value::from(CompanySuffix(EN).fake::<String>()))
+    tera.register_function("companySuffix", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(CompanySuffix(EN).fake::<String>()))
     });
-    tera.register_function("companyName", |_: &HashMap<String, Value>| {
-        Ok(Value::from(CompanyName(EN).fake::<String>()))
+    tera.register_function("companyName", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(CompanyName(EN).fake::<String>()))
     });
-    tera.register_function("buzzword", |_: &HashMap<String, Value>| {
-        Ok(Value::from(Buzzword(EN).fake::<String>()))
+    tera.register_function("buzzword", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(Buzzword(EN).fake::<String>()))
     });
-    tera.register_function("catchphrase", |_: &HashMap<String, Value>| {
-        Ok(Value::from(CatchPhase(EN).fake::<String>()))
+    tera.register_function("catchphrase", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(CatchPhase(EN).fake::<String>()))
     });
-    tera.register_function("bs", |_: &HashMap<String, Value>| {
-        Ok(Value::from(Bs(EN).fake::<String>()))
+    tera.register_function("bs", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(Bs(EN).fake::<String>()))
     });
-    tera.register_function("profession", |_: &HashMap<String, Value>| {
-        Ok(Value::from(Profession(EN).fake::<String>()))
+    tera.register_function("profession", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(Profession(EN).fake::<String>()))
     });
-    tera.register_function("industry", |_: &HashMap<String, Value>| {
-        Ok(Value::from(Industry(EN).fake::<String>()))
+    tera.register_function("industry", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(Industry(EN).fake::<String>()))
     });
 
     // Group "address"
-    tera.register_function("cityPrefix", |_: &HashMap<String, Value>| {
-        Ok(Value::from(CityPrefix(EN).fake::<String>()))
+    tera.register_function("cityPrefix", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(CityPrefix(EN).fake::<String>()))
     });
-    tera.register_function("citySuffix", |_: &HashMap<String, Value>| {
-        Ok(Value::from(CitySuffix(EN).fake::<String>()))
+    tera.register_function("citySuffix", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(CitySuffix(EN).fake::<String>()))
     });
-    tera.register_function("cityName", |_: &HashMap<String, Value>| {
-        Ok(Value::from(CityName(EN).fake::<String>()))
+    tera.register_function("cityName", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(CityName(EN).fake::<String>()))
     });
-    tera.register_function("countryName", |_: &HashMap<String, Value>| {
-        Ok(Value::from(CountryName(EN).fake::<String>()))
+    tera.register_function("countryName", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(CountryName(EN).fake::<String>()))
     });
-    tera.register_function("countryCode", |_: &HashMap<String, Value>| {
-        Ok(Value::from(CountryCode(EN).fake::<String>()))
+    tera.register_function("countryCode", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(CountryCode(EN).fake::<String>()))
     });
-    tera.register_function("streetSuffix", |_: &HashMap<String, Value>| {
-        Ok(Value::from(StreetSuffix(EN).fake::<String>()))
+    tera.register_function("streetSuffix", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(StreetSuffix(EN).fake::<String>()))
     });
-    tera.register_function("streetName", |_: &HashMap<String, Value>| {
-        Ok(Value::from(StreetName(EN).fake::<String>()))
+    tera.register_function("streetName", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(StreetName(EN).fake::<String>()))
     });
-    tera.register_function("timeZone", |_: &HashMap<String, Value>| {
-        Ok(Value::from(TimeZone(EN).fake::<String>()))
+    tera.register_function("timeZone", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(TimeZone(EN).fake::<String>()))
     });
-    tera.register_function("stateName", |_: &HashMap<String, Value>| {
-        Ok(Value::from(StateName(EN).fake::<String>()))
+    tera.register_function("stateName", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(StateName(EN).fake::<String>()))
     });
-    tera.register_function("stateAbbr", |_: &HashMap<String, Value>| {
-        Ok(Value::from(StateAbbr(EN).fake::<String>()))
+    tera.register_function("stateAbbr", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(StateAbbr(EN).fake::<String>()))
     });
-    tera.register_function("zipCode", |_: &HashMap<String, Value>| {
-        Ok(Value::from(ZipCode(EN).fake::<String>()))
+    tera.register_function("zipCode", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(ZipCode(EN).fake::<String>()))
     });
-    tera.register_function("postCode", |_: &HashMap<String, Value>| {
-        Ok(Value::from(PostCode(EN).fake::<String>()))
+    tera.register_function("postCode", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(PostCode(EN).fake::<String>()))
     });
-    tera.register_function("buildingNumber", |_: &HashMap<String, Value>| {
-        Ok(Value::from(BuildingNumber(EN).fake::<String>()))
+    tera.register_function("buildingNumber", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(BuildingNumber(EN).fake::<String>()))
     });
-    tera.register_function("latitude", |_: &HashMap<String, Value>| {
-        Ok(Value::from(Latitude(EN).fake::<String>()))
+    tera.register_function("latitude", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(Latitude(EN).fake::<String>()))
     });
-    tera.register_function("longitude", |_: &HashMap<String, Value>| {
-        Ok(Value::from(Longitude(EN).fake::<String>()))
+    tera.register_function("longitude", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(Longitude(EN).fake::<String>()))
     });
 
     // Group "phone_number"
-    tera.register_function("phoneNumber", |_: &HashMap<String, Value>| {
-        Ok(Value::from(PhoneNumber(EN).fake::<String>()))
+    tera.register_function("phoneNumber", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(PhoneNumber(EN).fake::<String>()))
     });
-    tera.register_function("cellNumber", |_: &HashMap<String, Value>| {
-        Ok(Value::from(CellNumber(EN).fake::<String>()))
+    tera.register_function("cellNumber", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(CellNumber(EN).fake::<String>()))
     });
 
     // Group "datetime"
-    tera.register_function("time", |_: &HashMap<String, Value>| {
-        Ok(Value::from(Time(EN).fake::<String>()))
+    tera.register_function("time", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(Time(EN).fake::<String>()))
     });
-    tera.register_function("date", |_: &HashMap<String, Value>| {
-        Ok(Value::from(Date(EN).fake::<String>()))
+    tera.register_function("date", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(Date(EN).fake::<String>()))
     });
-    tera.register_function("dateTime", |_: &HashMap<String, Value>| {
-        Ok(Value::from(DateTime(EN).fake::<String>()))
+    tera.register_function("dateTime", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(DateTime(EN).fake::<String>()))
     });
-    tera.register_function("duration", |_: &HashMap<String, Value>| {
-        Ok(Value::from(
+    tera.register_function("duration", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(
             Duration(EN).fake::<chrono::Duration>().num_milliseconds(),
         ))
     });
 
     // Group "filesystem"
-    tera.register_function("filePath", |_: &HashMap<String, Value>| {
+    tera.register_function("filePath", |_: &HashMap<String, JSONValue>| {
         // We need to escape this string because it contains a path, in Windows paths
         // are backslashes, which unescaped cause serde_json to error when parsing
         // the generated string in --list-functions.
-        Ok(Value::from(
+        Ok(JSONValue::from(
             FilePath(EN).fake::<String>().escape_default().to_string(),
         ))
     });
-    tera.register_function("fileName", |_: &HashMap<String, Value>| {
-        Ok(Value::from(FileName(EN).fake::<String>()))
+    tera.register_function("fileName", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(FileName(EN).fake::<String>()))
     });
-    tera.register_function("fileExtension", |_: &HashMap<String, Value>| {
-        Ok(Value::from(FileExtension(EN).fake::<String>()))
+    tera.register_function("fileExtension", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(FileExtension(EN).fake::<String>()))
     });
-    tera.register_function("dirPath", |_: &HashMap<String, Value>| {
+    tera.register_function("dirPath", |_: &HashMap<String, JSONValue>| {
         // We need to escape this string because it contains a path, in Windows paths
         // are backslashes, which unescaped cause serde_json to error when parsing
         // the generated string in --list-functions.
-        Ok(Value::from(
+        Ok(JSONValue::from(
             DirPath(EN).fake::<String>().escape_default().to_string(),
         ))
     });
 
     // Group "currency"
-    tera.register_function("currencyCode", |_: &HashMap<String, Value>| {
-        Ok(Value::from(CurrencyCode(EN).fake::<String>()))
+    tera.register_function("currencyCode", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(CurrencyCode(EN).fake::<String>()))
     });
-    tera.register_function("currencyName", |_: &HashMap<String, Value>| {
-        Ok(Value::from(CurrencyName(EN).fake::<String>()))
+    tera.register_function("currencyName", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(CurrencyName(EN).fake::<String>()))
     });
-    tera.register_function("currencySymbol", |_: &HashMap<String, Value>| {
-        Ok(Value::from(CurrencySymbol(EN).fake::<String>()))
+    tera.register_function("currencySymbol", |_: &HashMap<String, JSONValue>| {
+        Ok(JSONValue::from(CurrencySymbol(EN).fake::<String>()))
     });
 
     // Group "lorem"
-    tera.register_function("words", |args: &HashMap<String, Value>| {
+    tera.register_function("words", |args: &HashMap<String, JSONValue>| {
         let num = match args.get("num") {
             Some(val) => match from_value::<usize>(val.clone()) {
                 Ok(v) => v,
@@ -379,9 +431,9 @@ fn register_functions(tera: &mut Tera) {
             None => 1,
         };
         let words = Words(EN, num..num + 1).fake::<Vec<String>>();
-        Ok(Value::from(words.join(" ")))
+        Ok(JSONValue::from(words.join(" ")))
     });
-    tera.register_function("sentences", |args: &HashMap<String, Value>| {
+    tera.register_function("sentences", |args: &HashMap<String, JSONValue>| {
         let num = match args.get("num") {
             Some(val) => match from_value::<usize>(val.clone()) {
                 Ok(v) => v,
@@ -395,7 +447,7 @@ fn register_functions(tera: &mut Tera) {
             None => 1,
         };
         let sentences = Sentences(EN, num..num + 1).fake::<Vec<String>>();
-        Ok(Value::from(sentences.join(" ")))
+        Ok(JSONValue::from(sentences.join(" ")))
     });
 }
 

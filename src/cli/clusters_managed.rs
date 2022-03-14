@@ -1,12 +1,12 @@
-use crate::cli::util::cluster_identifiers_from;
+use crate::cli::util::{cluster_identifiers_from, NuValueMap};
 use crate::state::State;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, TaggedDictBuilder, UntaggedValue};
-use nu_source::Tag;
-use nu_stream::OutputStream;
 use std::sync::{Arc, Mutex};
 
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{Category, IntoPipelineData, PipelineData, ShellError, Signature, Value};
+
+#[derive(Clone)]
 pub struct ClustersManaged {
     state: Arc<Mutex<State>>,
 }
@@ -17,26 +17,39 @@ impl ClustersManaged {
     }
 }
 
-impl nu_engine::WholeStreamCommand for ClustersManaged {
+impl Command for ClustersManaged {
     fn name(&self) -> &str {
         "clusters managed"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("clusters")
+        Signature::build("clusters").category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Lists all clusters currently managed by couchbase shell"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        clusters(args, self.state.clone())
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        clusters(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn clusters(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream, ShellError> {
-    let identifiers = cluster_identifiers_from(&state, &args, false)?;
+fn clusters(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let span = call.head;
+    let identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
 
     let guard = state.lock().unwrap();
     let active = guard.active();
@@ -45,18 +58,23 @@ fn clusters(args: CommandArgs, state: Arc<Mutex<State>>) -> Result<OutputStream,
         .iter()
         .filter(|(k, _)| identifiers.contains(k))
         .map(|(k, v)| {
-            let mut collected = TaggedDictBuilder::new(Tag::default());
-            collected.insert_untagged("active", UntaggedValue::boolean(k == &active));
-            collected.insert_value("tls", UntaggedValue::boolean(v.tls_config().enabled()));
-            collected.insert_value("identifier", k.clone());
-            collected.insert_value("username", String::from(v.username()));
-            collected.insert_value(
+            let mut collected = NuValueMap::default();
+            collected.add_bool("active", k == &active, span);
+            collected.add_bool("tls", v.tls_config().enabled(), span);
+            collected.add_string("identifier", k.clone(), span);
+            collected.add_string("username", String::from(v.username()), span);
+            collected.add_string(
                 "capella_organization",
                 v.capella_org().unwrap_or_else(|| "".to_string()),
+                span,
             );
-            collected.into_value()
+            collected.into_value(span)
         })
         .collect::<Vec<_>>();
 
-    Ok(clusters.into())
+    Ok(Value::List {
+        vals: clusters,
+        span,
+    }
+    .into_pipeline_data())
 }

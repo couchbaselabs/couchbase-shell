@@ -1,16 +1,14 @@
 use crate::client::ManagementRequest;
 use crate::state::State;
-use async_trait::async_trait;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, UntaggedValue};
-use nu_source::Tag;
-use nu_stream::OutputStream;
 use std::ops::Add;
-use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{Category, IntoPipelineData, PipelineData, ShellError, Signature, Value};
+
+#[derive(Clone)]
 pub struct Tutorial {
     state: Arc<Mutex<State>>,
 }
@@ -21,30 +19,39 @@ impl Tutorial {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for Tutorial {
+impl Command for Tutorial {
     fn name(&self) -> &str {
         "tutorial"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("tutorial")
+        Signature::build("tutorial").category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Run the Couchbase Shell tutorial"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        let ctrl_c = args.ctrl_c();
-        run_tutorial(self.state.clone(), ctrl_c)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        run_tutorial(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
 fn run_tutorial(
     state: Arc<Mutex<State>>,
-    ctrl_c: Arc<AtomicBool>,
-) -> Result<OutputStream, ShellError> {
+    engine_state: &EngineState,
+    _stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+
     let guard = state.lock().unwrap();
     let tutorial = guard.tutorial();
     let exists = match guard.active_cluster() {
@@ -70,7 +77,9 @@ fn run_tutorial(
         None => true,
     };
 
-    Ok(OutputStream::one(
-        UntaggedValue::string(tutorial.current_step(exists)).into_value(Tag::unknown()),
-    ))
+    Ok(Value::String {
+        val: tutorial.current_step(exists),
+        span: call.head,
+    }
+    .into_pipeline_data())
 }

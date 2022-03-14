@@ -4,23 +4,25 @@ use super::util::convert_json_value_to_nu_value;
 use crate::state::State;
 
 use crate::cli::doc_upsert::{build_batched_kv_items, prime_manifest_if_required};
-use crate::cli::util::cluster_identifiers_from;
+use crate::cli::util::{cluster_identifiers_from, NuValueMap};
 use crate::client::KeyValueRequest;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use log::debug;
-use nu_engine::{CommandArgs, Example};
-use nu_errors::ShellError;
-use nu_protocol::{
-    MaybeOwned, Primitive, Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue,
-};
-use nu_source::Tag;
-use nu_stream::OutputStream;
 use std::ops::Add;
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 use tokio::time::Instant;
 
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{
+    Category, Example, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+};
+
+#[derive(Clone)]
 pub struct DocGet {
     state: Arc<Mutex<State>>,
 }
@@ -31,7 +33,7 @@ impl DocGet {
     }
 }
 
-impl nu_engine::WholeStreamCommand for DocGet {
+impl Command for DocGet {
     fn name(&self) -> &str {
         "doc get"
     }
@@ -70,14 +72,21 @@ impl nu_engine::WholeStreamCommand for DocGet {
                 "the maximum number of items to batch send at a time",
                 None,
             )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Fetches a document through the data service"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        run_get(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        run_get(self.state.clone(), engine_state, stack, call, input)
     }
 
     fn examples(&self) -> Vec<Example> {
@@ -96,13 +105,22 @@ impl nu_engine::WholeStreamCommand for DocGet {
     }
 }
 
-fn run_get(state: Arc<Mutex<State>>, mut args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
+fn run_get(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let span = call.head;
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
-    let batch_size: Option<i32> = args.get_flag("batch-size")?;
-    let id_column: String = args.get_flag("id-column")?.unwrap_or_else(|| "id".into());
-    let ids = ids_from_input(&mut args, id_column.clone())?;
+    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
+    let batch_size: Option<i64> = call.get_flag(&engine_state, stack, "batch-size")?;
+    let id_column: String = call
+        .get_flag(&engine_state, stack, "id-column")?
+        .unwrap_or_else(|| "id".into());
+    let ids = ids_from_input(&call, input, id_column.clone(), ctrl_c.clone())?;
 
     let mut workers = FuturesUnordered::new();
     let guard = state.lock().unwrap();
@@ -117,21 +135,25 @@ fn run_get(state: Arc<Mutex<State>>, mut args: CommandArgs) -> Result<OutputStre
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::unexpected("Cluster not found"));
+                return Err(ShellError::LabeledError(
+                    "Cluster not found".into(),
+                    "Cluster not found".into(),
+                ));
             }
         };
 
-        let bucket = match args
-            .get_flag("bucket")?
+        let bucket = match call
+            .get_flag(&engine_state, stack, "bucket")?
             .or_else(|| active_cluster.active_bucket())
         {
             Some(v) => Ok(v),
-            None => Err(ShellError::unexpected(
+            None => Err(ShellError::MissingParameter(
                 "Could not auto-select a bucket - please use --bucket instead".to_string(),
+                span,
             )),
         }?;
 
-        let scope = match args.get_flag("scope")? {
+        let scope = match call.get_flag(&engine_state, stack, "scope")? {
             Some(s) => s,
             None => match active_cluster.active_scope() {
                 Some(s) => s,
@@ -139,7 +161,7 @@ fn run_get(state: Arc<Mutex<State>>, mut args: CommandArgs) -> Result<OutputStre
             },
         };
 
-        let collection = match args.get_flag("collection")? {
+        let collection = match call.get_flag(&engine_state, stack, "collection")? {
             Some(c) => c,
             None => match active_cluster.active_collection() {
                 Some(c) => c,
@@ -199,39 +221,35 @@ fn run_get(state: Arc<Mutex<State>>, mut args: CommandArgs) -> Result<OutputStre
                 while let Some(response) = workers.next().await {
                     match response {
                         Ok(mut res) => {
-                            let tag = Tag::default();
-                            let mut collected = TaggedDictBuilder::new(&tag);
-                            collected.insert_value(&id_column, res.key());
-                            collected.insert_value(
-                                "cas",
-                                UntaggedValue::int(res.cas() as i64).into_untagged_value(),
-                            );
+                            let mut collected = NuValueMap::default();
+                            collected.add_string(&id_column, res.key(), call.head);
+                            collected.add_i64("cas", res.cas() as i64, call.head);
                             let content = res.content().unwrap();
-                            match convert_json_value_to_nu_value(&content, Tag::default()) {
+                            match convert_json_value_to_nu_value(&content, call.head) {
                                 Ok(c) => {
-                                    collected.insert_value("content", c);
-                                    collected.insert_value("error", "".to_string());
+                                    collected.add("content", c);
+                                    collected.add_string("error", "", call.head);
                                 }
                                 Err(e) => {
-                                    collected.insert_value("content", "".to_string());
-                                    collected.insert_value("error", e.to_string());
+                                    collected.add_string("content", "", call.head);
+                                    collected.add_string("error", e.to_string(), call.head);
                                 }
                             }
-                            collected.insert_value("cluster", identifier.clone());
-                            results.push(collected.into_value());
+                            collected.add_string("cluster", identifier.clone(), call.head);
+                            results.push(collected.into_value(call.head));
                         }
                         Err(e) => {
-                            let tag = Tag::default();
-                            let mut collected = TaggedDictBuilder::new(&tag);
-                            collected.insert_value(
+                            let mut collected = NuValueMap::default();
+                            collected.add_string(
                                 &id_column,
                                 e.key().unwrap_or_else(|| "".to_string()),
+                                call.head,
                             );
-                            collected.insert_value("cas", "".to_string());
-                            collected.insert_value("content", "".to_string());
-                            collected.insert_value("error", e.to_string());
-                            collected.insert_value("cluster", identifier.clone());
-                            results.push(collected.into_value());
+                            collected.add_string("cas", "", call.head);
+                            collected.add_string("content", "", call.head);
+                            collected.add_string("error", e.to_string(), call.head);
+                            collected.add_string("cluster", identifier.clone(), call.head);
+                            results.push(collected.into_value(call.head));
                         }
                     }
                 }
@@ -239,31 +257,46 @@ fn run_get(state: Arc<Mutex<State>>, mut args: CommandArgs) -> Result<OutputStre
         }
     }
 
-    Ok(OutputStream::from(results))
+    Ok(Value::List {
+        vals: results,
+        span: call.head,
+    }
+    .into_pipeline_data())
 }
 
 pub(crate) fn ids_from_input(
-    args: &mut CommandArgs,
+    args: &Call,
+    input: PipelineData,
     id_column: String,
+    ctrl_c: Arc<AtomicBool>,
 ) -> Result<Vec<String>, ShellError> {
-    let mut ids = vec![];
-    for item in &mut args.input {
-        let untagged = item.into();
-        match untagged {
-            UntaggedValue::Primitive(Primitive::String(s)) => ids.push(s.clone()),
-            UntaggedValue::Row(d) => {
-                if let MaybeOwned::Borrowed(d) = d.get_data(id_column.as_ref()) {
-                    let untagged = &d.value;
-                    if let UntaggedValue::Primitive(Primitive::String(s)) = untagged {
-                        ids.push(s.clone())
+    let mut ids: Vec<String> = input
+        .into_interruptible_iter(Some(ctrl_c))
+        .map(move |v| match v {
+            Value::String { val, .. } => Some(val.clone()),
+            Value::Record { cols, vals, .. } => {
+                if let Some(idx) = cols.iter().position(|x| x.clone() == id_column) {
+                    if let Some(d) = vals.get(idx) {
+                        match d {
+                            Value::String { val, .. } => Some(val.clone()),
+                            _ => None,
+                        }
+                    } else {
+                        None
                     }
+                } else {
+                    None
                 }
             }
-            _ => {}
+            _ => None,
+        })
+        .flatten()
+        .collect();
+
+    if let Some(id) = args.nth(0) {
+        if let Some(i) = id.as_string() {
+            ids.push(i);
         }
-    }
-    if let Some(id) = args.opt(0)? {
-        ids.push(id);
     }
 
     Ok(ids)

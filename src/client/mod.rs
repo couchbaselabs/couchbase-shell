@@ -6,7 +6,7 @@ pub use crate::client::http_client::{
 };
 pub use crate::client::http_handler::HttpResponse;
 pub use crate::client::kv_client::{KeyValueRequest, KvClient, KvResponse};
-use nu_errors::ShellError;
+use nu_protocol::ShellError;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tokio::time::Instant;
@@ -72,12 +72,20 @@ impl Client {
             self.username.clone(),
             self.password.clone(),
             self.tls_config.clone(),
-            bucket,
+            bucket.clone(),
             deadline,
             ctrl_c,
         )
         .await
-        .map_err(|e| ShellError::unexpected(e.to_string()))
+        .map_err(|_e| {
+            ShellError::LabeledError(
+                "Failed to connect to cluster".into(),
+                format!(
+                    "Check server ports and cluster encryption setting. Does the bucket {} exist?",
+                    bucket
+                ),
+            )
+        })
     }
 
     fn try_lookup_srv(addr: String) -> Result<Vec<String>, ClientError> {

@@ -3,20 +3,25 @@
 use crate::state::{CapellaEnvironment, State};
 
 use crate::cli::buckets_builder::{BucketSettings, JSONBucketSettings, JSONCloudBucketSettings};
-use crate::cli::util::cluster_identifiers_from;
+use crate::cli::util::{
+    cant_run_against_hosted_capella_error, cluster_identifiers_from, cluster_not_found_error,
+    generic_labeled_error, map_serde_deserialize_error_to_shell_error, NuValueMap,
+};
 use crate::client::{CapellaRequest, ManagementRequest};
-use async_trait::async_trait;
 use log::debug;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder, UntaggedValue, Value};
-use nu_source::Tag;
-use nu_stream::OutputStream;
 use std::convert::TryFrom;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape, Value,
+};
+
+#[derive(Clone)]
 pub struct BucketsGet {
     state: Arc<Mutex<State>>,
 }
@@ -27,8 +32,7 @@ impl BucketsGet {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for BucketsGet {
+impl Command for BucketsGet {
     fn name(&self) -> &str {
         "buckets get"
     }
@@ -42,22 +46,36 @@ impl nu_engine::WholeStreamCommand for BucketsGet {
                 "the clusters which should be contacted",
                 None,
             )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Fetches buckets through the HTTP API"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        buckets_get(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        buckets_get(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn buckets_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
+fn buckets_get(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let span = call.head;
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
-    let bucket: String = args.req(0)?;
+    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
+    let bucket: String = call.req(engine_state, stack, 0)?;
 
     debug!("Running buckets get for bucket {:?}", &bucket);
 
@@ -67,7 +85,7 @@ fn buckets_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStre
         let cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::unexpected("Cluster not found"));
+                return Err(cluster_not_found_error(identifier));
             }
         };
 
@@ -80,9 +98,7 @@ fn buckets_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStre
             )?;
 
             if cloud_cluster.environment() == CapellaEnvironment::Hosted {
-                return Err(ShellError::unexpected(
-                    "buckets get cannot be run against hosted Capella clusters",
-                ));
+                return Err(cant_run_against_hosted_capella_error());
             }
 
             let response = cloud.capella_request(
@@ -93,10 +109,14 @@ fn buckets_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStre
                 ctrl_c.clone(),
             )?;
             if response.status() != 200 {
-                return Err(ShellError::unexpected(response.content()));
+                return Err(generic_labeled_error(
+                    "Failed to get buckets",
+                    format!("Failed to get buckets {}", response.content()),
+                ));
             }
 
-            let content: Vec<JSONCloudBucketSettings> = serde_json::from_str(response.content())?;
+            let content: Vec<JSONCloudBucketSettings> = serde_json::from_str(response.content())
+                .map_err(map_serde_deserialize_error_to_shell_error)?;
             let mut bucket_settings: Option<JSONCloudBucketSettings> = None;
 
             for b in content.into_iter() {
@@ -107,13 +127,17 @@ fn buckets_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStre
             }
 
             if let Some(b) = bucket_settings {
-                results.push(bucket_to_tagged_dict(
+                results.push(bucket_to_nu_value(
                     BucketSettings::try_from(b)?,
                     identifier,
                     true,
+                    span,
                 ));
             } else {
-                return Err(ShellError::unexpected("bucket not found"));
+                return Err(generic_labeled_error(
+                    "Bucket not found",
+                    format!("Bucket {} not found", bucket),
+                ));
             }
         } else {
             let response = cluster.cluster().http_client().management_request(
@@ -124,38 +148,53 @@ fn buckets_get(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStre
                 ctrl_c.clone(),
             )?;
 
-            let content: JSONBucketSettings = serde_json::from_str(response.content())?;
-            results.push(bucket_to_tagged_dict(
+            let content: JSONBucketSettings = serde_json::from_str(response.content())
+                .map_err(map_serde_deserialize_error_to_shell_error)?;
+            results.push(bucket_to_nu_value(
                 BucketSettings::try_from(content)?,
                 identifier,
                 false,
+                span,
             ));
         }
     }
 
-    Ok(OutputStream::from(results))
+    Ok(Value::List {
+        vals: results,
+        span: call.head,
+    }
+    .into_pipeline_data())
 }
 
-pub(crate) fn bucket_to_tagged_dict(
+pub(crate) fn bucket_to_nu_value(
     bucket: BucketSettings,
     cluster_name: String,
     is_cloud: bool,
+    span: Span,
 ) -> Value {
-    let mut collected = TaggedDictBuilder::new(Tag::default());
-    collected.insert_value("cluster", cluster_name);
-    collected.insert_value("name", bucket.name());
-    collected.insert_value("type", bucket.bucket_type().to_string());
-    collected.insert_value("replicas", UntaggedValue::int(bucket.num_replicas()));
-    collected.insert_value(
+    let mut collected = NuValueMap::default();
+    collected.add_string("cluster", cluster_name, span);
+    collected.add_string("name", bucket.name(), span);
+    collected.add_string("type", bucket.bucket_type().to_string(), span);
+    collected.add_i64("replicas", bucket.num_replicas() as i64, span);
+    collected.add_string(
         "min_durability_level",
         bucket.minimum_durability_level().to_string(),
+        span,
     );
-    collected.insert_value(
+    collected.add(
         "ram_quota",
-        UntaggedValue::filesize(bucket.ram_quota_mb() * 1024 * 1024),
+        Value::Filesize {
+            val: (bucket.ram_quota_mb() * 1024 * 1024) as i64,
+            span,
+        },
     );
-    collected.insert_value("flush_enabled", bucket.flush_enabled());
-    collected.insert_value("status", bucket.status().unwrap_or(&"".to_string()).clone());
-    collected.insert_value("cloud", is_cloud);
-    collected.into_value()
+    collected.add_bool("flush_enabled", bucket.flush_enabled(), span);
+    collected.add_string(
+        "status",
+        bucket.status().unwrap_or(&"".to_string()).clone(),
+        span,
+    );
+    collected.add_bool("cloud", is_cloud, span);
+    collected.into_value(span)
 }

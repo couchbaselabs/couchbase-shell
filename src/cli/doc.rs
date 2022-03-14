@@ -1,29 +1,35 @@
-use async_trait::async_trait;
-use nu_engine::{get_full_help, CommandArgs};
-use nu_errors::ShellError;
-use nu_protocol::{Signature, UntaggedValue};
-use nu_source::Tag;
-use nu_stream::OutputStream;
+use nu_engine::get_full_help;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{Category, IntoPipelineData, PipelineData, ShellError, Signature, Value};
 
+#[derive(Clone)]
 pub struct Doc;
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for Doc {
+impl Command for Doc {
     fn name(&self) -> &str {
         "doc"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("doc")
+        Signature::build("doc").category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Perform document operations against a bucket or collection"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        Ok(OutputStream::one(
-            UntaggedValue::string(get_full_help(&Doc, args.scope())).into_value(Tag::unknown()),
-        ))
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        _input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        Ok(Value::String {
+            val: get_full_help(&Doc.signature(), &vec![], engine_state, stack),
+            span: call.head,
+        }
+        .into_pipeline_data())
     }
 }

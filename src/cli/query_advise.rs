@@ -1,21 +1,25 @@
 use crate::cli::util::{
-    cluster_identifiers_from, convert_json_value_to_nu_value, convert_row_to_nu_value,
-    duration_to_golang_string,
+    cluster_identifiers_from, cluster_not_found_error, convert_json_value_to_nu_value,
+    convert_row_to_nu_value, duration_to_golang_string, generic_labeled_error,
+    map_serde_deserialize_error_to_shell_error,
 };
 use crate::client::QueryRequest;
 use crate::state::State;
 use log::debug;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, Value};
-use nu_source::Tag;
-use nu_stream::OutputStream;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+};
+
+#[derive(Clone)]
 pub struct QueryAdvise {
     state: Arc<Mutex<State>>,
 }
@@ -26,7 +30,7 @@ impl QueryAdvise {
     }
 }
 
-impl nu_engine::WholeStreamCommand for QueryAdvise {
+impl Command for QueryAdvise {
     fn name(&self) -> &str {
         "query advise"
     }
@@ -41,25 +45,40 @@ impl nu_engine::WholeStreamCommand for QueryAdvise {
                 "the clusters to query against",
                 None,
             )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Calls the query adviser and lists recommended indexes"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        run(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        run(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
-    let with_meta = args.has_flag("with-meta");
+fn run(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let span = call.head;
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let statement: String = args.req(0)?;
+    let with_meta = call.has_flag("with-meta");
+
+    let statement: String = call.req(engine_state, stack, 0)?;
     let statement = format!("ADVISE {}", statement);
 
-    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let guard = state.lock().unwrap();
     debug!("Running n1ql query {}", &statement);
 
@@ -68,7 +87,7 @@ fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Shel
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::unexpected("Cluster not found"));
+                return Err(cluster_not_found_error(identifier));
             }
         };
         let response = active_cluster.cluster().http_client().query_request(
@@ -82,38 +101,36 @@ fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Shel
         )?;
 
         if with_meta {
-            let content: serde_json::Value = serde_json::from_str(response.content())?;
-            results.push(convert_row_to_nu_value(
-                &content,
-                Tag::default(),
-                identifier.clone(),
-            )?);
+            let content: serde_json::Value = serde_json::from_str(response.content())
+                .map_err(map_serde_deserialize_error_to_shell_error)?;
+            results.push(convert_row_to_nu_value(&content, span, identifier.clone())?);
         } else {
             let content: HashMap<String, serde_json::Value> =
-                serde_json::from_str(response.content())?;
+                serde_json::from_str(response.content())
+                    .map_err(map_serde_deserialize_error_to_shell_error)?;
             if let Some(content_errors) = content.get("errors") {
                 if let Some(arr) = content_errors.as_array() {
                     for result in arr {
-                        results.push(convert_row_to_nu_value(
-                            result,
-                            Tag::default(),
-                            identifier.clone(),
-                        )?);
+                        results.push(convert_row_to_nu_value(result, span, identifier.clone())?);
                     }
                 } else {
-                    return Err(ShellError::unexpected(
+                    return Err(generic_labeled_error(
                         "Query errors not an array - malformed response",
+                        format!("Query errors not an array - {}", content_errors.to_string(),),
                     ));
                 }
             } else if let Some(content_results) = content.get("results") {
                 if let Some(arr) = content_results.as_array() {
                     for result in arr {
-                        results
-                            .push(convert_json_value_to_nu_value(result, Tag::default()).unwrap());
+                        results.push(convert_json_value_to_nu_value(result, span).unwrap());
                     }
                 } else {
-                    return Err(ShellError::unexpected(
+                    return Err(generic_labeled_error(
                         "Query results not an array - malformed response",
+                        format!(
+                            "Query results not an array - {}",
+                            content_results.to_string(),
+                        ),
                     ));
                 }
             } else {
@@ -122,7 +139,12 @@ fn run(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, Shel
             };
         }
     }
-    Ok(OutputStream::from(results))
+
+    Ok(Value::List {
+        vals: results,
+        span: call.head,
+    }
+    .into_pipeline_data())
 }
 
 #[derive(Debug, Deserialize)]

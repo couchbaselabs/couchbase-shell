@@ -1,19 +1,21 @@
 use crate::cli::util::{
-    cluster_identifiers_from, convert_row_to_nu_value, duration_to_golang_string,
+    cluster_identifiers_from, cluster_not_found_error, convert_row_to_nu_value,
+    duration_to_golang_string, generic_labeled_error, map_serde_deserialize_error_to_shell_error,
 };
 use crate::client::AnalyticsQueryRequest;
 use crate::state::State;
-use async_trait::async_trait;
 use log::debug;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, Value};
-use nu_source::Tag;
-use nu_stream::OutputStream;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+};
+
+#[derive(Clone)]
 pub struct AnalyticsIndexes {
     state: Arc<Mutex<State>>,
 }
@@ -24,8 +26,7 @@ impl AnalyticsIndexes {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for AnalyticsIndexes {
+impl Command for AnalyticsIndexes {
     fn name(&self) -> &str {
         "analytics indexes"
     }
@@ -39,22 +40,35 @@ impl nu_engine::WholeStreamCommand for AnalyticsIndexes {
                 "the clusters which should be contacted",
                 None,
             )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Lists all analytics indexes"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        indexes(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        indexes(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn indexes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
+fn indexes(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
     let statement = "SELECT d.* FROM Metadata.`Index` d WHERE d.DataverseName <> \"Metadata\"";
 
-    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let guard = state.lock().unwrap();
     debug!("Running analytics query {}", &statement);
 
@@ -63,7 +77,7 @@ fn indexes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, 
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::unexpected("Cluster not found"));
+                return Err(cluster_not_found_error(identifier));
             }
         };
 
@@ -82,31 +96,45 @@ fn indexes(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, 
                 ctrl_c.clone(),
             )?;
 
-        let with_meta = args.call_info().switch_present("with-meta");
-        let content: serde_json::Value = serde_json::from_str(response.content())?;
+        let with_meta = call.has_flag("with-meta");
+        let content: serde_json::Value = serde_json::from_str(response.content())
+            .map_err(map_serde_deserialize_error_to_shell_error)?;
         if with_meta {
-            let converted = convert_row_to_nu_value(&content, Tag::default(), identifier.clone())?;
+            let converted = convert_row_to_nu_value(&content, call.head, identifier.clone())?;
             results.push(converted);
-        } else if let Some(results) = content.get("results") {
-            if let Some(arr) = results.as_array() {
+        } else if let Some(content_results) = content.get("results") {
+            if let Some(arr) = content_results.as_array() {
                 let mut converted = vec![];
                 for result in arr {
                     converted.push(convert_row_to_nu_value(
                         result,
-                        Tag::default(),
+                        call.head,
                         identifier.clone(),
                     )?);
                 }
             } else {
-                return Err(ShellError::unexpected(
-                    "Analytics result not an array - malformed response",
+                return Err(generic_labeled_error(
+                    "Analytics results not an array - malformed response",
+                    format!(
+                        "Analytics results not an array - {}",
+                        content_results.to_string(),
+                    ),
                 ));
             }
         } else {
-            return Err(ShellError::unexpected(
-                "Analytics toplevel result not  an object - malformed response",
+            return Err(generic_labeled_error(
+                "Analytics toplevel result not  an object",
+                format!(
+                    "Analytics toplevel result not  an object - {}",
+                    content.to_string(),
+                ),
             ));
         }
     }
-    Ok(OutputStream::from(results))
+
+    Ok(Value::List {
+        vals: results,
+        span: call.head,
+    }
+    .into_pipeline_data())
 }

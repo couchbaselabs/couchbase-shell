@@ -1,11 +1,14 @@
 use crate::cli::clusters_register::update_config_file;
 use crate::state::State;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape};
-use nu_stream::OutputStream;
 use std::sync::{Arc, Mutex};
 
+use crate::cli::util::{cluster_not_found_error, generic_labeled_error};
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
+
+#[derive(Clone)]
 pub struct ClustersUnregister {
     state: Arc<Mutex<State>>,
 }
@@ -16,7 +19,7 @@ impl ClustersUnregister {
     }
 }
 
-impl nu_engine::WholeStreamCommand for ClustersUnregister {
+impl Command for ClustersUnregister {
     fn name(&self) -> &str {
         "clusters unregister"
     }
@@ -33,40 +36,49 @@ impl nu_engine::WholeStreamCommand for ClustersUnregister {
                 "whether or not to add the cluster to the .cbsh config file, defaults to false",
                 None,
             )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Registers a cluster for use with the shell"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        clusters_unregister(args, self.state.clone())
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        clusters_unregister(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
 fn clusters_unregister(
-    args: CommandArgs,
     state: Arc<Mutex<State>>,
-) -> Result<OutputStream, ShellError> {
-    let identifier: String = args.req(0)?;
-    let save = args.get_flag("save")?.unwrap_or(false);
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let identifier: String = call.req(engine_state, stack, 0)?;
+    let save = call.get_flag(engine_state, stack, "save")?.unwrap_or(false);
 
     let mut guard = state.lock().unwrap();
     if guard.active() == identifier.clone() {
-        return Err(ShellError::unexpected(
+        return Err(generic_labeled_error(
+            "Cannot unregister the active cluster",
             "Cannot unregister the active cluster",
         ));
     }
 
-    if guard.remove_cluster(identifier).is_none() {
-        return Err(ShellError::unexpected(
-            "identifier is not registered to a cluster",
-        ));
+    if guard.remove_cluster(identifier.clone()).is_none() {
+        return Err(cluster_not_found_error(identifier));
     };
 
     if save {
         update_config_file(&mut guard)?;
     };
 
-    Ok(OutputStream::empty())
+    return Ok(PipelineData::new(call.head));
 }

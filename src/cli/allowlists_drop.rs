@@ -1,17 +1,18 @@
 use crate::cli::cloud_json::JSONCloudDeleteAllowListRequest;
-use crate::cli::util::{cluster_identifiers_from, validate_is_cloud};
+use crate::cli::util::{cluster_identifiers_from, cluster_not_found_error, validate_is_cloud};
 use crate::client::CapellaRequest;
 use crate::state::{CapellaEnvironment, State};
-use async_trait::async_trait;
 use log::debug;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape};
-use nu_stream::OutputStream;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
+
+#[derive(Clone)]
 pub struct AllowListsDrop {
     state: Arc<Mutex<State>>,
 }
@@ -22,8 +23,7 @@ impl AllowListsDrop {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for AllowListsDrop {
+impl Command for AllowListsDrop {
     fn name(&self) -> &str {
         "allowlists drop"
     }
@@ -41,31 +41,44 @@ impl nu_engine::WholeStreamCommand for AllowListsDrop {
                 "the clusters which should be contacted",
                 None,
             )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Removes an address to disallow Capella cluster access"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        addresses_drop(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        addresses_drop(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn addresses_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
-    let address: String = args.req(0)?;
+fn addresses_drop(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let address: String = call.req(engine_state, stack, 0)?;
 
     debug!("Running allowlists drop for {}", &address);
 
-    let cluster_identifiers = cluster_identifiers_from(&state, &args, true)?;
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let guard = state.lock().unwrap();
 
     for identifier in cluster_identifiers {
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::untagged_runtime_error("Cluster not found"));
+                return Err(cluster_not_found_error(identifier));
             }
         };
         validate_is_cloud(
@@ -83,8 +96,9 @@ fn addresses_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
         )?;
 
         if cluster.environment() == CapellaEnvironment::Hosted {
-            return Err(ShellError::unexpected(
-                "allowlists drop cannot be run against hosted Capella clusters",
+            return Err(ShellError::LabeledError(
+                "Unsupported".into(),
+                "allowlists add cannot be run against hosted Capella clusters".into(),
             ));
         }
 
@@ -93,7 +107,8 @@ fn addresses_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
         let response = cloud.capella_request(
             CapellaRequest::DeleteAllowListEntry {
                 cluster_id: cluster.id(),
-                payload: serde_json::to_string(&entry)?,
+                payload: serde_json::to_string(&entry)
+                    .map_err(|e| ShellError::LabeledError(e.to_string(), e.to_string()))?,
             },
             Instant::now().add(active_cluster.timeouts().query_timeout()),
             ctrl_c.clone(),
@@ -102,10 +117,13 @@ fn addresses_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputS
         match response.status() {
             204 => {}
             _ => {
-                return Err(ShellError::unexpected(response.content()));
+                return Err(ShellError::LabeledError(
+                    response.content().to_string(),
+                    response.content().to_string(),
+                ));
             }
         }
     }
 
-    Ok(OutputStream::empty())
+    Ok(PipelineData::new(call.head))
 }

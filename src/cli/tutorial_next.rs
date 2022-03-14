@@ -1,12 +1,11 @@
 use crate::state::State;
-use async_trait::async_trait;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, UntaggedValue};
-use nu_source::Tag;
-use nu_stream::OutputStream;
 use std::sync::{Arc, Mutex};
 
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{Category, IntoPipelineData, PipelineData, ShellError, Signature, Value};
+
+#[derive(Clone)]
 pub struct TutorialNext {
     state: Arc<Mutex<State>>,
 }
@@ -17,29 +16,37 @@ impl TutorialNext {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for TutorialNext {
+impl Command for TutorialNext {
     fn name(&self) -> &str {
         "tutorial next"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("tutorial next")
+        Signature::build("tutorial next").category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Step to the next page in the Couchbase Shell tutorial"
     }
 
-    fn run(&self, _args: CommandArgs) -> Result<OutputStream, ShellError> {
-        run_tutorial_next(self.state.clone())
+    fn run(
+        &self,
+        _engine_state: &EngineState,
+        _stack: &mut Stack,
+        call: &Call,
+        _input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        run_tutorial_next(self.state.clone(), call)
     }
 }
 
-fn run_tutorial_next(state: Arc<Mutex<State>>) -> Result<OutputStream, ShellError> {
+fn run_tutorial_next(state: Arc<Mutex<State>>, call: &Call) -> Result<PipelineData, ShellError> {
     let guard = state.lock().unwrap();
     let tutorial = guard.tutorial();
-    Ok(OutputStream::one(
-        UntaggedValue::string(tutorial.next_tutorial_step()).into_value(Tag::unknown()),
-    ))
+
+    Ok(Value::String {
+        val: tutorial.next_tutorial_step(),
+        span: call.head,
+    }
+    .into_pipeline_data())
 }

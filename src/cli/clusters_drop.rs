@@ -1,15 +1,17 @@
+use crate::cli::util::generic_labeled_error;
 use crate::client::CapellaRequest;
 use crate::state::{CapellaEnvironment, State};
-use async_trait::async_trait;
 use log::debug;
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape};
-use nu_stream::OutputStream;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
+
+#[derive(Clone)]
 pub struct ClustersDrop {
     state: Arc<Mutex<State>>,
 }
@@ -20,8 +22,7 @@ impl ClustersDrop {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for ClustersDrop {
+impl Command for ClustersDrop {
     fn name(&self) -> &str {
         "clusters drop"
     }
@@ -35,21 +36,36 @@ impl nu_engine::WholeStreamCommand for ClustersDrop {
                 "the Capella organization to use",
                 None,
             )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Deletes a cluster from the active Capella organization"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        clusters_drop(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        clusters_drop(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn clusters_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
-    let name: String = args.req(0)?;
-    let capella = args.get_flag("capella")?;
+fn clusters_drop(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let span = call.head;
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+
+    let name: String = call.req(engine_state, stack, 0)?;
+    let capella = call.get_flag(engine_state, stack, "capella")?;
 
     debug!("Running clusters drop for {}", &name);
 
@@ -82,8 +98,11 @@ fn clusters_drop(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputSt
         )
     }?;
     if response.status() != 202 {
-        return Err(ShellError::unexpected(response.content().to_string()));
+        return Err(generic_labeled_error(
+            "Failed to drop cluster",
+            format!("Failed to drop cluster {}", response.content()),
+        ));
     };
 
-    Ok(OutputStream::empty())
+    return Ok(PipelineData::new(span));
 }

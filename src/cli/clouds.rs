@@ -1,19 +1,22 @@
-use crate::state::State;
-use async_trait::async_trait;
-
-use nu_engine::CommandArgs;
-use nu_errors::ShellError;
-use nu_protocol::{Signature, SyntaxShape, TaggedDictBuilder};
-use nu_source::Tag;
-use nu_stream::OutputStream;
-
 use crate::cli::cloud_json::JSONCloudsResponse;
 use crate::client::CapellaRequest;
+use crate::state::State;
 use log::debug;
+use nu_engine::CallExt;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use crate::cli::util::{
+    generic_labeled_error, map_serde_deserialize_error_to_shell_error, NuValueMap,
+};
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+};
+
+#[derive(Clone)]
 pub struct Clouds {
     state: Arc<Mutex<State>>,
 }
@@ -24,33 +27,48 @@ impl Clouds {
     }
 }
 
-#[async_trait]
-impl nu_engine::WholeStreamCommand for Clouds {
+impl Command for Clouds {
     fn name(&self) -> &str {
         "clouds"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("clouds").named(
-            "capella",
-            SyntaxShape::String,
-            "the Capella organization to use",
-            None,
-        )
+        Signature::build("clouds")
+            .named(
+                "capella",
+                SyntaxShape::String,
+                "the Capella organization to use",
+                None,
+            )
+            .category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
         "Shows the current status for all clouds belonging to the active Capella organization"
     }
 
-    fn run(&self, args: CommandArgs) -> Result<OutputStream, ShellError> {
-        clouds(self.state.clone(), args)
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        clouds(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn clouds(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, ShellError> {
-    let ctrl_c = args.ctrl_c();
-    let capella = args.get_flag("capella")?;
+fn clouds(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    _input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let span = call.head;
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+
+    let capella = call.get_flag(engine_state, stack, "capella")?;
 
     debug!("Running clouds");
 
@@ -67,21 +85,29 @@ fn clouds(state: Arc<Mutex<State>>, args: CommandArgs) -> Result<OutputStream, S
         ctrl_c,
     )?;
     if response.status() != 200 {
-        return Err(ShellError::unexpected(response.content().to_string()));
+        return Err(generic_labeled_error(
+            "Failed to get clouds",
+            format!("Failed to get clouds {}", response.content()),
+        ));
     };
 
-    let content: JSONCloudsResponse = serde_json::from_str(response.content())?;
+    let content: JSONCloudsResponse = serde_json::from_str(response.content())
+        .map_err(map_serde_deserialize_error_to_shell_error)?;
 
     let mut results = vec![];
     for cloud in content.items().into_iter() {
-        let mut collected = TaggedDictBuilder::new(Tag::default());
-        collected.insert_value("identifier", cloud.name());
-        collected.insert_value("status", cloud.status());
-        collected.insert_value("region", cloud.region());
-        collected.insert_value("provider", cloud.provider());
-        collected.insert_value("cloud_id", cloud.id());
-        results.push(collected.into_value())
+        let mut collected = NuValueMap::default();
+        collected.add_string("identifier", cloud.name(), span);
+        collected.add_string("status", cloud.status(), span);
+        collected.add_string("region", cloud.region(), span);
+        collected.add_string("provider", cloud.provider(), span);
+        collected.add_string("cloud_id", cloud.id(), span);
+        results.push(collected.into_value(span))
     }
 
-    Ok(OutputStream::from(results))
+    Ok(Value::List {
+        vals: results,
+        span: call.head,
+    }
+    .into_pipeline_data())
 }
