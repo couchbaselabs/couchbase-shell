@@ -1,7 +1,7 @@
 use crate::cli::collections::Manifest;
 use crate::cli::util::{
     cluster_identifiers_from, cluster_not_found_error, generic_labeled_error,
-    map_serde_deserialize_error_to_shell_error, validate_is_not_cloud, NuValueMap,
+    map_serde_deserialize_error_to_shell_error, NuValueMap,
 };
 use crate::client::ManagementRequest;
 use crate::state::State;
@@ -87,10 +87,6 @@ fn run(
                 return Err(cluster_not_found_error(identifier));
             }
         };
-        validate_is_not_cloud(
-            active_cluster,
-            "scopes get cannot be run against Capella clusters",
-        )?;
 
         let bucket = match call.get_flag(engine_state, stack, "bucket")? {
             Some(v) => v,

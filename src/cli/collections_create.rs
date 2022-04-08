@@ -1,8 +1,6 @@
 //! The `collections get` command fetches all of the collection names from the server.
 
-use crate::cli::util::{
-    cluster_identifiers_from, cluster_not_found_error, generic_labeled_error, validate_is_not_cloud,
-};
+use crate::cli::util::{cluster_identifiers_from, cluster_not_found_error, generic_labeled_error};
 use crate::client::ManagementRequest::CreateCollection;
 use crate::state::State;
 use log::debug;
@@ -95,10 +93,6 @@ fn collections_create(
                 return Err(cluster_not_found_error(identifier));
             }
         };
-        validate_is_not_cloud(
-            active_cluster,
-            "collections create cannot be run against cloud clusters",
-        )?;
 
         let bucket = match call.get_flag(engine_state, stack, "bucket")? {
             Some(v) => v,
