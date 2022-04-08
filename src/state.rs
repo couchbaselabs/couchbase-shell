@@ -13,7 +13,7 @@ use std::{collections::HashMap, time::Duration};
 pub enum CapellaEnvironment {
     #[serde(rename = "hosted")]
     Hosted,
-    #[serde(rename = "vpc")]
+    #[serde(rename = "inVpc")]
     InVPC,
 }
 

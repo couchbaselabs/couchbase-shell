@@ -37,7 +37,7 @@ impl Command for ClustersHealth {
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("buckets config")
+        Signature::build("clusters health")
             .named(
                 "clusters",
                 SyntaxShape::String,

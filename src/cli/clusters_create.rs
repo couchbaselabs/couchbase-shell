@@ -79,7 +79,7 @@ fn clusters_create(
     let definition: String = call.req(engine_state, stack, 0)?;
     let capella = call.get_flag(engine_state, stack, "capella")?;
     let environment = call
-        .get_flag(engine_state, stack, "capella")?
+        .get_flag(engine_state, stack, "environment")?
         .unwrap_or("hosted".to_string());
 
     debug!("Running clusters create for {}", &definition);

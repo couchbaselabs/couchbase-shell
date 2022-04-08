@@ -1,4 +1,4 @@
-use crate::cli::util::{cluster_identifiers_from, NuValueMap};
+use crate::cli::util::NuValueMap;
 use crate::state::State;
 use std::sync::{Arc, Mutex};
 
@@ -23,7 +23,7 @@ impl Command for ClustersManaged {
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("clusters").category(Category::Custom("couchbase".into()))
+        Signature::build("clusters managed").category(Category::Custom("couchbase".into()))
     }
 
     fn usage(&self) -> &str {
@@ -43,20 +43,18 @@ impl Command for ClustersManaged {
 
 fn clusters(
     state: Arc<Mutex<State>>,
-    engine_state: &EngineState,
-    stack: &mut Stack,
+    _engine_state: &EngineState,
+    _stack: &mut Stack,
     call: &Call,
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
 
     let guard = state.lock().unwrap();
     let active = guard.active();
     let clusters = guard
         .clusters()
         .iter()
-        .filter(|(k, _)| identifiers.contains(k))
         .map(|(k, v)| {
             let mut collected = NuValueMap::default();
             collected.add_bool("active", k == &active, span);
