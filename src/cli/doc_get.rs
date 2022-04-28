@@ -293,7 +293,7 @@ pub(crate) fn ids_from_input(
         .flatten()
         .collect();
 
-    if let Some(id) = args.nth(0) {
+    if let Some(id) = args.positional_nth(0) {
         if let Some(i) = id.as_string() {
             ids.push(i);
         }

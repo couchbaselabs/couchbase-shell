@@ -473,9 +473,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let f = d.child("config.nu");
 
     let prompt = if cfg!(windows) {
-        r##"let-env PROMPT_COMMAND = {build-string (ansi ub) (cb-env | get username) (ansi reset) (ansi yb) (cb-env | get cluster) (ansi reset) ' in  (ansi wb) (cb-env | get bucket) (cb-env | select scope collection | each { |it| if $it.scope == "" && $it.collection == "" { } else { build-string (if $it.scope == "" { build-string ".<notset>" } else {build-string "." $it.scope}) (if $it.collection == "" { build-string ".<notset>"} else {build-string "." $it.collection})}}) (ansi reset)}"##
+        r##"let-env PROMPT_COMMAND = {build-string (ansi ub) (cb-env | get username) (ansi reset) (ansi yb) (cb-env | get cluster) (ansi reset) ' in  (ansi wb) (cb-env | get bucket) (cb-env | select scope collection | each { |it| if $it.scope == "" && $it.collection == "" { "" } else { build-string (if $it.scope == "" { build-string ".<notset>" } else {build-string "." $it.scope}) (if $it.collection == "" { build-string ".<notset>"} else {build-string "." $it.collection})}}) (ansi reset)}"##
     } else {
-        r##"let-env PROMPT_COMMAND = {build-string '👤 ' (ansi ub) (cb-env | get username) (ansi reset) ' 🏠 ' (ansi yb) (cb-env | get cluster) (ansi reset) ' in 🗄 ' (ansi wb) (cb-env | get bucket) (cb-env | select scope collection | each { |it| if $it.scope == "" && $it.collection == "" { } else { build-string (if $it.scope == "" { build-string ".<notset>" } else {build-string "." $it.scope}) (if $it.collection == "" { build-string ".<notset>"} else {build-string "." $it.collection})}}) (ansi reset)}"##
+        r##"let-env PROMPT_COMMAND = {build-string '👤 ' (ansi ub) (cb-env | get username) (ansi reset) ' 🏠 ' (ansi yb) (cb-env | get cluster) (ansi reset) ' in 🗄 ' (ansi wb) (cb-env | get bucket) (cb-env | select scope collection | each { |it| if $it.scope == "" && $it.collection == "" { "" } else { build-string (if $it.scope == "" { build-string ".<notset>" } else {build-string "." $it.scope}) (if $it.collection == "" { build-string ".<notset>"} else {build-string "." $it.collection})}}) (ansi reset)}"##
     };
 
     let config_string = format!(
@@ -573,7 +573,7 @@ impl Command for Cbsh {
 
     fn signature(&self) -> Signature {
         Signature::build("cbsh")
-            .desc("The Couchbase Shell.")
+            .usage("The Couchbase Shell.")
             .named(
                 "hostnames",
                 SyntaxShape::String,
@@ -689,7 +689,13 @@ fn parse_commandline_args(
         let mut working_set = StateWorkingSet::new(context);
         working_set.add_decl(Box::new(Cbsh));
 
-        let (output, err) = parse(&mut working_set, None, commandline_args.as_bytes(), false);
+        let (output, err) = parse(
+            &mut working_set,
+            None,
+            commandline_args.as_bytes(),
+            false,
+            &[],
+        );
         if let Some(err) = err {
             report_error(&working_set, &err);
 
