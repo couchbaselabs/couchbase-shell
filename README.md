@@ -11,9 +11,9 @@ The documentation is available [here](https://couchbase.sh/docs/).
 
 First, download the archive for your operating system.
 
- - [Linux 1.0.0-beta.3](https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.3/cbsh-1.0.0-beta.3-linux.tar.gz)
- - [macOS 1.0.0-beta.3](https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.3/cbsh-1.0.0-beta.3-mac.zip)
- - [Windows 1.0.0-beta.3](https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.3/cbsh-1.0.0-beta.3-windows.zip)
+ - [Linux 1.0.0-beta.4](https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.4/cbsh-1.0.0-beta.4-linux.tar.gz)
+ - [macOS 1.0.0-beta.4](https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.4/cbsh-1.0.0-beta.4-mac.zip)
+ - [Windows 1.0.0-beta.4](https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.4/cbsh-1.0.0-beta.4-windows.zip)
 
 You do not need any extra dependencies to run `cbsh`, it comes "batteries included".
 
@@ -23,7 +23,7 @@ After extracting the archive, run the `cbsh` binary in your terminal.
 
 ```
 ❯ ./cbsh --version
-The Couchbase Shell 1.0.0-beta.3
+The Couchbase Shell 1.0.0-beta.4
 ```
 
 ## Basic Usage
@@ -66,9 +66,9 @@ The downloaded archive contains an `example` directory which also contains sampl
 
 On top of [nushell](https://www.nushell.sh/) built-in commands, the following couchbase commands are available:
 
- - `addresses` - List all whitelisted addresses (cloud)
- - `addresses add` - Add a whitelist address (cloud)
- - `addresses drop` - Remove a whitelist address (cloud)
+ - `allowlists` - List all whitelisted addresses (cloud)
+ - `allowlists add` - Add a whitelist address (cloud)
+ - `allowlists drop` - Remove a whitelist address (cloud)
  - `analytics <statement>` - Perform an analytics query
  - `analytics dataverses` - List all dataverses
  - `analytics datasets` - List all datasets
@@ -84,14 +84,24 @@ On top of [nushell](https://www.nushell.sh/) built-in commands, the following co
  - `buckets get` - Fetches a bucket through the HTTP API
  - `buckets load-sample` - Load a sample bucket
  - `buckets update` - Updates a bucket
- - `clouds` - List (active) clouds (cloud)
- - `clouds clusters` - List all cloud clusters in the active organization  (cloud)
- - `clouds clusters-create` - Create a cloud cluster in the active organization  (cloud)
- - `clouds clusters-drop` - Remove a cloud cluster in the active organization  (cloud)
- - `clouds clusters-Get` - Get a cloud cluster in the active organization  (cloud)
- - `clouds status` - List all clouds in the active organization (cloud)
- - `clusters` - List (active) clusters
- - `clusters health` - Performs health checks on the target cluster(s)
+ - `cb-env` - lists the currently active bucket, collection, etc.
+ - `cb-env bucket` - Sets the active bucket based on its name
+ - `cb-env capella-organization` - Sets the active Capella organization based on its identifier
+ - `cb-env cloud` - Sets the active cloud based on its identifier
+ - `cb-env cluster` - Sets the active cluster based on its identifier
+ - `cb-env collection` - Sets the active collection based on its name
+ - `cb-env project` - Sets the active cloud project based on its name
+ - `cb-env scope` - Sets the active scope based on its name
+ - `cb-env timeouts` - Sets the default timeouts
+ - `clouds` - Lists all clusters on the active Capella organisation
+ - `clusters`- Lists all clusters on the active Capella organisation 
+ - `clusters create` - Creates a new cluster against the active Capella organization
+ - `clusters drop` - Deletes a cluster from the active Capella organization
+ - `clusters get` - Gets a cluster from the active Capella organization
+ - `aclusters health` - Performs health checks on the target cluster(s)
+ - `clusters managed` - Lists all clusters currently managed by couchbase shell
+ - `clusters register` - Registers a cluster for use with the shell
+ - `clusters unregister` - Registers a cluster for use with the shell
  - `collections` - Fetches collections through the HTTP API
  - `collections create` - Creates collections through the HTTP API
  - `collections drop` - Removes a collection
@@ -101,6 +111,7 @@ On top of [nushell](https://www.nushell.sh/) built-in commands, the following co
  - `doc replace` - Perform a KV replace operation
  - `doc upsert` - Perform a KV upsert operation
  - `fake` - Generate fake/mock data
+ - `help` - Display help information about commands
  - `nodes` - List all nodes in the active cluster
  - `ping` - Ping available services in the cluster
  - `projects` - List all projects (cloud)
@@ -116,14 +127,6 @@ On top of [nushell](https://www.nushell.sh/) built-in commands, the following co
  - `search` - Runs a query against a search index
  - `transations list-atrs` - List all active transaction records (requires an index - create index id3 on `travel-sample`(meta().id, meta().xattrs.attempts)) 
  - `tutorial` - Runs you through a tutorial of both nushell and cbshell
- - `use` - lists the currently active bucket, collection, etc.
- - `use bucket` - Sets the active bucket based on its name
- - `use cloud` - Sets the active cloud based on its identifier
- - `use cloud-organization` - Sets the active cloud organization based on its identifier
- - `use cluster` - Sets the active cluster based on its identifier
- - `use collection` - Sets the active collection based on its name
- - `use project` - Sets the active cloud project based on its name
- - `use scope` - Sets the active scope based on its name
  - `users` - List all users
  - `users roles` - List roles available on the cluster
  - `users get` - Show a specific user

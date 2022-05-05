@@ -2,6 +2,23 @@
 
 All user visible changes to this project will be documented in this file.
 
+## 1.0.0-beta.4 - 2022-05-05
+
+- Nushell pinned to 0.62
+  - Nushell underwent significant changes so some commands have changed on both the Nushell and Couchbase Shell sides.
+    - `use` renamed to `cb-env`.
+- Allow collections management commands to work against Capella.
+- Update config file parsing to allow either a `cluster` or a `capella-organisation` entry to be the only entry.
+- Change log env variable to be `CBSH_LOG`.
+- Change how clouds and Capella organisations work.
+  - Capella cluster commands are now performed via `clusters` and subcommands.
+  - Renamed `addresses` to `allowlists`.
+  - Renamed the old `clusters` command to `clusters managed`.
+  - Updated `clouds` to deal exclusively with invpc clouds and updated config file so that `cloud` is no longer a valid entry.
+    - `default-cloud` has been added to the `capella-organisation` entry.
+- Added scope and collection names to the prompt (if either is set).
+- Added support for viewing and setting default timeout values through `cb-env`
+
 ## 1.0.0-beta.3 - 2021-11-22
 
 - Nushell pinned to 0.40

@@ -1,7 +1,7 @@
 [package]
 name = "couchbase-shell"
-version = "1.0.0-beta.4-dev"
-authors = ["Michael Nitschinger <michael@nitschinger.at>"]
+version = "1.0.0-beta.4"
+authors = ["Michael Nitschinger <michael@nitschinger.at>", "Charles Dixon <chvckd@gmail.com>"]
 edition = "2018"
 default-run = "cbsh"
 
@@ -26,14 +26,14 @@ isahc = "1.6"
 lazy_static = "1.4.0"
 log = "0.4"
 mime_guess = "2.0"
-nu = { version = "0.61.0", features = ["extra"] }
-nu-protocol = { version = "0.61.0" }
-nu-command = { version = "0.61.0" }
-nu-parser = { version = "0.61.0" }
-nu-path = { version = "0.61.0" }
-nu-cli = { version = "0.61.0" }
-nu-engine = { version = "0.61.0" }
-nu-plugin = { version = "0.61.0" }
+nu = { version = "0.62.0", features = ["extra"] }
+nu-protocol = { version = "0.62.0" }
+nu-command = { version = "0.62.0" }
+nu-parser = { version = "0.62.0" }
+nu-path = { version = "0.62.0" }
+nu-cli = { version = "0.62.0" }
+nu-engine = { version = "0.62.0" }
+nu-plugin = { version = "0.62.0" }
 num-bigint = "0.4"
 num-traits = "0.2.14"
 pretty_env_logger = "0.3"
