@@ -34,7 +34,7 @@ jobs:
             os: macos-latest
             rust: stable
           - build: windows
-            os: windows-2016
+            os: windows-latest
             rust: stable
 
     steps:
@@ -57,7 +57,7 @@ jobs:
 
     - name: Build
       run: cargo build --verbose --release
-      if: matrix.os == 'windows-2016'
+      if: matrix.os == 'windows-latest'
 
     - name: Build (macos)
       run: cargo build --verbose --release
@@ -85,7 +85,7 @@ jobs:
       run: |
         choco install 7zip
         7z a -tzip ./artifacts/${{ env.RELEASE_BIN }}-windows-x86_64.zip ./target/release/${{ env.RELEASE_BIN_WINDOWS }} ${{ env.RELEASE_ADDS }}
-      if: matrix.os == 'windows-2016'
+      if: matrix.os == 'windows-latest'
 
     # This will double-zip
     # See - https://github.com/actions/upload-artifact/issues/39
