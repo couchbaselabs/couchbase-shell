@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Asciidoctor 2.0.16">
+<meta name="generator" content="Asciidoctor 2.0.17">
 <meta name="author" content="(c) Copyright 2021, All Rights Reserved">
 <title>Couchbase Shell Documentation</title>
 <link rel="stylesheet" href="./couchbase.css">
@@ -36,9 +36,9 @@
 <li><a href="#_exporting_data_from_the_shell">2.6. Exporting Data from the Shell</a></li>
 </ul>
 </li>
-<li><a href="#_use_and_the_environment">3. <code>use</code> and the Environment</a>
+<li><a href="#_cb_env_and_the_environment">3. <code>cb-env</code> and the Environment</a>
 <ul class="sectlevel2">
-<li><a href="#_useing_different_execution_environments">3.1. `Use`ing different execution environments</a>
+<li><a href="#_per_command_execution_environments">3.1. Per command execution environments</a>
 <ul class="sectlevel3">
 <li><a href="#_the_clusters_flag">3.1.1. The <code>--clusters</code> flag</a></li>
 <li><a href="#_the_bucket_scope_collection_flags">3.1.2. The <code>--bucket</code>, <code>--scope</code>, <code>--collection</code> flags</a></li>
@@ -68,39 +68,31 @@
 <li><a href="#_version">4.7. <code>version</code></a></li>
 </ul>
 </li>
-<li><a href="#_couchbase_capella_dbaas">5. Couchbase Capella (DBaaS)</a>
+<li><a href="#_reference">5. Reference</a>
 <ul class="sectlevel2">
-<li><a href="#_use_and_the_environment_2">5.1. <code>use</code>  and the Environment</a></li>
-<li><a href="#_document_level_commands">5.2. Document Level Commands</a></li>
-<li><a href="#_management_commands">5.3. Management Commands</a></li>
-<li><a href="#_config_file_format">5.4. Config file format</a></li>
+<li><a href="#_config_file_format">5.1. Config File Format</a></li>
+<li><a href="#_credentials_file_format">5.2. Credentials File Format</a></li>
 </ul>
 </li>
-<li><a href="#_reference">6. Reference</a>
+<li><a href="#_recipes">6. Recipes</a>
 <ul class="sectlevel2">
-<li><a href="#_config_file_format_2">6.1. Config File Format</a></li>
-<li><a href="#_credentials_file_format">6.2. Credentials File Format</a></li>
-</ul>
-</li>
-<li><a href="#_recipes">7. Recipes</a>
-<ul class="sectlevel2">
-<li><a href="#_importing_data">7.1. Importing data</a>
+<li><a href="#_importing_data">6.1. Importing data</a>
 <ul class="sectlevel3">
-<li><a href="#_a_note_on_data_format">7.1.1. A Note On Data format</a></li>
-<li><a href="#_from_file">7.1.2. From file</a>
+<li><a href="#_a_note_on_data_format">6.1.1. A Note On Data format</a></li>
+<li><a href="#_from_file">6.1.2. From file</a>
 <ul class="sectlevel4">
 <li><a href="#_from_json">From JSON</a></li>
 <li><a href="#_from_csv">From CSV</a></li>
 </ul>
 </li>
-<li><a href="#_faking_data">7.1.3. Faking data</a></li>
-<li><a href="#_modifying_data">7.1.4. Modifying data</a></li>
+<li><a href="#_faking_data">6.1.3. Faking data</a></li>
+<li><a href="#_modifying_data">6.1.4. Modifying data</a></li>
 </ul>
 </li>
-<li><a href="#_exporting_data">7.2. Exporting data</a>
+<li><a href="#_exporting_data">6.2. Exporting data</a>
 <ul class="sectlevel3">
-<li><a href="#_a_note_on_data_format_2">7.2.1. A Note On Data format</a></li>
-<li><a href="#_to_file">7.2.2. To file</a>
+<li><a href="#_a_note_on_data_format_2">6.2.1. A Note On Data format</a></li>
+<li><a href="#_to_file">6.2.2. To file</a>
 <ul class="sectlevel4">
 <li><a href="#_to_json">To JSON</a></li>
 <li><a href="#_to_csv">To CSV</a></li>
@@ -108,10 +100,10 @@
 </li>
 </ul>
 </li>
-<li><a href="#_useful_snippets">7.3. Useful snippets</a>
+<li><a href="#_useful_snippets">6.3. Useful snippets</a>
 <ul class="sectlevel3">
-<li><a href="#_migrating_scope_and_collection_definitions">7.3.1. Migrating scope and collection definitions</a></li>
-<li><a href="#_migrating_query_index_definitions">7.3.2. Migrating query index definitions</a></li>
+<li><a href="#_migrating_scope_and_collection_definitions">6.3.1. Migrating scope and collection definitions</a></li>
+<li><a href="#_migrating_query_index_definitions">6.3.2. Migrating query index definitions</a></li>
 </ul>
 </li>
 </ul>
@@ -141,7 +133,7 @@
 <div class="sect2">
 <h3 id="_installation">1.1. Installation</h3>
 <div class="paragraph">
-<p>The current latest version is <strong>1.0.0-beta.3</strong>.</p>
+<p>The current latest version is <strong>1.0.0-beta.4</strong>.</p>
 </div>
 <div class="paragraph">
 <p>There are a couple ways you can get access to <code>cbsh</code>, the easiest one is to download our pre-built binaries for your platform of choice:</p>
@@ -149,13 +141,13 @@
 <div class="ulist">
 <ul>
 <li>
-<p>Linux: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.3/cbsh-1.0.0-beta.3-linux.tar.gz">cbsh-1.0.0-beta.3-linux.tar.gz</a></p>
+<p>Linux: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.4/cbsh-1.0.0-beta.4-linux.tar.gz">cbsh-1.0.0-beta.4-linux.tar.gz</a></p>
 </li>
 <li>
-<p>macOS: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.3/cbsh-1.0.0-beta.3-mac.zip">cbsh-1.0.0-beta.3-mac.zip</a></p>
+<p>macOS: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.4/cbsh-1.0.0-beta.4-mac.zip">cbsh-1.0.0-beta.4-mac.zip</a></p>
 </li>
 <li>
-<p>Windows: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.3/cbsh-1.0.0-beta.3-windows.zip">cbsh-1.0.0-beta.3-windows.zip</a></p>
+<p>Windows: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.4/cbsh-1.0.0-beta.4-windows.zip">cbsh-1.0.0-beta.4-windows.zip</a></p>
 </li>
 </ul>
 </div>
@@ -164,7 +156,7 @@
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>$ unzip cbsh-1.0.0-beta.3-mac.zip
+<pre class="CodeRay highlight"><code>$ unzip cbsh-1.0.0-beta.4-mac.zip
 $ ls
 cbsh  examples  LICENSE  README.md</code></pre>
 </div>
@@ -175,7 +167,7 @@ cbsh  examples  LICENSE  README.md</code></pre>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>❯ ./cbsh --version
-The Couchbase Shell 1.0.0-beta.3</code></pre>
+The Couchbase Shell 1.0.0-beta.4</code></pre>
 </div>
 </div>
 <div class="admonitionblock tip">
@@ -271,7 +263,7 @@ password = &quot;password&quot;
 </div>
 </div>
 <div class="paragraph">
-<p>This will connect to two clusters, one called <code>local</code> and one called <code>remote</code> (commented out). The file format is <code>toml</code> in case you wonder. Now when you start the shell, it will connect to <code>local</code> automatically and you are all set.</p>
+<p>This will register two clusters, one called <code>local</code> and one called <code>remote</code> (commented out). The file format is <code>toml</code> in case you wonder. Now when you start the shell, it will connect to <code>local</code> automatically and you are all set.</p>
 </div>
 <div class="paragraph">
 <p>Please check out the reference section on additional parameters you can set as well as how to move the credentials to a separate <code>credentials</code> file in case you want to share your config with other people and they do not use the same credentials.</p>
@@ -439,6 +431,15 @@ Flags:
 </div>
 <div class="paragraph">
 <p>It tells you that your user is <code>Administrator</code>, the current active cluster identifier is <code>local</code> and the active bucket is <code>travel-sample</code>.</p>
+</div>
+<div class="paragraph">
+<p>If you have an active scope or collection set then the prompt will also update to reflect that:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Administrator 🏠 dev.local in 🗄 travel-sample.myscope.mycollection
+&gt;</code></pre>
+</div>
 </div>
 <div class="paragraph">
 <p>In the second line, your actual user prompt starts.</p>
@@ -612,19 +613,19 @@ Cazaux,Cazaux,France</code></pre>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_use_and_the_environment">3. <code>use</code> and the Environment</h2>
+<h2 id="_cb_env_and_the_environment">3. <code>cb-env</code> and the Environment</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>While multiple clusters can be connected at the same time, there is only ever one cluster (at most) active.
+<p>Whilst multiple clusters can be registered at the same time, there is only ever one cluster (at most) active.
 The same is true for buckets, scopes, and collections.
 When a resource is active then it used as the default to run commands against (this can be overridden on a per command basis).</p>
 </div>
 <div class="paragraph">
-<p>You can run the <code>use</code> command, which will tell you which resources are currently active (you are also able to tell from the prompt):</p>
+<p>You can run the <code>cb-env</code> command, which will tell you which resources are currently active (you are also able to tell from the prompt):</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; use
+<pre class="CodeRay highlight"><code>&gt; cb-env
 ────────────┬───────────────
  username   │ Susan
  cluster    │ dev.local
@@ -657,25 +658,25 @@ When a resource is active then it used as the default to run commands against (t
 </ul>
 </div>
 <div class="paragraph">
-<p>You can also change the active resources with the <code>use</code> command.
-(Note there are extra resources listed here, see <a href="#_use_and_the_environment"><code>use</code> and the Environment</a> for more information on these)</p>
+<p>You can also change the active resources with the <code>cb-env</code> command.
+(Note there are extra resources listed here, see <a href="capella.html#_cb_env_and_the_environment">capella.html</a> for more information on these)</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; use -h
+<pre class="CodeRay highlight"><code>&gt; cb-env -h
 Modify the default execution environment of commands
 
 Usage:
-  &gt; use &lt;subcommand&gt; {flags}
+  &gt; cb-env &lt;subcommand&gt; {flags}
 
 Subcommands:
-  use bucket - Sets the active bucket based on its name
-  use cloud - Sets the active cloud based on its identifier
-  use capella-organization - Sets the active capella organization based on its identifier
-  use cluster - Sets the active cluster based on its identifier
-  use collection - Sets the active collection based on its name
-  use project - Sets the active project based on its name
-  use scope - Sets the active scope based on its name</code></pre>
+  cb-env bucket - Sets the active bucket based on its name
+  cb-env cloud - Sets the active cloud based on its identifier
+  cb-env capella-organization - Sets the active capella organization based on its identifier
+  cb-env cluster - Sets the active cluster based on its identifier
+  cb-env collection - Sets the active collection based on its name
+  cb-env project - Sets the active project based on its name
+  cb-env scope - Sets the active scope based on its name</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -683,7 +684,7 @@ Subcommands:
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; use bucket beer-sample
+<pre class="CodeRay highlight"><code>&gt; cb-env bucket beer-sample
 ────────┬─────────────
  bucket │ beer-sample
 ────────┴─────────────</code></pre>
@@ -691,7 +692,7 @@ Subcommands:
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; use
+<pre class="CodeRay highlight"><code>&gt; cb-env
 ────────────┬─────────────
  username   │ Susan
  cluster    │ dev.local
@@ -702,10 +703,10 @@ Subcommands:
 </div>
 </div>
 <div class="paragraph">
-<p>Both the output of <code>use</code> and the prompt will reflect the changes.</p>
+<p>Both the output of <code>cb-env</code> and the prompt will reflect the changes.</p>
 </div>
 <div class="sect2">
-<h3 id="_useing_different_execution_environments">3.1. `Use`ing different execution environments</h3>
+<h3 id="_per_command_execution_environments">3.1. Per command execution environments</h3>
 <div class="paragraph">
 <p>On many commands you will notice a set of flags which allow you to override the active execution environment.
 Different commands support different flags, depending on the command you can expect to see any of:</p>
@@ -792,7 +793,7 @@ For example:</p>
 <div class="sect2">
 <h3 id="_working_with_clusters">4.1. Working with <code>clusters</code></h3>
 <div class="paragraph">
-<p>The <code>clusters managed</code> command lists all the clusters you specified in your configuration and the shell might be connected to.</p>
+<p>The <code>clusters managed</code> command lists all the clusters you have registered with the shell.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -1199,146 +1200,17 @@ Flags:
 ─────────┴───────────</code></pre>
 </div>
 </div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_couchbase_capella_dbaas">5. Couchbase Capella (DBaaS)</h2>
-<div class="sectionbody">
 <div class="paragraph">
-<p><a href="https://cloud.couchbase.com/sign-up?ref=cbsh-web-capella">Couchbase Capella</a> is a Database as a Service offering from Couchbase which you can interact with from Couchbase Shell.</p>
-</div>
-<div class="sect2">
-<h3 id="_use_and_the_environment_2">5.1. <code>use</code>  and the Environment</h3>
-<div class="paragraph">
-<p>For general usage of the <code>use</code> command see <a href="#_use_and_the_environment"><code>use</code> and the Environment</a>.
-When using <a href="#_management_commands">Management Commands</a> with Couchbase Capella and Couchbase Shell we need to be able to manage more active resources than the base <code>use</code> command gives us.
-You can use the <code>use --capella</code> command to see which cloud resources are current active:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code>&gt; use --capella
-──────────────────────┬──────────────────
- capella-organization │ mycapellaorg
- cloud                │
- project              │ mycapellaproject
-──────────────────────┴──────────────────</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>The active resource can be changed with the <code>use</code> command:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code>&gt; use -h
-Modify the default execution environment of commands
-
-Usage:
-  &gt; use &lt;subcommand&gt; {flags}
-
-Subcommands:
-  use bucket - Sets the active bucket based on its name
-  use cloud - Sets the active cloud based on its identifier
-  use capella-organization - Sets the active capella organization based on its identifier
-  use cluster - Sets the active cluster based on its identifier
-  use collection - Sets the active collection based on its name
-  use project - Sets the active project based on its name
-  use scope - Sets the active scope based on its name</code></pre>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_document_level_commands">5.2. Document Level Commands</h3>
-<div class="paragraph">
-<p>Document level commands like those under <code>doc</code>, <code>analytics</code>, <code>query</code>, and <code>search</code> (with a couple of exceptions) do not require any special changes to the <code>config</code> config file.</p>
-</div>
-<div class="paragraph">
-<p>You need to:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><a href="https://docs.couchbase.com/cloud/clusters/create-cluster.html">create a cluster</a> in your Couchbase Capella account</p>
-</li>
-<li>
-<p>ensure that your <a href="https://docs.couchbase.com/cloud/security/allow-ip-address.html">IP address is whitelisted</a></p>
-</li>
-<li>
-<p>ensure that you have a <a href="https://docs.couchbase.com/cloud/security/manage-database-users.html">database user</a></p>
-</li>
-<li>
-<p>Populate the relevant cluster section in the <code>config</code> file with the public address and database user credentials.</p>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_management_commands">5.3. Management Commands</h3>
-<div class="paragraph">
-<p>Management commands (such as <code>cluster</code> and <code>bucket</code> management) require a specific section to be added to the <code>config</code> file as well as an extra entry in the relevant cluster section.
-Before being able to perform management operations against Couchbase Capella you must <a href="https://docs.couchbase.com/cloud/public-api-guide/using-cloud-public-api.html#access-and-secret-keys">generate access and secret keys</a> to enable Couchbase Shell to interact with your Capella organisation.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_config_file_format">5.4. Config file format</h3>
-<div class="paragraph">
-<p>The <code>capella-organisation</code> section in the <code>config</code> file is used as follows:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code data-lang="toml"># Allows us to evolve in the future without breaking old config files
-version = 1
-
-[[cluster]]
-identifier = &quot;default&quot;
-hostnames = [&quot;127.0.0.1&quot;]
-default-bucket = &quot;travel-sample&quot;
-# The following can be part of the config or credentials
-username = &quot;Administrator&quot;
-password = &quot;password&quot;
-
-[[cluster]]
-# identifier *must* match the name of the cluster as provided in Couchbase Cloud
-identifier = &quot;capellahostedcluster&quot;
-hostnames = [&quot;xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.dp.cloud.couchbase.com&quot;]
-default-bucket = &quot;couchbasecloudbucket&quot;
-username = &quot;dave&quot;
-password = &quot;Pa55word!&quot;
-data-timeout = &quot;25s&quot;
-query-timeout = &quot;1m 15s&quot;
-tls-enabled = true
-tls-validate-hostnames = false
-tls-accept-all-certs = true
-capella-organisation = &quot;myhostedorg&quot;
-
-[[capella-organisation]]
-identifier = &quot;myhostedorg&quot;
-access-key = &quot;x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG&quot;
-secret-key = &quot;T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY&quot;
-default-project = &quot;mydefaultproject&quot;
-# The environment field defaults to &quot;hosted&quot; so we don't have to include it here.
-
-[[capella-organisation]]
-identifier = &quot;myinvpcorg&quot;
-access-key = &quot;x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG&quot;
-secret-key = &quot;T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY&quot;
-default-project = &quot;mydefaultproject&quot;
-default-cloud = &quot;mydefaultcloud&quot;
-environment = &quot;in-vpc&quot;</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Note that the identifier of the cluster, and the default-cloud (if applicable) <strong>must</strong> match the corresponding names in Couchbase Capella for management operations to work.
-Also note that some operations are not supported by Couchbase Capella.</p>
+<p>Unresolved directive in index.adoc - include::cloud.adoc[]</p>
 </div>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_reference">6. Reference</h2>
+<h2 id="_reference">5. Reference</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_config_file_format_2">6.1. Config File Format</h3>
+<h3 id="_config_file_format">5.1. Config File Format</h3>
 <div class="paragraph">
 <p>The <code>~/.cbsh/config</code> file with examples:</p>
 </div>
@@ -1374,10 +1246,9 @@ query-timeout = &quot;75s&quot;
 analytics-timeout = &quot;75s&quot;
 search-timeout = &quot;1m 15s&quot;
 management-timeout = &quot;75s&quot;
-# cloud corresponds to the identifier of the relevant cloud api plane section
-# cloud-organisation= &quot;org&quot;
+# capella-organisation= &quot;org&quot;
 
-# [[cloud-organisation]]
+# [[capella-organisation]]
 # identifier = &quot;org&quot;
 # access-key = &quot;x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG&quot;
 # secret-key = &quot;T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY&quot;</code></pre>
@@ -1385,7 +1256,7 @@ management-timeout = &quot;75s&quot;
 </div>
 </div>
 <div class="sect2">
-<h3 id="_credentials_file_format">6.2. Credentials File Format</h3>
+<h3 id="_credentials_file_format">5.2. Credentials File Format</h3>
 <div class="paragraph">
 <p>The optional <code>~/.cbsh/credentials</code> file with examples:</p>
 </div>
@@ -1405,7 +1276,7 @@ password = &quot;password&quot;
 # tls-validate-hostnames = false
 
 
-# [[cloud-organisation]]
+# [[capella-organisation]]
 # identifier = &quot;org&quot;
 # access-key = &quot;x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG&quot;
 # secret-key = &quot;T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY&quot;</code></pre>
@@ -1415,15 +1286,15 @@ password = &quot;password&quot;
 </div>
 </div>
 <div class="sect1">
-<h2 id="_recipes">7. Recipes</h2>
+<h2 id="_recipes">6. Recipes</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_importing_data">7.1. Importing data</h3>
+<h3 id="_importing_data">6.1. Importing data</h3>
 <div class="paragraph">
 <p>Couchbase Shell supports loading data from a variety of formats and sources.</p>
 </div>
 <div class="sect3">
-<h4 id="_a_note_on_data_format">7.1.1. A Note On Data format</h4>
+<h4 id="_a_note_on_data_format">6.1.1. A Note On Data format</h4>
 <div class="paragraph">
 <p>The <code>doc upsert</code> command requires there to be only two fields/columns for an upsert.
 There can be more than two fields/columns in the data but only two can be used.
@@ -1447,7 +1318,7 @@ By default, these two columns are named <code>id</code> and <code>content</code>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_from_file">7.1.2. From file</h4>
+<h4 id="_from_file">6.1.2. From file</h4>
 <div class="sect4">
 <h5 id="_from_json">From JSON</h5>
 <div class="paragraph">
@@ -1495,7 +1366,7 @@ By default, these two columns are named <code>id</code> and <code>content</code>
    │      │         │ Rgnl        │          │ States  │     │      │ ago
 ───┴──────┴─────────┴─────────────┴──────────┴─────────┴─────┴──────┴──────────────
 
-&gt; ls airports/ | open  $it.name | each { wrap content | insert id {echo $it.content.airportname} } | doc upsert
+&gt; ls airports/ | open  $it.name | each { |it| wrap content | insert id {echo $it.content.airportname} } | doc upsert
 ───┬───────────┬─────────┬────────
  # │ processed │ success │ failed
 ───┼───────────┼─────────┼────────
@@ -1515,7 +1386,7 @@ By default, these two columns are named <code>id</code> and <code>content</code>
 id,cas,type,airportname,city,country,faa,icao,tz
 3719,1600344369374167040,airport,Columbia Rgnl,Columbia,United States,COU,KCOU,America/Chicago
 
-&gt; open mydoc.csv | each { wrap content | insert id {echo $it.content.airportname} } | doc upsert
+&gt; open mydoc.csv | each { |it| wrap content | insert id {echo $it.content.airportname} } | doc upsert
 ───┬───────────┬─────────┬────────
  # │ processed │ success │ failed
 ───┼───────────┼─────────┼────────
@@ -1536,7 +1407,7 @@ Les Loges,Nangis,France,,LFAI,1256,airport,Europe/Paris
 Couterne,Bagnole-de-l'orne,France,,LFAO,1257,airport,Europe/Paris
 Bray,Albert,France,,LFAQ,1258,airport,Europe/Paris
 
-&gt; open airports.csv | each { wrap content | insert id {echo $it.content.airportname}  } | doc upsert
+&gt; open airports.csv | each { |it| wrap content | insert id {echo $it.content.airportname}  } | doc upsert
 ───┬───────────┬─────────┬────────
  # │ processed │ success │ failed
 ───┼───────────┼─────────┼────────
@@ -1547,7 +1418,7 @@ Bray,Albert,France,,LFAQ,1258,airport,Europe/Paris
 </div>
 </div>
 <div class="sect3">
-<h4 id="_faking_data">7.1.3. Faking data</h4>
+<h4 id="_faking_data">6.1.3. Faking data</h4>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; cat user.tera
@@ -1584,7 +1455,7 @@ Bray,Albert,France,,LFAQ,1258,airport,Europe/Paris
 </div>
 </div>
 <div class="sect3">
-<h4 id="_modifying_data">7.1.4. Modifying data</h4>
+<h4 id="_modifying_data">6.1.4. Modifying data</h4>
 <div class="paragraph">
 <p>In some circumstances you may want to modify the data before you import it.
 Let&#8217;s take the example of importing from a csv file but this time the airports.csv file is missing the <code>type</code> column but we want to add it to our data:</p>
@@ -1619,7 +1490,7 @@ Bray,Albert,France,,LFAQ,1258,Europe/Paris
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>open ~/demo/airports.csv | each { insert type $it.city }
+<pre class="CodeRay highlight"><code>open ~/demo/airports.csv | each { |it| insert type $it.city }
 ───┬────────────┬────────────┬─────────┬─────┬──────┬──────┬────────────┬────────────
  # │ airportnam │    city    │ country │ faa │ icao │  id  │     tz     │    type
    │     e      │            │         │     │      │      │            │
@@ -1640,12 +1511,12 @@ Bray,Albert,France,,LFAQ,1258,Europe/Paris
 </div>
 </div>
 <div class="sect2">
-<h3 id="_exporting_data">7.2. Exporting data</h3>
+<h3 id="_exporting_data">6.2. Exporting data</h3>
 <div class="paragraph">
 <p>Couchbase Shell supports exporting data to a variety of formats and sources.</p>
 </div>
 <div class="sect3">
-<h4 id="_a_note_on_data_format_2">7.2.1. A Note On Data format</h4>
+<h4 id="_a_note_on_data_format_2">6.2.1. A Note On Data format</h4>
 <div class="paragraph">
 <p>The <code>doc get</code> command exposes data as three fields; <code>id</code>, <code>cas</code>, and <code>content</code>.
 The body of the document is stored within the <code>content</code> column.
@@ -1653,7 +1524,7 @@ If you want to only store the document body then you can use <code>doc get &lt;i
 </div>
 </div>
 <div class="sect3">
-<h4 id="_to_file">7.2.2. To file</h4>
+<h4 id="_to_file">6.2.2. To file</h4>
 <div class="sect4">
 <h5 id="_to_json">To JSON</h5>
 <div class="paragraph">
@@ -1829,12 +1700,12 @@ There are two ways that we can do this.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_useful_snippets">7.3. Useful snippets</h3>
+<h3 id="_useful_snippets">6.3. Useful snippets</h3>
 <div class="paragraph">
 <p>This section contains a collection of useful commands and sets of commands which don&#8217;t really fit into their own section of recipes.</p>
 </div>
 <div class="sect3">
-<h4 id="_migrating_scope_and_collection_definitions">7.3.1. Migrating scope and collection definitions</h4>
+<h4 id="_migrating_scope_and_collection_definitions">6.3.1. Migrating scope and collection definitions</h4>
 <div class="paragraph">
 <p>When you create a new cluster it can be useful to migrate scope and collection definitions from an old cluster.
 A good example here is migrating from an on-premise cluster to a Capella cluster.</p>
@@ -1842,14 +1713,18 @@ A good example here is migrating from an on-premise cluster to a Capella cluster
 <div class="paragraph">
 <p>To migrate scopes, except the <code>_default</code> scope:</p>
 </div>
-<div class="paragraph">
-<p><code>scopes --clusters "On-Prem-Cluster" --bucket travel-sample | select scope | where scope != "_default" | each { scopes create $it.scope --clusters "Capella-Cluster" }</code></p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>scopes --clusters &quot;On-Prem-Cluster&quot; --bucket travel-sample | select scope | where scope != &quot;_default&quot; | each { |it| scopes create $it.scope --clusters &quot;Capella-Cluster&quot; }</code></pre>
+</div>
 </div>
 <div class="paragraph">
 <p>To migrate all collections, except the <code>_default</code> collection:</p>
 </div>
-<div class="paragraph">
-<p><code>collections --clusters "On-Prem-Cluster" --bucket "travel-sample" | select scope collection | where $it.scope != "_default" | where $it.collection != "_default" | each { collections create $it.collection --clusters "Capella-Cluster" --bucket "travel-sample-import" --scope $it.scope</code></p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>collections --clusters &quot;On-Prem-Cluster&quot; --bucket &quot;travel-sample&quot; | select scope collection | where $it.scope != &quot;_default&quot; | where $it.collection != &quot;_default&quot; | each { |it| collections create $it.collection --clusters &quot;Capella-Cluster&quot; --bucket &quot;travel-sample-import&quot; --scope $it.scope</code></pre>
+</div>
 </div>
 <div class="paragraph">
 <p>These examples can easily be extended to filter out any other scopes and collections you do not want to migrate.
@@ -1857,7 +1732,7 @@ For example to filter more scopes you would just add more <code>where</code> cla
 </div>
 </div>
 <div class="sect3">
-<h4 id="_migrating_query_index_definitions">7.3.2. Migrating query index definitions</h4>
+<h4 id="_migrating_query_index_definitions">6.3.2. Migrating query index definitions</h4>
 <div class="paragraph">
 <p>When you create a new cluster it can be useful to migrate index definitions from an old cluster.
 A good example here is migrating from an on-premise cluster to a Capella cluster.</p>
@@ -1865,8 +1740,10 @@ A good example here is migrating from an on-premise cluster to a Capella cluster
 <div class="paragraph">
 <p>To migrate all of your index definitions:</p>
 </div>
-<div class="paragraph">
-<p><code>query indexes --definitions --clusters "On-Prem-Cluster" | get definition | each { query $it --clusters "Capella-Cluster" }</code></p>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>query indexes --definitions --clusters &quot;On-Prem-Cluster&quot; | get definition | each { |it| query $it --clusters &quot;Capella-Cluster&quot; }</code></pre>
+</div>
 </div>
 </div>
 </div>
@@ -1875,7 +1752,7 @@ A good example here is migrating from an on-premise cluster to a Capella cluster
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2022-01-04 11:16:56 UTC
+Last updated 2022-05-05 20:20:39 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
