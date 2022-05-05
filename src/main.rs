@@ -24,12 +24,12 @@ use log::{error, info};
 use nu_cli::{add_plugin_file, gather_parent_env_vars, read_plugin_file, report_error};
 use nu_command::BufferedReader;
 use nu_engine::{get_full_help, CallExt};
-use nu_parser::parse;
+use nu_parser::{escape_quote_string, parse};
 use nu_protocol::ast::{Call, Expr, Expression};
 use nu_protocol::engine::{Command, EngineState, Stack, StateWorkingSet};
 use nu_protocol::{
     Category, Example, IntoPipelineData, PipelineData, RawStream, ShellError, Signature, Span,
-    Spanned, SyntaxShape, Value, ENV_VARIABLE_ID,
+    Spanned, SyntaxShape, Value,
 };
 use serde::Deserialize;
 use state::State;
@@ -73,54 +73,73 @@ fn main() -> Result<(), Box<dyn Error>> {
     gather_parent_env_vars(&mut context);
     let mut stack = nu_protocol::engine::Stack::new();
 
-    stack.vars.insert(
-        ENV_VARIABLE_ID,
-        Value::Record {
-            cols: vec![],
-            vals: vec![],
-            span: Span::new(0, 0),
-        },
-    );
+    // stack.vars.insert(
+    //     ENV_VARIABLE_ID,
+    //     Value::Record {
+    //         cols: vec![],
+    //         vals: vec![],
+    //         span: Span::new(0, 0),
+    //     },
+    // );
 
     let mut args_to_cbshell = vec![];
     let mut args_to_script = vec![];
+    let mut script_name = String::new();
 
     let mut collect_arg_script = false;
     let mut collect_arg_filename = false;
-    for arg in std::env::args().skip(1) {
-        if collect_arg_script {
-            if collect_arg_filename {
-                args_to_cbshell.push(if arg.contains(' ') {
-                    format!("'{}'", arg)
-                } else {
-                    arg
-                });
-                collect_arg_filename = false;
-            } else {
-                args_to_script.push(if arg.contains(' ') {
-                    format!("'{}'", arg)
-                } else {
-                    arg
-                });
-            }
-        } else if arg == "--script" {
-            collect_arg_script = true;
-            collect_arg_filename = true;
-            args_to_cbshell.push(if arg.contains(' ') {
-                format!("'{}'", arg)
-            } else {
-                arg
-            });
-        } else if arg == "-c" || arg == "--command" {
+    let mut args = std::env::args().skip(1);
+    while let Some(arg) = args.next() {
+        if !script_name.is_empty() {
+            args_to_script.push(escape_quote_string(&arg));
+        } else if arg.starts_with('-') {
+            // Cool, it's a flag
+            let flag_value = match arg.as_ref() {
+                "--commands" | "-c" => args.next().map(|a| escape_quote_string(&a)),
+                "--script" => {
+                    script_name = arg;
+                    continue;
+                }
+                _ => None,
+            };
+
             args_to_cbshell.push(arg);
+
+            if let Some(flag_value) = flag_value {
+                args_to_cbshell.push(flag_value);
+            }
         } else {
-            args_to_cbshell.push(if arg.contains(' ') {
-                format!("'{}'", arg)
-            } else {
-                arg
-            });
+            // Our script file
+            script_name = arg;
         }
     }
+    // for arg in std::env::args().skip(1) {
+    //     if collect_arg_script {
+    //         if collect_arg_filename {
+    //             args_to_cbshell.push(if arg.contains(' ') {
+    //                 format!("'{}'", arg)
+    //             } else {
+    //                 arg
+    //             });
+    //             collect_arg_filename = false;
+    //         } else {
+    //             args_to_script.push(if arg.contains(' ') {
+    //                 format!("'{}'", arg)
+    //             } else {
+    //                 arg
+    //             });
+    //         }
+    //     } else if arg == "--script" {
+    //     } else if arg == "-c" || arg == "--command" {
+    //         args_to_cbshell.push(arg);
+    //     } else {
+    //         args_to_cbshell.push(if arg.contains(' ') {
+    //             format!("'{}'", arg)
+    //         } else {
+    //             arg
+    //         });
+    //     }
+    // }
 
     args_to_cbshell.insert(0, "cbsh".into());
 
@@ -449,7 +468,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     if let Some(c) = opt.command {
         add_plugin_file(&mut context, CBSHELL_FOLDER);
-        nu_cli::evaluate_commands(&c, &init_cwd, &mut context, &mut stack, input, false)
+        nu_cli::evaluate_commands(&c, &init_cwd, &mut context, &mut stack, input, true)
             .expect("Failed to run command");
         return Ok(());
     }
@@ -709,14 +728,6 @@ fn parse_commandline_args(
     let _ = context.merge_delta(delta, None, init_cwd);
 
     let mut stack = Stack::new();
-    stack.add_var(
-        ENV_VARIABLE_ID,
-        Value::Record {
-            cols: vec![],
-            vals: vec![],
-            span: Span::new(0, 0),
-        },
-    );
 
     // We should have a successful parse now
     if let Some(pipeline) = block.pipelines.get(0) {
@@ -744,19 +755,23 @@ fn parse_commandline_args(
 
             fn extract_contents(
                 expression: Option<Expression>,
-                context: &mut EngineState,
-            ) -> Option<Spanned<String>> {
-                expression.map(|expr| {
-                    let contents = context.get_span_contents(&expr.span);
-
-                    Spanned {
-                        item: String::from_utf8_lossy(contents).to_string(),
-                        span: expr.span,
+            ) -> Result<Option<Spanned<String>>, ShellError> {
+                if let Some(expr) = expression {
+                    let str = expr.as_string();
+                    if let Some(str) = str {
+                        Ok(Some(Spanned {
+                            item: str,
+                            span: expr.span,
+                        }))
+                    } else {
+                        Err(ShellError::TypeMismatch("string".into(), expr.span))
                     }
-                })
+                } else {
+                    Ok(None)
+                }
             }
 
-            let command = extract_contents(command, context);
+            let command = extract_contents(command)?;
 
             let help = call.has_flag("help");
 
