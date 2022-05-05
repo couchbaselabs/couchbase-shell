@@ -3,7 +3,7 @@ use crate::cli::buckets_builder::{
 };
 use crate::cli::util::{
     cant_run_against_hosted_capella_error, cluster_identifiers_from, cluster_not_found_error,
-    generic_labeled_error, map_serde_deserialize_error_to_shell_error,
+    generic_unspanned_error, map_serde_deserialize_error_to_shell_error,
     map_serde_serialize_error_to_shell_error,
 };
 use crate::client::{CapellaRequest, HttpResponse, ManagementRequest};
@@ -120,14 +120,14 @@ fn buckets_update(
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(cluster_not_found_error(identifier));
+                return Err(cluster_not_found_error(identifier, call.span()));
             }
         };
 
         if active_cluster.capella_org().is_some()
             && (flush || durability.is_some() || expiry.is_some())
         {
-            return Err(generic_labeled_error(
+            return Err(generic_unspanned_error(
                 "Capella flag cannot be used with type, flush, durability, or expiry",
                 "Capella flag cannot be used with type, flush, durability, or expiry",
             ));
@@ -152,7 +152,7 @@ fn buckets_update(
                 ctrl_c.clone(),
             )?;
             if buckets_response.status() != 200 {
-                return Err(generic_labeled_error(
+                return Err(generic_unspanned_error(
                     "Failed to get buckets",
                     format!("Failed to get buckets: {}", buckets_response.content()),
                 ));
@@ -168,9 +168,12 @@ fn buckets_update(
             let idx = match buckets.iter().position(|b| b.name() == name.clone()) {
                 Some(i) => i,
                 None => {
-                    return Err(ShellError::LabeledError(
+                    return Err(ShellError::GenericError(
                         "Bucket not found".into(),
                         format!("Bucket named {} is not known", name),
+                        Some(span.clone()),
+                        None,
+                        Vec::new(),
                     ));
                 }
             };
@@ -235,7 +238,7 @@ fn buckets_update(
             201 => {}
             202 => {}
             _ => {
-                return Err(generic_labeled_error(
+                return Err(generic_unspanned_error(
                     "Failed to update bucket",
                     format!("Failed to update bucket: {}", response.content()),
                 ));
@@ -261,7 +264,7 @@ fn update_bucket_settings(
         settings.set_num_replicas(match u32::try_from(r) {
             Ok(bt) => bt,
             Err(e) => {
-                return Err(generic_labeled_error(
+                return Err(generic_unspanned_error(
                     "Failed to parse num replicas",
                     format!("Failed to parse num replicas {}", e.to_string()),
                 ));
@@ -275,7 +278,7 @@ fn update_bucket_settings(
         settings.set_minimum_durability_level(match DurabilityLevel::try_from(d.as_str()) {
             Ok(bt) => bt,
             Err(e) => {
-                return Err(generic_labeled_error(
+                return Err(generic_unspanned_error(
                     "Failed to parse durability level",
                     format!("Failed to parse durability level {}", e.to_string()),
                 ));

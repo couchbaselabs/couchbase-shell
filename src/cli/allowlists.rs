@@ -1,6 +1,7 @@
 use crate::cli::cloud_json::JSONCloudGetAllowListResponse;
 use crate::cli::util::{
-    cluster_identifiers_from, cluster_not_found_error, validate_is_cloud, NuValueMap,
+    cluster_identifiers_from, cluster_not_found_error, json_parse_fail_error,
+    unexpected_status_code_error, validate_is_cloud, NuValueMap,
 };
 use crate::client::CapellaRequest;
 use crate::state::{CapellaEnvironment, State};
@@ -75,7 +76,7 @@ fn addresses(
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(cluster_not_found_error(identifier));
+                return Err(cluster_not_found_error(identifier, call.span()));
             }
         };
 
@@ -94,9 +95,9 @@ fn addresses(
         )?;
 
         if cluster.environment() == CapellaEnvironment::Hosted {
-            return Err(ShellError::LabeledError(
-                "Unsupported".into(),
+            return Err(ShellError::UnsupportedInput(
                 "allowlists cannot be run against hosted Capella clusters".into(),
+                call.span(),
             ));
         }
 
@@ -108,14 +109,15 @@ fn addresses(
             ctrl_c.clone(),
         )?;
         if response.status() != 200 {
-            return Err(ShellError::LabeledError(
-                response.content().to_string(),
-                response.content().to_string(),
+            return Err(unexpected_status_code_error(
+                response.status(),
+                response.content(),
+                Some(call.span()),
             ));
         };
 
         let content: Vec<JSONCloudGetAllowListResponse> = serde_json::from_str(response.content())
-            .map_err(|e| ShellError::LabeledError(e.to_string(), e.to_string()))?;
+            .map_err(|e| json_parse_fail_error(e, Some(call.span())))?;
 
         let mut entries = content
             .into_iter()

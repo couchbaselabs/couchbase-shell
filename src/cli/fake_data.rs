@@ -21,7 +21,7 @@ use std::sync::{Arc, Mutex};
 use tera::{Context, Tera};
 use uuid::Uuid;
 
-use crate::cli::util::{generic_labeled_error, map_serde_serialize_error_to_shell_error};
+use crate::cli::util::{generic_unspanned_error, map_serde_serialize_error_to_shell_error};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -100,9 +100,9 @@ fn run_fake(
     if list_functions {
         let generated = tera
             .render_str(LIST_FUNCTIONS, &ctx)
-            .map_err(|e| generic_labeled_error("Failed to render functions", format!("{}", e)))?;
+            .map_err(|e| generic_unspanned_error("Failed to render functions", format!("{}", e)))?;
         let content = serde_json::from_str(&generated)
-            .map_err(|e| generic_labeled_error("Failed to render functions", format!("{}", e)))?;
+            .map_err(|e| generic_unspanned_error("Failed to render functions", format!("{}", e)))?;
         match content {
             serde_json::Value::Array(values) => {
                 let converted: Vec<Value> = values
@@ -125,7 +125,7 @@ fn run_fake(
         let path: String = match call.get_flag(engine_state, stack, "template")? {
             Some(p) => p,
             None => {
-                return Err(generic_labeled_error(
+                return Err(generic_unspanned_error(
                     "Template named parameter is required",
                     "Template named parameter is required",
                 ))
@@ -135,7 +135,7 @@ fn run_fake(
         let num_rows: i64 = call.get_flag(engine_state, stack, "num-rows")?.unwrap_or(1);
 
         let template = fs::read_to_string(path).map_err(|e| {
-            generic_labeled_error(
+            generic_unspanned_error(
                 "Failed to read template file",
                 format!("Failed to read template file {}", e.to_string()),
             )
@@ -143,7 +143,7 @@ fn run_fake(
 
         let converted = std::iter::repeat_with(move || {
             let rendered = tera.render_str(&template, &ctx).map_err(|e| {
-                generic_labeled_error(
+                generic_unspanned_error(
                     "Failed to render template",
                     format!("Failed to render template {}", e.to_string()),
                 )

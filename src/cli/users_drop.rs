@@ -1,6 +1,6 @@
 use crate::cli::util::{
     cant_run_against_hosted_capella_error, cluster_identifiers_from, cluster_not_found_error,
-    generic_labeled_error,
+    generic_unspanned_error,
 };
 use crate::client::{CapellaRequest, ManagementRequest};
 use crate::state::{CapellaEnvironment, State};
@@ -77,7 +77,7 @@ fn users_drop(
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(cluster_not_found_error(identifier));
+                return Err(cluster_not_found_error(identifier, call.span()));
             }
         };
         let response = if let Some(plane) = active_cluster.capella_org() {
@@ -112,7 +112,7 @@ fn users_drop(
             200 => {}
             204 => {}
             _ => {
-                return Err(generic_labeled_error(
+                return Err(generic_unspanned_error(
                     "Failed to drop user",
                     format!("Failed to drop user {}", response.content()),
                 ));

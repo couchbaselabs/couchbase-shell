@@ -1,4 +1,4 @@
-use crate::cli::util::generic_labeled_error;
+use crate::cli::util::generic_unspanned_error;
 use crate::client::CapellaRequest;
 use crate::state::{CapellaEnvironment, State};
 use log::debug;
@@ -98,7 +98,7 @@ fn clusters_drop(
         )
     }?;
     if response.status() != 202 {
-        return Err(generic_labeled_error(
+        return Err(generic_unspanned_error(
             "Failed to drop cluster",
             format!("Failed to drop cluster {}", response.content()),
         ));

@@ -3,7 +3,8 @@
 use crate::state::State;
 
 use crate::cli::util::{
-    cluster_identifiers_from, cluster_not_found_error, generic_labeled_error, validate_is_not_cloud,
+    cluster_identifiers_from, cluster_not_found_error, generic_unspanned_error,
+    validate_is_not_cloud,
 };
 use crate::client::ManagementRequest;
 use log::debug;
@@ -82,7 +83,7 @@ fn buckets_flush(
         let cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(cluster_not_found_error(identifier));
+                return Err(cluster_not_found_error(identifier, call.span()));
             }
         };
         validate_is_not_cloud(
@@ -99,7 +100,7 @@ fn buckets_flush(
         match result.status() {
             200 => {}
             _ => {
-                return Err(generic_labeled_error(
+                return Err(generic_unspanned_error(
                     "Failed to flush bucket",
                     format!("Failed to flush bucket {}", result.content()),
                 ));

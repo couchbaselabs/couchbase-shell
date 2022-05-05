@@ -1,6 +1,6 @@
 use crate::cli::util::{
     cluster_identifiers_from, cluster_not_found_error, convert_json_value_to_nu_value,
-    convert_row_to_nu_value, duration_to_golang_string, generic_labeled_error,
+    convert_row_to_nu_value, duration_to_golang_string, generic_unspanned_error,
     map_serde_deserialize_error_to_shell_error,
 };
 use crate::client::QueryRequest;
@@ -94,7 +94,7 @@ fn query(
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(cluster_not_found_error(identifier));
+                return Err(cluster_not_found_error(identifier, call.span()));
             }
         };
         let bucket = call
@@ -133,7 +133,7 @@ fn query(
                         results.push(convert_row_to_nu_value(result, span, identifier.clone())?);
                     }
                 } else {
-                    return Err(generic_labeled_error(
+                    return Err(generic_unspanned_error(
                         "Query errors not an array - malformed response",
                         format!("Query errors not an array - {}", content_errors.to_string(),),
                     ));
@@ -144,7 +144,7 @@ fn query(
                         results.push(convert_json_value_to_nu_value(result, span).unwrap());
                     }
                 } else {
-                    return Err(generic_labeled_error(
+                    return Err(generic_unspanned_error(
                         "Query results not an array - malformed response",
                         format!(
                             "Query results not an array - {}",

@@ -2,7 +2,7 @@ use crate::cli::cloud_json::JSONCloudUser;
 use crate::cli::user_builder::UserAndMetadata;
 use crate::cli::util::{
     cant_run_against_hosted_capella_error, cluster_identifiers_from, cluster_not_found_error,
-    generic_labeled_error, map_serde_deserialize_error_to_shell_error, NuValueMap,
+    generic_unspanned_error, map_serde_deserialize_error_to_shell_error, NuValueMap,
 };
 use crate::client::{CapellaRequest, ManagementRequest};
 use crate::state::{CapellaEnvironment, State};
@@ -82,7 +82,7 @@ fn users_get(
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(cluster_not_found_error(identifier));
+                return Err(cluster_not_found_error(identifier, call.span()));
             }
         };
 
@@ -104,7 +104,7 @@ fn users_get(
                 ctrl_c.clone(),
             )?;
             if response.status() != 200 {
-                return Err(generic_labeled_error(
+                return Err(generic_unspanned_error(
                     "Failed to get users",
                     format!("Failed to get users {}", response.content()),
                 ));
@@ -147,7 +147,7 @@ fn users_get(
                 200 => serde_json::from_str(response.content())
                     .map_err(map_serde_deserialize_error_to_shell_error)?,
                 _ => {
-                    return Err(generic_labeled_error(
+                    return Err(generic_unspanned_error(
                         "Failed to get user",
                         format!("Failed to get user {}", response.content()),
                     ));

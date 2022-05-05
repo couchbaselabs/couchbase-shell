@@ -1,6 +1,9 @@
 use crate::cli::cloud_json::JSONCloudUser;
 use crate::cli::user_builder::UserAndMetadata;
-use crate::cli::util::{cluster_identifiers_from, NuValueMap};
+use crate::cli::util::{
+    cluster_identifiers_from, cluster_not_found_error, json_parse_fail_error,
+    unexpected_status_code_error, NuValueMap,
+};
 use crate::client::{CapellaRequest, ManagementRequest};
 use crate::state::{CapellaEnvironment, State};
 use log::debug;
@@ -74,10 +77,7 @@ fn users_get_all(
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::LabeledError(
-                    "Cluster not found".into(),
-                    "Cluster not found".into(),
-                ));
+                return Err(cluster_not_found_error(identifier, call.span()));
             }
         };
         let mut stream: Vec<Value> = if let Some(plane) = active_cluster.capella_org() {
@@ -101,14 +101,15 @@ fn users_get_all(
                 ctrl_c.clone(),
             )?;
             if response.status() != 200 {
-                return Err(ShellError::LabeledError(
-                    response.content().to_string(),
-                    response.content().to_string(),
+                return Err(unexpected_status_code_error(
+                    response.status(),
+                    response.content(),
+                    Some(call.span()),
                 ));
             }
 
             let users: Vec<JSONCloudUser> = serde_json::from_str(response.content())
-                .map_err(|e| ShellError::LabeledError(e.to_string(), e.to_string()))?;
+                .map_err(|e| json_parse_fail_error(e, Some(call.span())))?;
 
             users
                 .into_iter()
@@ -141,16 +142,14 @@ fn users_get_all(
                 200 => match serde_json::from_str(response.content()) {
                     Ok(m) => m,
                     Err(e) => {
-                        return Err(ShellError::LabeledError(
-                            format!("Failed to decode response body {}", e,),
-                            "".into(),
-                        ));
+                        return Err(json_parse_fail_error(e, Some(call.span())));
                     }
                 },
                 _ => {
-                    return Err(ShellError::LabeledError(
-                        format!("Request failed {}", response.content(),),
-                        "".into(),
+                    return Err(unexpected_status_code_error(
+                        response.status(),
+                        response.content(),
+                        Some(call.span()),
                     ));
                 }
             };

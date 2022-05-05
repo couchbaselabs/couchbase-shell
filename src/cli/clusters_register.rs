@@ -5,7 +5,7 @@ use crate::state::{ClusterTimeouts, RemoteCluster, State};
 use std::fs;
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use crate::cli::util::generic_labeled_error;
+use crate::cli::util::generic_unspanned_error;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -184,7 +184,7 @@ pub fn update_config_file(guard: &mut MutexGuard<State>) -> Result<(), ShellErro
     let path = match guard.config_path() {
         Some(p) => p,
         None => {
-            return Err(generic_labeled_error(
+            return Err(generic_unspanned_error(
                 "A config path must be discoverable to save config",
                 "A config path must be discoverable to save config",
             ));
@@ -211,14 +211,14 @@ pub fn update_config_file(guard: &mut MutexGuard<State>) -> Result<(), ShellErro
     fs::write(
         path,
         config.to_str().map_err(|e| {
-            generic_labeled_error(
+            generic_unspanned_error(
                 "Failed to write config file",
                 format!("Failed to write config file {}", e.to_string()),
             )
         })?,
     )
     .map_err(|e| {
-        generic_labeled_error(
+        generic_unspanned_error(
             "Failed to write config file",
             format!("Failed to write config file {}", e.to_string()),
         )

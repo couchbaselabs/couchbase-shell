@@ -1,5 +1,8 @@
 use crate::cli::cloud_json::JSONCloudDeleteAllowListRequest;
-use crate::cli::util::{cluster_identifiers_from, cluster_not_found_error, validate_is_cloud};
+use crate::cli::util::{
+    cluster_identifiers_from, cluster_not_found_error, json_parse_fail_error,
+    unexpected_status_code_error, validate_is_cloud,
+};
 use crate::client::CapellaRequest;
 use crate::state::{CapellaEnvironment, State};
 use log::debug;
@@ -78,7 +81,7 @@ fn addresses_drop(
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(cluster_not_found_error(identifier));
+                return Err(cluster_not_found_error(identifier, call.span()));
             }
         };
         validate_is_cloud(
@@ -96,9 +99,9 @@ fn addresses_drop(
         )?;
 
         if cluster.environment() == CapellaEnvironment::Hosted {
-            return Err(ShellError::LabeledError(
-                "Unsupported".into(),
+            return Err(ShellError::UnsupportedInput(
                 "allowlists add cannot be run against hosted Capella clusters".into(),
+                call.span(),
             ));
         }
 
@@ -108,7 +111,7 @@ fn addresses_drop(
             CapellaRequest::DeleteAllowListEntry {
                 cluster_id: cluster.id(),
                 payload: serde_json::to_string(&entry)
-                    .map_err(|e| ShellError::LabeledError(e.to_string(), e.to_string()))?,
+                    .map_err(|e| json_parse_fail_error(e, Some(call.span())))?,
             },
             Instant::now().add(active_cluster.timeouts().query_timeout()),
             ctrl_c.clone(),
@@ -117,9 +120,10 @@ fn addresses_drop(
         match response.status() {
             204 => {}
             _ => {
-                return Err(ShellError::LabeledError(
-                    response.content().to_string(),
-                    response.content().to_string(),
+                return Err(unexpected_status_code_error(
+                    response.status(),
+                    response.content(),
+                    Some(call.span()),
                 ));
             }
         }

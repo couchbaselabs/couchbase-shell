@@ -1,7 +1,7 @@
 use crate::cli::collections::Manifest;
 use crate::cli::util::{
-    cluster_identifiers_from, cluster_not_found_error, generic_labeled_error,
-    map_serde_deserialize_error_to_shell_error, NuValueMap,
+    cluster_identifiers_from, cluster_not_found_error, generic_unspanned_error,
+    map_serde_deserialize_error_to_shell_error, no_active_bucket_error, NuValueMap,
 };
 use crate::client::ManagementRequest;
 use crate::state::State;
@@ -84,7 +84,7 @@ fn run(
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(cluster_not_found_error(identifier));
+                return Err(cluster_not_found_error(identifier, call.span()));
             }
         };
 
@@ -93,10 +93,7 @@ fn run(
             None => match active_cluster.active_bucket() {
                 Some(s) => s,
                 None => {
-                    return Err(ShellError::MissingParameter(
-                        "Could not auto-select a bucket - please use --bucket instead".to_string(),
-                        span,
-                    ));
+                    return Err(no_active_bucket_error(span));
                 }
             },
         };
@@ -113,7 +110,7 @@ fn run(
             200 => serde_json::from_str(response.content())
                 .map_err(map_serde_deserialize_error_to_shell_error)?,
             _ => {
-                return Err(generic_labeled_error(
+                return Err(generic_unspanned_error(
                     "Failed to get scopes",
                     format!("Failed to get scopes {}", response.content()),
                 ));

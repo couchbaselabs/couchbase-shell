@@ -2,7 +2,7 @@ use crate::cli::buckets_builder::{BucketSettings, JSONBucketSettings, JSONCloudB
 use crate::cli::buckets_get::bucket_to_nu_value;
 use crate::cli::util::{
     cant_run_against_hosted_capella_error, cluster_identifiers_from, cluster_not_found_error,
-    generic_labeled_error, map_serde_deserialize_error_to_shell_error,
+    generic_unspanned_error, map_serde_deserialize_error_to_shell_error,
 };
 use crate::client::{CapellaRequest, ManagementRequest};
 use crate::state::{CapellaEnvironment, State};
@@ -80,7 +80,7 @@ fn buckets_get_all(
         let cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(cluster_not_found_error(identifier));
+                return Err(cluster_not_found_error(identifier, call.span()));
             }
         };
 
@@ -101,7 +101,7 @@ fn buckets_get_all(
                 ctrl_c.clone(),
             )?;
             if response.status() != 200 {
-                return Err(generic_labeled_error(
+                return Err(generic_unspanned_error(
                     "Failed to get buckets from Capella",
                     format!(
                         "Failed to get buckets returned {}, content: {}",

@@ -7,6 +7,7 @@ use nu_protocol::engine::{EngineState, Stack};
 use nu_protocol::{IntoPipelineData, PipelineData, ShellError, Span, Value};
 use num_traits::cast::ToPrimitive;
 use regex::Regex;
+use serde_json::Error;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -23,7 +24,7 @@ pub fn convert_row_to_nu_value(
             let mut vals = vec![];
             for (k, v) in o.iter() {
                 cols.push(k.clone());
-                vals.push(convert_json_value_to_nu_value(v, span)?);
+                vals.push(convert_json_value_to_nu_value(v, span.clone())?);
             }
             cols.push("cluster".into());
             vals.push(Value::String {
@@ -33,9 +34,12 @@ pub fn convert_row_to_nu_value(
 
             Ok(Value::Record { vals, cols, span })
         }
-        _ => Err(ShellError::LabeledError(
-            "row not an object - malformed response".into(),
-            "row not an object - malformed response".into(),
+        _ => Err(ShellError::GenericError(
+            "Malformed response".into(),
+            format!("row not an object - {}", v),
+            Some(span),
+            None,
+            Vec::new(),
         )),
     }
 }
@@ -56,15 +60,18 @@ pub fn convert_json_value_to_nu_value(
                         "i64 sized integer".into(),
                         "larger than i64".into(),
                         span,
+                        None,
                     ));
                 }
             } else if let Some(val) = n.as_f64() {
                 Value::Float { val, span }
             } else {
-                return Err(ShellError::CantConvert(
-                    "number".into(),
-                    "value".into(),
-                    span,
+                return Err(ShellError::GenericError(
+                    "Unexpected number value".into(),
+                    format!("Cannot convert {} into i64 or f64", n),
+                    Some(span),
+                    None,
+                    Vec::new(),
                 ));
             }
         }
@@ -111,10 +118,12 @@ pub fn convert_nu_value_to_json_value(
             if let Some(num) = serde_json::Number::from_f64(*val) {
                 serde_json::Value::Number(num)
             } else {
-                return Err(ShellError::CantConvert(
-                    "float".into(),
-                    "value".into(),
-                    span,
+                return Err(ShellError::GenericError(
+                    "Unexpected number value".into(),
+                    format!("Cannot convert {} from f64", val),
+                    Some(span),
+                    None,
+                    Vec::new(),
                 ));
             }
         }
@@ -187,8 +196,13 @@ pub fn cluster_identifiers_from(
     let re = match Regex::new(identifier_arg.as_str()) {
         Ok(v) => v,
         Err(e) => {
-            let msg = format!("Could not parse regex {}", e);
-            return Err(ShellError::LabeledError(msg.clone(), msg));
+            return Err(ShellError::GenericError(
+                "Could not parse regex".into(),
+                e.to_string(),
+                Some(args.span()),
+                None,
+                Vec::new(),
+            ));
         }
     };
     let clusters: Vec<String> = state
@@ -198,10 +212,7 @@ pub fn cluster_identifiers_from(
         .cloned()
         .collect();
     if clusters.is_empty() {
-        return Err(ShellError::LabeledError(
-            "Cluster not found".into(),
-            "".into(),
-        ));
+        return Err(cluster_not_found_error(identifier_arg, args.span()));
     }
 
     Ok(clusters)
@@ -216,10 +227,7 @@ pub fn namespace_from_args(
 ) -> Result<(String, String, String), ShellError> {
     let bucket = match bucket_flag.or_else(|| active_cluster.active_bucket()) {
         Some(v) => Ok(v),
-        None => Err(ShellError::MissingParameter(
-            "Could not auto-select a bucket - please use --bucket instead".to_string(),
-            span,
-        )),
+        None => Err(no_active_bucket_error(span)),
     }?;
 
     let scope = match scope_flag {
@@ -243,9 +251,12 @@ pub fn namespace_from_args(
 
 pub fn validate_is_cloud(cluster: &RemoteCluster, err_msg: &str) -> Result<(), ShellError> {
     if cluster.capella_org().is_none() {
-        return Err(ShellError::LabeledError(
+        return Err(ShellError::GenericError(
             "Not a Capella cluster".into(),
             err_msg.into(),
+            None,
+            None,
+            Vec::new(),
         ));
     }
 
@@ -254,7 +265,13 @@ pub fn validate_is_cloud(cluster: &RemoteCluster, err_msg: &str) -> Result<(), S
 
 pub fn validate_is_not_cloud(cluster: &RemoteCluster, err_msg: &str) -> Result<(), ShellError> {
     if cluster.capella_org().is_some() {
-        return Err(ShellError::LabeledError(err_msg.into(), err_msg.into()));
+        return Err(ShellError::GenericError(
+            "Cannot run against Capella".into(),
+            err_msg.into(),
+            None,
+            None,
+            Vec::new(),
+        ));
     }
 
     Ok(())
@@ -268,7 +285,7 @@ pub(crate) fn find_project_id(
 ) -> Result<String, ShellError> {
     let response = client.capella_request(CapellaRequest::GetProjects {}, deadline, ctrl_c)?;
     if response.status() != 200 {
-        return Err(generic_labeled_error(
+        return Err(generic_unspanned_error(
             "Failed to fetch project id",
             format!("Failed to fetch project id {}", response.content()),
         ));
@@ -282,7 +299,7 @@ pub(crate) fn find_project_id(
         }
     }
 
-    Err(generic_labeled_error(
+    Err(generic_unspanned_error(
         "Project could not be found",
         format!(
             "Project named {} was not found on the Capella organization",
@@ -299,7 +316,7 @@ pub(crate) fn find_cloud_id(
 ) -> Result<String, ShellError> {
     let response = client.capella_request(CapellaRequest::GetClouds {}, deadline, ctrl_c)?;
     if response.status() != 200 {
-        return Err(generic_labeled_error(
+        return Err(generic_unspanned_error(
             "Failed to fetch cloud id",
             format!("Failed to fetch cloud id {}", response.content()),
         ));
@@ -313,7 +330,7 @@ pub(crate) fn find_cloud_id(
         }
     }
 
-    Err(generic_labeled_error(
+    Err(generic_unspanned_error(
         "Cloud could not be found",
         format!(
             "Cloud named {} was not found on the Capella organization",
@@ -393,35 +410,87 @@ impl NuValueMap {
 }
 
 pub fn no_active_cluster_error() -> ShellError {
-    ShellError::LabeledError(
-        "An active cluster must be set".into(),
-        "An active cluster must be set".into(),
+    ShellError::GenericError(
+        "No active cluster".into(),
+        "".into(),
+        None,
+        Some("An active cluster must be set".into()),
+        Vec::new(),
     )
 }
 
-pub fn cluster_not_found_error(name: String) -> ShellError {
-    ShellError::LabeledError(
+pub fn cluster_not_found_error(name: String, span: Span) -> ShellError {
+    ShellError::GenericError(
         "Cluster not found".into(),
-        format!("Cluster named {} is not known", name),
+        "".into(),
+        Some(span),
+        Some(format!("Cluster named {} is not known", name)),
+        Vec::new(),
     )
 }
 
-pub fn generic_labeled_error(msg: impl Into<String>, help: impl Into<String>) -> ShellError {
-    ShellError::LabeledError(msg.into(), help.into())
+pub fn generic_unspanned_error(msg: impl Into<String>, help: impl Into<String>) -> ShellError {
+    ShellError::GenericError(msg.into(), "".into(), None, Some(help.into()), Vec::new())
 }
 
 pub fn map_serde_deserialize_error_to_shell_error(e: serde_json::Error) -> ShellError {
-    ShellError::LabeledError("Failed to deserialize response".into(), e.to_string())
+    ShellError::GenericError(
+        "Failed to deserialize response".into(),
+        "".into(),
+        None,
+        Some(e.to_string()),
+        Vec::new(),
+    )
 }
 
 pub fn map_serde_serialize_error_to_shell_error(e: serde_json::Error) -> ShellError {
-    ShellError::LabeledError("Failed to serialize value".into(), e.to_string())
+    ShellError::GenericError(
+        "Failed to serialize value".into(),
+        "".into(),
+        None,
+        Some(e.to_string()),
+        Vec::new(),
+    )
 }
 
 pub fn cant_run_against_hosted_capella_error() -> ShellError {
-    ShellError::LabeledError(
+    ShellError::GenericError(
         "Cannot run command against Hosted Capella".into(),
-        "Cannot run command against Hosted Capella".into(),
+        "".into(),
+        None,
+        Some("This command is currently only support against in-vpc versions of Capella".into()),
+        Vec::new(),
+    )
+}
+
+pub fn json_parse_fail_error(e: serde_json::Error, span: Option<Span>) -> ShellError {
+    ShellError::GenericError(
+        "Failed to parse response content as JSON".into(),
+        "".into(),
+        span,
+        Some(e.to_string()),
+        Vec::new(),
+    )
+}
+
+pub fn unexpected_status_code_error(
+    status_code: u16,
+    content: &str,
+    span: Option<Span>,
+) -> ShellError {
+    ShellError::GenericError(
+        format!("Unexpected response status code: {}", status_code),
+        "".into(),
+        span,
+        Some(content.into()),
+        Vec::new(),
+    )
+}
+
+pub fn no_active_bucket_error(span: Span) -> ShellError {
+    ShellError::MissingParameter(
+        "Could not auto-select a bucket, use --bucket or set an active bucket".into(),
+        span,
     )
 }
 

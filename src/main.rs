@@ -29,7 +29,7 @@ use nu_protocol::ast::{Call, Expr, Expression};
 use nu_protocol::engine::{Command, EngineState, Stack, StateWorkingSet};
 use nu_protocol::{
     Category, Example, IntoPipelineData, PipelineData, RawStream, ShellError, Signature, Span,
-    Spanned, SyntaxShape, Value, CONFIG_VARIABLE_ID,
+    Spanned, SyntaxShape, Value, ENV_VARIABLE_ID,
 };
 use serde::Deserialize;
 use state::State;
@@ -74,7 +74,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut stack = nu_protocol::engine::Stack::new();
 
     stack.vars.insert(
-        CONFIG_VARIABLE_ID,
+        ENV_VARIABLE_ID,
         Value::Record {
             cols: vec![],
             vals: vec![],
@@ -710,7 +710,7 @@ fn parse_commandline_args(
 
     let mut stack = Stack::new();
     stack.add_var(
-        CONFIG_VARIABLE_ID,
+        ENV_VARIABLE_ID,
         Value::Record {
             cols: vec![],
             vals: vec![],

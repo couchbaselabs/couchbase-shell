@@ -1,5 +1,5 @@
 use crate::cli::util::{
-    convert_json_value_to_nu_value, generic_labeled_error,
+    convert_json_value_to_nu_value, generic_unspanned_error,
     map_serde_deserialize_error_to_shell_error, no_active_cluster_error, validate_is_not_cloud,
 };
 use crate::client::ManagementRequest;
@@ -85,7 +85,7 @@ fn buckets(
     match response.status() {
         200 => {}
         _ => {
-            return Err(generic_labeled_error(
+            return Err(generic_unspanned_error(
                 "Failed to get bucket config",
                 format!(
                     "Failed to get bucket config {}",

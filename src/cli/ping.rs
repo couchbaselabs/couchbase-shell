@@ -1,6 +1,6 @@
 //! The `ping` command performs a ping operation.
 
-use crate::cli::util::{cluster_identifiers_from, NuValueMap};
+use crate::cli::util::{cluster_identifiers_from, no_active_bucket_error, NuValueMap};
 use crate::state::State;
 
 use log::debug;
@@ -126,12 +126,7 @@ fn run_ping(
             .or_else(|| cluster.active_bucket())
         {
             Some(v) => v,
-            None => {
-                return Err(ShellError::MissingParameter(
-                    "Could not auto-select a bucket - please use --bucket instead".to_string(),
-                    span,
-                ))
-            }
+            None => return Err(no_active_bucket_error(span)),
         };
 
         // TODO: do this in parallel to http ops.

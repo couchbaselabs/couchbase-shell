@@ -5,8 +5,8 @@ use super::util::convert_nu_value_to_json_value;
 use crate::state::State;
 
 use crate::cli::util::{
-    cluster_identifiers_from, cluster_not_found_error, generic_labeled_error, namespace_from_args,
-    NuValueMap,
+    cluster_identifiers_from, cluster_not_found_error, generic_unspanned_error,
+    namespace_from_args, NuValueMap,
 };
 use crate::client::{ClientError, KeyValueRequest, KvClient, KvResponse};
 use futures::stream::FuturesUnordered;
@@ -197,7 +197,7 @@ pub(crate) fn run_kv_store_ops(
         let value = match serde_json::to_vec(&item.1) {
             Ok(v) => v,
             Err(e) => {
-                return Err(generic_labeled_error(
+                return Err(generic_unspanned_error(
                     "Failed to serialize value to JSON",
                     format!("Failed to serialize value to JSON {}", e.to_string()),
                 ));
@@ -219,7 +219,7 @@ pub(crate) fn run_kv_store_ops(
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(cluster_not_found_error(identifier));
+                return Err(cluster_not_found_error(identifier, call.span()));
             }
         };
 
@@ -381,7 +381,7 @@ pub(crate) fn prime_manifest_if_required(
     if KvClient::is_non_default_scope_collection(scope, collection) {
         rt.block_on(client.fetch_collections_manifest(deadline, ctrl_c))
             .map_err(|e| {
-                generic_labeled_error(
+                generic_unspanned_error(
                     "Failed to fetch collections manifest",
                     format!("Failed to fetch collections manifest {}", e.to_string()),
                 )

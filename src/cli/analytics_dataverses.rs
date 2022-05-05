@@ -1,6 +1,6 @@
 use crate::cli::util::{
     cluster_identifiers_from, cluster_not_found_error, convert_row_to_nu_value,
-    duration_to_golang_string, generic_labeled_error, map_serde_deserialize_error_to_shell_error,
+    duration_to_golang_string, generic_unspanned_error, map_serde_deserialize_error_to_shell_error,
 };
 use crate::client::AnalyticsQueryRequest;
 use crate::state::State;
@@ -77,7 +77,7 @@ fn dataverses(
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(cluster_not_found_error(identifier));
+                return Err(cluster_not_found_error(identifier, call.span()));
             }
         };
 
@@ -111,7 +111,7 @@ fn dataverses(
                     )?);
                 }
             } else {
-                return Err(generic_labeled_error(
+                return Err(generic_unspanned_error(
                     "Analytics results not an array - malformed response",
                     format!(
                         "Analytics results not an array - {}",
@@ -120,7 +120,7 @@ fn dataverses(
                 ));
             }
         } else {
-            return Err(generic_labeled_error(
+            return Err(generic_unspanned_error(
                 "Analytics toplevel result not  an object",
                 format!(
                     "Analytics toplevel result not  an object - {}",

@@ -78,12 +78,15 @@ impl Client {
         )
         .await
         .map_err(|_e| {
-            ShellError::LabeledError(
+            ShellError::GenericError(
                 "Failed to connect to cluster".into(),
                 format!(
                     "Check server ports and cluster encryption setting. Does the bucket {} exist?",
                     bucket
                 ),
+                None,
+                None,
+                Vec::new(),
             )
         })
     }

@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 use crate::cli::util::{
-    generic_labeled_error, map_serde_deserialize_error_to_shell_error, NuValueMap,
+    generic_unspanned_error, map_serde_deserialize_error_to_shell_error, NuValueMap,
 };
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
@@ -83,7 +83,7 @@ fn clusters(
         ctrl_c,
     )?;
     if response.status() != 200 {
-        return Err(generic_labeled_error(
+        return Err(generic_unspanned_error(
             "Failed to get clusters",
             format!("Failed to get clusters {}", response.content()),
         ));

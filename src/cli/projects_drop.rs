@@ -1,4 +1,4 @@
-use crate::cli::util::{find_project_id, generic_labeled_error};
+use crate::cli::util::{find_project_id, generic_unspanned_error};
 use crate::client::CapellaRequest;
 use crate::state::State;
 use log::debug;
@@ -76,7 +76,7 @@ fn projects_drop(
         ctrl_c,
     )?;
     if response.status() != 204 {
-        return Err(generic_labeled_error(
+        return Err(generic_unspanned_error(
             "Failed to drop project",
             format!("Failed to drop project {}", response.content()),
         ));

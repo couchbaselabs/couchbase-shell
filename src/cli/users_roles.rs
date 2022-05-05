@@ -1,6 +1,6 @@
 use crate::cli::user_builder::RoleAndDescription;
 use crate::cli::util::{
-    cluster_identifiers_from, cluster_not_found_error, generic_labeled_error,
+    cluster_identifiers_from, cluster_not_found_error, generic_unspanned_error,
     map_serde_deserialize_error_to_shell_error, validate_is_not_cloud, NuValueMap,
 };
 use crate::client::ManagementRequest;
@@ -84,7 +84,7 @@ fn run_async(
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(cluster_not_found_error(identifier));
+                return Err(cluster_not_found_error(identifier, call.span()));
             }
         };
         validate_is_not_cloud(
@@ -104,7 +104,7 @@ fn run_async(
             200 => serde_json::from_str(response.content())
                 .map_err(map_serde_deserialize_error_to_shell_error)?,
             _ => {
-                return Err(generic_labeled_error(
+                return Err(generic_unspanned_error(
                     "Failed to get roles",
                     format!("Failed to get roles {}", response.content()),
                 ));

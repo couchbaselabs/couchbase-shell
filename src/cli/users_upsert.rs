@@ -1,7 +1,7 @@
 use crate::cli::cloud_json::{JSONCloudCreateUserRequest, JSONCloudUser, JSONCloudUserRoles};
 use crate::cli::util::{
     cant_run_against_hosted_capella_error, cluster_identifiers_from, cluster_not_found_error,
-    generic_labeled_error, map_serde_deserialize_error_to_shell_error,
+    generic_unspanned_error, map_serde_deserialize_error_to_shell_error,
 };
 use crate::client::{CapellaRequest, ManagementRequest};
 use crate::state::{CapellaEnvironment, State};
@@ -107,7 +107,7 @@ fn users_upsert(
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(cluster_not_found_error(identifier));
+                return Err(cluster_not_found_error(identifier, call.span()));
             }
         };
         let response = if let Some(plane) = active_cluster.capella_org() {
@@ -145,7 +145,7 @@ fn users_upsert(
             } else if all_access_roles.len() == 1 {
                 all_access_roles[0].clone()
             } else {
-                return Err(generic_labeled_error(
+                return Err(generic_unspanned_error(
                     "Users with cluster scoped permissions can only be assigned one role",
                     "Users with cluster scoped permissions can only be assigned one role",
                 ));
@@ -167,7 +167,7 @@ fn users_upsert(
                 ctrl_c.clone(),
             )?;
             if response.status() != 200 {
-                return Err(generic_labeled_error(
+                return Err(generic_unspanned_error(
                     "Failed to get users",
                     format!("Failed to get users {}", response.content()),
                 ));
@@ -206,7 +206,7 @@ fn users_upsert(
                 let pass = match password.clone() {
                     Some(p) => p,
                     None => {
-                        return Err(generic_labeled_error(
+                        return Err(generic_unspanned_error(
                             "Capella database user does not exist, password must be set",
                             "Capella database user does not exist, password must be set",
                         ));
@@ -254,7 +254,7 @@ fn users_upsert(
             202 => {}
             204 => {}
             _ => {
-                return Err(generic_labeled_error(
+                return Err(generic_unspanned_error(
                     "Failed to upsert user",
                     format!("Failed to upsert user {}", response.content()),
                 ));

@@ -86,7 +86,7 @@ impl fmt::Display for ClientError {
 impl From<ClientError> for ShellError {
     fn from(ce: ClientError) -> Self {
         // todo: this can definitely be improved with more detail and reporting specifics
-        ShellError::LabeledError(ce.to_string(), "".into())
+        ShellError::GenericError(ce.to_string(), ce.to_string(), None, None, Vec::new())
     }
 }
 

@@ -4,7 +4,9 @@ use super::util::convert_json_value_to_nu_value;
 use crate::state::State;
 
 use crate::cli::doc_upsert::{build_batched_kv_items, prime_manifest_if_required};
-use crate::cli::util::{cluster_identifiers_from, NuValueMap};
+use crate::cli::util::{
+    cluster_identifiers_from, cluster_not_found_error, namespace_from_args, NuValueMap,
+};
 use crate::client::KeyValueRequest;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
@@ -130,44 +132,26 @@ fn run_get(
         all_ids = build_batched_kv_items(size as u32, ids.clone());
     }
 
+    let bucket_flag = call.get_flag(engine_state, stack, "bucket")?;
+    let scope_flag = call.get_flag(engine_state, stack, "scope")?;
+    let collection_flag = call.get_flag(engine_state, stack, "collection")?;
+
     let mut results = vec![];
     for identifier in cluster_identifiers {
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::LabeledError(
-                    "Cluster not found".into(),
-                    "Cluster not found".into(),
-                ));
+                return Err(cluster_not_found_error(identifier.clone(), call.span()));
             }
         };
 
-        let bucket = match call
-            .get_flag(&engine_state, stack, "bucket")?
-            .or_else(|| active_cluster.active_bucket())
-        {
-            Some(v) => Ok(v),
-            None => Err(ShellError::MissingParameter(
-                "Could not auto-select a bucket - please use --bucket instead".to_string(),
-                span,
-            )),
-        }?;
-
-        let scope = match call.get_flag(&engine_state, stack, "scope")? {
-            Some(s) => s,
-            None => match active_cluster.active_scope() {
-                Some(s) => s,
-                None => "".into(),
-            },
-        };
-
-        let collection = match call.get_flag(&engine_state, stack, "collection")? {
-            Some(c) => c,
-            None => match active_cluster.active_collection() {
-                Some(c) => c,
-                None => "".into(),
-            },
-        };
+        let (bucket, scope, collection) = namespace_from_args(
+            bucket_flag.clone(),
+            scope_flag.clone(),
+            collection_flag.clone(),
+            active_cluster,
+            span,
+        )?;
 
         if all_ids.is_empty() {
             all_ids = build_batched_kv_items(active_cluster.kv_batch_size(), ids.clone());

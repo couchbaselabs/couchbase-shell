@@ -1,6 +1,6 @@
 use crate::cli::util::{
     cluster_identifiers_from, cluster_not_found_error, duration_to_golang_string,
-    generic_labeled_error, map_serde_deserialize_error_to_shell_error, NuValueMap,
+    generic_unspanned_error, map_serde_deserialize_error_to_shell_error, NuValueMap,
 };
 use crate::client::SearchQueryRequest;
 use crate::state::State;
@@ -88,7 +88,7 @@ fn run(
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(cluster_not_found_error(identifier));
+                return Err(cluster_not_found_error(identifier, call.span()));
             }
         };
         let response = active_cluster
@@ -108,7 +108,7 @@ fn run(
             200 => serde_json::from_str(response.content())
                 .map_err(map_serde_deserialize_error_to_shell_error)?,
             _ => {
-                return Err(generic_labeled_error(
+                return Err(generic_unspanned_error(
                     "Failed to perform search",
                     format!("Failed to perform search {}", response.content()),
                 ));

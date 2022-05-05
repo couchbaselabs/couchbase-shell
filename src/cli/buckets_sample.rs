@@ -1,5 +1,5 @@
 use crate::cli::util::{
-    cluster_identifiers_from, cluster_not_found_error, generic_labeled_error,
+    cluster_identifiers_from, cluster_not_found_error, generic_unspanned_error,
     map_serde_deserialize_error_to_shell_error, validate_is_not_cloud, NuValueMap,
 };
 use crate::client::ManagementRequest;
@@ -81,7 +81,7 @@ fn load_sample_bucket(
         let cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(cluster_not_found_error(identifier));
+                return Err(cluster_not_found_error(identifier, call.span()));
             }
         };
 
@@ -101,7 +101,7 @@ fn load_sample_bucket(
         match response.status() {
             202 => {}
             _ => {
-                return Err(generic_labeled_error(
+                return Err(generic_unspanned_error(
                     "Failed to load sample bucket",
                     format!(
                         "Failed to load sample bucket {}",

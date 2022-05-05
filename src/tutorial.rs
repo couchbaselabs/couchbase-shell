@@ -59,9 +59,12 @@ impl Tutorial {
         let index = match STEPS_ORDER.iter().position(|&s| s == name) {
             Some(i) => i,
             None => {
-                return Err(ShellError::LabeledError(
+                return Err(ShellError::GenericError(
                     "invalid tutorial step".into(),
-                    "".into(),
+                    format!("{} is not a valid tutorial step", name),
+                    None,
+                    None,
+                    Vec::new(),
                 ))
             }
         };

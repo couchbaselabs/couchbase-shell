@@ -1,4 +1,7 @@
-use crate::cli::util::{cluster_identifiers_from, NuValueMap};
+use crate::cli::util::{
+    cluster_identifiers_from, cluster_not_found_error, json_parse_fail_error,
+    unexpected_status_code_error, NuValueMap,
+};
 use crate::state::State;
 
 use crate::cli::cloud_json::JSONCloudClusterHealthResponse;
@@ -70,10 +73,7 @@ fn nodes(
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(ShellError::LabeledError(
-                    "Cluster not found".into(),
-                    "Cluster not found".into(),
-                ));
+                return Err(cluster_not_found_error(identifier.clone(), call.span()));
             }
         };
         if let Some(plane) = active_cluster.capella_org() {
@@ -89,14 +89,15 @@ fn nodes(
                 ctrl_c.clone(),
             )?;
             if response.status() != 200 {
-                return Err(ShellError::LabeledError(
-                    response.content().into(),
-                    response.content().into(),
+                return Err(unexpected_status_code_error(
+                    response.status(),
+                    response.content(),
+                    Some(call.span()),
                 ));
             }
 
             let resp: JSONCloudClusterHealthResponse = serde_json::from_str(response.content())
-                .map_err(|e| ShellError::LabeledError(e.to_string(), e.to_string()))?;
+                .map_err(|e| json_parse_fail_error(e, Some(call.span())))?;
 
             let mut n = resp
                 .nodes()
@@ -137,16 +138,14 @@ fn nodes(
                 200 => match serde_json::from_str(response.content()) {
                     Ok(m) => m,
                     Err(e) => {
-                        return Err(ShellError::LabeledError(
-                            format!("Failed to decode response body {}", e,),
-                            format!("Failed to decode response body {}", e,),
-                        ));
+                        return Err(json_parse_fail_error(e, Some(call.span())));
                     }
                 },
                 _ => {
-                    return Err(ShellError::LabeledError(
-                        format!("Request failed {}", response.content(),),
-                        "".into(),
+                    return Err(unexpected_status_code_error(
+                        response.status(),
+                        response.content(),
+                        Some(call.span()),
                     ));
                 }
             };

@@ -3,7 +3,7 @@ use crate::state::{CapellaEnvironment, State};
 
 use crate::cli::cloud_json::JSONCloudDeleteBucketRequest;
 use crate::cli::util::{
-    cluster_identifiers_from, cluster_not_found_error, generic_labeled_error,
+    cluster_identifiers_from, cluster_not_found_error, generic_unspanned_error,
     map_serde_serialize_error_to_shell_error,
 };
 use crate::client::{CapellaRequest, HttpResponse, ManagementRequest};
@@ -80,7 +80,7 @@ fn buckets_drop(
         let cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(cluster_not_found_error(identifier));
+                return Err(cluster_not_found_error(identifier, call.span()));
             }
         };
 
@@ -92,7 +92,7 @@ fn buckets_drop(
                 cloud.find_cluster(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
 
             if cluster.environment() == CapellaEnvironment::Hosted {
-                return Err(generic_labeled_error(
+                return Err(generic_unspanned_error(
                     "buckets drop cannot  be run against hosted Capella clusters",
                     "buckets drop cannot  be run against hosted Capella clusters",
                 ));
@@ -121,7 +121,7 @@ fn buckets_drop(
             200 => {}
             202 => {}
             _ => {
-                return Err(generic_labeled_error(
+                return Err(generic_unspanned_error(
                     "Failed to drop bucket",
                     format!("Failed to drop bucket: {}", result.content()),
                 ));

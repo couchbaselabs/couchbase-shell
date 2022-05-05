@@ -1,6 +1,6 @@
 use crate::cli::util::{
     convert_json_value_to_nu_value, duration_to_golang_string,
-    map_serde_deserialize_error_to_shell_error, no_active_cluster_error,
+    map_serde_deserialize_error_to_shell_error, no_active_bucket_error, no_active_cluster_error,
 };
 use crate::client::QueryRequest;
 use crate::state::State;
@@ -78,10 +78,7 @@ impl Command for TransactionsListAtrs {
             .or_else(|| active_cluster.active_bucket())
         {
             Some(v) => Ok(v),
-            None => Err(ShellError::MissingParameter(
-                "Could not auto-select a bucket - please use --bucket instead".to_string(),
-                span,
-            )),
+            None => Err(no_active_bucket_error(span)),
         }?;
 
         /*

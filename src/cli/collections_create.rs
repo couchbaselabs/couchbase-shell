@@ -1,6 +1,9 @@
 //! The `collections get` command fetches all of the collection names from the server.
 
-use crate::cli::util::{cluster_identifiers_from, cluster_not_found_error, generic_labeled_error};
+use crate::cli::util::{
+    cluster_identifiers_from, cluster_not_found_error, generic_unspanned_error,
+    no_active_bucket_error,
+};
 use crate::client::ManagementRequest::CreateCollection;
 use crate::state::State;
 use log::debug;
@@ -90,7 +93,7 @@ fn collections_create(
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(cluster_not_found_error(identifier));
+                return Err(cluster_not_found_error(identifier, call.span()));
             }
         };
 
@@ -99,10 +102,7 @@ fn collections_create(
             None => match active_cluster.active_bucket() {
                 Some(s) => s,
                 None => {
-                    return Err(ShellError::MissingParameter(
-                        "Could not auto-select a bucket - please use --bucket instead".to_string(),
-                        span,
-                    ));
+                    return Err(no_active_bucket_error(call.span()));
                 }
             },
         };
@@ -113,7 +113,7 @@ fn collections_create(
                 Some(s) => s,
                 None => {
                     return Err(ShellError::MissingParameter(
-                        "Could not auto-select a scope - please use --scope instead".to_string(),
+                        "Could not auto-select a scope, use --scope or set an active scope".into(),
                         span,
                     ));
                 }
@@ -146,7 +146,7 @@ fn collections_create(
             200 => {}
             202 => {}
             _ => {
-                return Err(generic_labeled_error(
+                return Err(generic_unspanned_error(
                     "Failed to create collection",
                     format!("Failed to create collection {}", response.content()),
                 ));

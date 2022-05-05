@@ -1,6 +1,6 @@
 use crate::cli::cloud_json::JSONCloudsProjectsResponse;
 use crate::cli::util::{
-    generic_labeled_error, map_serde_deserialize_error_to_shell_error, NuValueMap,
+    generic_unspanned_error, map_serde_deserialize_error_to_shell_error, NuValueMap,
 };
 use crate::client::CapellaRequest;
 use crate::state::State;
@@ -69,7 +69,7 @@ fn projects(
         ctrl_c,
     )?;
     if response.status() != 200 {
-        return Err(generic_labeled_error(
+        return Err(generic_unspanned_error(
             "Failed to get projects",
             format!("Failed to get projects {}", response.content()),
         ));

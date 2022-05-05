@@ -43,17 +43,23 @@ impl Command for UseScope {
         let active = match guard.active_cluster() {
             Some(c) => c,
             None => {
-                return Err(ShellError::LabeledError(
-                    "An active cluster must be set".into(),
-                    "No active cluser was found".into(),
+                return Err(ShellError::GenericError(
+                    "No active cluster".into(),
+                    "You must set an active cluster before an active collection".into(),
+                    Some(call.span()),
+                    None,
+                    Vec::new(),
                 ));
             }
         };
 
         if active.active_bucket().is_none() {
-            return Err(ShellError::LabeledError(
-                "You must select a bucket before a collection".into(),
-                "You must select a bucket before a collection".into(),
+            return Err(ShellError::GenericError(
+                "No active bucket".into(),
+                "You must set an active bucket before an active scope".into(),
+                Some(call.span()),
+                None,
+                Vec::new(),
             ));
         }
 

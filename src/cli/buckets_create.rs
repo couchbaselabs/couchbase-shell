@@ -3,7 +3,7 @@ use crate::cli::buckets_builder::{
 };
 use crate::cli::util::{
     cant_run_against_hosted_capella_error, cluster_identifiers_from, cluster_not_found_error,
-    generic_labeled_error, map_serde_serialize_error_to_shell_error,
+    generic_unspanned_error, map_serde_serialize_error_to_shell_error,
 };
 use crate::client::{CapellaRequest, HttpResponse, ManagementRequest};
 use crate::state::{CapellaEnvironment, State};
@@ -117,7 +117,7 @@ fn buckets_create(
         builder = builder.bucket_type(match BucketType::try_from(t.as_str()) {
             Ok(bt) => bt,
             Err(_e) => {
-                return Err(generic_labeled_error("Failed to parse bucket type", format!("Failed to parse bucket type {}, allow values are couchbase, membase, memcached, ephemeral", t )));
+                return Err(generic_unspanned_error("Failed to parse bucket type", format!("Failed to parse bucket type {}, allow values are couchbase, membase, memcached, ephemeral", t )));
             }
         });
     }
@@ -125,7 +125,7 @@ fn buckets_create(
         builder = builder.num_replicas(match u32::try_from(r) {
             Ok(bt) => bt,
             Err(e) => {
-                return Err(generic_labeled_error(
+                return Err(generic_unspanned_error(
                     "Failed to parse num replicas",
                     format!("Failed to parse num replicas {}", e),
                 ));
@@ -139,8 +139,8 @@ fn buckets_create(
         builder = builder.minimum_durability_level(match DurabilityLevel::try_from(d.as_str()) {
             Ok(bt) => bt,
             Err(_e) => {
-                return Err(generic_labeled_error("Failed to parse durability level",
-                                             format!("Failed to parse durability level {}, allow values are one, majority, majorityAndPersistActive, persistToMajority", d )));
+                return Err(generic_unspanned_error("Failed to parse durability level",
+                                                   format!("Failed to parse durability level {}, allow values are one, majority, majorityAndPersistActive, persistToMajority", d )));
             }
         });
     }
@@ -154,7 +154,7 @@ fn buckets_create(
         let active_cluster = match guard.clusters().get(&identifier) {
             Some(c) => c,
             None => {
-                return Err(cluster_not_found_error(identifier));
+                return Err(cluster_not_found_error(identifier, call.span()));
             }
         };
 
@@ -164,7 +164,7 @@ fn buckets_create(
                 || durability.clone().is_some()
                 || expiry.is_some())
         {
-            return Err(generic_labeled_error(
+            return Err(generic_unspanned_error(
                 "Capella flag cannot be used with type, flush, durability, or expiry",
                 "Capella flag cannot be used with type, flush, durability, or expiry",
             ));
@@ -209,7 +209,7 @@ fn buckets_create(
             201 => {}
             202 => {}
             _ => {
-                return Err(generic_labeled_error(
+                return Err(generic_unspanned_error(
                     "Failed to create bucket",
                     format!("Failed to create bucket: {}", response.content()),
                 ));

@@ -1,5 +1,5 @@
 use crate::cli::cloud_json::{JSONCloudCreateClusterRequest, JSONCloudCreateClusterRequestV3};
-use crate::cli::util::generic_labeled_error;
+use crate::cli::util::generic_unspanned_error;
 use crate::cli::util::{find_cloud_id, find_project_id, map_serde_serialize_error_to_shell_error};
 use crate::client::CapellaRequest;
 use crate::state::State;
@@ -97,7 +97,7 @@ fn clusters_create(
         Some(p) => p,
         None => {
             return Err(ShellError::MissingParameter(
-                "Could not auto-select a project".into(),
+                "Could not auto-select a project, set an active project".into(),
                 span,
             ))
         }
@@ -119,7 +119,7 @@ fn clusters_create(
             ctrl_c,
         )?;
         if response.status() != 202 {
-            return Err(generic_labeled_error(
+            return Err(generic_unspanned_error(
                 "Failed to create cluster",
                 format!("Failed to create cluster {}", response.content()),
             ));
@@ -132,7 +132,7 @@ fn clusters_create(
         Some(p) => p,
         None => {
             return Err(ShellError::MissingParameter(
-                "Could not auto-select a cloud".into(),
+                "Could not auto-select a cloud, set an active cloud".into(),
                 span,
             ))
         }
@@ -153,7 +153,7 @@ fn clusters_create(
         ctrl_c,
     )?;
     if response.status() != 202 {
-        return Err(generic_labeled_error(
+        return Err(generic_unspanned_error(
             "Failed to create cluster",
             format!("Failed to create cluster {}", response.content()),
         ));
