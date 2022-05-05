@@ -4,7 +4,7 @@ The following sections discuss the individual couchbase specific commands in gre
 
 === Working with `clusters`
 
-The `clusters managed` command lists all the clusters you specified in your configuration and the shell might be connected to.
+The `clusters managed` command lists all the clusters you have registered with the shell.
 
 ```
 > clusters managed

@@ -138,6 +138,13 @@ Couchbase Shell uses a custom, two line prompt to show you exactly in what envir
 
 It tells you that your user is `Administrator`, the current active cluster identifier is `local` and the active bucket is `travel-sample`.
 
+If you have an active scope or collection set then the prompt will also update to reflect that:
+
+```
+👤 Administrator 🏠 dev.local in 🗄 travel-sample.myscope.mycollection
+>
+```
+
 In the second line, your actual user prompt starts.
 
 === Pivot mode

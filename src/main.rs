@@ -89,57 +89,40 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut collect_arg_script = false;
     let mut collect_arg_filename = false;
     let mut args = std::env::args().skip(1);
-    while let Some(arg) = args.next() {
-        if !script_name.is_empty() {
-            args_to_script.push(escape_quote_string(&arg));
-        } else if arg.starts_with('-') {
-            // Cool, it's a flag
-            let flag_value = match arg.as_ref() {
-                "--commands" | "-c" => args.next().map(|a| escape_quote_string(&a)),
-                "--script" => {
-                    script_name = arg;
-                    continue;
-                }
-                _ => None,
-            };
-
-            args_to_cbshell.push(arg);
-
-            if let Some(flag_value) = flag_value {
-                args_to_cbshell.push(flag_value);
+    for arg in std::env::args().skip(1) {
+        if collect_arg_script {
+            if collect_arg_filename {
+                args_to_cbshell.push(if arg.contains(' ') {
+                    escape_quote_string(&arg)
+                } else {
+                    arg
+                });
+                collect_arg_filename = false;
+            } else {
+                args_to_script.push(if arg.contains(' ') {
+                    escape_quote_string(&arg)
+                } else {
+                    arg
+                });
             }
+        } else if arg == "--script" {
+            collect_arg_script = true;
+            collect_arg_filename = true;
+            args_to_cbshell.push(if arg.contains(' ') {
+                escape_quote_string(&arg)
+            } else {
+                arg
+            });
+        } else if arg == "-c" || arg == "--command" {
+            args_to_cbshell.push(arg);
         } else {
-            // Our script file
-            script_name = arg;
+            args_to_cbshell.push(if arg.contains(' ') {
+                escape_quote_string(&arg)
+            } else {
+                arg
+            });
         }
     }
-    // for arg in std::env::args().skip(1) {
-    //     if collect_arg_script {
-    //         if collect_arg_filename {
-    //             args_to_cbshell.push(if arg.contains(' ') {
-    //                 format!("'{}'", arg)
-    //             } else {
-    //                 arg
-    //             });
-    //             collect_arg_filename = false;
-    //         } else {
-    //             args_to_script.push(if arg.contains(' ') {
-    //                 format!("'{}'", arg)
-    //             } else {
-    //                 arg
-    //             });
-    //         }
-    //     } else if arg == "--script" {
-    //     } else if arg == "-c" || arg == "--command" {
-    //         args_to_cbshell.push(arg);
-    //     } else {
-    //         args_to_cbshell.push(if arg.contains(' ') {
-    //             format!("'{}'", arg)
-    //         } else {
-    //             arg
-    //         });
-    //     }
-    // }
 
     args_to_cbshell.insert(0, "cbsh".into());
 

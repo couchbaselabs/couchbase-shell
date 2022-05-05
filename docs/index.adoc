@@ -14,7 +14,7 @@ include::quickstart.adoc[]
 
 include::intro.adoc[]
 
-include::use.adoc[]
+include::cbenv.adoc[]
 
 include::commands.adoc[]
 

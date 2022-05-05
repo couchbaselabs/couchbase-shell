@@ -2,11 +2,12 @@
 
 https://cloud.couchbase.com/sign-up?ref=cbsh-web-capella[Couchbase Capella] is a Database as a Service offering from Couchbase which you can interact with from Couchbase Shell.
 
-=== `use`  and the Environment
+[#_cb_env_and_the_environment]
+=== `cb-env` and the Environment
 
-For general usage of the `use` command see <<_use_and_the_environment>>.
-When using <<_management_commands>> with Couchbase Capella and Couchbase Shell we need to be able to manage more active resources than the base `use` command gives us.
-You can use the `use --capella` command to see which cloud resources are current active:
+For general usage of the `cb-env` command see <<cbenv.adoc#_cb_env_and_the_environment>>.
+When using <<_management_commands>> with Couchbase Capella and Couchbase Shell we need to be able to manage more active resources than the base `cb-env` command gives us.
+You can use the `cb-env --capella` command to see which cloud resources are current active:
 
 ```
 > cb-env--capella
@@ -17,7 +18,7 @@ You can use the `use --capella` command to see which cloud resources are current
 ──────────────────────┴──────────────────
 ```
 
-The active resource can be changed with the `use` command:
+The active resource can be changed with the `cb-env` command:
 
 ```
 > cb-env -h
@@ -42,11 +43,12 @@ Document level commands like those under `doc`, `analytics`, `query`, and `searc
 
 You need to:
 
-    - https://docs.couchbase.com/cloud/clusters/create-cluster.html[create a cluster] in your Couchbase Capella account
-    - ensure that your https://docs.couchbase.com/cloud/security/allow-ip-address.html[IP address is whitelisted]
-    - ensure that you have a https://docs.couchbase.com/cloud/security/manage-database-users.html[database user]
-    - Populate the relevant cluster section in the `config` file with the public address and database user credentials.
+- https://docs.couchbase.com/cloud/clusters/create-cluster.html[create a cluster] in your Couchbase Capella account
+- ensure that your https://docs.couchbase.com/cloud/security/allow-ip-address.html[IP address is whitelisted]
+- ensure that you have a https://docs.couchbase.com/cloud/security/manage-database-users.html[database user]
+- Populate the relevant cluster section in the `config` file with the public address and database user credentials.
 
+[#_management_commands]
 === Management Commands
 
 Management commands (such as `cluster` and `bucket` management) require a specific section to be added to the `config` file as well as an extra entry in the relevant cluster section.

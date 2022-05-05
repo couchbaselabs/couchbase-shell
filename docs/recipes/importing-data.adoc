@@ -64,7 +64,7 @@ Multiple Documents
    │      │         │ Rgnl        │          │ States  │     │      │ ago
 ───┴──────┴─────────┴─────────────┴──────────┴─────────┴─────┴──────┴──────────────
 
-> ls airports/ | open  $it.name | each { wrap content | insert id {echo $it.content.airportname} } | doc upsert
+> ls airports/ | open  $it.name | each { |it| wrap content | insert id {echo $it.content.airportname} } | doc upsert
 ───┬───────────┬─────────┬────────
  # │ processed │ success │ failed
 ───┼───────────┼─────────┼────────
@@ -80,7 +80,7 @@ Single Document
 id,cas,type,airportname,city,country,faa,icao,tz
 3719,1600344369374167040,airport,Columbia Rgnl,Columbia,United States,COU,KCOU,America/Chicago
 
-> open mydoc.csv | each { wrap content | insert id {echo $it.content.airportname} } | doc upsert
+> open mydoc.csv | each { |it| wrap content | insert id {echo $it.content.airportname} } | doc upsert
 ───┬───────────┬─────────┬────────
  # │ processed │ success │ failed
 ───┼───────────┼─────────┼────────
@@ -98,7 +98,7 @@ Les Loges,Nangis,France,,LFAI,1256,airport,Europe/Paris
 Couterne,Bagnole-de-l'orne,France,,LFAO,1257,airport,Europe/Paris
 Bray,Albert,France,,LFAQ,1258,airport,Europe/Paris
 
-> open airports.csv | each { wrap content | insert id {echo $it.content.airportname}  } | doc upsert
+> open airports.csv | each { |it| wrap content | insert id {echo $it.content.airportname}  } | doc upsert
 ───┬───────────┬─────────┬────────
  # │ processed │ success │ failed
 ───┼───────────┼─────────┼────────
@@ -170,7 +170,7 @@ Bray,Albert,France,,LFAQ,1258,Europe/Paris
 
 We can also add a column based on data from other columns, for instance adding a `type` column which is set to the relevant country:
 ```
-open ~/demo/airports.csv | each { insert type $it.city }
+open ~/demo/airports.csv | each { |it| insert type $it.city }
 ───┬────────────┬────────────┬─────────┬─────┬──────┬──────┬────────────┬────────────
  # │ airportnam │    city    │ country │ faa │ icao │  id  │     tz     │    type
    │     e      │            │         │     │      │      │            │

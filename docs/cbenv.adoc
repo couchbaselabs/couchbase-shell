@@ -1,13 +1,14 @@
-== `use` and the Environment
+[#_cb_env_and_the_environment]
+== `cb-env` and the Environment
 
-While multiple clusters can be connected at the same time, there is only ever one cluster (at most) active.
+Whilst multiple clusters can be registered at the same time, there is only ever one cluster (at most) active.
 The same is true for buckets, scopes, and collections.
 When a resource is active then it used as the default to run commands against (this can be overridden on a per command basis).
 
-You can run the `use` command, which will tell you which resources are currently active (you are also able to tell from the prompt):
+You can run the `cb-env` command, which will tell you which resources are currently active (you are also able to tell from the prompt):
 
 ```
-> use
+> cb-env
 ────────────┬───────────────
  username   │ Susan
  cluster    │ dev.local
@@ -25,8 +26,8 @@ If you were to now run a command then we would be running it:
 * Against the "inventory" scope
 * Against the "hotel" collection
 
-You can also change the active resources with the `use` command.
-(Note there are extra resources listed here, see <<cloud.adoc#_use_and_the_environment>> for more information on these)
+You can also change the active resources with the `cb-env` command.
+(Note there are extra resources listed here, see <<capella.adoc#_cb_env_and_the_environment>> for more information on these)
 
 ```
 > cb-env -h
@@ -55,7 +56,7 @@ For example if you change the active bucket:
 ```
 
 ```
-> use
+> cb-env
 ────────────┬─────────────
  username   │ Susan
  cluster    │ dev.local
@@ -65,9 +66,9 @@ For example if you change the active bucket:
 ────────────┴─────────────
 ```
 
-Both the output of `use` and the prompt will reflect the changes.
+Both the output of `cb-env` and the prompt will reflect the changes.
 
-=== `Use`ing different execution environments
+=== Per command execution environments
 
 On many commands you will notice a set of flags which allow you to override the active execution environment.
 Different commands support different flags, depending on the command you can expect to see any of:
