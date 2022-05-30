@@ -11,9 +11,9 @@ The documentation is available [here](https://couchbase.sh/docs/).
 
 First, download the archive for your operating system.
 
- - [Linux 1.0.0-beta.4](https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.4/cbsh-1.0.0-beta.4-linux.tar.gz)
- - [macOS 1.0.0-beta.4](https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.4/cbsh-1.0.0-beta.4-mac.zip)
- - [Windows 1.0.0-beta.4](https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.4/cbsh-1.0.0-beta.4-windows.zip)
+ - [Linux 1.0.0-beta.5](https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.5/cbsh-1.0.0-beta.5-linux.tar.gz)
+ - [macOS 1.0.0-beta.5](https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.5/cbsh-1.0.0-beta.5-mac.zip)
+ - [Windows 1.0.0-beta.5](https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.5/cbsh-1.0.0-beta.5-windows.zip)
 
 You do not need any extra dependencies to run `cbsh`, it comes "batteries included".
 
@@ -23,7 +23,7 @@ After extracting the archive, run the `cbsh` binary in your terminal.
 
 ```
 ❯ ./cbsh --version
-The Couchbase Shell 1.0.0-beta.4
+The Couchbase Shell 1.0.0-beta.5
 ```
 
 ## Basic Usage

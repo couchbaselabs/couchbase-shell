@@ -2,6 +2,12 @@
 
 All user visible changes to this project will be documented in this file.
 
+
+## 1.0.0-beta.5 - 2022-05-30
+
+- Nushell pinned to 0.63
+- Fixed issue with prompt on Windows
+
 ## 1.0.0-beta.4 - 2022-05-05
 
 - Nushell pinned to 0.62

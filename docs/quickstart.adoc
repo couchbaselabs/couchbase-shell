@@ -2,18 +2,18 @@
 
 === Installation
 
-The current latest version is *1.0.0-beta.4*.
+The current latest version is *1.0.0-beta.5*.
 
 There are a couple ways you can get access to `cbsh`, the easiest one is to download our pre-built binaries for your platform of choice:
 
- - Linux: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.4/cbsh-1.0.0-beta.4-linux.tar.gz[cbsh-1.0.0-beta.4-linux.tar.gz]
- - macOS: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.4/cbsh-1.0.0-beta.4-mac.zip[cbsh-1.0.0-beta.4-mac.zip]
- - Windows: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.4/cbsh-1.0.0-beta.4-windows.zip[cbsh-1.0.0-beta.4-windows.zip]
+ - Linux: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.5/cbsh-1.0.0-beta.5-linux.tar.gz[cbsh-1.0.0-beta.5-linux.tar.gz]
+ - macOS: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.5/cbsh-1.0.0-beta.5-mac.zip[cbsh-1.0.0-beta.5-mac.zip]
+ - Windows: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.5/cbsh-1.0.0-beta.5-windows.zip[cbsh-1.0.0-beta.5-windows.zip]
 
 Once you've downloaded the `zip` file, extract it and switch into the just created directory. The following example shows it for mac, but it works very similar if you are on linux (just align the commands with the file you just downloaded):
 
 ```
-$ unzip cbsh-1.0.0-beta.4-mac.zip
+$ unzip cbsh-1.0.0-beta.5-mac.zip
 $ ls
 cbsh  examples  LICENSE  README.md
 ```
@@ -22,7 +22,7 @@ You can now run the `cbsh` binary:
 
 ```
 ❯ ./cbsh --version
-The Couchbase Shell 1.0.0-beta.4
+The Couchbase Shell 1.0.0-beta.5
 ```
 
 TIP: If you are running a recent macOS release (i.e. 10.15.x), you'll likely see an error similar to *"cbsh" was blocked from use because it is not from an identified developer*. This is because our binaries are not yet signed. To run it nonetheless you need to navigate to `System Preferences -> Security & Privacy` and click `Allow Anyway`. Next time you run the binary you'll get another prompt but then it should run fine. 
