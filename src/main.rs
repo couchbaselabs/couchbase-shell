@@ -451,7 +451,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     if let Some(c) = opt.command {
         add_plugin_file(&mut context, CBSHELL_FOLDER);
-        nu_cli::evaluate_commands(&c, &init_cwd, &mut context, &mut stack, input, true)
+        nu_cli::evaluate_commands(&c, &init_cwd, &mut context, &mut stack, input, true, None)
             .expect("Failed to run command");
         return Ok(());
     }
