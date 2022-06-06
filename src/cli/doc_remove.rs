@@ -144,6 +144,7 @@ fn run_get(
             bucket.clone(),
             deadline,
             ctrl_c.clone(),
+            span,
         ))?;
 
         prime_manifest_if_required(
@@ -200,21 +201,8 @@ fn run_get(
         collected.add_i64("success", success as i64, span);
         collected.add_i64("failed", failed as i64, span);
 
-        let reasons = fail_reasons
-            .iter()
-            .map(|v| {
-                let mut collected_fails = NuValueMap::default();
-                collected_fails.add_string("fail reason", v, span);
-                collected_fails.into_value(span)
-            })
-            .collect();
-        collected.add(
-            "failures",
-            Value::List {
-                vals: reasons,
-                span,
-            },
-        );
+        let reasons = fail_reasons.into_iter().collect::<Vec<String>>().join(", ");
+        collected.add_string("failures", reasons, span);
         collected.add_string("cluster", identifier.clone(), span);
 
         results.push(collected.into_value(span));

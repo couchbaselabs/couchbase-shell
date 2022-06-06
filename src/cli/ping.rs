@@ -135,6 +135,7 @@ fn run_ping(
             bucket_name.clone(),
             kv_deadline,
             ctrl_c.clone(),
+            span,
         ))?;
 
         let kv_result = rt.block_on(client.ping_all(kv_deadline, ctrl_c.clone()));

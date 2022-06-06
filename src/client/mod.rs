@@ -6,7 +6,7 @@ pub use crate::client::http_client::{
 };
 pub use crate::client::http_handler::HttpResponse;
 pub use crate::client::kv_client::{KeyValueRequest, KvClient, KvResponse};
-use nu_protocol::ShellError;
+use nu_protocol::{ShellError, Span};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tokio::time::Instant;
@@ -66,6 +66,7 @@ impl Client {
         bucket: String,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
+        span: Span,
     ) -> Result<KvClient, ShellError> {
         KvClient::connect(
             self.seeds.clone(),
@@ -77,14 +78,14 @@ impl Client {
             ctrl_c,
         )
         .await
-        .map_err(|_e| {
+        .map_err(|e| {
             ShellError::GenericError(
-                "Failed to connect to cluster".into(),
+                format!("Failed to connect to cluster: {}", e),
                 format!(
                     "Check server ports and cluster encryption setting. Does the bucket {} exist?",
                     bucket
                 ),
-                None,
+                Some(span),
                 None,
                 Vec::new(),
             )

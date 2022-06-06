@@ -165,6 +165,7 @@ fn run_get(
             bucket.clone(),
             deadline,
             ctrl_c.clone(),
+            span,
         ))?;
 
         prime_manifest_if_required(
