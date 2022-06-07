@@ -910,6 +910,7 @@ dependencies = [
  "reqwest",
  "rpassword",
  "rust-embed 5.9.0",
+ "rustls-pemfile",
  "serde",
  "serde_derive",
  "serde_json",
@@ -4481,6 +4482,15 @@ dependencies = [
  "ring",
  "sct 0.7.0",
  "webpki 0.22.0",
+]
+
+[[package]]
+name = "rustls-pemfile"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e7522c9de787ff061458fe9a829dc790a3f5b22dc571694fc5883f448b94d9a9"
+dependencies = [
+ "base64",
 ]
 
 [[package]]

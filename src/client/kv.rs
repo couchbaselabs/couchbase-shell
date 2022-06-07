@@ -5,10 +5,12 @@ use crate::config::ClusterTlsConfig;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use futures::{FutureExt, SinkExt, StreamExt};
 use log::{debug, warn};
+use rustls_pemfile::{read_all, Item};
 use serde_derive::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::fs;
+use std::io::BufReader;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
@@ -73,12 +75,30 @@ impl KvEndpoint {
                 let mut root_cert_store = rustls::RootCertStore::empty();
                 if let Some(path) = tls_config.cert_path() {
                     let cert = fs::read(path).map_err(ClientError::from)?;
-                    root_cert_store.add(&Certificate(cert)).map_err(|e| {
-                        ClientError::RequestFailed {
-                            reason: Some(format!("Failed to create cert store {}", e.to_string())),
-                            key: None,
-                        }
+                    let mut reader = BufReader::new(&cert[..]);
+                    let items = read_all(&mut reader).map_err(|e| ClientError::RequestFailed {
+                        reason: Some(format!("Failed to read cert file {}", e.to_string())),
+                        key: None,
                     })?;
+                    for item in items {
+                        match item {
+                            Item::X509Certificate(c) => root_cert_store
+                                .add(&Certificate(c))
+                                .map_err(|e| ClientError::RequestFailed {
+                                    reason: Some(format!(
+                                        "Failed to create cert store {}",
+                                        e.to_string()
+                                    )),
+                                    key: None,
+                                })?,
+                            _ => {
+                                return Err(ClientError::RequestFailed {
+                                    reason: Some(format!("Unsupported certificate format")),
+                                    key: None,
+                                })
+                            }
+                        }
+                    }
                 }
                 builder
                     .with_root_certificates(root_cert_store)
