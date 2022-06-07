@@ -3,20 +3,38 @@ use crate::client::protocol::{request, KvRequest, KvResponse, Status};
 use crate::client::{protocol, ClientError};
 use crate::config::ClusterTlsConfig;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
-use futures::{SinkExt, StreamExt};
-use log::warn;
+use futures::{FutureExt, SinkExt, StreamExt};
+use log::{debug, warn};
 use serde_derive::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::fs;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::SystemTime;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
 use tokio::sync::{mpsc, oneshot};
-use tokio_native_tls::native_tls::Certificate;
-use tokio_native_tls::TlsConnector;
+use tokio_rustls::rustls::client::{ServerCertVerified, ServerCertVerifier};
+use tokio_rustls::rustls::{Certificate, ClientConfig, Error, ServerName};
+use tokio_rustls::{rustls, TlsConnector};
 use tokio_util::codec::{FramedRead, FramedWrite};
+
+struct InsecureCertVerifier {}
+
+impl ServerCertVerifier for InsecureCertVerifier {
+    fn verify_server_cert(
+        &self,
+        _end_entity: &Certificate,
+        _intermediates: &[Certificate],
+        _server_name: &ServerName,
+        _scts: &mut dyn Iterator<Item = &[u8]>,
+        _ocsp_response: &[u8],
+        _now: SystemTime,
+    ) -> Result<ServerCertVerified, Error> {
+        Ok(ServerCertVerified::assertion())
+    }
+}
 
 pub struct KvEndpoint {
     tx: mpsc::Sender<Bytes>,
@@ -46,24 +64,30 @@ impl KvEndpoint {
                         key: None,
                     })?;
 
-            let mut builder = tokio_native_tls::native_tls::TlsConnector::builder();
-            if tls_config.accept_all_certs() {
-                builder.danger_accept_invalid_certs(true);
-            }
-            if let Some(path) = tls_config.cert_path() {
-                let cert = fs::read(path).map_err(ClientError::from)?;
-                builder.add_root_certificate(Certificate::from_pem(cert.as_slice()).map_err(
-                    |e| ClientError::RequestFailed {
-                        reason: Some(e.to_string()),
-                        key: None,
-                    },
-                )?);
-            }
+            let builder = rustls::ClientConfig::builder().with_safe_defaults();
+            let config = if tls_config.accept_all_certs() {
+                builder
+                    .with_custom_certificate_verifier(Arc::new(InsecureCertVerifier {}))
+                    .with_no_client_auth()
+            } else {
+                let mut root_cert_store = rustls::RootCertStore::empty();
+                if let Some(path) = tls_config.cert_path() {
+                    let cert = fs::read(path).map_err(ClientError::from)?;
+                    root_cert_store.add(&Certificate(cert)).map_err(|e| {
+                        ClientError::RequestFailed {
+                            reason: Some(format!("Failed to create cert store {}", e.to_string())),
+                            key: None,
+                        }
+                    })?;
+                }
+                builder
+                    .with_root_certificates(root_cert_store)
+                    .with_no_client_auth()
+            };
 
-            let connector = builder.build().unwrap();
-            let connector = TlsConnector::from(connector);
+            let connector = TlsConnector::from(Arc::new(config));
             let socket = connector
-                .connect(hostname.as_str(), tcp_socket)
+                .connect(ServerName::try_from(hostname.as_str()).unwrap(), tcp_socket)
                 .await
                 .map_err(|e| ClientError::RequestFailed {
                     reason: Some(e.to_string()),
@@ -113,6 +137,8 @@ impl KvEndpoint {
                             let requests = Arc::clone(&in_flight);
                             let mut map = requests.lock().unwrap();
                             let t = map.remove(&response.opaque());
+                            drop(map);
+                            drop(requests);
 
                             if let Some(sender) = t {
                                 match sender.send(response) {
@@ -125,9 +151,8 @@ impl KvEndpoint {
                                 warn!("No entry in request map for {}", &response.opaque());
                             }
                         }
-                        Err(_e) => {
-                            // For now let's just bail.
-                            return;
+                        Err(e) => {
+                            warn!("failed to read frame {}", e.to_string());
                         }
                     };
                 }
@@ -149,28 +174,10 @@ impl KvEndpoint {
             }
         });
 
-        let hello_rcvr = match ep.send_hello().await {
-            Ok(rcvr) => rcvr,
-            Err(e) => {
-                return Err(e);
-            }
-        };
-        let err_map_rcvr = match ep.send_error_map().await {
-            Ok(rcvr) => Some(rcvr),
-            Err(_e) => None,
-        };
-        let auth_rcvr = match ep.send_auth(username, password).await {
-            Ok(rcvr) => rcvr,
-            Err(e) => {
-                return Err(e);
-            }
-        };
-        let bucket_rcvr = match ep.send_select_bucket(bucket).await {
-            Ok(rcvr) => rcvr,
-            Err(e) => {
-                return Err(e);
-            }
-        };
+        let hello_rcvr = ep.send_hello().await?;
+        let err_map_rcvr = ep.send_error_map().await.map(|r| Some(r))?;
+        let auth_rcvr = ep.send_auth(username, password).await?;
+        let bucket_rcvr = ep.send_select_bucket(bucket).await?;
 
         let features = match hello_rcvr.await {
             Ok(r) => match r {
@@ -229,8 +236,8 @@ impl KvEndpoint {
             ep.collections_enabled = true;
         }
 
-        // println!("Negotiated features {:?}", features);
-        // println!("Error Map: {:?}", error_map);
+        debug!("Negotiated features {:?}", features);
+        debug!("Error Map: {:?}", ep.error_map);
         Ok(ep)
     }
 

@@ -125,3 +125,12 @@ impl From<isahc::http::Error> for ClientError {
         }
     }
 }
+
+impl From<tokio::sync::oneshot::error::RecvError> for ClientError {
+    fn from(e: tokio::sync::oneshot::error::RecvError) -> Self {
+        ClientError::RequestFailed {
+            reason: Some(e.to_string()),
+            key: None,
+        }
+    }
+}
