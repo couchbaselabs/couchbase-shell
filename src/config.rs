@@ -497,6 +497,7 @@ impl Default for ClusterTlsConfig {
 
 #[derive(Debug, Deserialize)]
 pub struct StandaloneCredentialsConfig {
+    #[allow(dead_code)]
     version: usize,
     /// Note: clusters is kept for backwards compatibility and
     /// convenience, docs should only mention cluster

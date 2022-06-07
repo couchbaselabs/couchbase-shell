@@ -205,7 +205,7 @@ impl CapellaClient {
             serde_json::from_str(items.to_string().as_str())?;
 
         for c in clusters {
-            if c.name == cluster_name {
+            if c.name() == cluster_name {
                 return Ok(c);
             }
         }
@@ -301,7 +301,7 @@ pub enum CapellaRequest {
     GetClusterHealth {
         cluster_id: String,
     },
-    GetClusters,
+    // GetClusters,
     GetClustersV3,
     // GetClusterStatus {
     //     cluster_id: String,
@@ -388,7 +388,7 @@ impl CapellaRequest {
             Self::GetClusterV3 { cluster_id } => {
                 format!("/v3/clusters/{}", cluster_id)
             }
-            Self::GetClusters => "/v2/clusters".into(),
+            // Self::GetClusters => "/v2/clusters".into(),
             Self::GetClustersV3 => "/v3/clusters".into(),
             // Self::GetClusterStatus { cluster_id } => {
             //     format!("/v2/clusters/{}/status", cluster_id)
@@ -440,7 +440,7 @@ impl CapellaRequest {
             Self::GetClusterHealth { .. } => HttpVerb::Get,
             Self::GetCluster { .. } => HttpVerb::Get,
             Self::GetClusterV3 { .. } => HttpVerb::Get,
-            Self::GetClusters => HttpVerb::Get,
+            // Self::GetClusters => HttpVerb::Get,
             Self::GetClustersV3 => HttpVerb::Get,
             // Self::GetClusterStatus { .. } => HttpVerb::Get,
             // Self::GetOrgUsers => HttpVerb::Get,

@@ -6,7 +6,6 @@ use crate::cli::util::{
 use crate::client::QueryRequest;
 use crate::state::State;
 use log::debug;
-use serde::Deserialize;
 use std::collections::HashMap;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
@@ -145,15 +144,4 @@ fn run(
         span: call.head,
     }
     .into_pipeline_data())
-}
-
-#[derive(Debug, Deserialize)]
-struct AdviseResult {
-    query: String,
-    advice: Advice,
-}
-
-#[derive(Debug, Deserialize)]
-struct Advice {
-    adviseinfo: Vec<serde_json::Value>,
 }

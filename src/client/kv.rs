@@ -3,11 +3,10 @@ use crate::client::protocol::{request, KvRequest, KvResponse, Status};
 use crate::client::{protocol, ClientError};
 use crate::config::ClusterTlsConfig;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
-use futures::{FutureExt, SinkExt, StreamExt};
+use futures::{SinkExt, StreamExt};
 use log::{debug, warn};
 use rustls_pemfile::{read_all, Item};
-use serde_derive::Deserialize;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fs;
 use std::io::BufReader;
@@ -18,7 +17,7 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
 use tokio::sync::{mpsc, oneshot};
 use tokio_rustls::rustls::client::{ServerCertVerified, ServerCertVerifier};
-use tokio_rustls::rustls::{Certificate, ClientConfig, Error, ServerName};
+use tokio_rustls::rustls::{Certificate, Error, ServerName};
 use tokio_rustls::{rustls, TlsConnector};
 use tokio_util::codec::{FramedRead, FramedWrite};
 
@@ -43,7 +42,7 @@ pub struct KvEndpoint {
     opaque: AtomicU32,
     in_flight: Arc<Mutex<HashMap<u32, oneshot::Sender<KvResponse>>>>,
     collections_enabled: bool,
-    error_map: Option<ErrorMap>,
+    // error_map: Option<ErrorMap>,
 }
 
 impl KvEndpoint {
@@ -141,7 +140,7 @@ impl KvEndpoint {
             in_flight: Arc::clone(&in_flight),
             tx,
             collections_enabled: false,
-            error_map: None,
+            // error_map: None,
         };
 
         let (r, w) = tokio::io::split(stream);
@@ -195,7 +194,7 @@ impl KvEndpoint {
         });
 
         let hello_rcvr = ep.send_hello().await?;
-        let err_map_rcvr = ep.send_error_map().await.map(|r| Some(r))?;
+        // let err_map_rcvr = ep.send_error_map().await.map(|r| Some(r))?;
         let auth_rcvr = ep.send_auth(username, password).await?;
         let bucket_rcvr = ep.send_select_bucket(bucket).await?;
 
@@ -213,16 +212,16 @@ impl KvEndpoint {
                 });
             }
         };
-        if let Some(rcvr) = err_map_rcvr {
-            let error_map = match rcvr.await {
-                Ok(r) => match r {
-                    Ok(result) => Some(result),
-                    Err(_e) => None,
-                },
-                Err(_e) => None,
-            };
-            ep.error_map = error_map;
-        }
+        // if let Some(rcvr) = err_map_rcvr {
+        //     let error_map = match rcvr.await {
+        //         Ok(r) => match r {
+        //             Ok(result) => Some(result),
+        //             Err(_e) => None,
+        //         },
+        //         Err(_e) => None,
+        //     };
+        //     ep.error_map = error_map;
+        // }
         match auth_rcvr.await {
             Ok(r) => match r {
                 Ok(result) => result,
@@ -257,7 +256,7 @@ impl KvEndpoint {
         }
 
         debug!("Negotiated features {:?}", features);
-        debug!("Error Map: {:?}", ep.error_map);
+        // debug!("Error Map: {:?}", ep.error_map);
         Ok(ep)
     }
 
@@ -528,32 +527,32 @@ impl KvEndpoint {
         Ok(completerx)
     }
 
-    async fn send_error_map(
-        &mut self,
-    ) -> Result<oneshot::Receiver<Result<ErrorMap, ClientError>>, ClientError> {
-        let mut body = BytesMut::with_capacity(2);
-        body.put_u16(protocol::ERROR_MAP_VERSION);
-
-        let req = KvRequest::new(
-            protocol::Opcode::ErrorMap,
-            0,
-            0,
-            0,
-            None,
-            None,
-            Some(body.freeze()),
-            0,
-        );
-        let (tx, rx) = oneshot::channel::<KvResponse>();
-        self.send(req, tx).await?;
-
-        let (completetx, completerx) = oneshot::channel::<Result<ErrorMap, ClientError>>();
-        tokio::spawn(async move {
-            receive_error_map(rx, completetx).await;
-        });
-
-        Ok(completerx)
-    }
+    // async fn send_error_map(
+    //     &mut self,
+    // ) -> Result<oneshot::Receiver<Result<ErrorMap, ClientError>>, ClientError> {
+    //     let mut body = BytesMut::with_capacity(2);
+    //     body.put_u16(protocol::ERROR_MAP_VERSION);
+    //
+    //     let req = KvRequest::new(
+    //         protocol::Opcode::ErrorMap,
+    //         0,
+    //         0,
+    //         0,
+    //         None,
+    //         None,
+    //         Some(body.freeze()),
+    //         0,
+    //     );
+    //     let (tx, rx) = oneshot::channel::<KvResponse>();
+    //     self.send(req, tx).await?;
+    //
+    //     let (completetx, completerx) = oneshot::channel::<Result<ErrorMap, ClientError>>();
+    //     tokio::spawn(async move {
+    //         receive_error_map(rx, completetx).await;
+    //     });
+    //
+    //     Ok(completerx)
+    // }
 
     async fn send_auth(
         &mut self,
@@ -661,48 +660,48 @@ async fn receive_hello(
     };
 }
 
-async fn receive_error_map(
-    rx: oneshot::Receiver<KvResponse>,
-    completetx: oneshot::Sender<Result<ErrorMap, ClientError>>,
-) {
-    let r = match rx.await {
-        Ok(r) => Some(r),
-        Err(_e) => None,
-    };
-    let result = if let Some(mut response) = r {
-        let status = response.status();
-
-        match status {
-            Status::Success => {
-                if let Some(body) = response.body() {
-                    let error_map = serde_json::from_slice(body.as_ref()).unwrap();
-                    Ok(error_map)
-                } else {
-                    Err(ClientError::RequestFailed {
-                        reason: None,
-                        key: None,
-                    })
-                }
-            }
-            _ => Err(ClientError::RequestFailed {
-                reason: Some(status.as_string()),
-                key: None,
-            }),
-        }
-    } else {
-        Err(ClientError::RequestFailed {
-            reason: None,
-            key: None,
-        })
-    };
-
-    match completetx.send(result) {
-        Ok(()) => {}
-        Err(_e) => {
-            warn!("error map receive failed");
-        }
-    };
-}
+// async fn receive_error_map(
+//     rx: oneshot::Receiver<KvResponse>,
+//     completetx: oneshot::Sender<Result<ErrorMap, ClientError>>,
+// ) {
+//     let r = match rx.await {
+//         Ok(r) => Some(r),
+//         Err(_e) => None,
+//     };
+//     let result = if let Some(mut response) = r {
+//         let status = response.status();
+//
+//         match status {
+//             Status::Success => {
+//                 if let Some(body) = response.body() {
+//                     let error_map = serde_json::from_slice(body.as_ref()).unwrap();
+//                     Ok(error_map)
+//                 } else {
+//                     Err(ClientError::RequestFailed {
+//                         reason: None,
+//                         key: None,
+//                     })
+//                 }
+//             }
+//             _ => Err(ClientError::RequestFailed {
+//                 reason: Some(status.as_string()),
+//                 key: None,
+//             }),
+//         }
+//     } else {
+//         Err(ClientError::RequestFailed {
+//             reason: None,
+//             key: None,
+//         })
+//     };
+//
+//     match completetx.send(result) {
+//         Ok(()) => {}
+//         Err(_e) => {
+//             warn!("error map receive failed");
+//         }
+//     };
+// }
 
 async fn receive_auth(
     rx: oneshot::Receiver<KvResponse>,
@@ -831,75 +830,75 @@ impl TryFrom<u16> for ServerFeature {
     }
 }
 
-#[derive(Debug, Deserialize)]
-struct ErrorMap {
-    version: u16,
-    revision: u16,
-    errors: HashMap<String, ErrorCode>,
-}
-
-#[derive(Debug, Deserialize)]
-struct ErrorCode {
-    name: String,
-    desc: String,
-    attrs: HashSet<ErrorAttribute>,
-    retry: Option<RetrySpecification>,
-}
-
-#[derive(Debug, Deserialize)]
-struct RetrySpecification {
-    strategy: RetryStrategy,
-    interval: u32,
-    after: u32,
-    #[serde(rename = "max-duration")]
-    max_duration: u32,
-    ceil: u32,
-}
-
-#[derive(Debug, Deserialize, Eq, PartialEq, Hash)]
-enum ErrorAttribute {
-    #[serde(rename = "success")]
-    Success,
-    #[serde(rename = "item-only")]
-    ItemOnly,
-    #[serde(rename = "invalid-input")]
-    InvalidInput,
-    #[serde(rename = "fetch-config")]
-    FetchConfig,
-    #[serde(rename = "conn-state-invalidated")]
-    ConnStateInvalidated,
-    #[serde(rename = "auth")]
-    Auth,
-    #[serde(rename = "special-handling")]
-    SpecialHandling,
-    #[serde(rename = "support")]
-    Support,
-    #[serde(rename = "temp")]
-    Temp,
-    #[serde(rename = "internal")]
-    Internal,
-    #[serde(rename = "retry-now")]
-    RetryNow,
-    #[serde(rename = "retry-later")]
-    RetryLater,
-    #[serde(rename = "subdoc")]
-    Subdoc,
-    #[serde(rename = "dcp")]
-    Dcp,
-    #[serde(rename = "auto-retry")]
-    AutoRetry,
-    #[serde(rename = "item-locked")]
-    ItemLocked,
-    #[serde(rename = "item-deleted")]
-    ItemDeleted,
-}
-
-#[derive(Debug, Deserialize)]
-enum RetryStrategy {
-    #[serde(rename = "exponential")]
-    Exponential,
-    #[serde(rename = "linear")]
-    Linear,
-    #[serde(rename = "constant")]
-    Constant,
-}
+// #[derive(Debug, Deserialize)]
+// struct ErrorMap {
+//     version: u16,
+//     revision: u16,
+//     errors: HashMap<String, ErrorCode>,
+// }
+//
+// #[derive(Debug, Deserialize)]
+// struct ErrorCode {
+//     name: String,
+//     desc: String,
+//     attrs: HashSet<ErrorAttribute>,
+//     retry: Option<RetrySpecification>,
+// }
+//
+// #[derive(Debug, Deserialize)]
+// struct RetrySpecification {
+//     strategy: RetryStrategy,
+//     interval: u32,
+//     after: u32,
+//     #[serde(rename = "max-duration")]
+//     max_duration: u32,
+//     ceil: u32,
+// }
+//
+// #[derive(Debug, Deserialize, Eq, PartialEq, Hash)]
+// enum ErrorAttribute {
+//     #[serde(rename = "success")]
+//     Success,
+//     #[serde(rename = "item-only")]
+//     ItemOnly,
+//     #[serde(rename = "invalid-input")]
+//     InvalidInput,
+//     #[serde(rename = "fetch-config")]
+//     FetchConfig,
+//     #[serde(rename = "conn-state-invalidated")]
+//     ConnStateInvalidated,
+//     #[serde(rename = "auth")]
+//     Auth,
+//     #[serde(rename = "special-handling")]
+//     SpecialHandling,
+//     #[serde(rename = "support")]
+//     Support,
+//     #[serde(rename = "temp")]
+//     Temp,
+//     #[serde(rename = "internal")]
+//     Internal,
+//     #[serde(rename = "retry-now")]
+//     RetryNow,
+//     #[serde(rename = "retry-later")]
+//     RetryLater,
+//     #[serde(rename = "subdoc")]
+//     Subdoc,
+//     #[serde(rename = "dcp")]
+//     Dcp,
+//     #[serde(rename = "auto-retry")]
+//     AutoRetry,
+//     #[serde(rename = "item-locked")]
+//     ItemLocked,
+//     #[serde(rename = "item-deleted")]
+//     ItemDeleted,
+// }
+//
+// #[derive(Debug, Deserialize)]
+// enum RetryStrategy {
+//     #[serde(rename = "exponential")]
+//     Exponential,
+//     #[serde(rename = "linear")]
+//     Linear,
+//     #[serde(rename = "constant")]
+//     Constant,
+// }

@@ -4,7 +4,7 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 use std::convert::TryFrom;
 
 pub static HEADER_SIZE: usize = 24;
-pub static ERROR_MAP_VERSION: u16 = 1;
+// pub static ERROR_MAP_VERSION: u16 = 1;
 
 #[derive(Debug)]
 pub struct KvRequest {
@@ -50,13 +50,13 @@ impl KvRequest {
 
 #[derive(Debug)]
 pub struct KvResponse {
-    opcode: Opcode,
-    datatype: u8,
+    // opcode: Opcode,
+    // datatype: u8,
     status: Status,
     opaque: u32,
     cas: u64,
-    key: Option<Bytes>,
-    extras: Option<Bytes>,
+    // key: Option<Bytes>,
+    // extras: Option<Bytes>,
     body: Option<Bytes>,
 }
 
@@ -69,7 +69,7 @@ impl From<&Bytes> for KvResponse {
         let flexible = magic.is_flexible();
 
         // 1
-        let opcode = Opcode::try_from(slice.get_u8()).unwrap();
+        let _opcode = Opcode::try_from(slice.get_u8()).unwrap();
 
         let flexible_extras_len = if flexible {
             // 2
@@ -89,7 +89,7 @@ impl From<&Bytes> for KvResponse {
         // 4
         let extras_len = slice.get_u8() as usize;
         // 5
-        let datatype = slice.get_u8();
+        let _datatype = slice.get_u8();
         // 6, 7
         let status = slice.get_u16();
 
@@ -101,7 +101,7 @@ impl From<&Bytes> for KvResponse {
         let cas = slice.get_u64();
         let body_len = total_body_len - key_len - extras_len - flexible_extras_len;
 
-        let extras = if extras_len > 0 {
+        let _extras = if extras_len > 0 {
             Some(input.slice(
                 (HEADER_SIZE + flexible_extras_len)
                     ..(HEADER_SIZE + flexible_extras_len + extras_len),
@@ -110,7 +110,7 @@ impl From<&Bytes> for KvResponse {
             None
         };
 
-        let key = if key_len > 0 {
+        let _key = if key_len > 0 {
             Some(input.slice(
                 (HEADER_SIZE + flexible_extras_len + extras_len)
                     ..(HEADER_SIZE + flexible_extras_len + extras_len + key_len),
@@ -128,12 +128,12 @@ impl From<&Bytes> for KvResponse {
         KvResponse {
             opaque,
             body,
-            extras,
-            key,
+            // extras,
+            // key,
             status: Status::from(status),
-            datatype,
+            // datatype,
             cas,
-            opcode,
+            // opcode,
         }
     }
 }

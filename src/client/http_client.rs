@@ -774,7 +774,7 @@ impl ServiceType {
 
 #[derive(Deserialize, Debug)]
 struct ClusterConfig {
-    rev: u64,
+    // rev: u64,
     #[serde(alias = "nodesExt")]
     nodes_ext: Vec<NodeConfig>,
     loaded_from: Option<String>,

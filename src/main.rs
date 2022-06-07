@@ -84,11 +84,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut args_to_cbshell = vec![];
     let mut args_to_script = vec![];
-    let mut script_name = String::new();
 
     let mut collect_arg_script = false;
     let mut collect_arg_filename = false;
-    let mut args = std::env::args().skip(1);
     for arg in std::env::args().skip(1) {
         if collect_arg_script {
             if collect_arg_filename {
@@ -419,7 +417,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         working_set.add_decl(Box::new(UseScope::new(state.clone())));
         working_set.add_decl(Box::new(UseTimeouts::new(state.clone())));
         working_set.add_decl(Box::new(Users::new(state.clone())));
-        working_set.add_decl(Box::new(Users::new(state.clone())));
+        working_set.add_decl(Box::new(UsersGet::new(state.clone())));
         working_set.add_decl(Box::new(UsersDrop::new(state.clone())));
         working_set.add_decl(Box::new(UsersRoles::new(state.clone())));
         working_set.add_decl(Box::new(UsersUpsert::new(state.clone())));

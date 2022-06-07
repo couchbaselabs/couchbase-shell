@@ -457,26 +457,26 @@ impl KvClient {
 struct CollectionManifestCollection {
     uid: String,
     name: String,
-    #[serde(alias = "maxTTL")]
-    max_ttl: Option<u32>,
+    // #[serde(alias = "maxTTL")]
+    // max_ttl: Option<u32>,
 }
 
 #[derive(Deserialize, Debug)]
 struct CollectionManifestScope {
-    uid: String,
+    // uid: String,
     name: String,
     collections: Vec<CollectionManifestCollection>,
 }
 
 #[derive(Deserialize, Debug)]
 struct CollectionManifest {
-    uid: String,
+    // uid: String,
     scopes: Vec<CollectionManifestScope>,
 }
 
 #[derive(Deserialize, Debug)]
 struct BucketConfig {
-    rev: u64,
+    // rev: u64,
     #[serde(alias = "nodesExt")]
     nodes_ext: Vec<NodeConfig>,
     loaded_from: Option<String>,
@@ -556,8 +556,8 @@ pub(crate) struct AlternateAddress {
 #[derive(Deserialize, Debug)]
 pub(crate) struct NodeConfig {
     pub(crate) services: HashMap<String, u32>,
-    #[serde(alias = "thisNode")]
-    pub(crate) this_node: Option<bool>,
+    // #[serde(alias = "thisNode")]
+    // pub(crate) this_node: Option<bool>,
     pub(crate) hostname: Option<String>,
     #[serde(alias = "alternateAddresses", default)]
     pub(crate) alternate_addresses: HashMap<String, AlternateAddress>,
@@ -565,10 +565,10 @@ pub(crate) struct NodeConfig {
 
 #[derive(Deserialize, Debug)]
 struct VBucketServerMap {
-    #[serde(alias = "numReplicas")]
-    num_replicas: u32,
-    #[serde(alias = "serverList")]
-    server_list: Vec<String>,
+    // #[serde(alias = "numReplicas")]
+    // num_replicas: u32,
+    // #[serde(alias = "serverList")]
+    // server_list: Vec<String>,
     #[serde(alias = "vBucketMap")]
     vbucket_map: Vec<Vec<i32>>,
 }

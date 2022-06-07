@@ -295,7 +295,6 @@ struct JSONControllers {
 
 #[derive(Debug, Deserialize)]
 struct JSONQuota {
-    ram: u64,
     #[serde(rename = "rawRAM")]
     raw_ram: u64,
 }
@@ -314,8 +313,8 @@ pub struct JSONBucketSettings {
     bucket_type: String,
     #[serde(rename = "evictionPolicy")]
     eviction_policy: String,
-    #[serde(rename = "maxTTL")]
-    max_expiry: u32,
+    // #[serde(rename = "maxTTL")]
+    // max_expiry: u32,
     #[serde(rename = "compressionMode")]
     compression_mode: String,
     #[serde(rename = "durabilityMinLevel", default)]

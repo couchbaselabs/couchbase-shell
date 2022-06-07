@@ -7,7 +7,6 @@ use nu_protocol::engine::{EngineState, Stack};
 use nu_protocol::{IntoPipelineData, PipelineData, ShellError, Span, Value};
 use num_traits::cast::ToPrimitive;
 use regex::Regex;
-use serde_json::Error;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;

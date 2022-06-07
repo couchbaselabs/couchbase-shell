@@ -189,7 +189,6 @@ fn nodes(
 
 #[derive(Debug, Deserialize)]
 struct PoolInfo {
-    name: String,
     nodes: Vec<NodeInfo>,
 }
 

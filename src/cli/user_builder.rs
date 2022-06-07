@@ -86,7 +86,6 @@ impl RoleAndDescription {
 pub struct Origin {
     #[serde(rename = "type")]
     origin_type: String,
-    name: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -176,10 +175,10 @@ pub struct UserAndMetadata {
     #[serde(skip_serializing_if = "Option::is_none")]
     groups: Option<Vec<String>>,
     roles: Vec<RoleAndOrigins>,
-    domain: AuthDomain,
+    // domain: AuthDomain,
     password_change_date: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    external_groups: Option<Vec<String>>,
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // external_groups: Option<Vec<String>>,
 }
 
 impl UserAndMetadata {

@@ -26,7 +26,7 @@ impl JSONCloudClusterSummaryV3 {
         self.project_id.clone()
     }
     pub fn environment(&self) -> String {
-        self.project_id.clone()
+        self.environment.clone()
     }
 }
 
@@ -66,8 +66,8 @@ impl JSONCloudDeleteBucketRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct JSONCloudUser {
-    #[serde(rename = "userId", default)]
-    user_id: Option<String>,
+    // #[serde(rename = "userId", default)]
+    // user_id: Option<String>,
     username: String,
     access: Vec<JSONCloudUserRoles>,
 }

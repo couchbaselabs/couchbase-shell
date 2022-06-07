@@ -144,8 +144,3 @@ struct SearchResultHit {
 struct SearchResultData {
     hits: Vec<SearchResultHit>,
 }
-
-#[derive(Debug, Deserialize)]
-struct SearchResult {
-    data: SearchResultData,
-}
