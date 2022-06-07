@@ -95,7 +95,7 @@ tls-enabled = false",
         assert_eq!(1, item["success"]);
         assert_eq!(1, item["processed"]);
         assert_eq!(0, item["failed"]);
-        assert_eq!(serde_json::Value::Array(vec!()), item["failures"]);
+        assert_eq!("", item["failures"]);
     }
 
     pub fn parse_out_to_json(&self, out: String) -> serde_json::Value {

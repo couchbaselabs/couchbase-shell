@@ -14,7 +14,7 @@ pub async fn test_upserts_a_document(config: Arc<TestConfig>) -> bool {
         assert_eq!(1, json["success"]);
         assert_eq!(1, json["processed"]);
         assert_eq!(0, json["failed"]);
-        assert_eq!(serde_json::Value::Array(vec!()), json["failures"]);
+        assert_eq!("", json["failures"]);
     });
 
     false
