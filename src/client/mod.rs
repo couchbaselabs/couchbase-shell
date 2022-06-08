@@ -15,6 +15,7 @@ use crate::config::ClusterTlsConfig;
 use trust_dns_resolver::config::{ResolverConfig, ResolverOpts};
 use trust_dns_resolver::Resolver;
 
+mod capella_ca;
 mod cloud;
 mod codec;
 mod error;

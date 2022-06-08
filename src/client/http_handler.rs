@@ -1,4 +1,5 @@
 use crate::cli::CtrlcFuture;
+use crate::client::capella_ca::CAPELLA_CERT;
 use crate::client::error::ClientError;
 use crate::config::ClusterTlsConfig;
 use reqwest::ClientBuilder;
@@ -100,15 +101,17 @@ impl HTTPHandler {
         let mut client_builder = ClientBuilder::new();
 
         if self.tls_config.enabled() {
-            if let Some(cert) = self.tls_config.cert_path() {
+            client_builder = if let Some(cert) = self.tls_config.cert_path() {
                 let mut buf = Vec::new();
                 File::open(cert)
                     .map_err(ClientError::from)?
                     .read_to_end(&mut buf)?;
 
-                client_builder =
-                    client_builder.add_root_certificate(reqwest::Certificate::from_pem(&buf)?)
-            }
+                client_builder.add_root_certificate(reqwest::Certificate::from_pem(&buf)?)
+            } else {
+                client_builder
+                    .add_root_certificate(reqwest::Certificate::from_pem(CAPELLA_CERT.as_bytes())?)
+            };
 
             if self.tls_config.accept_all_certs() {
                 client_builder = client_builder.danger_accept_invalid_certs(true);

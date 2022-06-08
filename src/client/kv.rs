@@ -1,3 +1,4 @@
+use crate::client::capella_ca::CAPELLA_CERT;
 use crate::client::codec::KeyValueCodec;
 use crate::client::protocol::{request, KvRequest, KvResponse, Status};
 use crate::client::{protocol, ClientError};
@@ -45,44 +46,48 @@ pub struct KvTlsConfig {
 impl KvTlsConfig {
     pub fn new(tls_config: ClusterTlsConfig) -> Result<KvTlsConfig, ClientError> {
         let builder = rustls::ClientConfig::builder().with_safe_defaults();
-        let config =
-            if tls_config.accept_all_certs() {
-                builder
-                    .with_custom_certificate_verifier(Arc::new(InsecureCertVerifier {}))
-                    .with_no_client_auth()
+        let config = if tls_config.accept_all_certs() {
+            builder
+                .with_custom_certificate_verifier(Arc::new(InsecureCertVerifier {}))
+                .with_no_client_auth()
+        } else {
+            let mut root_cert_store = rustls::RootCertStore::empty();
+            let items = if let Some(path) = tls_config.cert_path() {
+                let cert = fs::read(path).map_err(ClientError::from)?;
+                let mut reader = BufReader::new(&cert[..]);
+                read_all(&mut reader).map_err(|e| ClientError::RequestFailed {
+                    reason: Some(format!("Failed to read cert file {}", e.to_string())),
+                    key: None,
+                })?
             } else {
-                let mut root_cert_store = rustls::RootCertStore::empty();
-                if let Some(path) = tls_config.cert_path() {
-                    let cert = fs::read(path).map_err(ClientError::from)?;
-                    let mut reader = BufReader::new(&cert[..]);
-                    let items = read_all(&mut reader).map_err(|e| ClientError::RequestFailed {
-                        reason: Some(format!("Failed to read cert file {}", e.to_string())),
-                        key: None,
-                    })?;
-                    for item in items {
-                        match item {
-                            Item::X509Certificate(c) => root_cert_store
-                                .add(&Certificate(c))
-                                .map_err(|e| ClientError::RequestFailed {
-                                    reason: Some(format!(
-                                        "Failed to create cert store {}",
-                                        e.to_string()
-                                    )),
-                                    key: None,
-                                })?,
-                            _ => {
-                                return Err(ClientError::RequestFailed {
-                                    reason: Some(format!("Unsupported certificate format")),
-                                    key: None,
-                                })
+                let mut reader = BufReader::new(CAPELLA_CERT.as_bytes());
+                read_all(&mut reader).expect("Failed to read capella certificate")
+            };
+            for item in items {
+                match item {
+                    Item::X509Certificate(c) => {
+                        root_cert_store.add(&Certificate(c)).map_err(|e| {
+                            ClientError::RequestFailed {
+                                reason: Some(format!(
+                                    "Failed to create cert store {}",
+                                    e.to_string()
+                                )),
+                                key: None,
                             }
-                        }
+                        })?
+                    }
+                    _ => {
+                        return Err(ClientError::RequestFailed {
+                            reason: Some(format!("Unsupported certificate format")),
+                            key: None,
+                        })
                     }
                 }
-                builder
-                    .with_root_certificates(root_cert_store)
-                    .with_no_client_auth()
-            };
+            }
+            builder
+                .with_root_certificates(root_cert_store)
+                .with_no_client_auth()
+        };
 
         Ok(KvTlsConfig { config })
     }
