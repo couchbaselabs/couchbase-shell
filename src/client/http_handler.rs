@@ -1,10 +1,10 @@
 use crate::cli::CtrlcFuture;
 use crate::client::error::ClientError;
 use crate::config::ClusterTlsConfig;
-use isahc::auth::{Authentication, Credentials};
-use isahc::config::CaCertificate;
-use isahc::{config::SslOption, prelude::*, ResponseFuture};
+use reqwest::ClientBuilder;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::Read;
 use std::ops::Sub;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
@@ -17,6 +17,17 @@ pub enum HttpVerb {
     Put,
 }
 
+impl HttpVerb {
+    pub fn as_str(&self) -> &str {
+        match self {
+            HttpVerb::Get => "GET",
+            HttpVerb::Post => "POST",
+            HttpVerb::Put => "PUT",
+            HttpVerb::Delete => "DELETE",
+        }
+    }
+}
+
 pub(crate) fn status_to_reason(status: u16) -> Option<String> {
     match status {
         400 => Some("bad request".into()),
@@ -24,13 +35,6 @@ pub(crate) fn status_to_reason(status: u16) -> Option<String> {
         403 => Some("forbidden".into()),
         404 => Some("not found".into()),
         _ => None,
-    }
-}
-
-pub(crate) fn http_prefix(tls_config: &ClusterTlsConfig) -> &'static str {
-    match tls_config.enabled() {
-        true => "https",
-        false => "http",
     }
 }
 
@@ -69,14 +73,23 @@ impl HTTPHandler {
         }
     }
 
-    pub(crate) async fn http_do(
+    fn http_prefix(&self) -> &'static str {
+        match self.tls_config.enabled() {
+            true => "https",
+            false => "http",
+        }
+    }
+
+    pub async fn http_do(
         &self,
-        mut res_builder: http::request::Builder,
+        uri: &str,
+        method: HttpVerb,
         payload: Option<Vec<u8>>,
         headers: HashMap<&str, &str>,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(String, u16), ClientError> {
+        let uri = format!("{}://{}", self.http_prefix(), uri);
         let now = Instant::now();
         if now >= deadline {
             return Err(ClientError::Timeout { key: None });
@@ -84,34 +97,51 @@ impl HTTPHandler {
         let timeout = deadline.sub(now);
         let ctrl_c_fut = CtrlcFuture::new(ctrl_c);
 
-        res_builder = res_builder
-            .authentication(Authentication::basic())
-            .credentials(Credentials::new(&self.username, &self.password))
-            .timeout(timeout);
+        let mut client_builder = ClientBuilder::new();
 
         if self.tls_config.enabled() {
             if let Some(cert) = self.tls_config.cert_path() {
-                res_builder = res_builder.ssl_ca_certificate(CaCertificate::file(cert));
+                let mut buf = Vec::new();
+                File::open(cert)
+                    .map_err(ClientError::from)?
+                    .read_to_end(&mut buf)?;
+
+                client_builder =
+                    client_builder.add_root_certificate(reqwest::Certificate::from_pem(&buf)?)
             }
-            res_builder = res_builder.ssl_options(self.http_ssl_opts());
+
+            if self.tls_config.accept_all_certs() {
+                client_builder = client_builder.danger_accept_invalid_certs(true);
+            }
         }
+
+        let client = client_builder.build().map_err(ClientError::from)?;
+        let mut res_builder = match method {
+            HttpVerb::Delete => client.delete(uri),
+            HttpVerb::Get => client.get(uri),
+            HttpVerb::Post => client.post(uri),
+            HttpVerb::Put => client.put(uri),
+        };
+
+        res_builder = res_builder
+            .basic_auth(&self.username, Some(&self.password))
+            .timeout(timeout);
 
         for (key, value) in headers {
             res_builder = res_builder.header(key, value);
         }
 
-        let res_fut: ResponseFuture;
         if let Some(p) = payload {
-            res_fut = res_builder.body(p)?.send_async();
-        } else {
-            res_fut = res_builder.body(())?.send_async();
-        }
+            res_builder = res_builder.body(p)
+        };
+
+        let res_fut = res_builder.send();
 
         select! {
             result = res_fut => {
-                let mut response = result.map_err(ClientError::from)?;
-                let content = response.text().await?;
+                let response = result.map_err(ClientError::from)?;
                 let status = response.status().into();
+                let content = response.text().await?;
                 Ok((content, status))
             },
             () = ctrl_c_fut => Err(ClientError::Cancelled{key: None}),
@@ -124,8 +154,7 @@ impl HTTPHandler {
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(String, u16), ClientError> {
-        let res_builder = isahc::Request::get(uri);
-        self.http_do(res_builder, None, HashMap::new(), deadline, ctrl_c)
+        self.http_do(uri, HttpVerb::Get, None, HashMap::new(), deadline, ctrl_c)
             .await
     }
 
@@ -135,9 +164,15 @@ impl HTTPHandler {
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(String, u16), ClientError> {
-        let res_builder = isahc::Request::delete(uri);
-        self.http_do(res_builder, None, HashMap::new(), deadline, ctrl_c)
-            .await
+        self.http_do(
+            uri,
+            HttpVerb::Delete,
+            None,
+            HashMap::new(),
+            deadline,
+            ctrl_c,
+        )
+        .await
     }
 
     pub(crate) async fn http_post(
@@ -148,8 +183,7 @@ impl HTTPHandler {
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(String, u16), ClientError> {
-        let res_builder = isahc::Request::post(uri);
-        self.http_do(res_builder, payload, headers, deadline, ctrl_c)
+        self.http_do(uri, HttpVerb::Post, payload, headers, deadline, ctrl_c)
             .await
     }
 
@@ -161,19 +195,7 @@ impl HTTPHandler {
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(String, u16), ClientError> {
-        let res_builder = isahc::Request::put(uri);
-        self.http_do(res_builder, payload, headers, deadline, ctrl_c)
+        self.http_do(uri, HttpVerb::Put, payload, headers, deadline, ctrl_c)
             .await
-    }
-
-    pub(crate) fn http_ssl_opts(&self) -> SslOption {
-        let mut ssl_opts = SslOption::NONE;
-        if !self.tls_config.validate_hostnames() {
-            ssl_opts |= SslOption::DANGER_ACCEPT_INVALID_HOSTS;
-        }
-        if self.tls_config.accept_all_certs() {
-            ssl_opts |= SslOption::DANGER_ACCEPT_INVALID_CERTS;
-        }
-        ssl_opts
     }
 }

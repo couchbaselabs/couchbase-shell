@@ -2,8 +2,8 @@ use crate::cli::CtrlcFuture;
 use crate::client::error::ClientError;
 use crate::client::error::ClientError::CollectionNotFound;
 use crate::client::http_client::{PingResponse, ServiceType};
-use crate::client::http_handler::{http_prefix, status_to_reason, HTTPHandler};
-use crate::client::kv::KvEndpoint;
+use crate::client::http_handler::{status_to_reason, HTTPHandler};
+use crate::client::kv::{KvEndpoint, KvTlsConfig};
 use crate::client::protocol;
 use crate::config::ClusterTlsConfig;
 use crc::crc32;
@@ -42,8 +42,8 @@ pub struct KvClient {
     manifest: Option<CollectionManifest>,
     endpoints: HashMap<String, KvEndpoint>,
     config: BucketConfig,
-    tls_config: ClusterTlsConfig,
     http_agent: HTTPHandler,
+    tls_enabled: bool,
     bucket: String,
 }
 
@@ -78,15 +78,22 @@ impl KvClient {
         )
         .await?;
 
+        let tls_enabled = tls_config.enabled();
+        let kv_tls_config = if tls_enabled {
+            Some(KvTlsConfig::new(tls_config)?)
+        } else {
+            None
+        };
+
         let mut endpoints = HashMap::new();
-        for addr in config.key_value_seeds(tls_config.enabled()) {
+        for addr in config.key_value_seeds(tls_enabled) {
             let connect = KvEndpoint::connect(
                 addr.0.clone(),
                 addr.1,
                 username.clone(),
                 password.clone(),
                 bucket.clone(),
-                tls_config.clone(),
+                kv_tls_config.clone(),
             );
 
             let endpoint = select! {
@@ -103,9 +110,9 @@ impl KvClient {
             manifest: None,
             config,
             endpoints,
-            tls_config: tls_config.clone(),
             http_agent,
             bucket,
+            tls_enabled: kv_tls_config.is_some(),
         })
     }
 
@@ -117,7 +124,7 @@ impl KvClient {
     }
 
     fn node_for_partition(&self, partition: u32) -> (String, u32) {
-        let seeds = self.config.key_value_seeds(self.tls_config.enabled());
+        let seeds = self.config.key_value_seeds(self.tls_enabled);
         let node = self.config.vbucket_server_map.vbucket_map[partition as usize][0];
 
         let seed = &seeds[node as usize];
@@ -174,7 +181,7 @@ impl KvClient {
                     })?;
             }
 
-            let uri = format!("{}://{}:{}{}", http_prefix(&tls_config), host, port, &path);
+            let uri = format!("{}:{}{}", host, port, &path);
             let (content, status) = http_agent.http_get(&uri, deadline, ctrl_c.clone()).await?;
             if status != 200 {
                 if !content.is_empty() {
@@ -209,11 +216,7 @@ impl KvClient {
             let port: i32;
             if host_split.len() == 1 {
                 host = seed.clone();
-                port = if self.tls_config.enabled() {
-                    18091
-                } else {
-                    8091
-                };
+                port = if self.tls_enabled { 18091 } else { 8091 };
             } else {
                 host = host_split[0].clone();
                 port = host_split[1]
@@ -223,13 +226,7 @@ impl KvClient {
                         key: None,
                     })?;
             }
-            let uri = format!(
-                "{}://{}:{}{}",
-                http_prefix(&self.tls_config),
-                host,
-                port,
-                &path
-            );
+            let uri = format!("{}:{}{}", host, port, &path);
             let (content, status) = self
                 .http_agent
                 .http_get(&uri, deadline, ctrl_c.clone())
@@ -268,7 +265,7 @@ impl KvClient {
         tokio::pin!(ctrl_c_fut);
 
         let mut results: Vec<PingResponse> = Vec::new();
-        for seed in self.config.key_value_seeds(self.tls_config.enabled()) {
+        for seed in self.config.key_value_seeds(self.tls_enabled) {
             let addr = seed.0.clone();
             let port = seed.1;
             let ep = self

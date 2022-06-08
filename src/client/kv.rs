@@ -17,7 +17,7 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
 use tokio::sync::{mpsc, oneshot};
 use tokio_rustls::rustls::client::{ServerCertVerified, ServerCertVerifier};
-use tokio_rustls::rustls::{Certificate, Error, ServerName};
+use tokio_rustls::rustls::{Certificate, ClientConfig, Error, ServerName};
 use tokio_rustls::{rustls, TlsConnector};
 use tokio_util::codec::{FramedRead, FramedWrite};
 
@@ -37,36 +37,16 @@ impl ServerCertVerifier for InsecureCertVerifier {
     }
 }
 
-pub struct KvEndpoint {
-    tx: mpsc::Sender<Bytes>,
-    opaque: AtomicU32,
-    in_flight: Arc<Mutex<HashMap<u32, oneshot::Sender<KvResponse>>>>,
-    collections_enabled: bool,
-    // error_map: Option<ErrorMap>,
+#[derive(Clone)]
+pub struct KvTlsConfig {
+    config: ClientConfig,
 }
 
-impl KvEndpoint {
-    pub async fn connect(
-        hostname: String,
-        port: u32,
-        username: String,
-        password: String,
-        bucket: String,
-        tls_config: ClusterTlsConfig,
-    ) -> Result<KvEndpoint, ClientError> {
-        let remote_addr = format!("{}:{}", hostname, port);
-
-        if tls_config.enabled() {
-            let tcp_socket =
-                TcpStream::connect(remote_addr)
-                    .await
-                    .map_err(|e| ClientError::RequestFailed {
-                        reason: Some(e.to_string()),
-                        key: None,
-                    })?;
-
-            let builder = rustls::ClientConfig::builder().with_safe_defaults();
-            let config = if tls_config.accept_all_certs() {
+impl KvTlsConfig {
+    pub fn new(tls_config: ClusterTlsConfig) -> Result<KvTlsConfig, ClientError> {
+        let builder = rustls::ClientConfig::builder().with_safe_defaults();
+        let config =
+            if tls_config.accept_all_certs() {
                 builder
                     .with_custom_certificate_verifier(Arc::new(InsecureCertVerifier {}))
                     .with_no_client_auth()
@@ -104,7 +84,43 @@ impl KvEndpoint {
                     .with_no_client_auth()
             };
 
-            let connector = TlsConnector::from(Arc::new(config));
+        Ok(KvTlsConfig { config })
+    }
+
+    pub fn config(&self) -> ClientConfig {
+        self.config.clone()
+    }
+}
+
+pub struct KvEndpoint {
+    tx: mpsc::Sender<Bytes>,
+    opaque: AtomicU32,
+    in_flight: Arc<Mutex<HashMap<u32, oneshot::Sender<KvResponse>>>>,
+    collections_enabled: bool,
+    // error_map: Option<ErrorMap>,
+}
+
+impl KvEndpoint {
+    pub async fn connect(
+        hostname: String,
+        port: u32,
+        username: String,
+        password: String,
+        bucket: String,
+        kv_tls_config: Option<KvTlsConfig>,
+    ) -> Result<KvEndpoint, ClientError> {
+        let remote_addr = format!("{}:{}", hostname, port);
+
+        if let Some(tls_config) = kv_tls_config {
+            let tcp_socket =
+                TcpStream::connect(remote_addr)
+                    .await
+                    .map_err(|e| ClientError::RequestFailed {
+                        reason: Some(e.to_string()),
+                        key: None,
+                    })?;
+
+            let connector = TlsConnector::from(Arc::new(tls_config.config()));
             let socket = connector
                 .connect(ServerName::try_from(hostname.as_str()).unwrap(), tcp_socket)
                 .await

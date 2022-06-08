@@ -18,7 +18,6 @@ use crate::state::{RemoteCapellaOrganization, RemoteCluster};
 use crate::{cli::*, state::ClusterTimeouts};
 use config::ClusterTlsConfig;
 use env_logger::Env;
-use isahc::{prelude::*, Request};
 use log::{debug, warn, LevelFilter};
 use log::{error, info};
 use nu_cli::{add_plugin_file, gather_parent_env_vars, read_plugin_file, report_error};
@@ -176,7 +175,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         let tls_config = ClusterTlsConfig::new(
             !opt.disable_tls,
             opt.tls_cert_path.clone(),
-            !opt.dont_validate_hostnames,
             opt.tls_cert_path.is_none(),
         );
         if !tls_config.enabled() {
@@ -506,11 +504,10 @@ fn fetch_and_print_motd() {
         std::env::consts::ARCH
     );
 
-    let mut response = match Request::get("http://motd.couchbase.sh/motd")
+    let response = match reqwest::blocking::Client::new()
+        .get("http://motd.couchbase.sh/motd")
         .timeout(Duration::from_millis(500))
         .header("User-Agent", agent)
-        .body(())
-        .expect("An empty body should not cause a panic - ignoring.")
         .send()
     {
         Ok(r) => r,
@@ -558,7 +555,6 @@ struct CliOptions {
     stdin: bool,
     no_motd: bool,
     disable_tls: bool,
-    dont_validate_hostnames: bool,
     tls_cert_path: Option<String>,
     silent: bool,
 }
@@ -630,11 +626,6 @@ impl Command for Cbsh {
             .switch("stdin", "redirect stdin", None)
             .switch("no-motd", "disable message of the day", None)
             .switch("disable-tls", "disable TLS", None)
-            .switch(
-                "dont-validate-hostnames",
-                "disable validation of hostnames for TLS certificates",
-                None,
-            )
             .named(
                 "tls-cert-path",
                 SyntaxShape::String,
@@ -729,7 +720,6 @@ fn parse_commandline_args(
             let stdin = call.has_flag("stdin");
             let no_motd = call.has_flag("no-motd");
             let disable_tls = call.has_flag("disable-tls");
-            let dont_validate_hostnames = call.has_flag("dont-validate-hostnames");
             let tls_cert_path: Option<String> =
                 call.get_flag(context, &mut stack, "tls-cert-path")?;
             let silent = call.has_flag("silent");
@@ -793,7 +783,6 @@ fn parse_commandline_args(
                 stdin,
                 no_motd,
                 disable_tls,
-                dont_validate_hostnames,
                 tls_cert_path,
                 silent,
             });

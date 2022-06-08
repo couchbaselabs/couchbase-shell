@@ -99,15 +99,6 @@ impl From<std::io::Error> for ClientError {
     }
 }
 
-impl From<isahc::Error> for ClientError {
-    fn from(e: isahc::Error) -> Self {
-        ClientError::RequestFailed {
-            reason: Some(format!("{}", e)),
-            key: None,
-        }
-    }
-}
-
 impl From<serde_json::Error> for ClientError {
     fn from(e: serde_json::Error) -> Self {
         ClientError::RequestFailed {
@@ -117,8 +108,8 @@ impl From<serde_json::Error> for ClientError {
     }
 }
 
-impl From<isahc::http::Error> for ClientError {
-    fn from(e: isahc::http::Error) -> Self {
+impl From<reqwest::Error> for ClientError {
+    fn from(e: reqwest::Error) -> Self {
         ClientError::RequestFailed {
             reason: Some(format!("{}", e)),
             key: None,

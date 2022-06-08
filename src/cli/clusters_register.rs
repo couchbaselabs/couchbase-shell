@@ -85,12 +85,6 @@ impl Command for ClustersRegister {
                 "whether or not to accept all certs with tls, defaults to true",
                 None,
             )
-            .named(
-                "tls-validate-hosts",
-                SyntaxShape::String,
-                "whether or not to validate hosts with tls, defaults to false",
-                None,
-            )
             .switch(
                 "save",
                 "whether or not to add the cluster to the .cbsh config file, defaults to false",
@@ -145,9 +139,6 @@ fn clusters_register(
     let tls_accept_all_certs = call
         .get_flag(engine_state, stack, "tls-accept-all-certs")?
         .unwrap_or(true);
-    let tls_accept_all_hosts = call
-        .get_flag(engine_state, stack, "tls-validate-hosts")?
-        .unwrap_or(true);
     let cert_path = call.get_flag(engine_state, stack, "tls-cert-path")?;
     let save = call.get_flag(engine_state, stack, "save")?.unwrap_or(false);
     let capella = call.get_flag(engine_state, stack, "capella-organization")?;
@@ -159,12 +150,7 @@ fn clusters_register(
         bucket,
         scope,
         collection,
-        ClusterTlsConfig::new(
-            tls_enabled,
-            cert_path,
-            tls_accept_all_certs,
-            tls_accept_all_hosts,
-        ),
+        ClusterTlsConfig::new(tls_enabled, cert_path, tls_accept_all_certs),
         ClusterTimeouts::default(),
         capella,
         DEFAULT_KV_BATCH_SIZE,

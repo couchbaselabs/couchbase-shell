@@ -3,8 +3,7 @@ use crate::client::error::ClientError;
 use crate::client::http_handler::{HttpResponse, HttpVerb};
 use crate::state::CapellaEnvironment;
 use hmac::{Hmac, Mac, NewMac};
-use isahc::prelude::*;
-use isahc::ResponseFuture;
+use reqwest::Client;
 use serde::Deserialize;
 use serde_json::Value;
 use sha2::Sha256;
@@ -66,11 +65,12 @@ impl CapellaClient {
 
         let uri = format!("{}{}", CLOUD_URL, path);
 
+        let client = Client::new();
         let mut res_builder = match verb {
-            HttpVerb::Get => isahc::Request::get(uri),
-            HttpVerb::Delete => isahc::Request::delete(uri),
-            HttpVerb::Put => isahc::Request::put(uri),
-            HttpVerb::Post => isahc::Request::post(uri),
+            HttpVerb::Get => client.get(uri),
+            HttpVerb::Delete => client.delete(uri),
+            HttpVerb::Put => client.put(uri),
+            HttpVerb::Post => client.post(uri),
         };
 
         let now_millis = SystemTime::now()
@@ -78,12 +78,7 @@ impl CapellaClient {
             .unwrap()
             .as_millis();
 
-        let bearer_payload = format!(
-            "{}\n{}\n{}",
-            res_builder.method_ref().unwrap(),
-            path,
-            now_millis.to_string()
-        );
+        let bearer_payload = format!("{}\n{}\n{}", verb.as_str(), path, now_millis.to_string());
 
         type HmacSha256 = Hmac<Sha256>;
         let mut mac = HmacSha256::new_from_slice(self.secret_key.clone().as_bytes()).unwrap();
@@ -102,20 +97,18 @@ impl CapellaClient {
             .header("Authorization", bearer)
             .header("Couchbase-Timestamp", now_millis.to_string());
 
-        let res_fut: ResponseFuture;
         if let Some(p) = payload {
-            res_fut = res_builder.body(p)?.send_async();
-        } else {
-            res_fut = res_builder.body(())?.send_async();
+            res_builder = res_builder.body(p);
         }
 
         let rt = Runtime::new().unwrap();
         rt.block_on(async {
+            let res_fut = res_builder.send();
             select! {
                 result = res_fut => {
-                    let mut response = result.map_err(ClientError::from)?;
-                    let content = response.text().await?;
+                    let response = result.map_err(ClientError::from)?;
                     let status = response.status().into();
+                    let content = response.text().await.map_err(ClientError::from)?;
                     Ok((content, status))
                 },
                 () = ctrl_c_fut => Err(ClientError::Cancelled{key: None}),

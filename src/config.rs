@@ -440,12 +440,6 @@ pub struct ClusterTlsConfig {
     #[serde(rename(deserialize = "tls-cert-path", serialize = "tls-cert-path"))]
     cert_path: Option<String>,
     #[serde(rename(
-        deserialize = "tls-validate-hostnames",
-        serialize = "tls-validate-hostnames"
-    ))]
-    #[serde(default = "default_as_false")]
-    validate_hostnames: bool,
-    #[serde(rename(
         deserialize = "tls-accept-all-certs",
         serialize = "tls-accept-all-certs"
     ))]
@@ -454,16 +448,10 @@ pub struct ClusterTlsConfig {
 }
 
 impl ClusterTlsConfig {
-    pub fn new(
-        enabled: bool,
-        cert_path: Option<String>,
-        validate_hostnames: bool,
-        accept_all_certs: bool,
-    ) -> Self {
+    pub fn new(enabled: bool, cert_path: Option<String>, accept_all_certs: bool) -> Self {
         Self {
             enabled,
             cert_path,
-            validate_hostnames,
             accept_all_certs,
         }
     }
@@ -473,10 +461,6 @@ impl ClusterTlsConfig {
 
     pub fn cert_path(&self) -> &Option<String> {
         &self.cert_path
-    }
-
-    pub fn validate_hostnames(&self) -> bool {
-        self.validate_hostnames
     }
 
     pub fn accept_all_certs(&self) -> bool {
@@ -489,7 +473,6 @@ impl Default for ClusterTlsConfig {
         Self {
             enabled: true,
             cert_path: None,
-            validate_hostnames: false,
             accept_all_certs: true,
         }
     }
@@ -547,9 +530,6 @@ impl StandaloneClusterCredentials {
     }
 }
 
-fn default_as_false() -> bool {
-    false
-}
 fn default_as_true() -> bool {
     true
 }

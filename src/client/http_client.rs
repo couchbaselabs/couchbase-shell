@@ -1,7 +1,5 @@
 use crate::client::error::ClientError;
-use crate::client::http_handler::{
-    http_prefix, status_to_reason, HTTPHandler, HttpResponse, HttpVerb,
-};
+use crate::client::http_handler::{status_to_reason, HTTPHandler, HttpResponse, HttpVerb};
 use crate::client::kv_client::NodeConfig;
 use crate::config::ClusterTlsConfig;
 use rand::Rng;
@@ -64,13 +62,7 @@ impl HTTPClient {
                     })?;
             }
 
-            let uri = format!(
-                "{}://{}:{}{}",
-                http_prefix(&self.tls_config),
-                host,
-                port,
-                &path
-            );
+            let uri = format!("{}:{}{}", host, port, &path);
             let (content, status) = self
                 .http_client
                 .http_get(&uri, deadline, ctrl_c.clone())
@@ -136,12 +128,7 @@ impl HTTPClient {
 
             let mut results: Vec<PingResponse> = Vec::new();
             for seed in config.search_seeds(self.tls_config.enabled()) {
-                let uri = format!(
-                    "{}://{}:{}/api/ping",
-                    http_prefix(&self.tls_config),
-                    seed.0,
-                    seed.1
-                );
+                let uri = format!("{}:{}/api/ping", seed.0, seed.1);
                 let address = format!("{}:{}", seed.0, seed.1);
                 results.push(
                     self.ping_endpoint(uri, address, ServiceType::Search, deadline, ctrl_c.clone())
@@ -149,12 +136,7 @@ impl HTTPClient {
                 );
             }
             for seed in config.query_seeds(self.tls_config.enabled()) {
-                let uri = format!(
-                    "{}://{}:{}/admin/ping",
-                    http_prefix(&self.tls_config),
-                    seed.0,
-                    seed.1
-                );
+                let uri = format!("{}:{}/admin/ping", seed.0, seed.1);
                 let address = format!("{}:{}", seed.0, seed.1);
                 results.push(
                     self.ping_endpoint(uri, address, ServiceType::Query, deadline, ctrl_c.clone())
@@ -162,12 +144,7 @@ impl HTTPClient {
                 );
             }
             for seed in config.analytics_seeds(self.tls_config.enabled()) {
-                let uri = format!(
-                    "{}://{}:{}/admin/ping",
-                    http_prefix(&self.tls_config),
-                    seed.0,
-                    seed.1
-                );
+                let uri = format!("{}:{}/admin/ping", seed.0, seed.1);
                 let address = format!("{}:{}", seed.0, seed.1);
                 results.push(
                     self.ping_endpoint(
@@ -181,7 +158,7 @@ impl HTTPClient {
                 );
             }
             for seed in config.view_seeds(self.tls_config.enabled()) {
-                let uri = format!("{}://{}:{}/", http_prefix(&self.tls_config), seed.0, seed.1);
+                let uri = format!("{}:{}/", seed.0, seed.1);
                 let address = format!("{}:{}", seed.0, seed.1);
                 results.push(
                     self.ping_endpoint(uri, address, ServiceType::Views, deadline, ctrl_c.clone())
@@ -205,13 +182,7 @@ impl HTTPClient {
 
             let path = request.path();
             if let Some(seed) = config.random_management_seed(self.tls_config.enabled()) {
-                let uri = format!(
-                    "{}://{}:{}{}",
-                    http_prefix(&self.tls_config),
-                    seed.0,
-                    seed.1,
-                    &path
-                );
+                let uri = format!("{}:{}{}", seed.0, seed.1, &path);
                 let (content, status) = match request.verb() {
                     HttpVerb::Get => self.http_client.http_get(&uri, deadline, ctrl_c).await?,
                     HttpVerb::Post => {
@@ -250,13 +221,7 @@ impl HTTPClient {
 
             let path = request.path();
             if let Some(seed) = config.random_query_seed(self.tls_config.enabled()) {
-                let uri = format!(
-                    "{}://{}:{}{}",
-                    http_prefix(&self.tls_config),
-                    seed.0,
-                    seed.1,
-                    &path
-                );
+                let uri = format!("{}:{}{}", seed.0, seed.1, &path);
                 let (content, status) = match request.verb() {
                     HttpVerb::Get => self.http_client.http_get(&uri, deadline, ctrl_c).await?,
                     HttpVerb::Post => {
@@ -294,13 +259,7 @@ impl HTTPClient {
 
             let path = request.path();
             if let Some(seed) = config.random_analytics_seed(self.tls_config.enabled()) {
-                let uri = format!(
-                    "{}://{}:{}{}",
-                    http_prefix(&self.tls_config),
-                    seed.0,
-                    seed.1,
-                    &path
-                );
+                let uri = format!("{}:{}{}", seed.0, seed.1, &path);
                 let (content, status) = match request.verb() {
                     HttpVerb::Get => self.http_client.http_get(&uri, deadline, ctrl_c).await?,
                     HttpVerb::Post => {
@@ -338,13 +297,7 @@ impl HTTPClient {
 
             let path = request.path();
             if let Some(seed) = config.random_search_seed(self.tls_config.enabled()) {
-                let uri = format!(
-                    "{}://{}:{}{}",
-                    http_prefix(&self.tls_config),
-                    seed.0,
-                    seed.1,
-                    &path
-                );
+                let uri = format!("{}:{}{}", seed.0, seed.1, &path);
                 let (content, status) = match request.verb() {
                     HttpVerb::Post => {
                         self.http_client
