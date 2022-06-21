@@ -8,7 +8,7 @@ use nu_protocol::{IntoPipelineData, PipelineData, ShellError, Span, Value};
 use num_traits::cast::ToPrimitive;
 use regex::Regex;
 use std::sync::atomic::AtomicBool;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 use tokio::time::Instant;
 
@@ -432,6 +432,20 @@ pub fn generic_unspanned_error(msg: impl Into<String>, help: impl Into<String>) 
     ShellError::GenericError(msg.into(), "".into(), None, Some(help.into()), Vec::new())
 }
 
+pub fn generic_spanned_error(
+    msg: impl Into<String>,
+    help: impl Into<String>,
+    span: Span,
+) -> ShellError {
+    ShellError::GenericError(
+        msg.into(),
+        "".into(),
+        Some(span),
+        Some(help.into()),
+        Vec::new(),
+    )
+}
+
 pub fn map_serde_deserialize_error_to_shell_error(e: serde_json::Error) -> ShellError {
     ShellError::GenericError(
         "Failed to deserialize response".into(),
@@ -491,6 +505,19 @@ pub fn no_active_bucket_error(span: Span) -> ShellError {
         "Could not auto-select a bucket, use --bucket or set an active bucket".into(),
         span,
     )
+}
+
+pub fn get_active_cluster<'a>(
+    identifier: String,
+    guard: &'a MutexGuard<State>,
+    span: Span,
+) -> Result<&'a RemoteCluster, ShellError> {
+    match guard.clusters().get(&identifier) {
+        Some(c) => Ok(c),
+        None => {
+            return Err(cluster_not_found_error(identifier, span));
+        }
+    }
 }
 
 #[cfg(test)]

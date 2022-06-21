@@ -1,21 +1,23 @@
 use crate::cli::util::{
-    cluster_identifiers_from, cluster_not_found_error, convert_json_value_to_nu_value,
-    convert_row_to_nu_value, duration_to_golang_string, generic_unspanned_error,
+    cluster_identifiers_from, convert_json_value_to_nu_value, convert_row_to_nu_value,
+    duration_to_golang_string, generic_spanned_error, get_active_cluster,
     map_serde_deserialize_error_to_shell_error,
 };
-use crate::client::QueryRequest;
+use crate::client::{ClientError, HttpResponse, QueryRequest};
 use crate::state::State;
 use log::debug;
 use std::collections::HashMap;
 use std::ops::Add;
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use crate::RemoteCluster;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
-    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape, Value,
 };
 
 #[derive(Clone)]
@@ -56,6 +58,7 @@ impl Command for Query {
                 None,
             )
             .switch("with-meta", "include toplevel metadata", None)
+            .switch("disable-context", "disable automatically detecting the query context based on the active bucket and scope", None)
             .category(Category::Custom("couchbase".into()))
     }
 
@@ -86,77 +89,31 @@ fn query(
 
     let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
 
-    let guard = state.lock().unwrap();
     let statement: String = call.req(engine_state, stack, 0)?;
 
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = match guard.clusters().get(&identifier) {
-            Some(c) => c,
-            None => {
-                return Err(cluster_not_found_error(identifier, call.span()));
-            }
-        };
-        let bucket = call
-            .get_flag(engine_state, stack, "bucket")?
-            .or_else(|| active_cluster.active_bucket());
+        let guard = state.lock().unwrap();
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
 
-        let scope = call.get_flag(engine_state, stack, "scope")?;
-
-        let maybe_scope = bucket.map(|b| scope.map(|s| (b, s))).flatten();
-
-        let with_meta = call.has_flag("with-meta");
+        let maybe_scope = query_context_from_args(active_cluster, engine_state, stack, call)?;
 
         debug!("Running n1ql query {}", &statement);
 
-        let response = active_cluster.cluster().http_client().query_request(
-            QueryRequest::Execute {
-                statement: statement.clone(),
-                scope: maybe_scope,
-                timeout: duration_to_golang_string(active_cluster.timeouts().query_timeout()),
-            },
-            Instant::now().add(active_cluster.timeouts().query_timeout()),
+        let response = send_query(
+            active_cluster,
+            statement.clone(),
+            maybe_scope,
             ctrl_c.clone(),
         )?;
+        drop(guard);
 
-        if with_meta {
-            let content: serde_json::Value = serde_json::from_str(response.content())
-                .map_err(map_serde_deserialize_error_to_shell_error)?;
-            results.push(convert_row_to_nu_value(&content, span, identifier.clone())?);
-        } else {
-            let content: HashMap<String, serde_json::Value> =
-                serde_json::from_str(response.content())
-                    .map_err(map_serde_deserialize_error_to_shell_error)?;
-            if let Some(content_errors) = content.get("errors") {
-                if let Some(arr) = content_errors.as_array() {
-                    for result in arr {
-                        results.push(convert_row_to_nu_value(result, span, identifier.clone())?);
-                    }
-                } else {
-                    return Err(generic_unspanned_error(
-                        "Query errors not an array - malformed response",
-                        format!("Query errors not an array - {}", content_errors.to_string(),),
-                    ));
-                }
-            } else if let Some(content_results) = content.get("results") {
-                if let Some(arr) = content_results.as_array() {
-                    for result in arr {
-                        results.push(convert_json_value_to_nu_value(result, span).unwrap());
-                    }
-                } else {
-                    return Err(generic_unspanned_error(
-                        "Query results not an array - malformed response",
-                        format!(
-                            "Query results not an array - {}",
-                            content_results.to_string(),
-                        ),
-                    ));
-                }
-            } else {
-                // Queries like "create index" can end up here.
-                continue;
-            };
-        }
+        results.extend(handle_query_response(
+            call.has_flag("with-meta"),
+            identifier.clone(),
+            response,
+            span.clone(),
+        )?);
     }
 
     Ok(Value::List {
@@ -164,4 +121,93 @@ fn query(
         span: call.head,
     }
     .into_pipeline_data())
+}
+
+pub fn send_query(
+    cluster: &RemoteCluster,
+    statement: String,
+    scope: Option<(String, String)>,
+    ctrl_c: Arc<AtomicBool>,
+) -> Result<HttpResponse, ClientError> {
+    cluster.cluster().http_client().query_request(
+        QueryRequest::Execute {
+            statement,
+            scope,
+            timeout: duration_to_golang_string(cluster.timeouts().query_timeout()),
+        },
+        Instant::now().add(cluster.timeouts().query_timeout()),
+        ctrl_c,
+    )
+}
+
+pub fn handle_query_response(
+    with_meta: bool,
+    identifier: String,
+    response: HttpResponse,
+    span: Span,
+) -> Result<Vec<Value>, ShellError> {
+    let mut results: Vec<Value> = vec![];
+    if with_meta {
+        let content: serde_json::Value = serde_json::from_str(response.content())
+            .map_err(map_serde_deserialize_error_to_shell_error)?;
+        results.push(convert_row_to_nu_value(&content, span, identifier)?);
+    } else {
+        let content: HashMap<String, serde_json::Value> = serde_json::from_str(response.content())
+            .map_err(map_serde_deserialize_error_to_shell_error)?;
+        if let Some(content_errors) = content.get("errors") {
+            if let Some(arr) = content_errors.as_array() {
+                for result in arr {
+                    results.push(convert_row_to_nu_value(result, span, identifier.clone())?);
+                }
+            } else {
+                return Err(generic_spanned_error(
+                    "Query errors not an array - malformed response",
+                    format!("Query errors not an array - {}", content_errors.to_string(),),
+                    span,
+                ));
+            }
+        } else if let Some(content_results) = content.get("results") {
+            if let Some(arr) = content_results.as_array() {
+                for result in arr {
+                    results.push(convert_json_value_to_nu_value(result, span).unwrap());
+                }
+            } else {
+                return Err(generic_spanned_error(
+                    "Query results not an array - malformed response",
+                    format!(
+                        "Query results not an array - {}",
+                        content_results.to_string(),
+                    ),
+                    span,
+                ));
+            }
+        } else {
+            // Queries like "create index" can end up here.
+        };
+    }
+
+    Ok(results)
+}
+
+pub fn query_context_from_args(
+    cluster: &RemoteCluster,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+) -> Result<Option<(String, String)>, ShellError> {
+    let bucket = call
+        .get_flag(engine_state, stack, "bucket")?
+        .or_else(|| cluster.active_bucket());
+
+    let scope = call
+        .get_flag(engine_state, stack, "scope")?
+        .or_else(|| cluster.active_scope());
+
+    let disable_context = call.has_flag("disable-context");
+
+    Ok(if disable_context {
+        None
+    } else {
+        bucket.map(|b| scope.map(|s| (b, s))).flatten()
+    })
 }
