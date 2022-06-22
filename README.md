@@ -157,4 +157,12 @@ If you just want to use it and don't want to bother compiling all the time, you 
 ```
 
 Grab a quick coffee or tea since this will take some time to compile.
-```
+
+## License
+
+Couchbase Shell is licensed under the [Apache 2.0 License](./LICENSE).
+
+Couchbase Shell is made possible through open source components as listed with their licenses in [NOTICES](./NOTICES).
+
+Usage of Couchbase Shell is subject to the [Couchbase Inc. License Agreement](./LICENSE_AGREEMENT)
+
