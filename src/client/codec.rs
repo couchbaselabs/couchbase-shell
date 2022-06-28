@@ -55,7 +55,7 @@ impl Decoder for KeyValueCodec {
             Err(e) => return Err(io::Error::new(io::ErrorKind::InvalidInput, e)),
         } as usize;
 
-        if buf_len < total_body_len {
+        if buf_len < (HEADER_SIZE + total_body_len) {
             return Ok(None);
         }
 
