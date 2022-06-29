@@ -6,7 +6,9 @@ pub use crate::client::http_client::{
 };
 pub use crate::client::http_handler::HttpResponse;
 pub use crate::client::kv_client::{KeyValueRequest, KvClient, KvResponse};
+use log::debug;
 use nu_protocol::{ShellError, Span};
+use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tokio::time::Instant;
@@ -39,7 +41,7 @@ impl Client {
         password: String,
         tls_config: ClusterTlsConfig,
     ) -> Self {
-        let seeds = if seeds.len() == 1 {
+        let seeds = if Client::might_be_srv(&seeds) {
             Client::try_lookup_srv(seeds[0].clone()).unwrap_or(seeds)
         } else {
             seeds
@@ -129,5 +131,56 @@ impl Client {
         }
 
         Ok(addresses)
+    }
+
+    // This broadly mirrors the srv logic from the connstr package within gocbcore.
+    fn might_be_srv(seeds: &Vec<String>) -> bool {
+        if seeds.len() > 1 {
+            return false;
+        }
+
+        match &seeds[0].parse::<SocketAddr>() {
+            Ok(s) => {
+                if s.port() > 0 {
+                    debug!(
+                        "Was able to parse {} to {}, has port so not srv record",
+                        &seeds[0], s
+                    );
+                    return false;
+                }
+                debug!("Was able to parse {} to {} but no port", &seeds[0], s);
+            }
+            Err(_) => {
+                debug!("Was not able to parse {}", &seeds[0]);
+            }
+        };
+
+        if Client::is_ip_address(&seeds[0]) {
+            return false;
+        }
+
+        return true;
+    }
+
+    fn is_ip_address(addr: &String) -> bool {
+        match addr.parse::<Ipv6Addr>() {
+            Ok(_) => {
+                debug!("Address {} is an ip v6 address", &addr);
+                return true;
+            }
+            Err(_) => {
+                debug!("Address {} is not an ip v6 address", &addr);
+            }
+        };
+        return match addr.parse::<Ipv4Addr>() {
+            Ok(_) => {
+                debug!("Address {} is an ip v4 address", &addr);
+                true
+            }
+            Err(_) => {
+                debug!("Address {} is not an ip v4 address", &addr);
+                false
+            }
+        };
     }
 }
