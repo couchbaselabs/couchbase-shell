@@ -3,6 +3,7 @@ use crate::state::State;
 use fake::faker::address::raw::*;
 use fake::faker::boolean::raw::*;
 use fake::faker::chrono::raw::*;
+use fake::faker::color::raw::HexColor;
 use fake::faker::company::raw::*;
 use fake::faker::currency::raw::*;
 use fake::faker::filesystem::raw::*;
@@ -203,7 +204,7 @@ fn register_functions(tera: &mut Tera) {
 
     // Group "internet"
     tera.register_function("color", |_: &HashMap<String, JSONValue>| {
-        Ok(JSONValue::from(Color(EN).fake::<String>()))
+        Ok(JSONValue::from(HexColor(EN).fake::<String>()))
     });
     tera.register_function("domainSuffix", |_: &HashMap<String, JSONValue>| {
         Ok(JSONValue::from(DomainSuffix(EN).fake::<String>()))
