@@ -39,7 +39,6 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use temp_dir::TempDir;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut logger_builder = env_logger::Builder::from_env(
@@ -467,24 +466,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
-    let d = TempDir::new().unwrap();
-    let f = d.child("config.nu");
-
-    let prompt = if cfg!(windows) {
-        r##"let-env PROMPT_COMMAND = {build-string (ansi ub) (cb-env | get username) (ansi reset) ' at ' (ansi yb) (cb-env | get cluster) (ansi reset) ' in ' (ansi wb) (cb-env | get bucket) (cb-env | select scope collection | each { |it| if $it.scope == "" && $it.collection == "" { "" } else { build-string (if $it.scope == "" { build-string ".<notset>" } else {build-string "." $it.scope}) (if $it.collection == "" { build-string ".<notset>"} else {build-string "." $it.collection})}}) (ansi reset)}"##
-    } else {
-        r##"let-env PROMPT_COMMAND = {build-string '👤 ' (ansi ub) (cb-env | get username) (ansi reset) ' 🏠 ' (ansi yb) (cb-env | get cluster) (ansi reset) ' in 🗄 ' (ansi wb) (cb-env | get bucket) (cb-env | select scope collection | each { |it| if $it.scope == "" && $it.collection == "" { "" } else { build-string (if $it.scope == "" { build-string ".<notset>" } else {build-string "." $it.scope}) (if $it.collection == "" { build-string ".<notset>"} else {build-string "." $it.collection})}}) (ansi reset)}"##
-    };
-
-    let config_string = format!(
-        "{}\nlet-env PROMPT_INDICATOR = \"\r\n> \"\nlet-env PROMPT_COMMAND_RIGHT = \"\"",
-        prompt
-    );
-
-    std::fs::write(&f, config_string.as_bytes()).unwrap();
-
     read_plugin_file(&mut context, &mut stack, CBSHELL_FOLDER, false);
-    read_nu_config_file(&mut context, &mut stack, f);
+    read_nu_config_file(&mut context, &mut stack);
 
     nu_cli::evaluate_repl(&mut context, &mut stack, "CouchbaseShell", false)
         .expect("evaluate loop failed");
