@@ -69,7 +69,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
     let mut context = create_default_context(&init_cwd);
 
-    gather_parent_env_vars(&mut context);
+    gather_parent_env_vars(&mut context, &init_cwd);
     let mut stack = nu_protocol::engine::Stack::new();
 
     // stack.vars.insert(
@@ -485,9 +485,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     read_plugin_file(&mut context, &mut stack, CBSHELL_FOLDER, false);
     read_nu_config_file(&mut context, &mut stack, f);
-    let history_path = config_files::create_history_path(config);
 
-    nu_cli::evaluate_repl(&mut context, &mut stack, history_path, false)
+    nu_cli::evaluate_repl(&mut context, &mut stack, "CouchbaseShell", false)
         .expect("evaluate loop failed");
     // nu_cli::evaluate_repl(&mut context, None, false).expect("evaluate loop failed");
     Ok(())
