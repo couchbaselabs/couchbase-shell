@@ -503,6 +503,11 @@ impl ManagementRequest {
                 h.insert("Content-Type", "application/x-www-form-urlencoded");
                 h
             }
+            Self::CreateScope { .. } => {
+                let mut h = HashMap::new();
+                h.insert("Content-Type", "application/x-www-form-urlencoded");
+                h
+            }
             _ => HashMap::new(),
         }
     }
