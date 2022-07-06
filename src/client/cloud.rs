@@ -3,6 +3,7 @@ use crate::client::error::ClientError;
 use crate::client::http_handler::{HttpResponse, HttpVerb};
 use crate::state::CapellaEnvironment;
 use hmac::{Hmac, Mac, NewMac};
+use log::debug;
 use reqwest::Client;
 use serde::Deserialize;
 use serde_json::Value;
@@ -100,6 +101,8 @@ impl CapellaClient {
         if let Some(p) = payload {
             res_builder = res_builder.body(p);
         }
+
+        debug!("Performing Capella management request {:?}", &res_builder);
 
         let rt = Runtime::new().unwrap();
         rt.block_on(async {

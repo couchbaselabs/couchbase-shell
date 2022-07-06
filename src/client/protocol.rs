@@ -2,6 +2,7 @@
 
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use std::convert::TryFrom;
+use std::fmt::{Display, Formatter};
 
 pub static HEADER_SIZE: usize = 24;
 // pub static ERROR_MAP_VERSION: u16 = 1;
@@ -46,11 +47,19 @@ impl KvRequest {
     pub fn set_opaque(&mut self, opaque: u32) {
         self.opaque = opaque;
     }
+
+    pub fn opaque(&self) -> u32 {
+        self.opaque
+    }
+
+    pub fn opcode(&self) -> Opcode {
+        self.opcode
+    }
 }
 
 #[derive(Debug)]
 pub struct KvResponse {
-    // opcode: Opcode,
+    opcode: Opcode,
     // datatype: u8,
     status: Status,
     opaque: u32,
@@ -69,7 +78,7 @@ impl From<&Bytes> for KvResponse {
         let flexible = magic.is_flexible();
 
         // 1
-        let _opcode = Opcode::try_from(slice.get_u8()).unwrap();
+        let opcode = Opcode::try_from(slice.get_u8()).unwrap();
 
         let flexible_extras_len = if flexible {
             // 2
@@ -133,7 +142,7 @@ impl From<&Bytes> for KvResponse {
             status: Status::from(status),
             // datatype,
             cas,
-            // opcode,
+            opcode,
         }
     }
 }
@@ -154,6 +163,10 @@ impl KvResponse {
 
     pub fn cas(&self) -> u64 {
         self.cas
+    }
+
+    pub fn opcode(&self) -> Opcode {
+        self.opcode
     }
 }
 
@@ -368,7 +381,7 @@ pub fn _dump(input: &Bytes) -> String {
     output
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum Opcode {
     Get,
     Set,
@@ -396,6 +409,12 @@ impl Opcode {
             Self::SelectBucket => 0x89,
             Self::ErrorMap => 0xFE,
         }
+    }
+}
+
+impl Display for Opcode {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:#04x}", self.encoded())
     }
 }
 
@@ -465,7 +484,13 @@ pub enum Status {
     KeyExists,
     CollectionUnknown,
     ScopeUnknown,
-    Unknown,
+    Unknown(u16),
+}
+
+impl Display for Status {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_string())
+    }
 }
 
 impl Status {
@@ -478,7 +503,7 @@ impl Status {
             Status::KeyExists => "key already exists".into(),
             Status::CollectionUnknown => "collection unknown".into(),
             Status::ScopeUnknown => "scope unknown".into(),
-            Status::Unknown => "unknown".into(),
+            Status::Unknown(status) => format!("{:#04x}", status),
         }
     }
 }
@@ -493,7 +518,7 @@ impl From<u16> for Status {
             0x8c => Status::ScopeUnknown,
             0x20 => Status::AuthError,
             0x24 => Status::AccessError,
-            _ => Status::Unknown,
+            _ => Status::Unknown(input),
         }
     }
 }
