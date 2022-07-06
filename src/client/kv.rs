@@ -5,7 +5,7 @@ use crate::client::{protocol, ClientError};
 use crate::config::ClusterTlsConfig;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use futures::{SinkExt, StreamExt};
-use log::{debug, warn};
+use log::{debug, trace, warn};
 use rustls_pemfile::{read_all, Item};
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -21,6 +21,7 @@ use tokio_rustls::rustls::client::{ServerCertVerified, ServerCertVerifier};
 use tokio_rustls::rustls::{Certificate, ClientConfig, Error, ServerName};
 use tokio_rustls::{rustls, TlsConnector};
 use tokio_util::codec::{FramedRead, FramedWrite};
+use uuid::Uuid;
 
 struct InsecureCertVerifier {}
 
@@ -60,6 +61,7 @@ impl KvTlsConfig {
                     key: None,
                 })?
             } else {
+                debug!("Adding Capella root CA to trust store");
                 let mut reader = BufReader::new(CAPELLA_CERT.as_bytes());
                 read_all(&mut reader).expect("Failed to read capella certificate")
             };
@@ -102,6 +104,9 @@ pub struct KvEndpoint {
     opaque: AtomicU32,
     in_flight: Arc<Mutex<HashMap<u32, oneshot::Sender<KvResponse>>>>,
     collections_enabled: bool,
+    local_addr: String,
+    remote_addr: String,
+    uuid: String,
     // error_map: Option<ErrorMap>,
 }
 
@@ -116,14 +121,21 @@ impl KvEndpoint {
     ) -> Result<KvEndpoint, ClientError> {
         let remote_addr = format!("{}:{}", hostname, port);
 
+        debug!(
+            "Connecting to {}, TLS enabled: {}",
+            &remote_addr,
+            kv_tls_config.is_some()
+        );
+
         if let Some(tls_config) = kv_tls_config {
             let tcp_socket =
-                TcpStream::connect(remote_addr)
+                TcpStream::connect(&remote_addr)
                     .await
                     .map_err(|e| ClientError::RequestFailed {
                         reason: Some(e.to_string()),
                         key: None,
                     })?;
+            let local_addr = tcp_socket.local_addr()?;
 
             let connector = TlsConnector::from(Arc::new(tls_config.config()));
             let socket = connector
@@ -133,16 +145,34 @@ impl KvEndpoint {
                     reason: Some(e.to_string()),
                     key: None,
                 })?;
-            KvEndpoint::setup(username, password, bucket, socket).await
+            KvEndpoint::setup(
+                username,
+                password,
+                bucket,
+                socket,
+                local_addr.to_string(),
+                remote_addr,
+            )
+            .await
         } else {
             let socket =
-                TcpStream::connect(remote_addr)
+                TcpStream::connect(&remote_addr)
                     .await
                     .map_err(|e| ClientError::RequestFailed {
                         reason: Some(e.to_string()),
                         key: None,
                     })?;
-            KvEndpoint::setup(username, password, bucket, socket).await
+            let local_addr = socket.local_addr()?;
+
+            KvEndpoint::setup(
+                username,
+                password,
+                bucket,
+                socket,
+                local_addr.to_string(),
+                remote_addr,
+            )
+            .await
         }
     }
 
@@ -151,7 +181,10 @@ impl KvEndpoint {
         password: String,
         bucket: String,
         stream: C,
+        local_addr: String,
+        remote_addr: String,
     ) -> Result<KvEndpoint, ClientError> {
+        let uuid = Uuid::new_v4().to_string();
         let (tx, mut rx) = mpsc::channel::<Bytes>(1024);
         let in_flight = Arc::new(Mutex::new(
             HashMap::<u32, oneshot::Sender<KvResponse>>::new(),
@@ -161,6 +194,9 @@ impl KvEndpoint {
             in_flight: Arc::clone(&in_flight),
             tx,
             collections_enabled: false,
+            local_addr,
+            remote_addr,
+            uuid: uuid.clone(),
             // error_map: None,
         };
 
@@ -168,12 +204,21 @@ impl KvEndpoint {
         let mut output = FramedWrite::new(w, KeyValueCodec::new());
         let mut input = FramedRead::new(r, KeyValueCodec::new());
 
+        // Read thread.
+        let recv_uuid = uuid.clone();
         tokio::spawn(async move {
             loop {
                 if let Some(frame) = input.next().await {
                     match frame {
                         Ok(input) => {
                             let response = KvResponse::from(&input.freeze());
+                            trace!(
+                                "Resolving response on {}. Opcode={}. Opaque={}. Status={}",
+                                recv_uuid,
+                                response.opcode(),
+                                response.opaque(),
+                                response.status(),
+                            );
                             let requests = Arc::clone(&in_flight);
                             let mut map = requests.lock().unwrap();
                             let t = map.remove(&response.opaque());
@@ -184,28 +229,34 @@ impl KvEndpoint {
                                 match sender.send(response) {
                                     Ok(_) => {}
                                     Err(_e) => {
-                                        warn!("Could not send kv response")
+                                        warn!("{} could not send kv response", recv_uuid)
                                     }
                                 };
                             } else {
-                                warn!("No entry in request map for {}", &response.opaque());
+                                warn!(
+                                    "{} has no entry in request map for {}",
+                                    recv_uuid,
+                                    &response.opaque()
+                                );
                             }
                         }
                         Err(e) => {
-                            warn!("failed to read frame {}", e.to_string());
+                            warn!("{} failed to read frame {}", recv_uuid, e.to_string());
                         }
                     };
                 }
             }
         });
 
+        // Send thread.
+        let send_uuid = uuid.clone();
         tokio::spawn(async move {
             loop {
                 if let Some(packet) = rx.recv().await {
                     match output.send(packet).await {
                         Ok(_) => {}
                         Err(_e) => {
-                            warn!("Could not send kv request");
+                            warn!("{} could not send kv request", send_uuid);
                         }
                     };
                 } else {
@@ -233,6 +284,7 @@ impl KvEndpoint {
                 });
             }
         };
+        debug!("{} negotiated features {:?}", ep.uuid, features);
         // if let Some(rcvr) = err_map_rcvr {
         //     let error_map = match rcvr.await {
         //         Ok(r) => match r {
@@ -257,6 +309,7 @@ impl KvEndpoint {
                 });
             }
         };
+        debug!("{} authenticated successfully", ep.uuid);
         match bucket_rcvr.await {
             Ok(r) => match r {
                 Ok(result) => result,
@@ -273,10 +326,10 @@ impl KvEndpoint {
         };
 
         if features.contains(&ServerFeature::Collections) {
+            debug!("{} enabling collections", ep.uuid);
             ep.collections_enabled = true;
         }
 
-        debug!("Negotiated features {:?}", features);
         // debug!("Error Map: {:?}", ep.error_map);
         Ok(ep)
     }
@@ -491,6 +544,14 @@ impl KvEndpoint {
     ) -> Result<(), ClientError> {
         let opaque = self.opaque.fetch_add(1, Ordering::SeqCst);
         req.set_opaque(opaque);
+        trace!(
+            "Writing request on {}. {} to {}. Opcode = {}. Opaque = {}",
+            self.uuid,
+            self.local_addr,
+            self.remote_addr,
+            req.opcode(),
+            req.opaque()
+        );
         match self
             .tx
             .send(request(req, self.collections_enabled).freeze())
@@ -655,6 +716,10 @@ async fn receive_hello(
                             features.push(f);
                         } else {
                             // todo: debug that we got an unknown server feature
+                            warn!(
+                                "Server replied with unknown hello feature {:#04x}",
+                                body.get_u16()
+                            )
                         }
                     }
                 }

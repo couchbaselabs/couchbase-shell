@@ -7,6 +7,7 @@ use crate::client::kv::{KvEndpoint, KvTlsConfig};
 use crate::client::protocol;
 use crate::config::ClusterTlsConfig;
 use crc::crc32;
+use log::{debug, trace};
 use serde::Deserialize;
 use std::future::Future;
 use std::pin::Pin;
@@ -140,15 +141,38 @@ impl KvClient {
         scope: String,
         collection: String,
     ) -> Result<u32, ClientError> {
+        if (scope.is_empty() || scope == "_default")
+            && (collection.is_empty() || collection == "_default")
+        {
+            trace!(
+                "Scope and collection names both empty or _default, not performing manifest lookup"
+            );
+            return Ok(0);
+        }
+
+        let scope_name = if scope.is_empty() {
+            trace!("Coerced empty scope name to _default");
+            "_default".into()
+        } else {
+            scope
+        };
+        let collection_name = if collection.is_empty() {
+            trace!("Coerced empty collection name to _default");
+            "_default".into()
+        } else {
+            collection
+        };
+
         for s in &self.manifest.as_ref().unwrap().scopes {
-            if s.name == scope {
+            if s.name == scope_name {
                 for c in &s.collections {
-                    if c.name == collection {
+                    if c.name == collection_name {
                         return Ok(u32::from_str_radix(c.uid.as_str(), 16).unwrap());
                     }
                 }
             }
         }
+        debug!("{}.{} not found in manifest", scope_name, collection_name);
         Err(CollectionNotFound { key: Some(key) })
     }
 
@@ -182,6 +206,7 @@ impl KvClient {
             }
 
             let uri = format!("{}:{}{}", host, port, &path);
+            debug!("Fetching config from {}", uri);
             let (content, status) = http_agent.http_get(&uri, deadline, ctrl_c.clone()).await?;
             if status != 200 {
                 if !content.is_empty() {
@@ -192,6 +217,8 @@ impl KvClient {
             }
             let mut config: BucketConfig = serde_json::from_str(&content).unwrap();
             config.set_loaded_from(host);
+
+            trace!("Fetched config {:?}", &config);
             return Ok(config);
         }
         let mut reason = final_error_content;
@@ -227,6 +254,7 @@ impl KvClient {
                     })?;
             }
             let uri = format!("{}:{}{}", host, port, &path);
+            debug!("Fetching collections manifest from {}", uri);
             let (content, status) = self
                 .http_agent
                 .http_get(&uri, deadline, ctrl_c.clone())
@@ -239,6 +267,7 @@ impl KvClient {
                 continue;
             }
             let manifest: CollectionManifest = serde_json::from_str(&content).unwrap();
+            trace!("Fetched collections manifest {:?}", &manifest);
             return Ok(manifest);
         }
         let mut reason = final_error_content;
@@ -348,13 +377,7 @@ impl KvClient {
         let ctrl_c_fut = CtrlcFuture::new(ctrl_c.clone());
         tokio::pin!(ctrl_c_fut);
 
-        let cid = if (!scope.is_empty() && scope != "_default")
-            || (!collection.is_empty() && collection != "_default")
-        {
-            self.search_manifest(request.key(), scope.clone(), collection.clone())?
-        } else {
-            0
-        };
+        let cid = self.search_manifest(request.key(), scope.clone(), collection.clone())?;
 
         let key = match request {
             KeyValueRequest::Get { ref key } => key.clone(),

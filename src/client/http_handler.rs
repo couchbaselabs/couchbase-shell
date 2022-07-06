@@ -2,6 +2,7 @@ use crate::cli::CtrlcFuture;
 use crate::client::capella_ca::CAPELLA_CERT;
 use crate::client::error::ClientError;
 use crate::config::ClusterTlsConfig;
+use log::debug;
 use reqwest::ClientBuilder;
 use std::collections::HashMap;
 use std::fs::File;
@@ -93,6 +94,7 @@ impl HTTPHandler {
         let uri = format!("{}://{}", self.http_prefix(), uri);
         let now = Instant::now();
         if now >= deadline {
+            debug!("HTTP request timed out before sending {}", uri);
             return Err(ClientError::Timeout { key: None });
         }
         let timeout = deadline.sub(now);
@@ -137,6 +139,8 @@ impl HTTPHandler {
         if let Some(p) = payload {
             res_builder = res_builder.body(p)
         };
+
+        debug!("Performing http request {:?}", &res_builder);
 
         let res_fut = res_builder.send();
 

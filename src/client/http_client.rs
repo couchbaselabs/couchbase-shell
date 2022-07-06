@@ -2,6 +2,7 @@ use crate::client::error::ClientError;
 use crate::client::http_handler::{status_to_reason, HTTPHandler, HttpResponse, HttpVerb};
 use crate::client::kv_client::NodeConfig;
 use crate::config::ClusterTlsConfig;
+use log::{debug, trace};
 use rand::Rng;
 use serde::Deserialize;
 use serde_json::json;
@@ -63,6 +64,9 @@ impl HTTPClient {
             }
 
             let uri = format!("{}:{}{}", host, port, &path);
+
+            debug!("Fetching config from {}", uri);
+
             let (content, status) = self
                 .http_client
                 .http_get(&uri, deadline, ctrl_c.clone())
@@ -76,6 +80,9 @@ impl HTTPClient {
             }
             let mut config: ClusterConfig = serde_json::from_str(&content).unwrap();
             config.set_loaded_from(host);
+
+            trace!("Fetched config {:?}", &config);
+
             return Ok(config);
         }
         let mut reason = final_error_content;
