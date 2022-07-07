@@ -1,7 +1,4 @@
-use crate::cli::util::{
-    cluster_identifiers_from, cluster_not_found_error, generic_unspanned_error,
-    no_active_bucket_error,
-};
+use crate::cli::util::{cluster_identifiers_from, get_active_cluster};
 use crate::client::ManagementRequest;
 use crate::state::State;
 use log::debug;
@@ -9,6 +6,8 @@ use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use crate::cli::collections::get_bucket_or_active;
+use crate::cli::error::{serialize_error, unexpected_status_code_error};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -79,22 +78,9 @@ fn run(
     let scope: String = call.req(engine_state, stack, 0)?;
 
     for identifier in cluster_identifiers {
-        let active_cluster = match guard.clusters().get(&identifier) {
-            Some(c) => c,
-            None => {
-                return Err(cluster_not_found_error(identifier, call.span()));
-            }
-        };
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
 
-        let bucket = match call.get_flag(engine_state, stack, "bucket")? {
-            Some(v) => v,
-            None => match active_cluster.active_bucket() {
-                Some(s) => s,
-                None => {
-                    return Err(no_active_bucket_error(span));
-                }
-            },
-        };
+        let bucket = get_bucket_or_active(active_cluster, engine_state, stack, call)?;
 
         debug!(
             "Running scope create for {:?} on bucket {:?}",
@@ -102,7 +88,8 @@ fn run(
         );
 
         let form = vec![("name", scope.clone())];
-        let payload = serde_urlencoded::to_string(&form).unwrap();
+        let payload =
+            serde_urlencoded::to_string(&form).map_err(|e| serialize_error(e.to_string(), span))?;
         let response = active_cluster.cluster().http_client().management_request(
             ManagementRequest::CreateScope { payload, bucket },
             Instant::now().add(active_cluster.timeouts().management_timeout()),
@@ -113,9 +100,10 @@ fn run(
             200 => {}
             202 => {}
             _ => {
-                return Err(generic_unspanned_error(
-                    "Failed to create scope",
-                    format!("Failed to create scope {}", response.content()),
+                return Err(unexpected_status_code_error(
+                    response.status(),
+                    response.content(),
+                    span,
                 ));
             }
         }

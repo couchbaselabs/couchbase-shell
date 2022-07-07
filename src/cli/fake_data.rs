@@ -1,4 +1,5 @@
 use super::util::convert_json_value_to_nu_value;
+use crate::cli::error::{generic_error, serialize_error};
 use crate::state::State;
 use fake::faker::address::raw::*;
 use fake::faker::boolean::raw::*;
@@ -14,6 +15,12 @@ use fake::faker::number::raw::*;
 use fake::faker::phone_number::raw::*;
 use fake::locales::*;
 use fake::Fake;
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+};
 use serde_json::from_value;
 use serde_json::Value as JSONValue;
 use std::collections::HashMap;
@@ -21,14 +28,6 @@ use std::fs;
 use std::sync::{Arc, Mutex};
 use tera::{Context, Tera};
 use uuid::Uuid;
-
-use crate::cli::util::{generic_unspanned_error, map_serde_serialize_error_to_shell_error};
-use nu_engine::CallExt;
-use nu_protocol::ast::Call;
-use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::{
-    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
-};
 
 #[derive(Clone)]
 pub struct FakeData {
@@ -101,9 +100,9 @@ fn run_fake(
     if list_functions {
         let generated = tera
             .render_str(LIST_FUNCTIONS, &ctx)
-            .map_err(|e| generic_unspanned_error("Failed to render functions", format!("{}", e)))?;
+            .map_err(|e| generic_error(format!("Failed to render functions {}", e), None, span))?;
         let content = serde_json::from_str(&generated)
-            .map_err(|e| generic_unspanned_error("Failed to render functions", format!("{}", e)))?;
+            .map_err(|e| generic_error(format!("Failed to render functions {}", e), None, span))?;
         match content {
             serde_json::Value::Array(values) => {
                 let converted: Vec<Value> = values
@@ -125,32 +124,29 @@ fn run_fake(
     } else {
         let path: String = match call.get_flag(engine_state, stack, "template")? {
             Some(p) => p,
-            None => {
-                return Err(generic_unspanned_error(
-                    "Template named parameter is required",
-                    "Template named parameter is required",
-                ))
-            }
+            None => return Err(ShellError::MissingParameter("template".into(), span)),
         };
 
         let num_rows: i64 = call.get_flag(engine_state, stack, "num-rows")?.unwrap_or(1);
 
         let template = fs::read_to_string(path).map_err(|e| {
-            generic_unspanned_error(
-                "Failed to read template file",
+            generic_error(
                 format!("Failed to read template file {}", e.to_string()),
+                "Is the path to the file correct?".to_string(),
+                span,
             )
         })?;
 
         let converted = std::iter::repeat_with(move || {
             let rendered = tera.render_str(&template, &ctx).map_err(|e| {
-                generic_unspanned_error(
-                    "Failed to render template",
+                generic_error(
                     format!("Failed to render template {}", e.to_string()),
+                    None,
+                    span,
                 )
             })?;
             let generated = serde_json::from_str(&rendered)
-                .map_err(map_serde_serialize_error_to_shell_error)?;
+                .map_err(|e| serialize_error(e.to_string(), span))?;
             let converted = convert_json_value_to_nu_value(&generated, span)?;
 
             Ok(converted)

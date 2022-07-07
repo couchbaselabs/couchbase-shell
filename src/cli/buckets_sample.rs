@@ -1,19 +1,18 @@
+use crate::cli::error::{deserialize_error, unexpected_status_code_error};
 use crate::cli::util::{
-    cluster_identifiers_from, cluster_not_found_error, generic_unspanned_error,
-    map_serde_deserialize_error_to_shell_error, validate_is_not_cloud, NuValueMap,
+    cluster_identifiers_from, get_active_cluster, validate_is_not_cloud, NuValueMap,
 };
 use crate::client::ManagementRequest;
 use crate::state::State;
-use std::ops::Add;
-use std::sync::{Arc, Mutex};
-use tokio::time::Instant;
-
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
 };
+use std::ops::Add;
+use std::sync::{Arc, Mutex};
+use tokio::time::Instant;
 
 #[derive(Clone)]
 pub struct BucketsSample {
@@ -73,22 +72,14 @@ fn load_sample_bucket(
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
     let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
+    let guard = state.lock().unwrap();
     let bucket_name: String = call.req(engine_state, stack, 0)?;
 
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
-        let guard = state.lock().unwrap();
-        let cluster = match guard.clusters().get(&identifier) {
-            Some(c) => c,
-            None => {
-                return Err(cluster_not_found_error(identifier, call.span()));
-            }
-        };
+        let cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
 
-        validate_is_not_cloud(
-            cluster,
-            "buckets sample cannot be run against cloud clusters",
-        )?;
+        validate_is_not_cloud(cluster, "buckets sample", span.clone())?;
 
         let response = cluster.cluster().http_client().management_request(
             ManagementRequest::LoadSampleBucket {
@@ -101,18 +92,16 @@ fn load_sample_bucket(
         match response.status() {
             202 => {}
             _ => {
-                return Err(generic_unspanned_error(
-                    "Failed to load sample bucket",
-                    format!(
-                        "Failed to load sample bucket {}",
-                        response.content().to_string()
-                    ),
+                return Err(unexpected_status_code_error(
+                    response.status(),
+                    response.content(),
+                    span,
                 ))
             }
         }
 
         let resp: Vec<String> = serde_json::from_str(response.content())
-            .map_err(map_serde_deserialize_error_to_shell_error)?;
+            .map_err(|e| deserialize_error(e.to_string(), span))?;
         for r in resp {
             let mut collected = NuValueMap::default();
             collected.add_string("cluster", identifier.clone(), span);
@@ -123,7 +112,7 @@ fn load_sample_bucket(
 
     Ok(Value::List {
         vals: results,
-        span: call.head,
+        span,
     }
     .into_pipeline_data())
 }

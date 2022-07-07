@@ -1,22 +1,22 @@
 use crate::cli::buckets_builder::{
     BucketSettingsBuilder, BucketType, DurabilityLevel, JSONCloudBucketSettings,
 };
-use crate::cli::util::{
-    cant_run_against_hosted_capella_error, cluster_identifiers_from, cluster_not_found_error,
-    generic_unspanned_error, map_serde_serialize_error_to_shell_error,
+use crate::cli::error::{
+    cant_run_against_hosted_capella_error, generic_error, serialize_error,
+    unexpected_status_code_error,
 };
-use crate::client::{CapellaRequest, HttpResponse, ManagementRequest};
+use crate::cli::util::{cluster_identifiers_from, get_active_cluster};
+use crate::client::{CapellaRequest, ManagementRequest};
 use crate::state::{CapellaEnvironment, State};
 use log::debug;
-use std::convert::TryFrom;
-use std::ops::Add;
-use std::sync::{Arc, Mutex};
-use tokio::time::{Duration, Instant};
-
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
+use std::convert::TryFrom;
+use std::ops::Add;
+use std::sync::{Arc, Mutex};
+use tokio::time::{Duration, Instant};
 
 #[derive(Clone)]
 pub struct BucketsCreate {
@@ -117,7 +117,12 @@ fn buckets_create(
         builder = builder.bucket_type(match BucketType::try_from(t.as_str()) {
             Ok(bt) => bt,
             Err(_e) => {
-                return Err(generic_unspanned_error("Failed to parse bucket type", format!("Failed to parse bucket type {}, allow values are couchbase, membase, memcached, ephemeral", t )));
+                return Err(generic_error(
+                    format!("Failed to parse bucket type {}", t),
+                    "Allow values for bucket type are couchbase, membase, memcached, ephemeral"
+                        .to_string(),
+                    span,
+                ));
             }
         });
     }
@@ -125,9 +130,10 @@ fn buckets_create(
         builder = builder.num_replicas(match u32::try_from(r) {
             Ok(bt) => bt,
             Err(e) => {
-                return Err(generic_unspanned_error(
-                    "Failed to parse num replicas",
+                return Err(generic_error(
                     format!("Failed to parse num replicas {}", e),
+                    None,
+                    span,
                 ));
             }
         });
@@ -139,8 +145,8 @@ fn buckets_create(
         builder = builder.minimum_durability_level(match DurabilityLevel::try_from(d.as_str()) {
             Ok(bt) => bt,
             Err(_e) => {
-                return Err(generic_unspanned_error("Failed to parse durability level",
-                                                   format!("Failed to parse durability level {}, allow values are one, majority, majorityAndPersistActive, persistToMajority", d )));
+                return Err(generic_error(format!("Failed to parse durability level {}", d),
+                                         "Allowed values for durability level are one, majority, majorityAndPersistActive, persistToMajority".to_string(), span));
             }
         });
     }
@@ -151,12 +157,7 @@ fn buckets_create(
     let settings = builder.build();
 
     for identifier in cluster_identifiers {
-        let active_cluster = match guard.clusters().get(&identifier) {
-            Some(c) => c,
-            None => {
-                return Err(cluster_not_found_error(identifier, call.span()));
-            }
-        };
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
 
         if active_cluster.capella_org().is_some()
             && (bucket_type.clone().is_some()
@@ -164,54 +165,63 @@ fn buckets_create(
                 || durability.clone().is_some()
                 || expiry.is_some())
         {
-            return Err(generic_unspanned_error(
+            return Err(generic_error(
                 "Capella flag cannot be used with type, flush, durability, or expiry",
-                "Capella flag cannot be used with type, flush, durability, or expiry",
+                None,
+                span,
             ));
         }
 
-        let response: HttpResponse;
-        if let Some(plane) = active_cluster.capella_org() {
+        let response = if let Some(plane) = active_cluster.capella_org() {
             let cloud = guard.capella_org_for_cluster(plane)?.client();
             let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
             let cluster =
                 cloud.find_cluster(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
 
             if cluster.environment() == CapellaEnvironment::Hosted {
-                return Err(cant_run_against_hosted_capella_error());
+                return Err(cant_run_against_hosted_capella_error(
+                    "buckets create",
+                    span,
+                ));
             }
 
-            let json_settings = JSONCloudBucketSettings::try_from(&settings)?;
-            response = cloud.capella_request(
+            let json_settings = JSONCloudBucketSettings::try_from(&settings).map_err(|e| {
+                generic_error(format!("Invalid setting {}", e.to_string()), None, span)
+            })?;
+            cloud.capella_request(
                 CapellaRequest::CreateBucket {
                     cluster_id: cluster.id(),
                     payload: serde_json::to_string(&json_settings)
-                        .map_err(map_serde_serialize_error_to_shell_error)?,
+                        .map_err(|e| serialize_error(e.to_string(), span))?,
                 },
                 deadline,
                 ctrl_c.clone(),
-            )?;
+            )?
         } else {
             let cluster = active_cluster.cluster();
 
-            let form = settings.as_form(false)?;
-            let payload = serde_urlencoded::to_string(&form).unwrap();
+            let form = settings.as_form(false).map_err(|e| {
+                generic_error(format!("Invalid setting {}", e.to_string()), None, span)
+            })?;
+            let payload = serde_urlencoded::to_string(&form)
+                .map_err(|e| serialize_error(e.to_string(), span))?;
 
-            response = cluster.http_client().management_request(
+            cluster.http_client().management_request(
                 ManagementRequest::CreateBucket { payload },
                 Instant::now().add(active_cluster.timeouts().management_timeout()),
                 ctrl_c.clone(),
-            )?;
-        }
+            )?
+        };
 
         match response.status() {
             200 => {}
             201 => {}
             202 => {}
             _ => {
-                return Err(generic_unspanned_error(
-                    "Failed to create bucket",
-                    format!("Failed to create bucket: {}", response.content()),
+                return Err(unexpected_status_code_error(
+                    response.status(),
+                    response.content(),
+                    span,
                 ));
             }
         }

@@ -1,16 +1,20 @@
 //! The `doc upsert` command performs a KV upsert operation.
 
 use super::util::convert_nu_value_to_json_value;
-
-use crate::state::State;
-
+use crate::cli::error::{generic_error, serialize_error};
 use crate::cli::util::{
-    cluster_identifiers_from, cluster_not_found_error, generic_unspanned_error,
-    namespace_from_args, NuValueMap,
+    cluster_identifiers_from, get_active_cluster, namespace_from_args, NuValueMap,
 };
 use crate::client::{ClientError, KeyValueRequest, KvClient, KvResponse};
+use crate::state::State;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape, Value,
+};
 use std::collections::HashSet;
 use std::future::Future;
 use std::ops::Add;
@@ -18,13 +22,6 @@ use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 use tokio::time::Instant;
-
-use nu_engine::CallExt;
-use nu_protocol::ast::Call;
-use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::{
-    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
-};
 
 #[derive(Clone)]
 pub struct DocUpsert {
@@ -194,15 +191,8 @@ pub(crate) fn run_kv_store_ops(
 
     let mut all_items = vec![];
     for item in filtered.chain(input_args).into_iter() {
-        let value = match serde_json::to_vec(&item.1) {
-            Ok(v) => v,
-            Err(e) => {
-                return Err(generic_unspanned_error(
-                    "Failed to serialize value to JSON",
-                    format!("Failed to serialize value to JSON {}", e.to_string()),
-                ));
-            }
-        };
+        let value =
+            serde_json::to_vec(&item.1).map_err(|e| serialize_error(e.to_string(), span))?;
 
         all_items.push((item.0, value));
     }
@@ -216,12 +206,7 @@ pub(crate) fn run_kv_store_ops(
 
     let mut results = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = match guard.clusters().get(&identifier) {
-            Some(c) => c,
-            None => {
-                return Err(cluster_not_found_error(identifier, call.span()));
-            }
-        };
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
 
         let (bucket, scope, collection) = namespace_from_args(
             bucket_flag.clone(),
@@ -245,6 +230,7 @@ pub(crate) fn run_kv_store_ops(
             ctrl_c.clone(),
             Instant::now().add(active_cluster.timeouts().data_timeout()),
             &mut client,
+            span.clone(),
         )?;
 
         let client = Arc::new(client);
@@ -365,13 +351,15 @@ pub(crate) fn prime_manifest_if_required(
     ctrl_c: Arc<AtomicBool>,
     deadline: Instant,
     client: &mut KvClient,
+    span: Span,
 ) -> Result<(), ShellError> {
     if KvClient::is_non_default_scope_collection(scope, collection) {
         rt.block_on(client.fetch_collections_manifest(deadline, ctrl_c))
             .map_err(|e| {
-                generic_unspanned_error(
-                    "Failed to fetch collections manifest",
+                generic_error(
                     format!("Failed to fetch collections manifest {}", e.to_string()),
+                    None,
+                    span,
                 )
             })?;
     }

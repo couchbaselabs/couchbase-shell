@@ -1,9 +1,6 @@
 use crate::cli::cloud_json::JSONCloudUser;
 use crate::cli::user_builder::UserAndMetadata;
-use crate::cli::util::{
-    cant_run_against_hosted_capella_error, cluster_identifiers_from, cluster_not_found_error,
-    generic_unspanned_error, map_serde_deserialize_error_to_shell_error, NuValueMap,
-};
+use crate::cli::util::{cluster_identifiers_from, get_active_cluster, NuValueMap};
 use crate::client::{CapellaRequest, ManagementRequest};
 use crate::state::{CapellaEnvironment, State};
 use log::debug;
@@ -11,6 +8,9 @@ use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use crate::cli::error::{
+    cant_run_against_hosted_capella_error, deserialize_error, unexpected_status_code_error,
+};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -79,12 +79,7 @@ fn users_get(
 
     let mut results = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = match guard.clusters().get(&identifier) {
-            Some(c) => c,
-            None => {
-                return Err(cluster_not_found_error(identifier, call.span()));
-            }
-        };
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
 
         let mut stream: Vec<Value> = if let Some(plane) = active_cluster.capella_org() {
             let cloud = guard.capella_org_for_cluster(plane)?.client();
@@ -93,7 +88,7 @@ fn users_get(
                 cloud.find_cluster(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
 
             if cluster.environment() == CapellaEnvironment::Hosted {
-                return Err(cant_run_against_hosted_capella_error());
+                return Err(cant_run_against_hosted_capella_error("users get", span));
             }
 
             let response = cloud.capella_request(
@@ -103,15 +98,18 @@ fn users_get(
                 deadline,
                 ctrl_c.clone(),
             )?;
-            if response.status() != 200 {
-                return Err(generic_unspanned_error(
-                    "Failed to get users",
-                    format!("Failed to get users {}", response.content()),
-                ));
-            }
 
-            let users: Vec<JSONCloudUser> = serde_json::from_str(response.content())
-                .map_err(map_serde_deserialize_error_to_shell_error)?;
+            let users: Vec<JSONCloudUser> = match response.status() {
+                200 => serde_json::from_str(response.content())
+                    .map_err(|e| deserialize_error(e.to_string(), call.span()))?,
+                _ => {
+                    return Err(unexpected_status_code_error(
+                        response.status(),
+                        response.content(),
+                        call.span(),
+                    ));
+                }
+            };
 
             users
                 .into_iter()
@@ -145,11 +143,12 @@ fn users_get(
 
             let user_and_meta: UserAndMetadata = match response.status() {
                 200 => serde_json::from_str(response.content())
-                    .map_err(map_serde_deserialize_error_to_shell_error)?,
+                    .map_err(|e| deserialize_error(e.to_string(), call.span()))?,
                 _ => {
-                    return Err(generic_unspanned_error(
-                        "Failed to get user",
-                        format!("Failed to get user {}", response.content()),
+                    return Err(unexpected_status_code_error(
+                        response.status(),
+                        response.content(),
+                        call.span(),
                     ));
                 }
             };

@@ -1,4 +1,4 @@
-use crate::cli::util::{find_project_id, generic_unspanned_error};
+use crate::cli::util::find_project_id;
 use crate::client::CapellaRequest;
 use crate::state::State;
 use log::debug;
@@ -6,6 +6,7 @@ use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use crate::cli::error::unexpected_status_code_error;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -66,7 +67,7 @@ fn projects_drop(
     let control = guard.active_capella_org()?;
     let client = control.client();
     let deadline = Instant::now().add(control.timeout());
-    let project_id = find_project_id(ctrl_c.clone(), name, &client, deadline)?;
+    let project_id = find_project_id(ctrl_c.clone(), name, &client, deadline, span.clone())?;
 
     let response = client.capella_request(
         CapellaRequest::DeleteProject {
@@ -76,9 +77,10 @@ fn projects_drop(
         ctrl_c,
     )?;
     if response.status() != 204 {
-        return Err(generic_unspanned_error(
-            "Failed to drop project",
-            format!("Failed to drop project {}", response.content()),
+        return Err(unexpected_status_code_error(
+            response.status(),
+            response.content(),
+            span,
         ));
     };
 

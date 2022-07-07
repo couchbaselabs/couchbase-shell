@@ -1,20 +1,20 @@
-use crate::cli::util::{
-    convert_json_value_to_nu_value, duration_to_golang_string,
-    map_serde_deserialize_error_to_shell_error, no_active_bucket_error, no_active_cluster_error,
+use crate::cli::error::{
+    deserialize_error, no_active_bucket_error, no_active_cluster_error,
+    unexpected_status_code_error,
 };
+use crate::cli::util::{convert_json_value_to_nu_value, duration_to_golang_string};
 use crate::client::QueryRequest;
 use crate::state::State;
-use std::collections::HashMap;
-use std::ops::Add;
-use std::sync::{Arc, Mutex};
-use tokio::time::Instant;
-
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
 };
+use std::collections::HashMap;
+use std::ops::Add;
+use std::sync::{Arc, Mutex};
+use tokio::time::Instant;
 
 // For now you need a covered index like
 // create index id3 on `travel-sample`(meta().id, meta().xattrs.attempts);
@@ -70,7 +70,7 @@ impl Command for TransactionsListAtrs {
         let active_cluster = match guard.active_cluster() {
             Some(c) => c,
             None => {
-                return Err(no_active_cluster_error());
+                return Err(no_active_cluster_error(span));
             }
         };
         let bucket = match call
@@ -111,9 +111,21 @@ impl Command for TransactionsListAtrs {
             Instant::now().add(active_cluster.timeouts().management_timeout()),
             ctrl_c,
         )?;
+
+        match response.status() {
+            200 => {}
+            _ => {
+                return Err(unexpected_status_code_error(
+                    response.status(),
+                    response.content(),
+                    span,
+                ));
+            }
+        }
+
         let mut content: HashMap<String, serde_json::Value> =
             serde_json::from_str(response.content())
-                .map_err(map_serde_deserialize_error_to_shell_error)?;
+                .map_err(|e| deserialize_error(e.to_string(), span))?;
         let removed = if content.contains_key("errors") {
             content.remove("errors").unwrap()
         } else {

@@ -2,7 +2,7 @@ use crate::cli::clusters_register::update_config_file;
 use crate::state::State;
 use std::sync::{Arc, Mutex};
 
-use crate::cli::util::{cluster_not_found_error, generic_unspanned_error};
+use crate::cli::error::{cluster_not_found_error, generic_error};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -66,9 +66,10 @@ fn clusters_unregister(
 
     let mut guard = state.lock().unwrap();
     if guard.active() == identifier.clone() {
-        return Err(generic_unspanned_error(
+        return Err(generic_error(
             "Cannot unregister the active cluster",
-            "Cannot unregister the active cluster",
+            "Change the active cluster using cb-env cluster first".to_string(),
+            call.head,
         ));
     }
 
@@ -77,7 +78,7 @@ fn clusters_unregister(
     };
 
     if save {
-        update_config_file(&mut guard)?;
+        update_config_file(&mut guard, call.head)?;
     };
 
     return Ok(PipelineData::new(call.head));

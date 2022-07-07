@@ -1,7 +1,4 @@
-use crate::cli::util::{
-    cluster_identifiers_from, cluster_not_found_error, json_parse_fail_error,
-    unexpected_status_code_error, NuValueMap,
-};
+use crate::cli::util::{cluster_identifiers_from, get_active_cluster, NuValueMap};
 use crate::state::State;
 
 use crate::cli::cloud_json::JSONCloudClusterHealthResponse;
@@ -12,6 +9,7 @@ use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use crate::cli::error::{serialize_error, unexpected_status_code_error};
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value};
@@ -64,18 +62,15 @@ fn nodes(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let span = call.head;
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
 
     let guard = state.lock().unwrap();
     let mut nodes = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = match guard.clusters().get(&identifier) {
-            Some(c) => c,
-            None => {
-                return Err(cluster_not_found_error(identifier.clone(), call.span()));
-            }
-        };
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+
         if let Some(plane) = active_cluster.capella_org() {
             let cloud = guard.capella_org_for_cluster(plane)?.client();
             let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
@@ -92,12 +87,12 @@ fn nodes(
                 return Err(unexpected_status_code_error(
                     response.status(),
                     response.content(),
-                    Some(call.span()),
+                    span,
                 ));
             }
 
             let resp: JSONCloudClusterHealthResponse = serde_json::from_str(response.content())
-                .map_err(|e| json_parse_fail_error(e, Some(call.span())))?;
+                .map_err(|e| serialize_error(e.to_string(), span))?;
 
             let mut n = resp
                 .nodes()
@@ -133,19 +128,22 @@ fn nodes(
                 Instant::now().add(active_cluster.timeouts().management_timeout()),
                 ctrl_c.clone(),
             )?;
+            if response.status() != 200 {
+                return Err(unexpected_status_code_error(
+                    response.status(),
+                    response.content(),
+                    span,
+                ));
+            }
 
             let resp: PoolInfo = match response.status() {
-                200 => match serde_json::from_str(response.content()) {
-                    Ok(m) => m,
-                    Err(e) => {
-                        return Err(json_parse_fail_error(e, Some(call.span())));
-                    }
-                },
+                200 => serde_json::from_str(response.content())
+                    .map_err(|e| serialize_error(e.to_string(), call.span()))?,
                 _ => {
                     return Err(unexpected_status_code_error(
                         response.status(),
                         response.content(),
-                        Some(call.span()),
+                        call.span(),
                     ));
                 }
             };

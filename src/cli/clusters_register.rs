@@ -5,11 +5,11 @@ use crate::state::{ClusterTimeouts, RemoteCluster, State};
 use std::fs;
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use crate::cli::util::generic_unspanned_error;
+use crate::cli::error::generic_error;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
+use nu_protocol::{Category, PipelineData, ShellError, Signature, Span, SyntaxShape};
 
 #[derive(Clone)]
 pub struct ClustersRegister {
@@ -160,19 +160,20 @@ fn clusters_register(
     guard.add_cluster(identifier, cluster)?;
 
     if save {
-        update_config_file(&mut guard)?;
+        update_config_file(&mut guard, call.head)?;
     }
 
     Ok(PipelineData::new(call.head))
 }
 
-pub fn update_config_file(guard: &mut MutexGuard<State>) -> Result<(), ShellError> {
+pub fn update_config_file(guard: &mut MutexGuard<State>, span: Span) -> Result<(), ShellError> {
     let path = match guard.config_path() {
         Some(p) => p,
         None => {
-            return Err(generic_unspanned_error(
+            return Err(generic_error(
                 "A config path must be discoverable to save config",
-                "A config path must be discoverable to save config",
+                None,
+                span,
             ));
         }
     };
@@ -197,16 +198,18 @@ pub fn update_config_file(guard: &mut MutexGuard<State>) -> Result<(), ShellErro
     fs::write(
         path,
         config.to_str().map_err(|e| {
-            generic_unspanned_error(
-                "Failed to write config file",
+            generic_error(
                 format!("Failed to write config file {}", e.to_string()),
+                None,
+                span,
             )
         })?,
     )
     .map_err(|e| {
-        generic_unspanned_error(
-            "Failed to write config file",
+        generic_error(
             format!("Failed to write config file {}", e.to_string()),
+            None,
+            span,
         )
     })?;
 

@@ -5,7 +5,7 @@ use crate::state::State;
 
 use crate::cli::doc_upsert::{build_batched_kv_items, prime_manifest_if_required};
 use crate::cli::util::{
-    cluster_identifiers_from, cluster_not_found_error, namespace_from_args, NuValueMap,
+    cluster_identifiers_from, get_active_cluster, namespace_from_args, NuValueMap,
 };
 use crate::client::KeyValueRequest;
 use futures::stream::FuturesUnordered;
@@ -138,12 +138,7 @@ fn run_get(
 
     let mut results = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = match guard.clusters().get(&identifier) {
-            Some(c) => c,
-            None => {
-                return Err(cluster_not_found_error(identifier.clone(), call.span()));
-            }
-        };
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
 
         let (bucket, scope, collection) = namespace_from_args(
             bucket_flag.clone(),
@@ -175,6 +170,7 @@ fn run_get(
             ctrl_c.clone(),
             Instant::now().add(active_cluster.timeouts().data_timeout()),
             &mut client,
+            span.clone(),
         )?;
 
         let client = Arc::new(client);

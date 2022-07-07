@@ -1,17 +1,14 @@
-use crate::cli::util::{
-    convert_json_value_to_nu_value, generic_unspanned_error,
-    map_serde_deserialize_error_to_shell_error, no_active_cluster_error, validate_is_not_cloud,
-};
+use crate::cli::error::{deserialize_error, no_active_cluster_error, unexpected_status_code_error};
+use crate::cli::util::{convert_json_value_to_nu_value, validate_is_not_cloud};
 use crate::client::ManagementRequest;
 use crate::state::State;
-use std::ops::Add;
-use std::sync::{Arc, Mutex};
-use tokio::time::Instant;
-
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape};
+use std::ops::Add;
+use std::sync::{Arc, Mutex};
+use tokio::time::Instant;
 
 #[derive(Clone)]
 pub struct BucketsConfig {
@@ -66,15 +63,12 @@ fn buckets(
     let active_cluster = match guard.active_cluster() {
         Some(c) => c,
         None => {
-            return Err(no_active_cluster_error());
+            return Err(no_active_cluster_error(span));
         }
     };
     let cluster = active_cluster.cluster();
 
-    validate_is_not_cloud(
-        active_cluster,
-        "buckets config cannot be run against Capella clusters",
-    )?;
+    validate_is_not_cloud(active_cluster, "buckets config", span.clone())?;
 
     let response = cluster.http_client().management_request(
         ManagementRequest::GetBucket { name: bucket_name },
@@ -85,18 +79,16 @@ fn buckets(
     match response.status() {
         200 => {}
         _ => {
-            return Err(generic_unspanned_error(
-                "Failed to get bucket config",
-                format!(
-                    "Failed to get bucket config {}",
-                    response.content().to_string()
-                ),
-            ))
+            return Err(unexpected_status_code_error(
+                response.status(),
+                response.content(),
+                span,
+            ));
         }
     }
 
     let content = serde_json::from_str(response.content())
-        .map_err(map_serde_deserialize_error_to_shell_error)?;
+        .map_err(|e| deserialize_error(e.to_string(), span))?;
     let converted = convert_json_value_to_nu_value(&content, span)?;
 
     Ok(converted.into_pipeline_data())

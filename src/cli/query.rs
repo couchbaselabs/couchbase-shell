@@ -1,9 +1,8 @@
 use crate::cli::util::{
     cluster_identifiers_from, convert_json_value_to_nu_value, convert_row_to_nu_value,
-    duration_to_golang_string, generic_spanned_error, get_active_cluster,
-    map_serde_deserialize_error_to_shell_error,
+    duration_to_golang_string, get_active_cluster,
 };
-use crate::client::{ClientError, HttpResponse, QueryRequest};
+use crate::client::{HttpResponse, QueryRequest};
 use crate::state::State;
 use log::debug;
 use std::collections::HashMap;
@@ -12,6 +11,9 @@ use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use crate::cli::error::{
+    deserialize_error, malformed_response_error, unexpected_status_code_error,
+};
 use crate::RemoteCluster;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
@@ -105,6 +107,7 @@ fn query(
             statement.clone(),
             maybe_scope,
             ctrl_c.clone(),
+            span.clone(),
         )?;
         drop(guard);
 
@@ -128,8 +131,9 @@ pub fn send_query(
     statement: String,
     scope: Option<(String, String)>,
     ctrl_c: Arc<AtomicBool>,
-) -> Result<HttpResponse, ClientError> {
-    cluster.cluster().http_client().query_request(
+    span: Span,
+) -> Result<HttpResponse, ShellError> {
+    let response = cluster.cluster().http_client().query_request(
         QueryRequest::Execute {
             statement,
             scope,
@@ -137,7 +141,20 @@ pub fn send_query(
         },
         Instant::now().add(cluster.timeouts().query_timeout()),
         ctrl_c,
-    )
+    )?;
+
+    match response.status() {
+        200 => {}
+        _ => {
+            return Err(unexpected_status_code_error(
+                response.status(),
+                response.content(),
+                span,
+            ));
+        }
+    }
+
+    Ok(response)
 }
 
 pub fn handle_query_response(
@@ -149,20 +166,20 @@ pub fn handle_query_response(
     let mut results: Vec<Value> = vec![];
     if with_meta {
         let content: serde_json::Value = serde_json::from_str(response.content())
-            .map_err(map_serde_deserialize_error_to_shell_error)?;
+            .map_err(|e| deserialize_error(e.to_string(), span))?;
         results.push(convert_row_to_nu_value(&content, span, identifier)?);
     } else {
         let content: HashMap<String, serde_json::Value> = serde_json::from_str(response.content())
-            .map_err(map_serde_deserialize_error_to_shell_error)?;
+            .map_err(|e| deserialize_error(e.to_string(), span))?;
         if let Some(content_errors) = content.get("errors") {
             if let Some(arr) = content_errors.as_array() {
                 for result in arr {
                     results.push(convert_row_to_nu_value(result, span, identifier.clone())?);
                 }
             } else {
-                return Err(generic_spanned_error(
-                    "Query errors not an array - malformed response",
-                    format!("Query errors not an array - {}", content_errors.to_string(),),
+                return Err(malformed_response_error(
+                    "query errors not an array",
+                    content_errors.to_string(),
                     span,
                 ));
             }
@@ -172,12 +189,9 @@ pub fn handle_query_response(
                     results.push(convert_json_value_to_nu_value(result, span).unwrap());
                 }
             } else {
-                return Err(generic_spanned_error(
-                    "Query results not an array - malformed response",
-                    format!(
-                        "Query results not an array - {}",
-                        content_results.to_string(),
-                    ),
+                return Err(malformed_response_error(
+                    "query results not an array",
+                    content_results.to_string(),
                     span,
                 ));
             }

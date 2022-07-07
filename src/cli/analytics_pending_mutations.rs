@@ -1,18 +1,17 @@
+use crate::cli::error::{deserialize_error, unexpected_status_code_error};
 use crate::cli::util::{
-    cluster_identifiers_from, cluster_not_found_error, convert_row_to_nu_value,
-    map_serde_deserialize_error_to_shell_error, validate_is_not_cloud,
+    cluster_identifiers_from, convert_row_to_nu_value, get_active_cluster, validate_is_not_cloud,
 };
 use crate::client::AnalyticsQueryRequest;
 use crate::state::State;
-use std::ops::Add;
-use std::sync::{Arc, Mutex};
-use tokio::time::Instant;
-
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
 };
+use std::ops::Add;
+use std::sync::{Arc, Mutex};
+use tokio::time::Instant;
 
 #[derive(Clone)]
 pub struct AnalyticsPendingMutations {
@@ -64,22 +63,15 @@ fn pending_mutations(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let span = call.head;
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let guard = state.lock().unwrap();
 
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = match guard.clusters().get(&identifier) {
-            Some(c) => c,
-            None => {
-                return Err(cluster_not_found_error(identifier, call.span()));
-            }
-        };
-        validate_is_not_cloud(
-            active_cluster,
-            "pending mutations cannot be run against Capella clusters",
-        )?;
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        validate_is_not_cloud(active_cluster, "analytics pending-mutations", span.clone())?;
 
         let response = active_cluster
             .cluster()
@@ -90,15 +82,26 @@ fn pending_mutations(
                 ctrl_c.clone(),
             )?;
 
+        match response.status() {
+            200 => {}
+            _ => {
+                return Err(unexpected_status_code_error(
+                    response.status(),
+                    response.content(),
+                    span,
+                ));
+            }
+        }
+
         let content: serde_json::Value = serde_json::from_str(response.content())
-            .map_err(map_serde_deserialize_error_to_shell_error)?;
-        let converted = convert_row_to_nu_value(&content, call.head, identifier.clone())?;
+            .map_err(|e| deserialize_error(e.to_string(), span))?;
+        let converted = convert_row_to_nu_value(&content, span.clone(), identifier.clone())?;
         results.push(converted);
     }
 
     Ok(Value::List {
         vals: results,
-        span: call.head,
+        span,
     }
     .into_pipeline_data())
 }

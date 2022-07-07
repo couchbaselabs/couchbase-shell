@@ -2,16 +2,14 @@
 
 use crate::state::State;
 
-use crate::cli::util::{
-    cluster_identifiers_from, cluster_not_found_error, generic_unspanned_error,
-    validate_is_not_cloud,
-};
+use crate::cli::util::{cluster_identifiers_from, get_active_cluster, validate_is_not_cloud};
 use crate::client::ManagementRequest;
 use log::debug;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use crate::cli::error::{bucket_not_found_error, unexpected_status_code_error};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -80,16 +78,8 @@ fn buckets_flush(
 
     for identifier in cluster_identifiers {
         let guard = state.lock().unwrap();
-        let cluster = match guard.clusters().get(&identifier) {
-            Some(c) => c,
-            None => {
-                return Err(cluster_not_found_error(identifier, call.span()));
-            }
-        };
-        validate_is_not_cloud(
-            cluster,
-            "buckets flush cannot be run against Capella clusters",
-        )?;
+        let cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        validate_is_not_cloud(cluster, "buckets flush", span)?;
 
         let result = cluster.cluster().http_client().management_request(
             ManagementRequest::FlushBucket { name: name.clone() },
@@ -99,10 +89,21 @@ fn buckets_flush(
 
         match result.status() {
             200 => {}
+            404 => {
+                if result
+                    .content()
+                    .to_string()
+                    .to_lowercase()
+                    .contains("resource not found")
+                {
+                    return Err(bucket_not_found_error(name, span));
+                }
+            }
             _ => {
-                return Err(generic_unspanned_error(
-                    "Failed to flush bucket",
-                    format!("Failed to flush bucket {}", result.content()),
+                return Err(unexpected_status_code_error(
+                    result.status(),
+                    result.content(),
+                    span,
                 ));
             }
         }

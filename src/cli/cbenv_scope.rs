@@ -1,3 +1,4 @@
+use crate::cli::error::{no_active_bucket_error, no_active_cluster_error};
 use crate::cli::util::NuValueMap;
 use crate::state::State;
 use nu_engine::CallExt;
@@ -40,27 +41,16 @@ impl Command for UseScope {
         _input: PipelineData,
     ) -> Result<PipelineData, ShellError> {
         let guard = self.state.lock().unwrap();
+        let span = call.head;
         let active = match guard.active_cluster() {
             Some(c) => c,
             None => {
-                return Err(ShellError::GenericError(
-                    "No active cluster".into(),
-                    "You must set an active cluster before an active collection".into(),
-                    Some(call.span()),
-                    None,
-                    Vec::new(),
-                ));
+                return Err(no_active_cluster_error(span));
             }
         };
 
         if active.active_bucket().is_none() {
-            return Err(ShellError::GenericError(
-                "No active bucket".into(),
-                "You must set an active bucket before an active scope".into(),
-                Some(call.span()),
-                None,
-                Vec::new(),
-            ));
+            return Err(no_active_bucket_error(span));
         }
 
         active.set_active_scope(call.req(engine_state, stack, 0)?);
@@ -71,9 +61,9 @@ impl Command for UseScope {
             active
                 .active_scope()
                 .unwrap_or_else(|| String::from("<not set>")),
-            call.head,
+            span.clone(),
         );
 
-        Ok(result.into_pipeline_data(call.head))
+        Ok(result.into_pipeline_data(span))
     }
 }

@@ -1,9 +1,6 @@
 //! The `collections drop` commanddrop a collection from the server.
 
-use crate::cli::util::{
-    cluster_identifiers_from, cluster_not_found_error, generic_unspanned_error,
-    no_active_bucket_error,
-};
+use crate::cli::util::{cluster_identifiers_from, get_active_cluster};
 use crate::client::ManagementRequest::DropCollection;
 use crate::state::State;
 use log::debug;
@@ -11,6 +8,8 @@ use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use crate::cli::collections::get_bucket_or_active;
+use crate::cli::error::{no_active_scope_error, unexpected_status_code_error};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -81,32 +80,16 @@ fn collections_drop(
     let collection: String = call.req(engine_state, stack, 0)?;
 
     for identifier in cluster_identifiers {
-        let active_cluster = match guard.clusters().get(&identifier) {
-            Some(c) => c,
-            None => {
-                return Err(cluster_not_found_error(identifier, call.span()));
-            }
-        };
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
 
-        let bucket = match call.get_flag(engine_state, stack, "bucket")? {
-            Some(v) => v,
-            None => match active_cluster.active_bucket() {
-                Some(s) => s,
-                None => {
-                    return Err(no_active_bucket_error(call.span()));
-                }
-            },
-        };
+        let bucket = get_bucket_or_active(active_cluster, engine_state, stack, call)?;
 
         let scope_name = match call.get_flag(engine_state, stack, "scope")? {
             Some(name) => name,
             None => match active_cluster.active_scope() {
                 Some(s) => s,
                 None => {
-                    return Err(ShellError::MissingParameter(
-                        "Could not auto-select a scope - please use --scope or set an active scope instead".to_string(),
-                        span,
-                    ));
+                    return Err(no_active_scope_error(span));
                 }
             },
         };
@@ -129,9 +112,10 @@ fn collections_drop(
         match response.status() {
             200 => {}
             _ => {
-                return Err(generic_unspanned_error(
-                    "Failed to drop collection",
-                    format!("Failed to drop collection {}", response.content()),
+                return Err(unexpected_status_code_error(
+                    response.status(),
+                    response.content(),
+                    span,
                 ));
             }
         }

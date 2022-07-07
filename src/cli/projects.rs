@@ -1,7 +1,5 @@
 use crate::cli::cloud_json::JSONCloudsProjectsResponse;
-use crate::cli::util::{
-    generic_unspanned_error, map_serde_deserialize_error_to_shell_error, NuValueMap,
-};
+use crate::cli::util::NuValueMap;
 use crate::client::CapellaRequest;
 use crate::state::State;
 use log::debug;
@@ -9,6 +7,7 @@ use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use crate::cli::error::{deserialize_error, unexpected_status_code_error};
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, IntoPipelineData, PipelineData, ShellError, Signature, Value};
@@ -69,14 +68,15 @@ fn projects(
         ctrl_c,
     )?;
     if response.status() != 200 {
-        return Err(generic_unspanned_error(
-            "Failed to get projects",
-            format!("Failed to get projects {}", response.content()),
+        return Err(unexpected_status_code_error(
+            response.status(),
+            response.content(),
+            span,
         ));
     };
 
     let content: JSONCloudsProjectsResponse = serde_json::from_str(response.content())
-        .map_err(map_serde_deserialize_error_to_shell_error)?;
+        .map_err(|e| deserialize_error(e.to_string(), span))?;
 
     let mut results = vec![];
     for project in content.items() {

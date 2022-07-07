@@ -1,4 +1,11 @@
 use crate::cli::cloud_json::{JSONCloudsProjectsResponse, JSONCloudsResponse};
+use crate::cli::error::CBShellError::{
+    CloudNotFound, GenericError, MustBeCapella, MustNotBeCapella, ProjectNotFound,
+    UnexpectedResponseStatus,
+};
+use crate::cli::error::{
+    cluster_not_found_error, deserialize_error, malformed_response_error, no_active_bucket_error,
+};
 use crate::client::{CapellaClient, CapellaRequest};
 use crate::state::{RemoteCluster, State};
 use nu_engine::CallExt;
@@ -33,13 +40,12 @@ pub fn convert_row_to_nu_value(
 
             Ok(Value::Record { vals, cols, span })
         }
-        _ => Err(ShellError::GenericError(
-            "Malformed response".into(),
-            format!("row not an object - {}", v),
-            Some(span),
-            None,
-            Vec::new(),
-        )),
+        _ => Err(malformed_response_error(
+            "row was not an object",
+            v.to_string(),
+            span,
+        ))
+        .into(),
     }
 }
 
@@ -51,27 +57,20 @@ pub fn convert_json_value_to_nu_value(
         serde_json::Value::Null => Value::Nothing { span },
         serde_json::Value::Bool(b) => Value::Bool { val: *b, span },
         serde_json::Value::Number(n) => {
-            if n.is_i64() {
-                if let Some(val) = n.as_i64() {
-                    Value::Int { val, span }
-                } else {
-                    return Err(ShellError::CantConvert(
-                        "i64 sized integer".into(),
-                        "larger than i64".into(),
-                        span,
-                        None,
-                    ));
-                }
+            if let Some(val) = n.as_i64() {
+                Value::Int { val, span }
             } else if let Some(val) = n.as_f64() {
                 Value::Float { val, span }
             } else {
-                return Err(ShellError::GenericError(
-                    "Unexpected number value".into(),
-                    format!("Cannot convert {} into i64 or f64", n),
-                    Some(span),
-                    None,
-                    Vec::new(),
-                ));
+                return Err(GenericError {
+                    message: format!(
+                        "Unexpected numeric value, cannot convert {} into i64 or f64",
+                        n
+                    ),
+                    help: None,
+                    span: Some(span),
+                }
+                .into());
             }
         }
         serde_json::Value::String(val) => Value::String {
@@ -117,13 +116,12 @@ pub fn convert_nu_value_to_json_value(
             if let Some(num) = serde_json::Number::from_f64(*val) {
                 serde_json::Value::Number(num)
             } else {
-                return Err(ShellError::GenericError(
-                    "Unexpected number value".into(),
-                    format!("Cannot convert {} from f64", val),
-                    Some(span),
-                    None,
-                    Vec::new(),
-                ));
+                return Err(GenericError {
+                    message: format!("Unexpected numeric value, cannot convert {} from f64", val),
+                    help: None,
+                    span: Some(span),
+                }
+                .into());
             }
         }
         Value::Int { val, .. } => serde_json::Value::Number(serde_json::Number::from(*val)),
@@ -195,13 +193,12 @@ pub fn cluster_identifiers_from(
     let re = match Regex::new(identifier_arg.as_str()) {
         Ok(v) => v,
         Err(e) => {
-            return Err(ShellError::GenericError(
-                "Could not parse regex".into(),
-                e.to_string(),
-                Some(args.span()),
-                None,
-                Vec::new(),
-            ));
+            return Err(GenericError {
+                message: e.to_string(),
+                help: Some("Failed to parse identifier used for specifying clusters".into()),
+                span: Some(args.head),
+            }
+            .into());
         }
     };
     let clusters: Vec<String> = state
@@ -248,29 +245,33 @@ pub fn namespace_from_args(
     Ok((bucket, scope, collection))
 }
 
-pub fn validate_is_cloud(cluster: &RemoteCluster, err_msg: &str) -> Result<(), ShellError> {
+pub fn validate_is_cloud(
+    cluster: &RemoteCluster,
+    command_name: impl Into<String>,
+    span: Span,
+) -> Result<(), ShellError> {
     if cluster.capella_org().is_none() {
-        return Err(ShellError::GenericError(
-            "Not a Capella cluster".into(),
-            err_msg.into(),
-            None,
-            None,
-            Vec::new(),
-        ));
+        return Err(MustBeCapella {
+            command_name: command_name.into(),
+            span,
+        }
+        .into());
     }
 
     Ok(())
 }
 
-pub fn validate_is_not_cloud(cluster: &RemoteCluster, err_msg: &str) -> Result<(), ShellError> {
+pub fn validate_is_not_cloud(
+    cluster: &RemoteCluster,
+    command_name: impl Into<String>,
+    span: Span,
+) -> Result<(), ShellError> {
     if cluster.capella_org().is_some() {
-        return Err(ShellError::GenericError(
-            "Cannot run against Capella".into(),
-            err_msg.into(),
-            None,
-            None,
-            Vec::new(),
-        ));
+        return Err(MustNotBeCapella {
+            command_name: command_name.into(),
+            span,
+        }
+        .into());
     }
 
     Ok(())
@@ -281,16 +282,19 @@ pub(crate) fn find_project_id(
     name: String,
     client: &Arc<CapellaClient>,
     deadline: Instant,
+    span: Span,
 ) -> Result<String, ShellError> {
     let response = client.capella_request(CapellaRequest::GetProjects {}, deadline, ctrl_c)?;
     if response.status() != 200 {
-        return Err(generic_unspanned_error(
-            "Failed to fetch project id",
-            format!("Failed to fetch project id {}", response.content()),
-        ));
-    };
+        return Err(UnexpectedResponseStatus {
+            status_code: response.status(),
+            message: response.content().to_string(),
+            span,
+        }
+        .into());
+    }
     let content: JSONCloudsProjectsResponse = serde_json::from_str(response.content())
-        .map_err(map_serde_deserialize_error_to_shell_error)?;
+        .map_err(|e| deserialize_error(e.to_string(), span))?;
 
     for p in content.items() {
         if p.name() == name.clone() {
@@ -298,13 +302,7 @@ pub(crate) fn find_project_id(
         }
     }
 
-    Err(generic_unspanned_error(
-        "Project could not be found",
-        format!(
-            "Project named {} was not found on the Capella organization",
-            name
-        ),
-    ))
+    Err(ShellError::from(ProjectNotFound { name, span }))
 }
 
 pub(crate) fn find_cloud_id(
@@ -312,16 +310,19 @@ pub(crate) fn find_cloud_id(
     name: String,
     client: &Arc<CapellaClient>,
     deadline: Instant,
+    span: Span,
 ) -> Result<String, ShellError> {
     let response = client.capella_request(CapellaRequest::GetClouds {}, deadline, ctrl_c)?;
     if response.status() != 200 {
-        return Err(generic_unspanned_error(
-            "Failed to fetch cloud id",
-            format!("Failed to fetch cloud id {}", response.content()),
-        ));
+        return Err(UnexpectedResponseStatus {
+            status_code: response.status(),
+            message: response.content().to_string(),
+            span,
+        }
+        .into());
     };
     let clouds: JSONCloudsResponse = serde_json::from_str(response.content())
-        .map_err(map_serde_deserialize_error_to_shell_error)?;
+        .map_err(|e| deserialize_error(e.to_string(), span))?;
 
     for c in clouds.items() {
         if c.name() == name {
@@ -329,13 +330,7 @@ pub(crate) fn find_cloud_id(
         }
     }
 
-    Err(generic_unspanned_error(
-        "Cloud could not be found",
-        format!(
-            "Cloud named {} was not found on the Capella organization",
-            name
-        ),
-    ))
+    Err(ShellError::from(CloudNotFound { name, span }))
 }
 
 // duration_to_golang_string creates a golang formatted string to use with timeouts. Unlike Golang
@@ -406,105 +401,6 @@ impl NuValueMap {
         }
         .into_pipeline_data()
     }
-}
-
-pub fn no_active_cluster_error() -> ShellError {
-    ShellError::GenericError(
-        "No active cluster".into(),
-        "".into(),
-        None,
-        Some("An active cluster must be set".into()),
-        Vec::new(),
-    )
-}
-
-pub fn cluster_not_found_error(name: String, span: Span) -> ShellError {
-    ShellError::GenericError(
-        "Cluster not found".into(),
-        "".into(),
-        Some(span),
-        Some(format!("Cluster named {} is not known", name)),
-        Vec::new(),
-    )
-}
-
-pub fn generic_unspanned_error(msg: impl Into<String>, help: impl Into<String>) -> ShellError {
-    ShellError::GenericError(msg.into(), "".into(), None, Some(help.into()), Vec::new())
-}
-
-pub fn generic_spanned_error(
-    msg: impl Into<String>,
-    help: impl Into<String>,
-    span: Span,
-) -> ShellError {
-    ShellError::GenericError(
-        msg.into(),
-        "".into(),
-        Some(span),
-        Some(help.into()),
-        Vec::new(),
-    )
-}
-
-pub fn map_serde_deserialize_error_to_shell_error(e: serde_json::Error) -> ShellError {
-    ShellError::GenericError(
-        "Failed to deserialize response".into(),
-        "".into(),
-        None,
-        Some(e.to_string()),
-        Vec::new(),
-    )
-}
-
-pub fn map_serde_serialize_error_to_shell_error(e: serde_json::Error) -> ShellError {
-    ShellError::GenericError(
-        "Failed to serialize value".into(),
-        "".into(),
-        None,
-        Some(e.to_string()),
-        Vec::new(),
-    )
-}
-
-pub fn cant_run_against_hosted_capella_error() -> ShellError {
-    ShellError::GenericError(
-        "Cannot run command against Hosted Capella".into(),
-        "".into(),
-        None,
-        Some("This command is currently only support against in-vpc versions of Capella".into()),
-        Vec::new(),
-    )
-}
-
-pub fn json_parse_fail_error(e: serde_json::Error, span: Option<Span>) -> ShellError {
-    ShellError::GenericError(
-        "Failed to parse response content as JSON".into(),
-        "".into(),
-        span,
-        Some(e.to_string()),
-        Vec::new(),
-    )
-}
-
-pub fn unexpected_status_code_error(
-    status_code: u16,
-    content: &str,
-    span: Option<Span>,
-) -> ShellError {
-    ShellError::GenericError(
-        format!("Unexpected response status code: {}", status_code),
-        "".into(),
-        span,
-        Some(content.into()),
-        Vec::new(),
-    )
-}
-
-pub fn no_active_bucket_error(span: Span) -> ShellError {
-    ShellError::MissingParameter(
-        "Could not auto-select a bucket, use --bucket or set an active bucket".into(),
-        span,
-    )
 }
 
 pub fn get_active_cluster<'a>(

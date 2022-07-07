@@ -1,23 +1,22 @@
 use crate::cli::buckets_builder::{
     BucketSettings, DurabilityLevel, JSONBucketSettings, JSONCloudBucketSettings,
 };
-use crate::cli::util::{
-    cant_run_against_hosted_capella_error, cluster_identifiers_from, cluster_not_found_error,
-    generic_unspanned_error, map_serde_deserialize_error_to_shell_error,
-    map_serde_serialize_error_to_shell_error,
+use crate::cli::error::{
+    bucket_not_found_error, cant_run_against_hosted_capella_error, deserialize_error,
+    generic_error, serialize_error, unexpected_status_code_error,
 };
-use crate::client::{CapellaRequest, HttpResponse, ManagementRequest};
+use crate::cli::util::{cluster_identifiers_from, get_active_cluster};
+use crate::client::{CapellaRequest, ManagementRequest};
 use crate::state::{CapellaEnvironment, State};
 use log::debug;
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{Category, PipelineData, ShellError, Signature, Span, SyntaxShape};
 use std::convert::TryFrom;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::{Duration, Instant};
-
-use nu_engine::CallExt;
-use nu_protocol::ast::Call;
-use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
 
 #[derive(Clone)]
 pub struct BucketsUpdate {
@@ -117,31 +116,29 @@ fn buckets_update(
     let guard = state.lock().unwrap();
 
     for identifier in cluster_identifiers {
-        let active_cluster = match guard.clusters().get(&identifier) {
-            Some(c) => c,
-            None => {
-                return Err(cluster_not_found_error(identifier, call.span()));
-            }
-        };
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
 
         if active_cluster.capella_org().is_some()
             && (flush || durability.is_some() || expiry.is_some())
         {
-            return Err(generic_unspanned_error(
+            return Err(generic_error(
                 "Capella flag cannot be used with type, flush, durability, or expiry",
-                "Capella flag cannot be used with type, flush, durability, or expiry",
+                None,
+                span,
             ));
         }
 
-        let response: HttpResponse;
-        if let Some(plane) = active_cluster.capella_org() {
+        let response = if let Some(plane) = active_cluster.capella_org() {
             let cloud = guard.capella_org_for_cluster(plane)?.client();
 
             let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
             let cluster = cloud.find_cluster(identifier.clone(), deadline, ctrl_c.clone())?;
 
             if cluster.environment() == CapellaEnvironment::Hosted {
-                return Err(cant_run_against_hosted_capella_error());
+                return Err(cant_run_against_hosted_capella_error(
+                    "buckets update",
+                    span,
+                ));
             }
 
             let buckets_response = cloud.capella_request(
@@ -152,15 +149,17 @@ fn buckets_update(
                 ctrl_c.clone(),
             )?;
             if buckets_response.status() != 200 {
-                return Err(generic_unspanned_error(
-                    "Failed to get buckets",
-                    format!("Failed to get buckets: {}", buckets_response.content()),
+                debug!("Failed to get buckets from capella");
+                return Err(unexpected_status_code_error(
+                    buckets_response.status(),
+                    buckets_response.content(),
+                    span,
                 ));
             }
 
             let mut buckets: Vec<JSONCloudBucketSettings> =
                 serde_json::from_str(buckets_response.content())
-                    .map_err(map_serde_deserialize_error_to_shell_error)?;
+                    .map_err(|e| deserialize_error(e.to_string(), span))?;
 
             // Cloud requires that updates are performed on an array of buckets, and we have to include all
             // of the buckets that we want to keep so we need to pull out, change and reinsert the bucket that
@@ -168,17 +167,13 @@ fn buckets_update(
             let idx = match buckets.iter().position(|b| b.name() == name.clone()) {
                 Some(i) => i,
                 None => {
-                    return Err(ShellError::GenericError(
-                        "Bucket not found".into(),
-                        format!("Bucket named {} is not known", name),
-                        Some(span.clone()),
-                        None,
-                        Vec::new(),
-                    ));
+                    return Err(bucket_not_found_error(name, span));
                 }
             };
 
-            let mut settings = BucketSettings::try_from(buckets.swap_remove(idx))?;
+            let mut settings = BucketSettings::try_from(buckets.swap_remove(idx)).map_err(|e| {
+                generic_error(format!("Invalid setting {}", e.to_string()), None, span)
+            })?;
             update_bucket_settings(
                 &mut settings,
                 ram.map(|v| v as u64),
@@ -186,19 +181,22 @@ fn buckets_update(
                 flush,
                 durability.clone(),
                 expiry.map(|v| v as u64),
+                span.clone(),
             )?;
 
-            buckets.push(JSONCloudBucketSettings::try_from(&settings)?);
+            buckets.push(JSONCloudBucketSettings::try_from(&settings).map_err(|e| {
+                generic_error(format!("Invalid setting {}", e.to_string()), None, span)
+            })?);
 
-            response = cloud.capella_request(
+            cloud.capella_request(
                 CapellaRequest::UpdateBucket {
                     cluster_id: cluster.id(),
                     payload: serde_json::to_string(&buckets)
-                        .map_err(map_serde_serialize_error_to_shell_error)?,
+                        .map_err(|e| serialize_error(e.to_string(), span))?,
                 },
                 deadline.clone(),
                 ctrl_c.clone(),
-            )?;
+            )?
         } else {
             let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
             let get_response = active_cluster.cluster().http_client().management_request(
@@ -206,10 +204,20 @@ fn buckets_update(
                 deadline.clone(),
                 ctrl_c.clone(),
             )?;
+            if get_response.status() != 200 {
+                debug!("Failed to get buckets from server");
+                return Err(unexpected_status_code_error(
+                    get_response.status(),
+                    get_response.content(),
+                    span,
+                ));
+            }
 
             let content: JSONBucketSettings = serde_json::from_str(get_response.content())
-                .map_err(map_serde_deserialize_error_to_shell_error)?;
-            let mut settings = BucketSettings::try_from(content)?;
+                .map_err(|e| deserialize_error(e.to_string(), span))?;
+            let mut settings = BucketSettings::try_from(content).map_err(|e| {
+                generic_error(format!("Invalid setting {}", e.to_string()), None, span)
+            })?;
 
             update_bucket_settings(
                 &mut settings,
@@ -218,29 +226,34 @@ fn buckets_update(
                 flush,
                 durability.clone(),
                 expiry.map(|v| v as u64),
+                span.clone(),
             )?;
 
-            let form = settings.as_form(true)?;
-            let payload = serde_urlencoded::to_string(&form).unwrap();
+            let form = settings.as_form(true).map_err(|e| {
+                generic_error(format!("Invalid setting {}", e.to_string()), None, span)
+            })?;
+            let payload = serde_urlencoded::to_string(&form)
+                .map_err(|e| serialize_error(e.to_string(), span))?;
 
-            response = active_cluster.cluster().http_client().management_request(
+            active_cluster.cluster().http_client().management_request(
                 ManagementRequest::UpdateBucket {
                     name: name.clone(),
                     payload,
                 },
                 deadline,
                 ctrl_c.clone(),
-            )?;
-        }
+            )?
+        };
 
         match response.status() {
             200 => {}
             201 => {}
             202 => {}
             _ => {
-                return Err(generic_unspanned_error(
-                    "Failed to update bucket",
-                    format!("Failed to update bucket: {}", response.content()),
+                return Err(unexpected_status_code_error(
+                    response.status(),
+                    response.content(),
+                    span,
                 ));
             }
         }
@@ -256,6 +269,7 @@ fn update_bucket_settings(
     flush: bool,
     durability: Option<String>,
     expiry: Option<u64>,
+    span: Span,
 ) -> Result<(), ShellError> {
     if let Some(r) = ram {
         settings.set_ram_quota_mb(r);
@@ -264,9 +278,10 @@ fn update_bucket_settings(
         settings.set_num_replicas(match u32::try_from(r) {
             Ok(bt) => bt,
             Err(e) => {
-                return Err(generic_unspanned_error(
-                    "Failed to parse num replicas",
+                return Err(generic_error(
                     format!("Failed to parse num replicas {}", e.to_string()),
+                    None,
+                    span,
                 ));
             }
         });
@@ -277,11 +292,10 @@ fn update_bucket_settings(
     if let Some(d) = durability {
         settings.set_minimum_durability_level(match DurabilityLevel::try_from(d.as_str()) {
             Ok(bt) => bt,
-            Err(e) => {
-                return Err(generic_unspanned_error(
-                    "Failed to parse durability level",
-                    format!("Failed to parse durability level {}", e.to_string()),
-                ));
+            Err(_e) => {
+
+                return Err(generic_error(format!("Failed to parse durability level {}", d),
+                                         "Allowed values for durability level are one, majority, majorityAndPersistActive, persistToMajority".to_string(), span));
             }
         });
     }

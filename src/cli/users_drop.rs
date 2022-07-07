@@ -1,7 +1,4 @@
-use crate::cli::util::{
-    cant_run_against_hosted_capella_error, cluster_identifiers_from, cluster_not_found_error,
-    generic_unspanned_error,
-};
+use crate::cli::util::{cluster_identifiers_from, get_active_cluster};
 use crate::client::{CapellaRequest, ManagementRequest};
 use crate::state::{CapellaEnvironment, State};
 use log::debug;
@@ -9,6 +6,7 @@ use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use crate::cli::error::{cant_run_against_hosted_capella_error, unexpected_status_code_error};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -74,12 +72,8 @@ fn users_drop(
     let guard = state.lock().unwrap();
 
     for identifier in cluster_identifiers {
-        let active_cluster = match guard.clusters().get(&identifier) {
-            Some(c) => c,
-            None => {
-                return Err(cluster_not_found_error(identifier, call.span()));
-            }
-        };
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+
         let response = if let Some(plane) = active_cluster.capella_org() {
             let cloud = guard.capella_org_for_cluster(plane)?.client();
             let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
@@ -87,7 +81,7 @@ fn users_drop(
                 cloud.find_cluster(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
 
             if cluster.environment() == CapellaEnvironment::Hosted {
-                return Err(cant_run_against_hosted_capella_error());
+                return Err(cant_run_against_hosted_capella_error("users drop", span));
             }
 
             cloud.capella_request(
@@ -112,9 +106,10 @@ fn users_drop(
             200 => {}
             204 => {}
             _ => {
-                return Err(generic_unspanned_error(
-                    "Failed to drop user",
-                    format!("Failed to drop user {}", response.content()),
+                return Err(unexpected_status_code_error(
+                    response.status(),
+                    response.content(),
+                    call.span(),
                 ));
             }
         }

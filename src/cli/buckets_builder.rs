@@ -1,10 +1,20 @@
-use crate::cli::util::generic_unspanned_error;
-use nu_protocol::ShellError;
 use serde_derive::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::time::Duration;
+
+// We use a builder error here to force any errors to have to be translated into shell error.
+#[derive(Debug, Clone)]
+pub struct BuilderError {
+    message: String,
+}
+
+impl fmt::Display for BuilderError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
 
 #[derive(Debug, Copy, Clone)]
 pub enum DurabilityLevel {
@@ -34,7 +44,7 @@ impl Display for DurabilityLevel {
 }
 
 impl TryFrom<&str> for DurabilityLevel {
-    type Error = ShellError;
+    type Error = BuilderError;
 
     fn try_from(alias: &str) -> Result<Self, Self::Error> {
         match alias {
@@ -42,10 +52,9 @@ impl TryFrom<&str> for DurabilityLevel {
             "majority" => Ok(DurabilityLevel::Majority),
             "majorityAndPersistActive" => Ok(DurabilityLevel::MajorityAndPersistOnMaster),
             "persistToMajority" => Ok(DurabilityLevel::PersistToMajority),
-            _ => Err(generic_unspanned_error(
-                "invalid durability mode",
-                "invalid durability mode",
-            )),
+            _ => Err(BuilderError {
+                message: "invalid durability level".to_string(),
+            }),
         }
     }
 }
@@ -58,7 +67,7 @@ pub enum BucketType {
 }
 
 impl TryFrom<&str> for BucketType {
-    type Error = ShellError;
+    type Error = BuilderError;
 
     fn try_from(alias: &str) -> Result<Self, Self::Error> {
         match alias {
@@ -66,10 +75,9 @@ impl TryFrom<&str> for BucketType {
             "membase" => Ok(BucketType::Couchbase),
             "memcached" => Ok(BucketType::Memcached),
             "ephemeral" => Ok(BucketType::Ephemeral),
-            _ => Err(generic_unspanned_error(
-                "invalid bucket type",
-                "invalid bucket type",
-            )),
+            _ => Err(BuilderError {
+                message: "invalid bucket type".to_string(),
+            }),
         }
     }
 }
@@ -93,16 +101,15 @@ pub enum ConflictResolutionType {
 }
 
 impl TryFrom<&str> for ConflictResolutionType {
-    type Error = ShellError;
+    type Error = BuilderError;
 
     fn try_from(alias: &str) -> Result<Self, Self::Error> {
         match alias {
             "lww" => Ok(ConflictResolutionType::Timestamp),
             "seqno" => Ok(ConflictResolutionType::SequenceNumber),
-            _ => Err(generic_unspanned_error(
-                "invalid conflict resolution policy",
-                "invalid conflict resolution policy",
-            )),
+            _ => Err(BuilderError {
+                message: "invalid conflict resolution policy".to_string(),
+            }),
         }
     }
 }
@@ -126,7 +133,7 @@ pub enum EvictionPolicy {
     NoEviction,
 }
 impl TryFrom<&str> for EvictionPolicy {
-    type Error = ShellError;
+    type Error = BuilderError;
 
     fn try_from(alias: &str) -> Result<Self, Self::Error> {
         match alias {
@@ -134,10 +141,9 @@ impl TryFrom<&str> for EvictionPolicy {
             "valueOnly" => Ok(EvictionPolicy::ValueOnly),
             "nruEviction" => Ok(EvictionPolicy::NotRecentlyUsed),
             "noEviction" => Ok(EvictionPolicy::NoEviction),
-            _ => Err(generic_unspanned_error(
-                "invalid eviction policy",
-                "invalid eviction policy",
-            )),
+            _ => Err(BuilderError {
+                message: "invalid eviction policy".to_string(),
+            }),
         }
     }
 }
@@ -163,17 +169,16 @@ pub enum CompressionMode {
 }
 
 impl TryFrom<&str> for CompressionMode {
-    type Error = ShellError;
+    type Error = BuilderError;
 
     fn try_from(alias: &str) -> Result<Self, Self::Error> {
         match alias {
             "off" => Ok(CompressionMode::Off),
             "passive" => Ok(CompressionMode::Passive),
             "active" => Ok(CompressionMode::Active),
-            _ => Err(generic_unspanned_error(
-                "invalid compression mode",
-                "invalid compression mode",
-            )),
+            _ => Err(BuilderError {
+                message: "invalid compression mode".to_string(),
+            }),
         }
     }
 }
@@ -340,7 +345,7 @@ pub struct JSONCloudBucketSettings {
 }
 
 impl TryFrom<&BucketSettings> for JSONCloudBucketSettings {
-    type Error = ShellError;
+    type Error = BuilderError;
 
     fn try_from(settings: &BucketSettings) -> Result<Self, Self::Error> {
         let mut reso_type = "".to_string();
@@ -363,7 +368,7 @@ impl JSONCloudBucketSettings {
 }
 
 impl TryFrom<JSONBucketSettings> for BucketSettings {
-    type Error = ShellError;
+    type Error = BuilderError;
 
     fn try_from(settings: JSONBucketSettings) -> Result<Self, Self::Error> {
         Ok(BucketSettings {
@@ -386,7 +391,7 @@ impl TryFrom<JSONBucketSettings> for BucketSettings {
 }
 
 impl TryFrom<JSONCloudBucketSettings> for BucketSettings {
-    type Error = ShellError;
+    type Error = BuilderError;
 
     fn try_from(settings: JSONCloudBucketSettings) -> Result<Self, Self::Error> {
         Ok(BucketSettings {
@@ -409,12 +414,11 @@ impl TryFrom<JSONCloudBucketSettings> for BucketSettings {
 }
 
 impl BucketSettings {
-    pub fn as_form(&self, is_update: bool) -> Result<Vec<(&str, String)>, ShellError> {
+    pub fn as_form(&self, is_update: bool) -> Result<Vec<(&str, String)>, BuilderError> {
         if self.ram_quota_mb < 100 {
-            return Err(generic_unspanned_error(
-                "ram quota must be more than 100mb",
-                "ram quota must be more than 100mb",
-            ));
+            return Err(BuilderError {
+                message: "ram quota must be more than 100mb".to_string(),
+            });
         }
         let flush_enabled = match self.flush_enabled {
             true => "1",
@@ -450,16 +454,14 @@ impl BucketSettings {
                 if let Some(eviction_policy) = self.eviction_policy {
                     match eviction_policy {
                         EvictionPolicy::NoEviction => {
-                            return Err(generic_unspanned_error(
-                                "specified eviction policy cannot be used with couchbase buckets",
-                                "specified eviction policy cannot be used with couchbase buckets",
-                            ));
+                            return Err(BuilderError{
+                                message: "specified eviction policy cannot be used with couchbase buckets".to_string(),
+                            });
                         }
                         EvictionPolicy::NotRecentlyUsed => {
-                            return Err(generic_unspanned_error(
-                                "specified eviction policy cannot be used with couchbase buckets",
-                                "specified eviction policy cannot be used with couchbase buckets",
-                            ));
+                            return Err(BuilderError{
+                                message: "specified eviction policy cannot be used with couchbase buckets".to_string(),
+                            });
                         }
                         _ => {
                             form.push(("evictionPolicy", eviction_policy.to_string()));
@@ -473,16 +475,14 @@ impl BucketSettings {
                 if let Some(eviction_policy) = self.eviction_policy {
                     match eviction_policy {
                         EvictionPolicy::Full => {
-                            return Err(generic_unspanned_error(
-                                "specified eviction policy cannot be used with ephemeral buckets",
-                                "specified eviction policy cannot be used with ephemeral buckets",
-                            ));
+                            return Err(BuilderError{
+                                message: "specified eviction policy cannot be used with ephemeral buckets".to_string(),
+                            });
                         }
                         EvictionPolicy::ValueOnly => {
-                            return Err(generic_unspanned_error(
-                                "specified eviction policy cannot be used with ephemeral buckets",
-                                "specified eviction policy cannot be used with ephemeral buckets",
-                            ));
+                            return Err(BuilderError{
+                                message: "specified eviction policy cannot be used with ephemeral buckets".to_string(),
+                            });
                         }
                         _ => {
                             form.push(("evictionPolicy", eviction_policy.to_string()));
@@ -493,16 +493,15 @@ impl BucketSettings {
             }
             BucketType::Memcached => {
                 if self.num_replicas > 0 {
-                    return Err(generic_unspanned_error(
-                        "num replicas cannot be used with memcached buckets",
-                        "num replicas cannot be used with memcached buckets",
-                    ));
+                    return Err(BuilderError {
+                        message: "num replicas cannot be used with memcached buckets".to_string(),
+                    });
                 }
                 if self.eviction_policy.is_some() {
-                    return Err(generic_unspanned_error(
-                        "eviction policy cannot be used with memcached buckets",
-                        "eviction policy cannot be used with memcached buckets",
-                    ));
+                    return Err(BuilderError {
+                        message: "eviction policy cannot be used with memcached buckets"
+                            .to_string(),
+                    });
                 }
                 form.push(("replicaIndex", replica_index_enabled.into()));
             }

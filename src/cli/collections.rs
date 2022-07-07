@@ -1,7 +1,4 @@
-use crate::cli::util::{
-    cluster_identifiers_from, cluster_not_found_error, generic_unspanned_error,
-    map_serde_deserialize_error_to_shell_error, no_active_bucket_error, NuValueMap,
-};
+use crate::cli::util::{cluster_identifiers_from, get_active_cluster, NuValueMap};
 use crate::client::ManagementRequest;
 use crate::state::State;
 use log::debug;
@@ -11,6 +8,8 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::time::Instant;
 
+use crate::cli::error::{deserialize_error, no_active_bucket_error, unexpected_status_code_error};
+use crate::RemoteCluster;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -84,22 +83,9 @@ fn collections_get(
 
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = match guard.clusters().get(&identifier) {
-            Some(c) => c,
-            None => {
-                return Err(cluster_not_found_error(identifier, call.span()));
-            }
-        };
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
 
-        let bucket = match call.get_flag(engine_state, stack, "bucket")? {
-            Some(v) => v,
-            None => match active_cluster.active_bucket() {
-                Some(s) => s,
-                None => {
-                    return Err(no_active_bucket_error(call.span()));
-                }
-            },
-        };
+        let bucket = get_bucket_or_active(active_cluster, engine_state, stack, call)?;
 
         debug!(
             "Running collections get for bucket {:?}, scope {:?}",
@@ -114,11 +100,12 @@ fn collections_get(
 
         let manifest: Manifest = match response.status() {
             200 => serde_json::from_str(response.content())
-                .map_err(map_serde_deserialize_error_to_shell_error)?,
+                .map_err(|e| deserialize_error(e.to_string(), span))?,
             _ => {
-                return Err(generic_unspanned_error(
-                    "Failed to get collections",
-                    format!("Failed to get collections {}", response.content()),
+                return Err(unexpected_status_code_error(
+                    response.status(),
+                    response.content(),
+                    span,
                 ));
             }
         };
@@ -159,9 +146,26 @@ fn collections_get(
 
     Ok(Value::List {
         vals: results,
-        span: call.head,
+        span,
     }
     .into_pipeline_data())
+}
+
+pub fn get_bucket_or_active(
+    active_cluster: &RemoteCluster,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+) -> Result<String, ShellError> {
+    match call.get_flag(engine_state, stack, "bucket")? {
+        Some(v) => Ok(v),
+        None => match active_cluster.active_bucket() {
+            Some(s) => Ok(s),
+            None => {
+                return Err(no_active_bucket_error(call.span()));
+            }
+        },
+    }
 }
 
 #[derive(Debug, Deserialize)]

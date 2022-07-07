@@ -1,19 +1,17 @@
 use crate::cli::cloud_json::JSONCloudClustersSummariesV3;
+use crate::cli::error::{deserialize_error, unexpected_status_code_error};
+use crate::cli::util::NuValueMap;
 use crate::client::CapellaRequest;
 use crate::state::State;
-use std::ops::Add;
-use std::sync::{Arc, Mutex};
-use tokio::time::Instant;
-
-use crate::cli::util::{
-    generic_unspanned_error, map_serde_deserialize_error_to_shell_error, NuValueMap,
-};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
 };
+use std::ops::Add;
+use std::sync::{Arc, Mutex};
+use tokio::time::Instant;
 
 #[derive(Clone)]
 pub struct Clusters {
@@ -83,14 +81,15 @@ fn clusters(
         ctrl_c,
     )?;
     if response.status() != 200 {
-        return Err(generic_unspanned_error(
-            "Failed to get clusters",
-            format!("Failed to get clusters {}", response.content()),
+        return Err(unexpected_status_code_error(
+            response.status(),
+            response.content(),
+            span,
         ));
     };
 
     let content: JSONCloudClustersSummariesV3 = serde_json::from_str(response.content())
-        .map_err(map_serde_deserialize_error_to_shell_error)?;
+        .map_err(|e| deserialize_error(e.to_string(), span))?;
 
     let mut results = vec![];
     for cluster in content.items() {
@@ -106,7 +105,7 @@ fn clusters(
 
     Ok(Value::List {
         vals: results,
-        span: call.head,
+        span,
     }
     .into_pipeline_data())
 }

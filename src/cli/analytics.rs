@@ -1,20 +1,25 @@
 use crate::cli::util::{
-    cluster_identifiers_from, cluster_not_found_error, convert_row_to_nu_value,
-    duration_to_golang_string, generic_unspanned_error, map_serde_deserialize_error_to_shell_error,
+    cluster_identifiers_from, convert_row_to_nu_value, duration_to_golang_string,
+    get_active_cluster,
 };
-use crate::client::AnalyticsQueryRequest;
+use crate::client::{AnalyticsQueryRequest, HttpResponse};
 use crate::state::State;
 use log::debug;
 use std::collections::HashMap;
 use std::ops::Add;
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use crate::cli::error::{
+    deserialize_error, malformed_response_error, unexpected_status_code_error,
+};
+use crate::RemoteCluster;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
-    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape, Value,
 };
 
 #[derive(Clone)]
@@ -82,6 +87,7 @@ fn run(
 ) -> Result<PipelineData, ShellError> {
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
     let statement: String = call.req(engine_state, stack, 0)?;
+    let span = call.head;
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
 
@@ -94,79 +100,51 @@ fn run(
 
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = match guard.clusters().get(&identifier) {
-            Some(c) => c,
-            None => {
-                return Err(cluster_not_found_error(identifier, call.span()));
-            }
-        };
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
         let bucket = call
             .get_flag(engine_state, stack, "bucket")?
             .or_else(|| active_cluster.active_bucket());
         let maybe_scope = bucket.map(|b| scope.clone().map(|s| (b, s))).flatten();
 
-        let response = active_cluster
-            .cluster()
-            .http_client()
-            .analytics_query_request(
-                AnalyticsQueryRequest::Execute {
-                    statement: statement.clone(),
-                    scope: maybe_scope,
-                    timeout: duration_to_golang_string(
-                        active_cluster.timeouts().analytics_timeout(),
-                    ),
-                },
-                Instant::now().add(active_cluster.timeouts().analytics_timeout()),
-                ctrl_c.clone(),
-            )?;
+        let response = send_analytics_query(
+            active_cluster,
+            maybe_scope,
+            statement.clone(),
+            ctrl_c.clone(),
+            span.clone(),
+        )?;
 
         if with_meta {
             let content: serde_json::Value = serde_json::from_str(response.content())
-                .map_err(map_serde_deserialize_error_to_shell_error)?;
-            results.push(convert_row_to_nu_value(
-                &content,
-                call.head,
-                identifier.clone(),
-            )?);
+                .map_err(|e| deserialize_error(e.to_string(), span))?;
+            results.push(convert_row_to_nu_value(&content, span, identifier.clone())?);
         } else {
             let content: HashMap<String, serde_json::Value> =
                 serde_json::from_str(response.content())
-                    .map_err(map_serde_deserialize_error_to_shell_error)?;
+                    .map_err(|e| deserialize_error(e.to_string(), span))?;
             if let Some(content_errors) = content.get("errors") {
                 if let Some(arr) = content_errors.as_array() {
                     for result in arr {
-                        results.push(convert_row_to_nu_value(
-                            result,
-                            call.head,
-                            identifier.clone(),
-                        )?);
+                        results.push(convert_row_to_nu_value(result, span, identifier.clone())?);
                     }
                 } else {
-                    return Err(generic_unspanned_error(
-                        "Analytics errors not an array - malformed response",
-                        format!(
-                            "Analytics errors not an array - {}",
-                            content_errors.to_string()
-                        ),
+                    return Err(malformed_response_error(
+                        "analytics rows not an array",
+                        content_errors.to_string(),
+                        span,
                     ));
                 }
             } else if let Some(content_results) = content.get("results") {
                 if let Some(arr) = content_results.as_array() {
                     dbg!(&arr);
                     for result in arr {
-                        results.push(convert_row_to_nu_value(
-                            result,
-                            call.head,
-                            identifier.clone(),
-                        )?);
+                        results.push(convert_row_to_nu_value(result, span, identifier.clone())?);
                     }
                 } else {
-                    return Err(generic_unspanned_error(
-                        "Analytics results not an array - malformed response",
-                        format!(
-                            "Analytics results not an array - {}",
-                            content_results.to_string(),
-                        ),
+                    return Err(malformed_response_error(
+                        "analytics toplevel result not  an object",
+                        content_results.to_string(),
+                        span,
                     ));
                 }
             } else {
@@ -178,7 +156,41 @@ fn run(
 
     Ok(Value::List {
         vals: results,
-        span: call.head,
+        span,
     }
     .into_pipeline_data())
+}
+
+pub fn send_analytics_query(
+    active_cluster: &RemoteCluster,
+    scope: Option<(String, String)>,
+    statement: impl Into<String>,
+    ctrl_c: Arc<AtomicBool>,
+    span: Span,
+) -> Result<HttpResponse, ShellError> {
+    let response = active_cluster
+        .cluster()
+        .http_client()
+        .analytics_query_request(
+            AnalyticsQueryRequest::Execute {
+                statement: statement.into(),
+                scope,
+                timeout: duration_to_golang_string(active_cluster.timeouts().analytics_timeout()),
+            },
+            Instant::now().add(active_cluster.timeouts().analytics_timeout()),
+            ctrl_c,
+        )?;
+
+    match response.status() {
+        200 => {}
+        _ => {
+            return Err(unexpected_status_code_error(
+                response.status(),
+                response.content(),
+                span,
+            ));
+        }
+    }
+
+    Ok(response)
 }

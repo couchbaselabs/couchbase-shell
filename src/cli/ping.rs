@@ -1,6 +1,6 @@
 //! The `ping` command performs a ping operation.
 
-use crate::cli::util::{cluster_identifiers_from, no_active_bucket_error, NuValueMap};
+use crate::cli::util::{cluster_identifiers_from, get_active_cluster, NuValueMap};
 use crate::state::State;
 
 use log::debug;
@@ -9,6 +9,7 @@ use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 use tokio::time::Instant;
 
+use crate::cli::error::no_active_bucket_error;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -84,10 +85,7 @@ fn run_ping(
     let clusters_len = cluster_identifiers.len();
     let mut results = vec![];
     for identifier in cluster_identifiers {
-        let cluster = match guard.clusters().get(&identifier) {
-            Some(c) => c,
-            None => continue, // This can't actually happen, we filter the clusters in cluster_identifiers_from
-        };
+        let cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
         let deadline = Instant::now().add(cluster.timeouts().management_timeout());
 
         let client = cluster.cluster().http_client();

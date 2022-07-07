@@ -51,6 +51,7 @@ mod cbenv_collection;
 mod cbenv_project;
 mod cbenv_scope;
 mod cbenv_timeouts;
+mod error;
 mod projects;
 mod projects_create;
 mod projects_drop;

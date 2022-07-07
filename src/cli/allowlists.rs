@@ -1,7 +1,6 @@
 use crate::cli::cloud_json::JSONCloudGetAllowListResponse;
 use crate::cli::util::{
-    cluster_identifiers_from, cluster_not_found_error, json_parse_fail_error,
-    unexpected_status_code_error, validate_is_cloud, NuValueMap,
+    cluster_identifiers_from, get_active_cluster, validate_is_cloud, NuValueMap,
 };
 use crate::client::CapellaRequest;
 use crate::state::{CapellaEnvironment, State};
@@ -10,6 +9,9 @@ use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use crate::cli::error::{
+    cant_run_against_hosted_capella_error, deserialize_error, unexpected_status_code_error,
+};
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
@@ -66,24 +68,18 @@ fn addresses(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let span = call.head;
 
     debug!("Running allowlists");
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let guard = state.lock().unwrap();
+
     let mut results = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = match guard.clusters().get(&identifier) {
-            Some(c) => c,
-            None => {
-                return Err(cluster_not_found_error(identifier, call.span()));
-            }
-        };
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
 
-        validate_is_cloud(
-            active_cluster,
-            "allowlists can only be used with clusters registered to a Capella organisation",
-        )?;
+        validate_is_cloud(active_cluster, "allowlists", span.clone())?;
 
         let cloud = guard
             .capella_org_for_cluster(active_cluster.capella_org().unwrap())?
@@ -95,10 +91,7 @@ fn addresses(
         )?;
 
         if cluster.environment() == CapellaEnvironment::Hosted {
-            return Err(ShellError::UnsupportedInput(
-                "allowlists cannot be run against hosted Capella clusters".into(),
-                call.span(),
-            ));
+            return Err(cant_run_against_hosted_capella_error("allowlists", span));
         }
 
         let response = cloud.capella_request(
@@ -112,12 +105,12 @@ fn addresses(
             return Err(unexpected_status_code_error(
                 response.status(),
                 response.content(),
-                Some(call.span()),
+                span,
             ));
         };
 
         let content: Vec<JSONCloudGetAllowListResponse> = serde_json::from_str(response.content())
-            .map_err(|e| json_parse_fail_error(e, Some(call.span())))?;
+            .map_err(|e| deserialize_error(e.to_string(), span))?;
 
         let mut entries = content
             .into_iter()

@@ -1,4 +1,3 @@
-use crate::cli::util::generic_unspanned_error;
 use crate::client::CapellaRequest;
 use crate::state::{CapellaEnvironment, State};
 use log::debug;
@@ -6,6 +5,7 @@ use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use crate::cli::error::unexpected_status_code_error;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -98,9 +98,10 @@ fn clusters_drop(
         )
     }?;
     if response.status() != 202 {
-        return Err(generic_unspanned_error(
-            "Failed to drop cluster",
-            format!("Failed to drop cluster {}", response.content()),
+        return Err(unexpected_status_code_error(
+            response.status(),
+            response.content(),
+            span,
         ));
     };
 

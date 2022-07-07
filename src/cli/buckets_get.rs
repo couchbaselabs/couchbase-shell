@@ -3,10 +3,7 @@
 use crate::state::{CapellaEnvironment, State};
 
 use crate::cli::buckets_builder::{BucketSettings, JSONBucketSettings, JSONCloudBucketSettings};
-use crate::cli::util::{
-    cant_run_against_hosted_capella_error, cluster_identifiers_from, cluster_not_found_error,
-    generic_unspanned_error, map_serde_deserialize_error_to_shell_error, NuValueMap,
-};
+use crate::cli::util::{cluster_identifiers_from, get_active_cluster, NuValueMap};
 use crate::client::{CapellaRequest, ManagementRequest};
 use log::debug;
 use std::convert::TryFrom;
@@ -14,6 +11,10 @@ use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use crate::cli::error::{
+    bucket_not_found_error, cant_run_against_hosted_capella_error, deserialize_error,
+    generic_error, unexpected_status_code_error,
+};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -82,12 +83,7 @@ fn buckets_get(
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
         let guard = state.lock().unwrap();
-        let cluster = match guard.clusters().get(&identifier) {
-            Some(c) => c,
-            None => {
-                return Err(cluster_not_found_error(identifier, call.span()));
-            }
-        };
+        let cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
 
         if let Some(plane) = cluster.capella_org() {
             let cloud = guard.capella_org_for_cluster(plane)?.client();
@@ -98,7 +94,7 @@ fn buckets_get(
             )?;
 
             if cloud_cluster.environment() == CapellaEnvironment::Hosted {
-                return Err(cant_run_against_hosted_capella_error());
+                return Err(cant_run_against_hosted_capella_error("buckets get", span));
             }
 
             let response = cloud.capella_request(
@@ -109,14 +105,15 @@ fn buckets_get(
                 ctrl_c.clone(),
             )?;
             if response.status() != 200 {
-                return Err(generic_unspanned_error(
-                    "Failed to get buckets",
-                    format!("Failed to get buckets {}", response.content()),
+                return Err(unexpected_status_code_error(
+                    response.status(),
+                    response.content(),
+                    span,
                 ));
             }
 
             let content: Vec<JSONCloudBucketSettings> = serde_json::from_str(response.content())
-                .map_err(map_serde_deserialize_error_to_shell_error)?;
+                .map_err(|e| deserialize_error(e.to_string(), span))?;
             let mut bucket_settings: Option<JSONCloudBucketSettings> = None;
 
             for b in content.into_iter() {
@@ -128,16 +125,15 @@ fn buckets_get(
 
             if let Some(b) = bucket_settings {
                 results.push(bucket_to_nu_value(
-                    BucketSettings::try_from(b)?,
+                    BucketSettings::try_from(b).map_err(|e| {
+                        generic_error(format!("Invalid setting {}", e.to_string()), None, span)
+                    })?,
                     identifier,
                     true,
                     span,
                 ));
             } else {
-                return Err(generic_unspanned_error(
-                    "Bucket not found",
-                    format!("Bucket {} not found", bucket),
-                ));
+                return Err(bucket_not_found_error(bucket, span));
             }
         } else {
             let response = cluster.cluster().http_client().management_request(
@@ -148,10 +144,26 @@ fn buckets_get(
                 ctrl_c.clone(),
             )?;
 
+            match response.status() {
+                200 => {}
+                404 => {
+                    return Err(bucket_not_found_error(bucket, span));
+                }
+                _ => {
+                    return Err(unexpected_status_code_error(
+                        response.status(),
+                        response.content(),
+                        span,
+                    ));
+                }
+            };
+
             let content: JSONBucketSettings = serde_json::from_str(response.content())
-                .map_err(map_serde_deserialize_error_to_shell_error)?;
+                .map_err(|e| deserialize_error(e.to_string(), span))?;
             results.push(bucket_to_nu_value(
-                BucketSettings::try_from(content)?,
+                BucketSettings::try_from(content).map_err(|e| {
+                    generic_error(format!("Invalid setting {}", e.to_string()), None, span)
+                })?,
                 identifier,
                 false,
                 span,

@@ -1,8 +1,5 @@
 use super::util::convert_json_value_to_nu_value;
-use crate::cli::util::{
-    cluster_identifiers_from, cluster_not_found_error, map_serde_deserialize_error_to_shell_error,
-    validate_is_not_cloud,
-};
+use crate::cli::util::{cluster_identifiers_from, get_active_cluster, validate_is_not_cloud};
 use crate::client::ManagementRequest;
 use crate::state::State;
 use serde_json::{json, Map, Value};
@@ -10,6 +7,7 @@ use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use crate::cli::error::{deserialize_error, unexpected_status_code_error};
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
@@ -69,25 +67,32 @@ fn whoami(
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
     let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
+    let guard = state.lock().unwrap();
 
     let mut entries = vec![];
     for identifier in cluster_identifiers {
-        let guard = state.lock().unwrap();
-        let cluster = match guard.clusters().get(&identifier) {
-            Some(c) => c,
-            None => {
-                return Err(cluster_not_found_error(identifier, call.span()));
-            }
-        };
-        validate_is_not_cloud(cluster, "whoami cannot be run against cloud clusters")?;
+        let cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        validate_is_not_cloud(cluster, "whoami", span)?;
 
         let response = cluster.cluster().http_client().management_request(
             ManagementRequest::Whoami,
             Instant::now().add(cluster.timeouts().management_timeout()),
             ctrl_c.clone(),
         )?;
+
+        match response.status() {
+            200 => {}
+            _ => {
+                return Err(unexpected_status_code_error(
+                    response.status(),
+                    response.content(),
+                    span,
+                ));
+            }
+        }
+
         let mut content: Map<String, Value> = serde_json::from_str(response.content())
-            .map_err(map_serde_deserialize_error_to_shell_error)?;
+            .map_err(|e| deserialize_error(e.to_string(), span))?;
         content.insert("cluster".into(), json!(identifier.clone()));
         let converted = convert_json_value_to_nu_value(&Value::Object(content), span)?;
         entries.push(converted);

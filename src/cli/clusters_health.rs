@@ -1,8 +1,5 @@
 use crate::cli::cloud_json::JSONCloudClusterHealthResponse;
-use crate::cli::util::{
-    cant_run_against_hosted_capella_error, cluster_identifiers_from, cluster_not_found_error,
-    map_serde_deserialize_error_to_shell_error, NuValueMap,
-};
+use crate::cli::util::{cluster_identifiers_from, get_active_cluster, NuValueMap};
 use crate::client::{CapellaRequest, ManagementRequest};
 use crate::state::{
     CapellaEnvironment, ClusterTimeouts, RemoteCapellaOrganization, RemoteCluster, State,
@@ -14,6 +11,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use crate::cli::error::{cant_run_against_hosted_capella_error, deserialize_error};
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
@@ -77,12 +75,7 @@ fn health(
     let mut converted = vec![];
     for identifier in cluster_identifiers {
         let guard = state.lock().unwrap();
-        let cluster = match guard.clusters().get(&identifier) {
-            Some(c) => c,
-            None => {
-                return Err(cluster_not_found_error(identifier, call.span()));
-            }
-        };
+        let cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
 
         if let Some(plane) = cluster.capella_org() {
             let cloud = guard.capella_org_for_cluster(plane)?;
@@ -99,7 +92,7 @@ fn health(
                 span,
             )?);
 
-            let bucket_names = grab_bucket_names(cluster, ctrl_c.clone())?;
+            let bucket_names = grab_bucket_names(cluster, ctrl_c.clone(), span.clone())?;
             for bucket_name in bucket_names {
                 converted.push(check_resident_ratio(
                     &bucket_name,
@@ -122,6 +115,7 @@ fn health(
 fn grab_bucket_names(
     cluster: &RemoteCluster,
     ctrl_c: Arc<AtomicBool>,
+    span: Span,
 ) -> Result<Vec<String>, ShellError> {
     let response = cluster.cluster().http_client().management_request(
         ManagementRequest::GetBuckets,
@@ -129,7 +123,7 @@ fn grab_bucket_names(
         ctrl_c,
     )?;
     let resp: Vec<BucketInfo> = serde_json::from_str(response.content())
-        .map_err(map_serde_deserialize_error_to_shell_error)?;
+        .map_err(|e| deserialize_error(e.to_string(), span))?;
     Ok(resp.into_iter().map(|b| b.name).collect::<Vec<_>>())
 }
 
@@ -150,7 +144,7 @@ fn check_autofailover(
         ctrl_c,
     )?;
     let resp: AutoFailoverSettings = serde_json::from_str(response.content())
-        .map_err(map_serde_deserialize_error_to_shell_error)?;
+        .map_err(|e| deserialize_error(e.to_string(), span))?;
 
     let mut collected = NuValueMap::default();
     collected.add_string("cluster", identifier.to_string(), span);
@@ -190,7 +184,7 @@ fn check_resident_ratio(
         ctrl_c,
     )?;
     let resp: BucketStats = serde_json::from_str(response.content())
-        .map_err(map_serde_deserialize_error_to_shell_error)?;
+        .map_err(|e| deserialize_error(e.to_string(), span))?;
     let ratio = match resp.op.samples.active_resident_ratios.last() {
         Some(r) => *r,
         None => {
@@ -233,7 +227,10 @@ fn check_cloud_health(
             .find_cluster(identifier.to_string(), deadline.clone(), ctrl_c.clone())?;
 
     if cluster.environment() == CapellaEnvironment::Hosted {
-        return Err(cant_run_against_hosted_capella_error());
+        return Err(cant_run_against_hosted_capella_error(
+            "clusters health",
+            span,
+        ));
     }
 
     let response = cloud.client().capella_request(
@@ -244,7 +241,7 @@ fn check_cloud_health(
         ctrl_c,
     )?;
     let resp: JSONCloudClusterHealthResponse = serde_json::from_str(response.content())
-        .map_err(map_serde_deserialize_error_to_shell_error)?;
+        .map_err(|e| deserialize_error(e.to_string(), span))?;
 
     let status = resp.status();
 

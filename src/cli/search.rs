@@ -1,6 +1,5 @@
 use crate::cli::util::{
-    cluster_identifiers_from, cluster_not_found_error, duration_to_golang_string,
-    generic_unspanned_error, map_serde_deserialize_error_to_shell_error, NuValueMap,
+    cluster_identifiers_from, duration_to_golang_string, get_active_cluster, NuValueMap,
 };
 use crate::client::SearchQueryRequest;
 use crate::state::State;
@@ -10,6 +9,7 @@ use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use crate::cli::error::{deserialize_error, unexpected_status_code_error};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -85,12 +85,7 @@ fn run(
 
     let mut results = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = match guard.clusters().get(&identifier) {
-            Some(c) => c,
-            None => {
-                return Err(cluster_not_found_error(identifier, call.span()));
-            }
-        };
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
         let response = active_cluster
             .cluster()
             .http_client()
@@ -106,11 +101,12 @@ fn run(
 
         let rows: SearchResultData = match response.status() {
             200 => serde_json::from_str(response.content())
-                .map_err(map_serde_deserialize_error_to_shell_error)?,
+                .map_err(|e| deserialize_error(e.to_string(), span))?,
             _ => {
-                return Err(generic_unspanned_error(
-                    "Failed to perform search",
-                    format!("Failed to perform search {}", response.content()),
+                return Err(unexpected_status_code_error(
+                    response.status(),
+                    response.content(),
+                    span,
                 ));
             }
         };

@@ -1,3 +1,4 @@
+use crate::cli::error::no_active_cluster_error;
 use crate::cli::util::NuValueMap;
 use crate::state::State;
 use nu_engine::CallExt;
@@ -73,13 +74,7 @@ impl Command for UseTimeouts {
         let active = match guard.active_cluster() {
             Some(c) => c,
             None => {
-                return Err(ShellError::GenericError(
-                    "No active cluster".into(),
-                    "You must set an active cluster before an active collection".into(),
-                    Some(call.span()),
-                    None,
-                    Vec::new(),
-                ));
+                return Err(no_active_cluster_error(call.head));
             }
         };
 

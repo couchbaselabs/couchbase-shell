@@ -1,8 +1,5 @@
 use crate::cli::cloud_json::{JSONCloudCreateUserRequest, JSONCloudUser, JSONCloudUserRoles};
-use crate::cli::util::{
-    cant_run_against_hosted_capella_error, cluster_identifiers_from, cluster_not_found_error,
-    generic_unspanned_error, map_serde_deserialize_error_to_shell_error,
-};
+use crate::cli::util::{cluster_identifiers_from, get_active_cluster};
 use crate::client::{CapellaRequest, ManagementRequest};
 use crate::state::{CapellaEnvironment, State};
 use log::debug;
@@ -11,6 +8,10 @@ use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use crate::cli::error::{
+    cant_run_against_hosted_capella_error, deserialize_error, generic_error,
+    unexpected_status_code_error,
+};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -104,12 +105,8 @@ fn users_upsert(
     let guard = state.lock().unwrap();
 
     for identifier in cluster_identifiers {
-        let active_cluster = match guard.clusters().get(&identifier) {
-            Some(c) => c,
-            None => {
-                return Err(cluster_not_found_error(identifier, call.span()));
-            }
-        };
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+
         let response = if let Some(plane) = active_cluster.capella_org() {
             let mut bucket_roles_map: HashMap<&str, Vec<&str>> = HashMap::new();
             for role in roles.split(',') {
@@ -145,9 +142,10 @@ fn users_upsert(
             } else if all_access_roles.len() == 1 {
                 all_access_roles[0].clone()
             } else {
-                return Err(generic_unspanned_error(
+                return Err(generic_error(
                     "Users with cluster scoped permissions can only be assigned one role",
-                    "Users with cluster scoped permissions can only be assigned one role",
+                    None,
+                    span,
                 ));
             };
 
@@ -156,7 +154,7 @@ fn users_upsert(
             let cluster = cloud.find_cluster(identifier.clone(), deadline, ctrl_c.clone())?;
 
             if cluster.environment() == CapellaEnvironment::Hosted {
-                return Err(cant_run_against_hosted_capella_error());
+                return Err(cant_run_against_hosted_capella_error("users upsert", span));
             }
 
             let response = cloud.capella_request(
@@ -166,15 +164,18 @@ fn users_upsert(
                 deadline,
                 ctrl_c.clone(),
             )?;
-            if response.status() != 200 {
-                return Err(generic_unspanned_error(
-                    "Failed to get users",
-                    format!("Failed to get users {}", response.content()),
-                ));
-            };
 
-            let users: Vec<JSONCloudUser> = serde_json::from_str(response.content())
-                .map_err(map_serde_deserialize_error_to_shell_error)?;
+            let users: Vec<JSONCloudUser> = match response.status() {
+                200 => serde_json::from_str(response.content())
+                    .map_err(|e| deserialize_error(e.to_string(), call.span()))?,
+                _ => {
+                    return Err(unexpected_status_code_error(
+                        response.status(),
+                        response.content(),
+                        call.span(),
+                    ));
+                }
+            };
 
             let mut user_exists = false;
             for u in users {
@@ -195,7 +196,7 @@ fn users_upsert(
                     CapellaRequest::UpdateUser {
                         cluster_id: cluster.id(),
                         payload: serde_json::to_string(&user)
-                            .map_err(map_serde_deserialize_error_to_shell_error)?,
+                            .map_err(|e| deserialize_error(e.to_string(), span))?,
                         username: username.clone(),
                     },
                     deadline,
@@ -206,9 +207,10 @@ fn users_upsert(
                 let pass = match password.clone() {
                     Some(p) => p,
                     None => {
-                        return Err(generic_unspanned_error(
+                        return Err(generic_error(
                             "Capella database user does not exist, password must be set",
-                            "Capella database user does not exist, password must be set",
+                            "Use the --password flag to set a password for the user".to_string(),
+                            span,
                         ));
                     }
                 };
@@ -223,7 +225,7 @@ fn users_upsert(
                     CapellaRequest::CreateUser {
                         cluster_id: cluster.id(),
                         payload: serde_json::to_string(&user)
-                            .map_err(map_serde_deserialize_error_to_shell_error)?,
+                            .map_err(|e| deserialize_error(e.to_string(), span))?,
                     },
                     deadline,
                     ctrl_c.clone(),
@@ -254,9 +256,10 @@ fn users_upsert(
             202 => {}
             204 => {}
             _ => {
-                return Err(generic_unspanned_error(
-                    "Failed to upsert user",
-                    format!("Failed to upsert user {}", response.content()),
+                return Err(unexpected_status_code_error(
+                    response.status(),
+                    response.content(),
+                    call.span(),
                 ));
             }
         }

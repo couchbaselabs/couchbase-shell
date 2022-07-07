@@ -1,9 +1,6 @@
 use crate::cli::cloud_json::JSONCloudUser;
 use crate::cli::user_builder::UserAndMetadata;
-use crate::cli::util::{
-    cluster_identifiers_from, cluster_not_found_error, json_parse_fail_error,
-    unexpected_status_code_error, NuValueMap,
-};
+use crate::cli::util::{cluster_identifiers_from, get_active_cluster, NuValueMap};
 use crate::client::{CapellaRequest, ManagementRequest};
 use crate::state::{CapellaEnvironment, State};
 use log::debug;
@@ -11,6 +8,9 @@ use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use crate::cli::error::{
+    cant_run_against_hosted_capella_error, deserialize_error, unexpected_status_code_error,
+};
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
@@ -66,6 +66,7 @@ fn users_get_all(
     call: &Call,
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
+    let span = call.head;
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
     debug!("Running users get all");
 
@@ -74,12 +75,8 @@ fn users_get_all(
 
     let mut results = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = match guard.clusters().get(&identifier) {
-            Some(c) => c,
-            None => {
-                return Err(cluster_not_found_error(identifier, call.span()));
-            }
-        };
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+
         let mut stream: Vec<Value> = if let Some(plane) = active_cluster.capella_org() {
             let cloud = guard.capella_org_for_cluster(plane)?.client();
             let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
@@ -87,10 +84,7 @@ fn users_get_all(
                 cloud.find_cluster(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
 
             if cluster.environment() == CapellaEnvironment::Hosted {
-                return Err(ShellError::IncompatibleParametersSingle(
-                    "users cannot be run against hosted Capella clusters".into(),
-                    call.head,
-                ));
+                return Err(cant_run_against_hosted_capella_error("users", span));
             }
 
             let response = cloud.capella_request(
@@ -100,16 +94,18 @@ fn users_get_all(
                 deadline,
                 ctrl_c.clone(),
             )?;
-            if response.status() != 200 {
-                return Err(unexpected_status_code_error(
-                    response.status(),
-                    response.content(),
-                    Some(call.span()),
-                ));
-            }
 
-            let users: Vec<JSONCloudUser> = serde_json::from_str(response.content())
-                .map_err(|e| json_parse_fail_error(e, Some(call.span())))?;
+            let users: Vec<JSONCloudUser> = match response.status() {
+                200 => serde_json::from_str(response.content())
+                    .map_err(|e| deserialize_error(e.to_string(), call.span()))?,
+                _ => {
+                    return Err(unexpected_status_code_error(
+                        response.status(),
+                        response.content(),
+                        call.span(),
+                    ));
+                }
+            };
 
             users
                 .into_iter()
@@ -139,17 +135,13 @@ fn users_get_all(
             )?;
 
             let users: Vec<UserAndMetadata> = match response.status() {
-                200 => match serde_json::from_str(response.content()) {
-                    Ok(m) => m,
-                    Err(e) => {
-                        return Err(json_parse_fail_error(e, Some(call.span())));
-                    }
-                },
+                200 => serde_json::from_str(response.content())
+                    .map_err(|e| deserialize_error(e.to_string(), call.span()))?,
                 _ => {
                     return Err(unexpected_status_code_error(
                         response.status(),
                         response.content(),
-                        Some(call.span()),
+                        call.span(),
                     ));
                 }
             };
@@ -196,7 +188,7 @@ fn users_get_all(
 
     Ok(Value::List {
         vals: results,
-        span: call.head,
+        span,
     }
     .into_pipeline_data())
 }

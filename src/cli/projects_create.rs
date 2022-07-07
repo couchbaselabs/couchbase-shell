@@ -6,7 +6,7 @@ use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
-use crate::cli::util::{generic_unspanned_error, map_serde_serialize_error_to_shell_error};
+use crate::cli::error::{serialize_error, unexpected_status_code_error};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -69,15 +69,16 @@ fn projects_create(
     let response = client.capella_request(
         CapellaRequest::CreateProject {
             payload: serde_json::to_string(&project)
-                .map_err(map_serde_serialize_error_to_shell_error)?,
+                .map_err(|e| serialize_error(e.to_string(), span))?,
         },
         Instant::now().add(control.timeout()),
         ctrl_c,
     )?;
     if response.status() != 201 {
-        return Err(generic_unspanned_error(
-            "Failed to create project",
-            format!("Failed to create project {}", response.content()),
+        return Err(unexpected_status_code_error(
+            response.status(),
+            response.content(),
+            span,
         ));
     };
 

@@ -1,22 +1,23 @@
+use crate::cli::error::{
+    deserialize_error, malformed_response_error, unexpected_status_code_error,
+};
 use crate::cli::util::{
-    cluster_identifiers_from, cluster_not_found_error, convert_row_to_nu_value,
-    duration_to_golang_string, generic_unspanned_error, map_serde_deserialize_error_to_shell_error,
-    NuValueMap,
+    cluster_identifiers_from, convert_row_to_nu_value, duration_to_golang_string,
+    get_active_cluster, NuValueMap,
 };
 use crate::client::{ManagementRequest, QueryRequest};
 use crate::state::{RemoteCluster, State};
 use log::debug;
-use serde::Deserialize;
-use std::ops::Add;
-use std::sync::atomic::AtomicBool;
-use std::sync::{Arc, Mutex};
-use tokio::time::Instant;
-
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape, Value,
 };
+use serde::Deserialize;
+use std::ops::Add;
+use std::sync::atomic::AtomicBool;
+use std::sync::{Arc, Mutex};
+use tokio::time::Instant;
 
 #[derive(Clone)]
 pub struct QueryIndexes {
@@ -88,12 +89,7 @@ fn query(
 
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = match guard.clusters().get(&identifier) {
-            Some(c) => c,
-            None => {
-                return Err(cluster_not_found_error(identifier, call.span()));
-            }
-        };
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
 
         if fetch_defs {
             let mut defs =
@@ -112,8 +108,19 @@ fn query(
             ctrl_c.clone(),
         )?;
 
+        match response.status() {
+            200 => {}
+            _ => {
+                return Err(unexpected_status_code_error(
+                    response.status(),
+                    response.content(),
+                    span,
+                ));
+            }
+        }
+
         let content: serde_json::Value = serde_json::from_str(response.content())
-            .map_err(map_serde_deserialize_error_to_shell_error)?;
+            .map_err(|e| deserialize_error(e.to_string(), span))?;
         if with_meta {
             let converted = convert_row_to_nu_value(&content, span, identifier.clone())?;
             results.push(converted);
@@ -123,21 +130,17 @@ fn query(
                     results.push(convert_row_to_nu_value(result, span, identifier.clone())?);
                 }
             } else {
-                return Err(generic_unspanned_error(
-                    "Query results not an array - malformed response",
-                    format!(
-                        "Query results not an array - {}",
-                        content_results.to_string(),
-                    ),
+                return Err(malformed_response_error(
+                    "query results not an array",
+                    content_results.to_string(),
+                    span,
                 ));
             }
         } else {
-            return Err(generic_unspanned_error(
-                "Query toplevel result not  an object- malformed response",
-                format!(
-                    "Query toplevel result not  an object - {}",
-                    content.to_string(),
-                ),
+            return Err(malformed_response_error(
+                "query top level object not an object",
+                content.to_string(),
+                span,
             ));
         }
     }
@@ -183,8 +186,19 @@ fn index_definitions(
         ctrl_c,
     )?;
 
+    match response.status() {
+        200 => {}
+        _ => {
+            return Err(unexpected_status_code_error(
+                response.status(),
+                response.content(),
+                span,
+            ));
+        }
+    }
+
     let defs: IndexStatus = serde_json::from_str(response.content())
-        .map_err(map_serde_deserialize_error_to_shell_error)?;
+        .map_err(|e| deserialize_error(e.to_string(), span))?;
     let n = defs
         .indexes
         .into_iter()

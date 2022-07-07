@@ -6,9 +6,8 @@ use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
-use crate::cli::util::{
-    generic_unspanned_error, map_serde_deserialize_error_to_shell_error, NuValueMap,
-};
+use crate::cli::error::{deserialize_error, unexpected_status_code_error};
+use crate::cli::util::NuValueMap;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -91,13 +90,14 @@ fn clusters_get(
             ctrl_c,
         )?;
         if response.status() != 200 {
-            return Err(generic_unspanned_error(
-                "Failed to get clusters",
-                format!("Failed to get clusters {}", response.content()),
+            return Err(unexpected_status_code_error(
+                response.status(),
+                response.content(),
+                span,
             ));
         };
         let cluster: JSONCloudClusterV3 = serde_json::from_str(response.content())
-            .map_err(map_serde_deserialize_error_to_shell_error)?;
+            .map_err(|e| deserialize_error(e.to_string(), span))?;
 
         let mut collected = NuValueMap::default();
         collected.add_string("name", cluster.name(), span);
@@ -124,13 +124,14 @@ fn clusters_get(
         ctrl_c,
     )?;
     if response.status() != 200 {
-        return Err(generic_unspanned_error(
-            "Failed to get cluster",
-            format!("Failed to get cluster {}", response.content()),
+        return Err(unexpected_status_code_error(
+            response.status(),
+            response.content(),
+            span,
         ));
     };
     let cluster: JSONCloudCluster = serde_json::from_str(response.content())
-        .map_err(map_serde_deserialize_error_to_shell_error)?;
+        .map_err(|e| deserialize_error(e.to_string(), span))?;
 
     let mut collected = NuValueMap::default();
     collected.add_string("name", cluster.name(), span);
