@@ -108,19 +108,10 @@ fn query(
             ctrl_c.clone(),
         )?;
 
-        match response.status() {
-            200 => {}
-            _ => {
-                return Err(unexpected_status_code_error(
-                    response.status(),
-                    response.content(),
-                    span,
-                ));
-            }
-        }
-
-        let content: serde_json::Value = serde_json::from_str(response.content())
-            .map_err(|e| deserialize_error(e.to_string(), span))?;
+        let content: serde_json::Value =
+            serde_json::from_str(response.content()).map_err(|_e| {
+                unexpected_status_code_error(response.status(), response.content(), span)
+            })?;
         if with_meta {
             let converted = convert_row_to_nu_value(&content, span, identifier.clone())?;
             results.push(converted);

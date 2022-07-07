@@ -1,5 +1,5 @@
 use crate::cli::analytics::send_analytics_query;
-use crate::cli::error::{deserialize_error, malformed_response_error};
+use crate::cli::error::{malformed_response_error, unexpected_status_code_error};
 use crate::cli::util::{cluster_identifiers_from, convert_row_to_nu_value, get_active_cluster};
 use crate::state::State;
 use crate::RemoteCluster;
@@ -102,10 +102,10 @@ pub fn do_non_mutation_analytics_query(
     span: Span,
     with_meta: bool,
 ) -> Result<Vec<Value>, ShellError> {
-    let response = send_analytics_query(active_cluster, None, statement, ctrl_c, span.clone())?;
+    let response = send_analytics_query(active_cluster, None, statement, ctrl_c)?;
 
     let content: serde_json::Value = serde_json::from_str(response.content())
-        .map_err(|e| deserialize_error(e.to_string(), span))?;
+        .map_err(|_e| unexpected_status_code_error(response.status(), response.content(), span))?;
 
     let mut results: Vec<Value> = vec![];
     if with_meta {

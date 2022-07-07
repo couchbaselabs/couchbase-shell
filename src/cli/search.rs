@@ -1,21 +1,20 @@
+use crate::cli::error::unexpected_status_code_error;
 use crate::cli::util::{
     cluster_identifiers_from, duration_to_golang_string, get_active_cluster, NuValueMap,
 };
 use crate::client::SearchQueryRequest;
 use crate::state::State;
 use log::debug;
-use serde_derive::Deserialize;
-use std::ops::Add;
-use std::sync::{Arc, Mutex};
-use tokio::time::Instant;
-
-use crate::cli::error::{deserialize_error, unexpected_status_code_error};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
 };
+use serde_derive::Deserialize;
+use std::ops::Add;
+use std::sync::{Arc, Mutex};
+use tokio::time::Instant;
 
 #[derive(Clone)]
 pub struct Search {
@@ -100,8 +99,9 @@ fn run(
             )?;
 
         let rows: SearchResultData = match response.status() {
-            200 => serde_json::from_str(response.content())
-                .map_err(|e| deserialize_error(e.to_string(), span))?,
+            200 => serde_json::from_str(response.content()).map_err(|_e| {
+                unexpected_status_code_error(response.status(), response.content(), span)
+            })?,
             _ => {
                 return Err(unexpected_status_code_error(
                     response.status(),

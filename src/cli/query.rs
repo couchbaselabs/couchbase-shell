@@ -107,7 +107,6 @@ fn query(
             statement.clone(),
             maybe_scope,
             ctrl_c.clone(),
-            span.clone(),
         )?;
         drop(guard);
 
@@ -131,7 +130,6 @@ pub fn send_query(
     statement: String,
     scope: Option<(String, String)>,
     ctrl_c: Arc<AtomicBool>,
-    span: Span,
 ) -> Result<HttpResponse, ShellError> {
     let response = cluster.cluster().http_client().query_request(
         QueryRequest::Execute {
@@ -142,17 +140,6 @@ pub fn send_query(
         Instant::now().add(cluster.timeouts().query_timeout()),
         ctrl_c,
     )?;
-
-    match response.status() {
-        200 => {}
-        _ => {
-            return Err(unexpected_status_code_error(
-                response.status(),
-                response.content(),
-                span,
-            ));
-        }
-    }
 
     Ok(response)
 }
@@ -165,8 +152,10 @@ pub fn handle_query_response(
 ) -> Result<Vec<Value>, ShellError> {
     let mut results: Vec<Value> = vec![];
     if with_meta {
-        let content: serde_json::Value = serde_json::from_str(response.content())
-            .map_err(|e| deserialize_error(e.to_string(), span))?;
+        let content: serde_json::Value =
+            serde_json::from_str(response.content()).map_err(|_e| {
+                unexpected_status_code_error(response.status(), response.content(), span)
+            })?;
         results.push(convert_row_to_nu_value(&content, span, identifier)?);
     } else {
         let content: HashMap<String, serde_json::Value> = serde_json::from_str(response.content())

@@ -1,26 +1,25 @@
+use crate::cli::error::{
+    deserialize_error, malformed_response_error, unexpected_status_code_error,
+};
 use crate::cli::util::{
     cluster_identifiers_from, convert_row_to_nu_value, duration_to_golang_string,
     get_active_cluster,
 };
 use crate::client::{AnalyticsQueryRequest, HttpResponse};
 use crate::state::State;
+use crate::RemoteCluster;
 use log::debug;
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+};
 use std::collections::HashMap;
 use std::ops::Add;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
-
-use crate::cli::error::{
-    deserialize_error, malformed_response_error, unexpected_status_code_error,
-};
-use crate::RemoteCluster;
-use nu_engine::CallExt;
-use nu_protocol::ast::Call;
-use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::{
-    Category, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape, Value,
-};
 
 #[derive(Clone)]
 pub struct Analytics {
@@ -111,12 +110,13 @@ fn run(
             maybe_scope,
             statement.clone(),
             ctrl_c.clone(),
-            span.clone(),
         )?;
 
         if with_meta {
-            let content: serde_json::Value = serde_json::from_str(response.content())
-                .map_err(|e| deserialize_error(e.to_string(), span))?;
+            let content: serde_json::Value =
+                serde_json::from_str(response.content()).map_err(|_e| {
+                    unexpected_status_code_error(response.status(), response.content(), span)
+                })?;
             results.push(convert_row_to_nu_value(&content, span, identifier.clone())?);
         } else {
             let content: HashMap<String, serde_json::Value> =
@@ -166,7 +166,6 @@ pub fn send_analytics_query(
     scope: Option<(String, String)>,
     statement: impl Into<String>,
     ctrl_c: Arc<AtomicBool>,
-    span: Span,
 ) -> Result<HttpResponse, ShellError> {
     let response = active_cluster
         .cluster()
@@ -180,17 +179,6 @@ pub fn send_analytics_query(
             Instant::now().add(active_cluster.timeouts().analytics_timeout()),
             ctrl_c,
         )?;
-
-    match response.status() {
-        200 => {}
-        _ => {
-            return Err(unexpected_status_code_error(
-                response.status(),
-                response.content(),
-                span,
-            ));
-        }
-    }
 
     Ok(response)
 }
