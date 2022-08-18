@@ -30,3 +30,7 @@ let-env PROMPT_INDICATOR = "
 > "
 
 let-env PROMPT_COMMAND_RIGHT = ""
+
+let-env config = {
+    show_banner: false
+}

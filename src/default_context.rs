@@ -1,11 +1,9 @@
 use nu_command::*;
 use nu_protocol::engine::{EngineState, StateWorkingSet};
 
-use std::path::Path;
-
 // We maintain our own default context so that we can control the commands supported,
 // and prevent name clashes. This function should be very similar to the same one in nu_command.
-pub fn create_default_context(cwd: impl AsRef<Path>) -> EngineState {
+pub fn create_default_context() -> EngineState {
     let mut engine_state = EngineState::new();
 
     let delta = {
@@ -57,7 +55,6 @@ pub fn create_default_context(cwd: impl AsRef<Path>) -> EngineState {
             Metadata,
             Module,
             Source,
-            Tutor,
             Use,
             // Version,
         };
@@ -80,6 +77,7 @@ pub fn create_default_context(cwd: impl AsRef<Path>) -> EngineState {
             DropColumn,
             DropNth,
             Each,
+            EachWhile,
             Empty,
             Every,
             Find,
@@ -119,6 +117,7 @@ pub fn create_default_context(cwd: impl AsRef<Path>) -> EngineState {
             SkipWhile,
             Sort,
             SortBy,
+            SplitList,
             Transpose,
             Uniq,
             Upsert,
@@ -128,6 +127,12 @@ pub fn create_default_context(cwd: impl AsRef<Path>) -> EngineState {
             Window,
             Wrap,
             Zip,
+        };
+
+        // Misc
+        bind_command! {
+            History,
+            // Tutor, TODO(chvck): useful but we need to think about how this interacts with our tutorial
         };
 
         // Path
@@ -150,6 +155,7 @@ pub fn create_default_context(cwd: impl AsRef<Path>) -> EngineState {
             Complete,
             Exec,
             External,
+            NuCheck,
             Ps,
             Sys,
         };
@@ -161,6 +167,9 @@ pub fn create_default_context(cwd: impl AsRef<Path>) -> EngineState {
             BuildString,
             Char,
             Decode,
+            Encode,
+            DecodeBase64,
+            EncodeBase64,
             DetectColumns,
             Format,
             FileSize,
@@ -193,6 +202,35 @@ pub fn create_default_context(cwd: impl AsRef<Path>) -> EngineState {
             StrTitleCase,
             StrUpcase
         };
+
+        // Bits
+        bind_command! {
+            Bits,
+            BitsAnd,
+            BitsNot,
+            BitsOr,
+            BitsXor,
+            BitsRotateLeft,
+            BitsRotateRight,
+            BitsShiftLeft,
+            BitsShiftRight,
+        }
+
+        // Bytes
+        bind_command! {
+            Bytes,
+            BytesLen,
+            BytesStartsWith,
+            BytesEndsWith,
+            BytesReverse,
+            BytesReplace,
+            BytesAdd,
+            BytesAt,
+            BytesIndexOf,
+            BytesCollect,
+            BytesRemove,
+            BytesBuild,
+        }
 
         // FileSystem
         bind_command! {
@@ -314,6 +352,7 @@ pub fn create_default_context(cwd: impl AsRef<Path>) -> EngineState {
             ConfigNu,
             ConfigEnv,
             ConfigMeta,
+            ConfigReset,
         };
 
         // Math
@@ -345,6 +384,7 @@ pub fn create_default_context(cwd: impl AsRef<Path>) -> EngineState {
             UrlPath,
             UrlQuery,
             UrlScheme,
+            Port,
         }
 
         // Random
@@ -371,12 +411,12 @@ pub fn create_default_context(cwd: impl AsRef<Path>) -> EngineState {
             Hash,
             HashMd5::default(),
             HashSha256::default(),
-            Base64,
         };
 
         // Experimental
         bind_command! {
             ViewSource,
+            IsAdmin,
         };
 
         bind_command!(Register);
@@ -384,7 +424,7 @@ pub fn create_default_context(cwd: impl AsRef<Path>) -> EngineState {
         working_set.render()
     };
 
-    let _ = engine_state.merge_delta(delta, None, &cwd);
+    let _ = engine_state.merge_delta(delta);
 
     engine_state
 }

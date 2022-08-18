@@ -25,14 +25,14 @@ humantime-serde = "1.0"
 lazy_static = "1.4.0"
 log = "0.4"
 mime_guess = "2.0"
-nu = { version = "0.64.0", features = ["extra"] }
-nu-protocol = { version = "0.64.0" }
-nu-command = { version = "0.64.0" }
-nu-parser = { version = "0.64.0" }
-nu-path = { version = "0.64.0" }
-nu-cli = { version = "0.64.0" }
-nu-engine = { version = "0.64.0" }
-nu-plugin = { version = "0.64.0" }
+nu = { version = "0.67.0", features = ["extra"] }
+nu-protocol = { version = "0.67.0" }
+nu-command = { version = "0.67.0" }
+nu-parser = { version = "0.67.0" }
+nu-path = { version = "0.67.0" }
+nu-cli = { version = "0.67.0" }
+nu-engine = { version = "0.67.0" }
+nu-plugin = { version = "0.67.0" }
 num-bigint = "0.4"
 num-traits = "0.2.14"
 openssl = { version = "0.10", features = ["vendored"] }
@@ -60,7 +60,7 @@ url = "2.1"
 uuid = { version = "0.8", features = ["v4"] }
 
 [dev-dependencies]
-nu-test-support = { version = "0.63.0"}
+nu-test-support = { version = "0.67.0"}
 dunce = "1.0.1"
 itertools = "0.10.3"
 lazy_static = "1.4.0"

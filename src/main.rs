@@ -35,7 +35,7 @@ use state::State;
 use std::collections::HashMap;
 use std::error::Error;
 use std::io::{BufReader, Write};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -66,7 +66,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             },
         },
     };
-    let mut context = create_default_context(&init_cwd);
+    let mut context = create_default_context();
 
     gather_parent_env_vars(&mut context, &init_cwd);
     let mut stack = nu_protocol::engine::Stack::new();
@@ -124,7 +124,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let shell_commandline_args = args_to_cbshell.join(" ");
 
-    let opt = match parse_commandline_args(&shell_commandline_args, &init_cwd, &mut context) {
+    let opt = match parse_commandline_args(&shell_commandline_args, &mut context) {
         Ok(o) => o,
         Err(_) => std::process::exit(1),
     };
@@ -423,7 +423,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         working_set.render()
     };
-    let _ = context.merge_delta(delta, None, &init_cwd);
+    let _ = context.merge_delta(delta);
 
     let input = if opt.stdin {
         let stdin = std::io::stdin();
@@ -445,14 +445,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
 
     if let Some(c) = opt.command {
-        add_plugin_file(&mut context, CBSHELL_FOLDER);
-        nu_cli::evaluate_commands(&c, &init_cwd, &mut context, &mut stack, input, true, None)
+        add_plugin_file(&mut context, None, CBSHELL_FOLDER);
+        nu_cli::evaluate_commands(&c, &mut context, &mut stack, input, true, None)
             .expect("Failed to run command");
         return Ok(());
     }
 
     if let Some(filepath) = opt.script {
-        add_plugin_file(&mut context, CBSHELL_FOLDER);
+        add_plugin_file(&mut context, None, CBSHELL_FOLDER);
         let _ret_val = nu_cli::evaluate_file(
             filepath,
             &args_to_script,
@@ -466,7 +466,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
-    read_plugin_file(&mut context, &mut stack, CBSHELL_FOLDER, false);
+    read_plugin_file(&mut context, &mut stack, None, CBSHELL_FOLDER, false);
     read_nu_config_file(&mut context, &mut stack);
 
     nu_cli::evaluate_repl(&mut context, &mut stack, "CouchbaseShell", false)
@@ -655,7 +655,6 @@ impl Command for Cbsh {
 
 fn parse_commandline_args(
     commandline_args: &str,
-    init_cwd: &Path,
     context: &mut EngineState,
 ) -> Result<CliOptions, ShellError> {
     let (block, delta) = {
@@ -679,7 +678,7 @@ fn parse_commandline_args(
         (output, working_set.render())
     };
 
-    let _ = context.merge_delta(delta, None, init_cwd);
+    let _ = context.merge_delta(delta);
 
     let mut stack = Stack::new();
 
