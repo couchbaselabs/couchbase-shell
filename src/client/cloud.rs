@@ -2,7 +2,7 @@ use crate::cli::CtrlcFuture;
 use crate::client::error::ClientError;
 use crate::client::http_handler::{HttpResponse, HttpVerb};
 use crate::state::CapellaEnvironment;
-use hmac::{Hmac, Mac, NewMac};
+use hmac::{Hmac, Mac};
 use log::debug;
 use reqwest::Client;
 use serde::Deserialize;

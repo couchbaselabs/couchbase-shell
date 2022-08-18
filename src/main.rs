@@ -147,7 +147,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut capella_orgs = HashMap::new();
 
     let password = match opt.password {
-        true => Some(rpassword::read_password_from_tty(Some("Password: ")).unwrap()),
+        true => Some(rpassword::prompt_password("Password: ").unwrap()),
         false => None,
     };
 

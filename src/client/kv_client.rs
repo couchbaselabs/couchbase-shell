@@ -1,4 +1,5 @@
 use crate::cli::CtrlcFuture;
+use crate::client::crc::cb_vb_map;
 use crate::client::error::ClientError;
 use crate::client::error::ClientError::CollectionNotFound;
 use crate::client::http_client::{PingResponse, ServiceType};
@@ -6,7 +7,6 @@ use crate::client::http_handler::{status_to_reason, HTTPHandler};
 use crate::client::kv::{KvEndpoint, KvTlsConfig};
 use crate::client::protocol;
 use crate::config::ClusterTlsConfig;
-use crc::crc32;
 use log::{debug, trace};
 use serde::Deserialize;
 use std::future::Future;
@@ -120,8 +120,7 @@ impl KvClient {
     fn partition_for_key(&self, key: String) -> u32 {
         let num_partitions = self.config.vbucket_server_map.vbucket_map.len() as u32;
 
-        let sum = (crc32::checksum_ieee(key.as_bytes()) >> 16) & 0x7fff;
-        sum % num_partitions
+        cb_vb_map(key.as_bytes().to_vec(), num_partitions)
     }
 
     fn node_for_partition(&self, partition: u32) -> (String, u32) {

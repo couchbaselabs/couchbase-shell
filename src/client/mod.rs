@@ -20,6 +20,7 @@ use trust_dns_resolver::Resolver;
 mod capella_ca;
 mod cloud;
 mod codec;
+mod crc;
 mod error;
 mod http_client;
 mod http_handler;
