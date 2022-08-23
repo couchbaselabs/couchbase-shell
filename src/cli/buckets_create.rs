@@ -1,13 +1,8 @@
-use crate::cli::buckets_builder::{
-    BucketSettingsBuilder, BucketType, DurabilityLevel, JSONCloudBucketSettings,
-};
-use crate::cli::error::{
-    cant_run_against_hosted_capella_error, generic_error, serialize_error,
-    unexpected_status_code_error,
-};
-use crate::cli::util::{cluster_identifiers_from, get_active_cluster};
-use crate::client::{CapellaRequest, ManagementRequest};
-use crate::state::{CapellaEnvironment, State};
+use crate::cli::buckets_builder::{BucketSettingsBuilder, BucketType, DurabilityLevel};
+use crate::cli::error::{generic_error, serialize_error, unexpected_status_code_error};
+use crate::cli::util::{cluster_identifiers_from, get_active_cluster, validate_is_not_cloud};
+use crate::client::ManagementRequest;
+use crate::state::State;
 use log::debug;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
@@ -68,7 +63,7 @@ impl Command for BucketsCreate {
                 "the clusters which should be contacted",
                 None,
             )
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {
@@ -158,60 +153,21 @@ fn buckets_create(
 
     for identifier in cluster_identifiers {
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        validate_is_not_cloud(active_cluster, "buckets create", span)?;
 
-        if active_cluster.capella_org().is_some()
-            && (bucket_type.clone().is_some()
-                || flush
-                || durability.clone().is_some()
-                || expiry.is_some())
-        {
-            return Err(generic_error(
-                "Capella flag cannot be used with type, flush, durability, or expiry",
-                None,
-                span,
-            ));
-        }
+        let cluster = active_cluster.cluster();
 
-        let response = if let Some(plane) = active_cluster.capella_org() {
-            let cloud = guard.capella_org_for_cluster(plane)?.client();
-            let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
-            let cluster =
-                cloud.find_cluster(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
+        let form = settings
+            .as_form(false)
+            .map_err(|e| generic_error(format!("Invalid setting {}", e.to_string()), None, span))?;
+        let payload =
+            serde_urlencoded::to_string(&form).map_err(|e| serialize_error(e.to_string(), span))?;
 
-            if cluster.environment() == CapellaEnvironment::Hosted {
-                return Err(cant_run_against_hosted_capella_error(
-                    "buckets create",
-                    span,
-                ));
-            }
-
-            let json_settings = JSONCloudBucketSettings::try_from(&settings).map_err(|e| {
-                generic_error(format!("Invalid setting {}", e.to_string()), None, span)
-            })?;
-            cloud.capella_request(
-                CapellaRequest::CreateBucket {
-                    cluster_id: cluster.id(),
-                    payload: serde_json::to_string(&json_settings)
-                        .map_err(|e| serialize_error(e.to_string(), span))?,
-                },
-                deadline,
-                ctrl_c.clone(),
-            )?
-        } else {
-            let cluster = active_cluster.cluster();
-
-            let form = settings.as_form(false).map_err(|e| {
-                generic_error(format!("Invalid setting {}", e.to_string()), None, span)
-            })?;
-            let payload = serde_urlencoded::to_string(&form)
-                .map_err(|e| serialize_error(e.to_string(), span))?;
-
-            cluster.http_client().management_request(
-                ManagementRequest::CreateBucket { payload },
-                Instant::now().add(active_cluster.timeouts().management_timeout()),
-                ctrl_c.clone(),
-            )?
-        };
+        let response = cluster.http_client().management_request(
+            ManagementRequest::CreateBucket { payload },
+            Instant::now().add(active_cluster.timeouts().management_timeout()),
+            ctrl_c.clone(),
+        )?;
 
         match response.status() {
             200 => {}

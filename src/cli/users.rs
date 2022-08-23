@@ -1,16 +1,15 @@
-use crate::cli::cloud_json::JSONCloudUser;
 use crate::cli::user_builder::UserAndMetadata;
-use crate::cli::util::{cluster_identifiers_from, get_active_cluster, NuValueMap};
-use crate::client::{CapellaRequest, ManagementRequest};
-use crate::state::{CapellaEnvironment, State};
+use crate::cli::util::{
+    cluster_identifiers_from, get_active_cluster, validate_is_not_cloud, NuValueMap,
+};
+use crate::client::ManagementRequest;
+use crate::state::State;
 use log::debug;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
-use crate::cli::error::{
-    cant_run_against_hosted_capella_error, deserialize_error, unexpected_status_code_error,
-};
+use crate::cli::error::{deserialize_error, unexpected_status_code_error};
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
@@ -41,7 +40,7 @@ impl Command for Users {
                 "the clusters which should be contacted",
                 None,
             )
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {
@@ -76,112 +75,61 @@ fn users_get_all(
     let mut results = vec![];
     for identifier in cluster_identifiers {
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        validate_is_not_cloud(active_cluster, "users", span)?;
 
-        let mut stream: Vec<Value> = if let Some(plane) = active_cluster.capella_org() {
-            let cloud = guard.capella_org_for_cluster(plane)?.client();
-            let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
-            let cluster =
-                cloud.find_cluster(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
+        let response = active_cluster.cluster().http_client().management_request(
+            ManagementRequest::GetUsers,
+            Instant::now().add(active_cluster.timeouts().management_timeout()),
+            ctrl_c.clone(),
+        )?;
 
-            if cluster.environment() == CapellaEnvironment::Hosted {
-                return Err(cant_run_against_hosted_capella_error("users", span));
+        let users: Vec<UserAndMetadata> = match response.status() {
+            200 => serde_json::from_str(response.content())
+                .map_err(|e| deserialize_error(e.to_string(), call.span()))?,
+            _ => {
+                return Err(unexpected_status_code_error(
+                    response.status(),
+                    response.content(),
+                    call.span(),
+                ));
             }
-
-            let response = cloud.capella_request(
-                CapellaRequest::GetUsers {
-                    cluster_id: cluster.id(),
-                },
-                deadline,
-                ctrl_c.clone(),
-            )?;
-
-            let users: Vec<JSONCloudUser> = match response.status() {
-                200 => serde_json::from_str(response.content())
-                    .map_err(|e| deserialize_error(e.to_string(), call.span()))?,
-                _ => {
-                    return Err(unexpected_status_code_error(
-                        response.status(),
-                        response.content(),
-                        call.span(),
-                    ));
-                }
-            };
-
-            users
-                .into_iter()
-                .map(|user| {
-                    let mut roles: Vec<String> = Vec::new();
-                    for role in user.roles().iter() {
-                        for name in role.names() {
-                            roles.push(format!("{}[{}]", role.bucket().clone(), name));
-                        }
-                    }
-
-                    let mut collected = NuValueMap::default();
-                    collected.add_string("username", user.username(), call.head);
-                    collected.add_string("display name", "", call.head);
-                    collected.add_string("groups", "", call.head);
-                    collected.add_string("roles", roles.join(","), call.head);
-                    collected.add_string("password_last_changed", "", call.head);
-                    collected.add_string("cluster", identifier.clone(), call.head);
-                    collected.into_value(call.head)
-                })
-                .collect()
-        } else {
-            let response = active_cluster.cluster().http_client().management_request(
-                ManagementRequest::GetUsers,
-                Instant::now().add(active_cluster.timeouts().management_timeout()),
-                ctrl_c.clone(),
-            )?;
-
-            let users: Vec<UserAndMetadata> = match response.status() {
-                200 => serde_json::from_str(response.content())
-                    .map_err(|e| deserialize_error(e.to_string(), call.span()))?,
-                _ => {
-                    return Err(unexpected_status_code_error(
-                        response.status(),
-                        response.content(),
-                        call.span(),
-                    ));
-                }
-            };
-
-            users
-                .into_iter()
-                .map(|v| {
-                    let user = v.user();
-                    let roles: Vec<String> = user
-                        .roles()
-                        .iter()
-                        .map(|r| match r.bucket() {
-                            Some(b) => format!("{}[{}]", r.name(), b),
-                            None => r.name().to_string(),
-                        })
-                        .collect();
-
-                    let mut collected = NuValueMap::default();
-                    collected.add_string("username", user.username(), call.head);
-                    collected.add_string(
-                        "display name",
-                        user.display_name().unwrap_or_default(),
-                        call.head,
-                    );
-                    if let Some(groups) = user.groups() {
-                        collected.add_string("groups", groups.join(","), call.head)
-                    } else {
-                        collected.add_string("groups", "", call.head)
-                    }
-                    collected.add_string("roles", roles.join(","), call.head);
-                    if let Some(changed) = v.password_changed() {
-                        collected.add_string("password_last_changed", changed, call.head)
-                    } else {
-                        collected.add_string("password_last_changed", "", call.head)
-                    }
-                    collected.add_string("cluster", identifier.clone(), call.head);
-                    collected.into_value(call.head)
-                })
-                .collect()
         };
+
+        let mut stream: Vec<Value> = users
+            .into_iter()
+            .map(|v| {
+                let user = v.user();
+                let roles: Vec<String> = user
+                    .roles()
+                    .iter()
+                    .map(|r| match r.bucket() {
+                        Some(b) => format!("{}[{}]", r.name(), b),
+                        None => r.name().to_string(),
+                    })
+                    .collect();
+
+                let mut collected = NuValueMap::default();
+                collected.add_string("username", user.username(), call.head);
+                collected.add_string(
+                    "display name",
+                    user.display_name().unwrap_or_default(),
+                    call.head,
+                );
+                if let Some(groups) = user.groups() {
+                    collected.add_string("groups", groups.join(","), call.head)
+                } else {
+                    collected.add_string("groups", "", call.head)
+                }
+                collected.add_string("roles", roles.join(","), call.head);
+                if let Some(changed) = v.password_changed() {
+                    collected.add_string("password_last_changed", changed, call.head)
+                } else {
+                    collected.add_string("password_last_changed", "", call.head)
+                }
+                collected.add_string("cluster", identifier.clone(), call.head);
+                collected.into_value(call.head)
+            })
+            .collect();
 
         results.append(&mut stream);
     }

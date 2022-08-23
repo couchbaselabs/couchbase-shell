@@ -1,10 +1,12 @@
 //! The `buckets get` command fetches buckets from the server.
 
-use crate::state::{CapellaEnvironment, State};
+use crate::state::State;
 
-use crate::cli::buckets_builder::{BucketSettings, JSONBucketSettings, JSONCloudBucketSettings};
-use crate::cli::util::{cluster_identifiers_from, get_active_cluster, NuValueMap};
-use crate::client::{CapellaRequest, ManagementRequest};
+use crate::cli::buckets_builder::{BucketSettings, JSONBucketSettings};
+use crate::cli::util::{
+    cluster_identifiers_from, get_active_cluster, validate_is_not_cloud, NuValueMap,
+};
+use crate::client::ManagementRequest;
 use log::debug;
 use std::convert::TryFrom;
 use std::ops::Add;
@@ -12,8 +14,7 @@ use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 use crate::cli::error::{
-    bucket_not_found_error, cant_run_against_hosted_capella_error, deserialize_error,
-    generic_error, unexpected_status_code_error,
+    bucket_not_found_error, deserialize_error, generic_error, unexpected_status_code_error,
 };
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
@@ -47,7 +48,7 @@ impl Command for BucketsGet {
                 "the clusters which should be contacted",
                 None,
             )
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {
@@ -84,91 +85,40 @@ fn buckets_get(
     for identifier in cluster_identifiers {
         let guard = state.lock().unwrap();
         let cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        validate_is_not_cloud(cluster, "buckets get", span)?;
 
-        if let Some(plane) = cluster.capella_org() {
-            let cloud = guard.capella_org_for_cluster(plane)?.client();
-            let cloud_cluster = cloud.find_cluster(
-                identifier.clone(),
-                Instant::now().add(cluster.timeouts().query_timeout()),
-                ctrl_c.clone(),
-            )?;
+        let response = cluster.cluster().http_client().management_request(
+            ManagementRequest::GetBucket {
+                name: bucket.clone(),
+            },
+            Instant::now().add(cluster.timeouts().query_timeout()),
+            ctrl_c.clone(),
+        )?;
 
-            if cloud_cluster.environment() == CapellaEnvironment::Hosted {
-                return Err(cant_run_against_hosted_capella_error("buckets get", span));
+        match response.status() {
+            200 => {}
+            404 => {
+                return Err(bucket_not_found_error(bucket, span));
             }
-
-            let response = cloud.capella_request(
-                CapellaRequest::GetBuckets {
-                    cluster_id: cloud_cluster.id(),
-                },
-                Instant::now().add(cluster.timeouts().query_timeout()),
-                ctrl_c.clone(),
-            )?;
-            if response.status() != 200 {
+            _ => {
                 return Err(unexpected_status_code_error(
                     response.status(),
                     response.content(),
                     span,
                 ));
             }
+        };
 
-            let content: Vec<JSONCloudBucketSettings> = serde_json::from_str(response.content())
-                .map_err(|e| deserialize_error(e.to_string(), span))?;
-            let mut bucket_settings: Option<JSONCloudBucketSettings> = None;
-
-            for b in content.into_iter() {
-                if b.name() == bucket.clone() {
-                    bucket_settings = Some(b);
-                    break;
-                }
-            }
-
-            if let Some(b) = bucket_settings {
-                results.push(bucket_to_nu_value(
-                    BucketSettings::try_from(b).map_err(|e| {
-                        generic_error(format!("Invalid setting {}", e.to_string()), None, span)
-                    })?,
-                    identifier,
-                    true,
-                    span,
-                ));
-            } else {
-                return Err(bucket_not_found_error(bucket, span));
-            }
-        } else {
-            let response = cluster.cluster().http_client().management_request(
-                ManagementRequest::GetBucket {
-                    name: bucket.clone(),
-                },
-                Instant::now().add(cluster.timeouts().query_timeout()),
-                ctrl_c.clone(),
-            )?;
-
-            match response.status() {
-                200 => {}
-                404 => {
-                    return Err(bucket_not_found_error(bucket, span));
-                }
-                _ => {
-                    return Err(unexpected_status_code_error(
-                        response.status(),
-                        response.content(),
-                        span,
-                    ));
-                }
-            };
-
-            let content: JSONBucketSettings = serde_json::from_str(response.content())
-                .map_err(|e| deserialize_error(e.to_string(), span))?;
-            results.push(bucket_to_nu_value(
-                BucketSettings::try_from(content).map_err(|e| {
-                    generic_error(format!("Invalid setting {}", e.to_string()), None, span)
-                })?,
-                identifier,
-                false,
-                span,
-            ));
-        }
+        let content: JSONBucketSettings = serde_json::from_str(response.content())
+            .map_err(|e| deserialize_error(e.to_string(), span))?;
+        results.push(bucket_to_nu_value(
+            BucketSettings::try_from(content).map_err(|e| {
+                generic_error(format!("Invalid setting {}", e.to_string()), None, span)
+            })?,
+            identifier,
+            false,
+            span,
+        ));
     }
 
     Ok(Value::List {

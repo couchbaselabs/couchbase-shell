@@ -109,9 +109,9 @@ impl HTTPClient {
             Err(e) => Some(e),
         };
 
-        let mut state = "OK".into();
+        let mut state = "OK".to_string();
         if error.is_some() {
-            state = "Error".into();
+            state = "Error".to_string();
         }
 
         Ok(PingResponse {
@@ -238,7 +238,7 @@ impl HTTPClient {
                     }
                     _ => {
                         return Err(ClientError::RequestFailed {
-                            reason: Some("Method not allowed for queries".into()),
+                            reason: Some("Method not allowed for queries".to_string()),
                             key: None,
                         });
                     }
@@ -276,7 +276,7 @@ impl HTTPClient {
                     }
                     _ => {
                         return Err(ClientError::RequestFailed {
-                            reason: Some("Method not allowed for analytics queries".into()),
+                            reason: Some("Method not allowed for analytics queries".to_string()),
                             key: None,
                         });
                     }
@@ -313,7 +313,7 @@ impl HTTPClient {
                     }
                     _ => {
                         return Err(ClientError::RequestFailed {
-                            reason: Some("Method not allowed for analytics queries".into()),
+                            reason: Some("Method not allowed for analytics queries".to_string()),
                             key: None,
                         });
                     }
@@ -401,19 +401,19 @@ pub enum ManagementRequest {
 impl ManagementRequest {
     pub fn path(&self) -> String {
         match self {
-            Self::GetBuckets => "/pools/default/buckets".into(),
+            Self::GetBuckets => "/pools/default/buckets".to_string(),
             Self::GetBucket { name } => format!("/pools/default/buckets/{}", name),
-            Self::Whoami => "/whoami".into(),
-            Self::IndexStatus => "/indexStatus".into(),
-            Self::SettingsAutoFailover => "/settings/autoFailover".into(),
+            Self::Whoami => "/whoami".to_string(),
+            Self::IndexStatus => "/indexStatus".to_string(),
+            Self::SettingsAutoFailover => "/settings/autoFailover".to_string(),
             Self::BucketStats { name } => format!("/pools/default/buckets/{}/stats", name),
-            Self::CreateBucket { .. } => "/pools/default/buckets".into(),
+            Self::CreateBucket { .. } => "/pools/default/buckets".to_string(),
             Self::DropBucket { name } => format!("/pools/default/buckets/{}", name),
             Self::DropUser { username } => format!("/settings/rbac/users/local/{}", username),
             Self::FlushBucket { name } => {
                 format!("/pools/default/buckets/{}/controller/doFlush", name)
             }
-            Self::LoadSampleBucket { .. } => "/sampleBuckets/install".into(),
+            Self::LoadSampleBucket { .. } => "/sampleBuckets/install".to_string(),
             Self::UpdateBucket { name, .. } => {
                 format!("/pools/default/buckets/{}", name)
             }
@@ -430,12 +430,12 @@ impl ManagementRequest {
                 bucket, scope, name
             ),
             Self::GetCollections { bucket } => format!("/pools/default/buckets/{}/scopes", bucket),
-            Self::GetNodes => "/pools/default".into(),
-            Self::GetUsers => "/settings/rbac/users/local".into(),
+            Self::GetNodes => "/pools/default".to_string(),
+            Self::GetUsers => "/settings/rbac/users/local".to_string(),
             Self::GetUser { username } => format!("/settings/rbac/users/local/{}", username),
             Self::GetRoles { permission } => match permission {
                 Some(p) => format!("/settings/rbac/roles?permission={}", p),
-                None => "/settings/rbac/roles".into(),
+                None => "/settings/rbac/roles".to_string(),
             },
             Self::UpsertUser { username, .. } => format!("/settings/rbac/users/local/{}", username),
             Self::CreateScope { bucket, .. } => {
@@ -531,7 +531,7 @@ pub enum QueryRequest {
 impl QueryRequest {
     pub fn path(&self) -> String {
         match self {
-            Self::Execute { .. } => "/query".into(),
+            Self::Execute { .. } => "/query".to_string(),
         }
     }
 
@@ -584,8 +584,8 @@ pub enum AnalyticsQueryRequest {
 impl AnalyticsQueryRequest {
     pub fn path(&self) -> String {
         match self {
-            Self::Execute { .. } => "/query/service".into(),
-            Self::PendingMutations => "/analytics/node/agg/stats/remaining".into(),
+            Self::Execute { .. } => "/query/service".to_string(),
+            Self::PendingMutations => "/analytics/node/agg/stats/remaining".to_string(),
         }
     }
 
@@ -728,11 +728,11 @@ pub enum ServiceType {
 impl ServiceType {
     pub fn as_string(&self) -> String {
         match self {
-            ServiceType::KeyValue => "KeyValue".into(),
-            ServiceType::Query => "Query".into(),
-            ServiceType::Search => "Search".into(),
-            ServiceType::Analytics => "Analytics".into(),
-            ServiceType::Views => "Views".into(),
+            ServiceType::KeyValue => "KeyValue".to_string(),
+            ServiceType::Query => "Query".to_string(),
+            ServiceType::Search => "Search".to_string(),
+            ServiceType::Analytics => "Analytics".to_string(),
+            ServiceType::Views => "Views".to_string(),
         }
     }
 }

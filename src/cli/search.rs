@@ -46,7 +46,7 @@ impl Command for Search {
                 "the clusters which should be contacted",
                 None,
             )
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {

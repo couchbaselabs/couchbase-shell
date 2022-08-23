@@ -12,7 +12,7 @@ impl Command for Doc {
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("doc").category(Category::Custom("couchbase".into()))
+        Signature::build("doc").category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {

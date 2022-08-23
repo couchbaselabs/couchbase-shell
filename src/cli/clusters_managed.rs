@@ -23,7 +23,7 @@ impl Command for ClustersManaged {
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("clusters managed").category(Category::Custom("couchbase".into()))
+        Signature::build("clusters managed").category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {

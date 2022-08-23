@@ -7,13 +7,12 @@ https://cloud.couchbase.com/sign-up?ref=cbsh-web-capella[Couchbase Capella] is a
 
 For general usage of the `cb-env` command see <<cbenv.adoc#_cb_env_and_the_environment>>.
 When using <<_management_commands>> with Couchbase Capella and Couchbase Shell we need to be able to manage more active resources than the base `cb-env` command gives us.
-You can use the `cb-env --capella` command to see which cloud resources are current active:
+You can use the `cb-env --capella` command to see which Capella resources are current active:
 
 ```
 > cb-env--capella
 ──────────────────────┬──────────────────
  capella-organization │ mycapellaorg
- cloud                │
  project              │ mycapellaproject
 ──────────────────────┴──────────────────
 ```
@@ -29,7 +28,6 @@ Usage:
 
 Subcommands:
   cb-env bucket - Sets the active bucket based on its name
-  cb-env cloud - Sets the active cloud based on its identifier
   cb-env capella-organization - Sets the active capella organization based on its identifier
   cb-env cluster - Sets the active cluster based on its identifier
   cb-env collection - Sets the active collection based on its name
@@ -90,17 +88,8 @@ identifier = "myhostedorg"
 access-key = "x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG"
 secret-key = "T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY"
 default-project = "mydefaultproject"
-# The environment field defaults to "hosted" so we don't have to include it here.
-
-[[capella-organisation]]
-identifier = "myinvpcorg"
-access-key = "x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG"
-secret-key = "T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY"
-default-project = "mydefaultproject"
-default-cloud = "mydefaultcloud"
-environment = "in-vpc"
 
 ----
 
-Note that the identifier of the cluster, and the default-cloud (if applicable) *must* match the corresponding names in Couchbase Capella for management operations to work.
+Note that the identifier of the cluster *must* match the corresponding names in Couchbase Capella for management operations to succeed.
 Also note that some operations are not supported by Couchbase Capella.

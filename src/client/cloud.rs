@@ -1,7 +1,6 @@
 use crate::cli::CtrlcFuture;
 use crate::client::error::ClientError;
 use crate::client::http_handler::{HttpResponse, HttpVerb};
-use crate::state::CapellaEnvironment;
 use hmac::{Hmac, Mac};
 use log::debug;
 use reqwest::Client;
@@ -21,7 +20,6 @@ const CLOUD_URL: &str = "https://cloudapi.cloud.couchbase.com";
 pub struct LimitedClusterSummary {
     id: String,
     name: String,
-    environment: CapellaEnvironment,
 }
 
 impl LimitedClusterSummary {
@@ -30,9 +28,6 @@ impl LimitedClusterSummary {
     }
     pub fn name(&self) -> String {
         self.name.clone()
-    }
-    pub fn environment(&self) -> CapellaEnvironment {
-        self.environment
     }
 }
 
@@ -180,7 +175,8 @@ impl CapellaClient {
             None => {
                 return Err(ClientError::RequestFailed {
                     reason: Some(
-                        "Get clusters response payload unexpected format, missing items".into(),
+                        "Get clusters response payload unexpected format, missing items"
+                            .to_string(),
                     ),
                     key: None,
                 })
@@ -191,7 +187,7 @@ impl CapellaClient {
             None => {
                 // No items entry means no clusters.
                 return Err(ClientError::RequestFailed {
-                    reason: Some("Cluster not found".into()),
+                    reason: Some("Cluster not found".to_string()),
                     key: None,
                 });
             }
@@ -231,6 +227,7 @@ impl CapellaClient {
     }
 }
 
+#[allow(dead_code)]
 pub enum CapellaRequest {
     CreateAllowListEntry {
         cluster_id: String,
@@ -260,9 +257,6 @@ pub enum CapellaRequest {
     DeleteBucket {
         cluster_id: String,
         payload: String,
-    },
-    DeleteCluster {
-        cluster_id: String,
     },
     DeleteClusterV3 {
         cluster_id: String,
@@ -346,9 +340,6 @@ impl CapellaRequest {
             Self::DeleteBucket { cluster_id, .. } => {
                 format!("/v2/clusters/{}/buckets", cluster_id)
             }
-            Self::DeleteCluster { cluster_id, .. } => {
-                format!("/v2/clusters/{}", cluster_id)
-            }
             Self::DeleteClusterV3 { cluster_id, .. } => {
                 format!("/v3/clusters/{}", cluster_id)
             }
@@ -423,7 +414,6 @@ impl CapellaRequest {
             Self::CreateUser { .. } => HttpVerb::Post,
             Self::DeleteAllowListEntry { .. } => HttpVerb::Delete,
             Self::DeleteBucket { .. } => HttpVerb::Delete,
-            Self::DeleteCluster { .. } => HttpVerb::Delete,
             Self::DeleteClusterV3 { .. } => HttpVerb::Delete,
             Self::DeleteProject { .. } => HttpVerb::Delete,
             Self::DeleteUser { .. } => HttpVerb::Delete,

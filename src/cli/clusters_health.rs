@@ -1,9 +1,8 @@
-use crate::cli::cloud_json::JSONCloudClusterHealthResponse;
-use crate::cli::util::{cluster_identifiers_from, get_active_cluster, NuValueMap};
-use crate::client::{CapellaRequest, ManagementRequest};
-use crate::state::{
-    CapellaEnvironment, ClusterTimeouts, RemoteCapellaOrganization, RemoteCluster, State,
+use crate::cli::util::{
+    cluster_identifiers_from, get_active_cluster, validate_is_not_cloud, NuValueMap,
 };
+use crate::client::ManagementRequest;
+use crate::state::{RemoteCluster, State};
 use log::warn;
 use serde::Deserialize;
 use std::ops::Add;
@@ -11,7 +10,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
-use crate::cli::error::{cant_run_against_hosted_capella_error, deserialize_error};
+use crate::cli::error::deserialize_error;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
@@ -42,7 +41,7 @@ impl Command for ClustersHealth {
                 "the clusters which should be contacted",
                 None,
             )
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {
@@ -76,32 +75,24 @@ fn health(
     for identifier in cluster_identifiers {
         let guard = state.lock().unwrap();
         let cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        validate_is_not_cloud(cluster, "clusters health", span.clone())?;
 
-        if let Some(plane) = cluster.capella_org() {
-            let cloud = guard.capella_org_for_cluster(plane)?;
-            let values =
-                check_cloud_health(&identifier, cloud, cluster.timeouts(), ctrl_c.clone(), span)?;
-            for value in values {
-                converted.push(value);
-            }
-        } else {
-            converted.push(check_autofailover(
+        converted.push(check_autofailover(
+            &identifier,
+            cluster,
+            ctrl_c.clone(),
+            span,
+        )?);
+
+        let bucket_names = grab_bucket_names(cluster, ctrl_c.clone(), span.clone())?;
+        for bucket_name in bucket_names {
+            converted.push(check_resident_ratio(
+                &bucket_name,
                 &identifier,
                 cluster,
                 ctrl_c.clone(),
                 span,
             )?);
-
-            let bucket_names = grab_bucket_names(cluster, ctrl_c.clone(), span.clone())?;
-            for bucket_name in bucket_names {
-                converted.push(check_resident_ratio(
-                    &bucket_name,
-                    &identifier,
-                    cluster,
-                    ctrl_c.clone(),
-                    span,
-                )?);
-            }
         }
     }
 
@@ -209,79 +200,6 @@ fn check_resident_ratio(
     collected.add_string("remedy", remedy.to_string(), span);
 
     Ok(collected.into_value(span))
-}
-
-fn check_cloud_health(
-    identifier: &str,
-    cloud: &RemoteCapellaOrganization,
-    timeouts: ClusterTimeouts,
-    ctrl_c: Arc<AtomicBool>,
-    span: Span,
-) -> Result<Vec<Value>, ShellError> {
-    let mut results = Vec::new();
-
-    let deadline = Instant::now().add(timeouts.management_timeout());
-    let cluster =
-        cloud
-            .client()
-            .find_cluster(identifier.to_string(), deadline.clone(), ctrl_c.clone())?;
-
-    if cluster.environment() == CapellaEnvironment::Hosted {
-        return Err(cant_run_against_hosted_capella_error(
-            "clusters health",
-            span,
-        ));
-    }
-
-    let response = cloud.client().capella_request(
-        CapellaRequest::GetClusterHealth {
-            cluster_id: cluster.id(),
-        },
-        deadline,
-        ctrl_c,
-    )?;
-    let resp: JSONCloudClusterHealthResponse = serde_json::from_str(response.content())
-        .map_err(|e| deserialize_error(e.to_string(), span))?;
-
-    let status = resp.status();
-
-    let mut status_collected = NuValueMap::default();
-    status_collected.add_string("cluster", identifier.to_string(), span);
-    status_collected.add_string("check", "Status".to_string(), span);
-    status_collected.add_string("bucket", "-".to_string(), span);
-    status_collected.add_string("expected", "ready".to_string(), span);
-    status_collected.add_string("actual", status.clone(), span);
-    status_collected.add_bool("capella", true, span);
-
-    let remedy = if status == *"ready" {
-        "Not needed"
-    } else {
-        "Should be ready"
-    };
-    status_collected.add_string("remedy", remedy.to_string(), span);
-
-    results.push(status_collected.into_value(span));
-
-    let health = resp.health();
-
-    let mut health_collected = NuValueMap::default();
-    health_collected.add_string("cluster", identifier.to_string(), span);
-    health_collected.add_string("check", "Health".to_string(), span);
-    health_collected.add_string("bucket", "-".to_string(), span);
-    health_collected.add_string("expected", "healthy".to_string(), span);
-    health_collected.add_string("actual", health.clone(), span);
-    health_collected.add_bool("capella", true, span);
-
-    let remedy = if health == *"healthy" {
-        "Not needed"
-    } else {
-        "Should be healthy"
-    };
-    health_collected.add_string("remedy", remedy.to_string(), span);
-
-    results.push(health_collected.into_value(span));
-
-    Ok(results)
 }
 
 #[derive(Debug, Deserialize)]

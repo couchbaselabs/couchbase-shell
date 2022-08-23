@@ -12,7 +12,7 @@ impl Command for Version {
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("version").category(Category::Custom("couchbase".into()))
+        Signature::build("version").category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {

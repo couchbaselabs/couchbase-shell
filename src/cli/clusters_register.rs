@@ -96,7 +96,7 @@ impl Command for ClustersRegister {
                 "capella organization that this cluster belongs to",
                 None,
             )
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {
@@ -189,7 +189,6 @@ pub fn update_config_file(guard: &mut MutexGuard<State>, span: Span) -> Result<(
             c.access_key(),
             Some(c.timeout()),
             c.active_project(),
-            c.active_cloud(),
         ))
     }
 

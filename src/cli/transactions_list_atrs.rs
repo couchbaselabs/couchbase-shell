@@ -42,7 +42,7 @@ impl Command for TransactionsListAtrs {
                 "the name of the bucket",
                 None,
             )
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
         /* .named("scope", SyntaxShape::String, "the name of the scope", None)
         .named(
             "collection",

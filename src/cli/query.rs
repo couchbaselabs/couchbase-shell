@@ -61,7 +61,7 @@ impl Command for Query {
             )
             .switch("with-meta", "include toplevel metadata", None)
             .switch("disable-context", "disable automatically detecting the query context based on the active bucket and scope", None)
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {

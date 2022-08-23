@@ -14,7 +14,7 @@ impl Command for Transactions {
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("transactions").category(Category::Custom("couchbase".into()))
+        Signature::build("transactions").category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {

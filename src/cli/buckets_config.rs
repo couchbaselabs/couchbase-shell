@@ -29,7 +29,7 @@ impl Command for BucketsConfig {
     fn signature(&self) -> Signature {
         Signature::build("buckets config")
             .required("name", SyntaxShape::String, "the name of the bucket")
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {

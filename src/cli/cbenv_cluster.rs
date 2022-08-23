@@ -30,7 +30,7 @@ impl Command for UseCluster {
                 SyntaxShape::String,
                 "the identifier of the cluster",
             )
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {

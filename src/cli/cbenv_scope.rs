@@ -26,7 +26,7 @@ impl Command for UseScope {
     fn signature(&self) -> Signature {
         Signature::build("cb-env scope")
             .required("identifier", SyntaxShape::String, "the name of the scope")
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {

@@ -49,7 +49,7 @@ impl Command for QueryIndexes {
                 None,
             )
             .switch("with-meta", "Includes related metadata in the result", None)
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {

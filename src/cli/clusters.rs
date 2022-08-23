@@ -37,7 +37,7 @@ impl Command for Clusters {
                 "the Capella organization to use",
                 None,
             )
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {
@@ -96,9 +96,7 @@ fn clusters(
         let mut collected = NuValueMap::default();
         collected.add_string("name", cluster.name(), span);
         collected.add_string("id", cluster.id(), span);
-        collected.add_string("cloud_id", cluster.cloud_id(), span);
         collected.add_string("project_id", cluster.project_id(), span);
-        collected.add_string("environment", cluster.environment(), span);
         collected.add_string("tenant_id", content.tenant_id(), span);
         results.push(collected.into_value(span))
     }

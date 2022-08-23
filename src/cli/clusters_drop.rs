@@ -1,5 +1,5 @@
 use crate::client::CapellaRequest;
-use crate::state::{CapellaEnvironment, State};
+use crate::state::State;
 use log::debug;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
@@ -36,7 +36,7 @@ impl Command for ClustersDrop {
                 "the Capella organization to use",
                 None,
             )
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {
@@ -80,23 +80,13 @@ fn clusters_drop(
 
     let deadline = Instant::now().add(control.timeout());
     let cluster = client.find_cluster(name, deadline.clone(), ctrl_c.clone())?;
-    let response = if cluster.environment() == CapellaEnvironment::Hosted {
-        client.capella_request(
-            CapellaRequest::DeleteClusterV3 {
-                cluster_id: cluster.id(),
-            },
-            deadline,
-            ctrl_c,
-        )
-    } else {
-        client.capella_request(
-            CapellaRequest::DeleteCluster {
-                cluster_id: cluster.id(),
-            },
-            deadline,
-            ctrl_c,
-        )
-    }?;
+    let response = client.capella_request(
+        CapellaRequest::DeleteClusterV3 {
+            cluster_id: cluster.id(),
+        },
+        deadline,
+        ctrl_c,
+    )?;
     if response.status() != 202 {
         return Err(unexpected_status_code_error(
             response.status(),
