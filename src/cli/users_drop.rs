@@ -68,11 +68,11 @@ fn users_drop(
 
     debug!("Running users drop {}", username);
 
-    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let guard = state.lock().unwrap();
 
     for identifier in cluster_identifiers {
-        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
         validate_is_not_cloud(active_cluster, "users", span)?;
 
         let response = active_cluster.cluster().http_client().management_request(

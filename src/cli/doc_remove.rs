@@ -117,13 +117,13 @@ fn run_get(
     let scope_flag = call.get_flag(engine_state, stack, "scope")?;
     let collection_flag = call.get_flag(engine_state, stack, "collection")?;
 
-    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
 
     let guard = state.lock().unwrap();
 
     let mut results = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
         let (bucket, scope, collection) = namespace_from_args(
             bucket_flag.clone(),
@@ -149,7 +149,7 @@ fn run_get(
             ctrl_c.clone(),
             Instant::now().add(active_cluster.timeouts().data_timeout()),
             &mut client,
-            span.clone(),
+            span,
         )?;
 
         if all_ids.is_empty() {

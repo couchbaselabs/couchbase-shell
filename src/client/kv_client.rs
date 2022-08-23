@@ -316,9 +316,9 @@ impl KvClient {
                 Err(e) => Some(e),
             };
 
-            let mut state = "OK".into();
+            let mut state = "OK".to_string();
             if error.is_some() {
-                state = "Error".into();
+                state = "Error".to_string();
             }
 
             results.push(PingResponse::new(

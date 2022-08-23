@@ -125,7 +125,7 @@ impl Client {
             // The addresses get suffixed with a . so we have to remove this to later match the address
             // with the addresses in the alternate addresses in the config.
             let mut host = a.target().to_string();
-            if let Some(prefix) = host.strip_suffix(".") {
+            if let Some(prefix) = host.strip_suffix('.') {
                 host = prefix.to_string();
             }
             addresses.push(host);
@@ -135,7 +135,7 @@ impl Client {
     }
 
     // This broadly mirrors the srv logic from the connstr package within gocbcore.
-    fn might_be_srv(seeds: &Vec<String>) -> bool {
+    fn might_be_srv(seeds: &[String]) -> bool {
         if seeds.len() > 1 {
             return false;
         }
@@ -160,7 +160,7 @@ impl Client {
             return false;
         }
 
-        return true;
+        true
     }
 
     fn is_ip_address(addr: &String) -> bool {

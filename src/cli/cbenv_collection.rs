@@ -65,7 +65,7 @@ impl Command for UseCollection {
             active
                 .active_collection()
                 .unwrap_or_else(|| String::from("<not set>")),
-            span.clone(),
+            span,
         );
 
         Ok(result.into_pipeline_data(span))

@@ -58,7 +58,7 @@ impl Command for UseBucket {
             active
                 .active_bucket()
                 .unwrap_or_else(|| String::from("<not set>")),
-            span.clone(),
+            span,
         );
 
         Ok(result.into_pipeline_data(span))

@@ -99,11 +99,11 @@ fn run(
 
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
         let bucket = call
             .get_flag(engine_state, stack, "bucket")?
             .or_else(|| active_cluster.active_bucket());
-        let maybe_scope = bucket.map(|b| scope.clone().map(|s| (b, s))).flatten();
+        let maybe_scope = bucket.and_then(|b| scope.clone().map(|s| (b, s)));
 
         let response = send_analytics_query(
             active_cluster,

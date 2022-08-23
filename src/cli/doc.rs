@@ -27,7 +27,7 @@ impl Command for Doc {
         _input: PipelineData,
     ) -> Result<PipelineData, ShellError> {
         Ok(Value::String {
-            val: get_full_help(&Doc.signature(), &vec![], engine_state, stack),
+            val: get_full_help(&Doc.signature(), &[], engine_state, stack),
             span: call.head,
         }
         .into_pipeline_data())

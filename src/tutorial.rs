@@ -18,7 +18,7 @@ impl Tutorial {
 
     fn additional_info(&self, travel_sample_exists: bool) -> String {
         if travel_sample_exists {
-            return "".into();
+            return "".to_string();
         }
 
         SAMPLE_INFO.to_string()
@@ -60,7 +60,7 @@ impl Tutorial {
             Some(i) => i,
             None => {
                 return Err(ShellError::GenericError(
-                    "invalid tutorial step".into(),
+                    "invalid tutorial step".to_string(),
                     format!("{} is not a valid tutorial step", name),
                     None,
                     None,
@@ -81,10 +81,10 @@ impl Tutorial {
 
         let mut s = vec![];
         for step in STEPS_ORDER.iter() {
-            s.push(step.to_owned().into()) // We control the names and we aren't putting non-unicode chars in them.
+            s.push(step.to_owned().to_string()) // We control the names and we aren't putting non-unicode chars in them.
         }
 
-        (key.into(), s)
+        (key.to_string(), s)
     }
 }
 

@@ -32,10 +32,10 @@ impl HttpVerb {
 
 pub(crate) fn status_to_reason(status: u16) -> Option<String> {
     match status {
-        400 => Some("bad request".into()),
-        401 => Some("unauthorized".into()),
-        403 => Some("forbidden".into()),
-        404 => Some("not found".into()),
+        400 => Some("bad request".to_string()),
+        401 => Some("unauthorized".to_string()),
+        403 => Some("forbidden".to_string()),
+        404 => Some("not found".to_string()),
         _ => None,
     }
 }

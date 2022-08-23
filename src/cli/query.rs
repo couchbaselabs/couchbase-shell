@@ -89,14 +89,14 @@ fn query(
     let span = call.head;
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
 
     let statement: String = call.req(engine_state, stack, 0)?;
 
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
         let guard = state.lock().unwrap();
-        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
         let maybe_scope = query_context_from_args(active_cluster, engine_state, stack, call)?;
 
@@ -114,7 +114,7 @@ fn query(
             call.has_flag("with-meta"),
             identifier.clone(),
             response,
-            span.clone(),
+            span,
         )?);
     }
 
@@ -211,6 +211,6 @@ pub fn query_context_from_args(
     Ok(if disable_context {
         None
     } else {
-        bucket.map(|b| scope.map(|s| (b, s))).flatten()
+        bucket.and_then(|b| scope.map(|s| (b, s)))
     })
 }

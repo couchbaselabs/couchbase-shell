@@ -68,7 +68,7 @@ fn buckets(
     };
     let cluster = active_cluster.cluster();
 
-    validate_is_not_cloud(active_cluster, "buckets config", span.clone())?;
+    validate_is_not_cloud(active_cluster, "buckets config", span)?;
 
     let response = cluster.http_client().management_request(
         ManagementRequest::GetBucket { name: bucket_name },

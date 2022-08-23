@@ -67,12 +67,10 @@ fn projects_drop(
     let control = guard.active_capella_org()?;
     let client = control.client();
     let deadline = Instant::now().add(control.timeout());
-    let project_id = find_project_id(ctrl_c.clone(), name, &client, deadline, span.clone())?;
+    let project_id = find_project_id(ctrl_c.clone(), name, &client, deadline, span)?;
 
     let response = client.capella_request(
-        CapellaRequest::DeleteProject {
-            project_id: project_id.to_string(),
-        },
+        CapellaRequest::DeleteProject { project_id },
         deadline,
         ctrl_c,
     )?;
@@ -84,5 +82,5 @@ fn projects_drop(
         ));
     };
 
-    return Ok(PipelineData::new(span));
+    Ok(PipelineData::new(span))
 }

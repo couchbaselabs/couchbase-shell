@@ -150,7 +150,7 @@ pub(crate) fn run_kv_store_ops(
     let scope_flag = call.get_flag(engine_state, stack, "scope")?;
     let collection_flag = call.get_flag(engine_state, stack, "collection")?;
 
-    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
 
     let guard = state.lock().unwrap();
 
@@ -190,7 +190,7 @@ pub(crate) fn run_kv_store_ops(
     });
 
     let mut all_items = vec![];
-    for item in filtered.chain(input_args).into_iter() {
+    for item in filtered.chain(input_args) {
         let value =
             serde_json::to_vec(&item.1).map_err(|e| serialize_error(e.to_string(), span))?;
 
@@ -206,7 +206,7 @@ pub(crate) fn run_kv_store_ops(
 
     let mut results = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
         let (bucket, scope, collection) = namespace_from_args(
             bucket_flag.clone(),
@@ -230,7 +230,7 @@ pub(crate) fn run_kv_store_ops(
             ctrl_c.clone(),
             Instant::now().add(active_cluster.timeouts().data_timeout()),
             &mut client,
-            span.clone(),
+            span,
         )?;
 
         let client = Arc::new(client);
@@ -357,7 +357,7 @@ pub(crate) fn prime_manifest_if_required(
         rt.block_on(client.fetch_collections_manifest(deadline, ctrl_c))
             .map_err(|e| {
                 generic_error(
-                    format!("Failed to fetch collections manifest {}", e.to_string()),
+                    format!("Failed to fetch collections manifest {}", e),
                     None,
                     span,
                 )

@@ -70,8 +70,8 @@ fn nodes(
     let guard = state.lock().unwrap();
     let mut nodes = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
-        validate_is_not_cloud(active_cluster, "nodes", span.clone())?;
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
+        validate_is_not_cloud(active_cluster, "nodes", span)?;
 
         let response = active_cluster.cluster().http_client().management_request(
             ManagementRequest::GetNodes,

@@ -10,8 +10,8 @@ pub struct BuilderError {
     message: String,
 }
 
-impl fmt::Display for BuilderError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Display for BuilderError {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{}", self.message)
     }
 }
@@ -407,7 +407,7 @@ impl BucketSettings {
                     }
                 }
                 form.push(("replicaNumber", self.num_replicas.to_string()));
-                form.push(("replicaIndex", replica_index_enabled.into()));
+                form.push(("replicaIndex", replica_index_enabled.to_string()));
             }
             BucketType::Ephemeral => {
                 if let Some(eviction_policy) = self.eviction_policy {
@@ -441,7 +441,7 @@ impl BucketSettings {
                             .to_string(),
                     });
                 }
-                form.push(("replicaIndex", replica_index_enabled.into()));
+                form.push(("replicaIndex", replica_index_enabled.to_string()));
             }
         }
 

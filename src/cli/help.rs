@@ -76,34 +76,34 @@ fn help(
                 || c.to_lowercase().contains(&search_string)
                 || e.to_lowercase().contains(&search_string)
             {
-                cols.push("name".into());
+                cols.push("name".to_string());
                 vals.push(Value::String {
                     val: key,
                     span: head,
                 });
 
-                cols.push("category".into());
+                cols.push("category".to_string());
                 vals.push(Value::String {
                     val: sig.category.to_string(),
                     span: head,
                 });
 
-                cols.push("is_plugin".into());
+                cols.push("is_plugin".to_string());
                 vals.push(Value::Bool {
                     val: is_plugin,
                     span: head,
                 });
 
-                cols.push("is_custom".into());
+                cols.push("is_custom".to_string());
                 vals.push(Value::Bool {
                     val: is_custom,
                     span: head,
                 });
 
-                cols.push("usage".into());
+                cols.push("usage".to_string());
                 vals.push(Value::String { val: c, span: head });
 
-                cols.push("extra_usage".into());
+                cols.push("extra_usage".to_string());
                 vals.push(Value::String { val: e, span: head });
 
                 found_cmds_vec.push(Value::Record {
@@ -131,34 +131,34 @@ fn help(
                 let c = sig.usage.clone();
                 let e = sig.extra_usage.clone();
 
-                cols.push("name".into());
+                cols.push("name".to_string());
                 vals.push(Value::String {
                     val: key,
                     span: head,
                 });
 
-                cols.push("category".into());
+                cols.push("category".to_string());
                 vals.push(Value::String {
                     val: sig.category.to_string(),
                     span: head,
                 });
 
-                cols.push("is_plugin".into());
+                cols.push("is_plugin".to_string());
                 vals.push(Value::Bool {
                     val: is_plugin,
                     span: head,
                 });
 
-                cols.push("is_custom".into());
+                cols.push("is_custom".to_string());
                 vals.push(Value::Bool {
                     val: is_custom,
                     span: head,
                 });
 
-                cols.push("usage".into());
+                cols.push("usage".to_string());
                 vals.push(Value::String { val: c, span: head });
 
-                cols.push("extra_usage".into());
+                cols.push("extra_usage".to_string());
                 vals.push(Value::String { val: e, span: head });
 
                 found_cmds_vec.push(Value::Record {
@@ -208,6 +208,7 @@ fn help(
 Here are some tips to help you get started.
   * help commands - list all available commands
   * help <command name> - display help about a particular command
+  * help commands | where category == "couchbase" - list all available Couchbase specific commands
 
 Nushell works on the idea of a "pipeline". Pipelines are commands connected with the '|' character.
 Each stage in the pipeline works together to load, parse, and display information to you.
@@ -226,7 +227,7 @@ Open a JSON file, transform the data, and upsert it into your active bucket:
 You can also learn more at https://couchbase.sh/docs/ and https://www.nushell.sh/book/"#;
 
         Ok(Value::String {
-            val: msg.into(),
+            val: msg.to_string(),
             span: head,
         }
         .into_pipeline_data())

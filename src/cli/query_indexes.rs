@@ -78,7 +78,7 @@ fn query(
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
     let with_meta = call.has_flag("with-meta");
 
-    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let guard = state.lock().unwrap();
 
     let fetch_defs = call.has_flag("definitions");
@@ -89,7 +89,7 @@ fn query(
 
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
         if fetch_defs {
             let mut defs =
@@ -100,7 +100,7 @@ fn query(
 
         let response = active_cluster.cluster().http_client().query_request(
             QueryRequest::Execute {
-                statement: statement.into(),
+                statement: statement.to_string(),
                 scope: None,
                 timeout: duration_to_golang_string(active_cluster.timeouts().query_timeout()),
             },
@@ -196,10 +196,10 @@ fn index_definitions(
         .map(|d| {
             let mut collected = NuValueMap::default();
             collected.add_string("bucket", d.bucket, span);
-            collected.add_string("scope", d.scope.unwrap_or_else(|| "".into()), span);
+            collected.add_string("scope", d.scope.unwrap_or_else(|| "".to_string()), span);
             collected.add_string(
                 "collection",
-                d.collection.unwrap_or_else(|| "".into()),
+                d.collection.unwrap_or_else(|| "".to_string()),
                 span,
             );
             collected.add_string("name", d.index_name, span);

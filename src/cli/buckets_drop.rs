@@ -65,14 +65,14 @@ fn buckets_drop(
     let span = call.head;
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let name: String = call.req(engine_state, stack, 0)?;
     let guard = state.lock().unwrap();
 
     debug!("Running buckets drop for bucket {:?}", &name);
 
     for identifier in cluster_identifiers {
-        let cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        let cluster = get_active_cluster(identifier.clone(), &guard, span)?;
         validate_is_not_cloud(cluster, "buckets drop", span)?;
 
         let result = cluster.cluster().http_client().management_request(

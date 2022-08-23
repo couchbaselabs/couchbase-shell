@@ -75,7 +75,7 @@ fn run_ping(
     let span = call.head;
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
 
     let guard = state.lock().unwrap();
 
@@ -85,7 +85,7 @@ fn run_ping(
     let clusters_len = cluster_identifiers.len();
     let mut results = vec![];
     for identifier in cluster_identifiers {
-        let cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        let cluster = get_active_cluster(identifier.clone(), &guard, span)?;
         let deadline = Instant::now().add(cluster.timeouts().management_timeout());
 
         let client = cluster.cluster().http_client();

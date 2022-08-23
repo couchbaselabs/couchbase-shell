@@ -305,7 +305,7 @@ impl ClusterConfig {
         self.capella_org.clone()
     }
     pub fn kv_batch_size(&self) -> Option<u32> {
-        self.kv_batch_size.clone()
+        self.kv_batch_size
     }
 }
 

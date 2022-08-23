@@ -117,12 +117,12 @@ fn run_get(
     let span = call.head;
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
-    let batch_size: Option<i64> = call.get_flag(&engine_state, stack, "batch-size")?;
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
+    let batch_size: Option<i64> = call.get_flag(engine_state, stack, "batch-size")?;
     let id_column: String = call
-        .get_flag(&engine_state, stack, "id-column")?
+        .get_flag(engine_state, stack, "id-column")?
         .unwrap_or_else(|| "id".to_string());
-    let ids = ids_from_input(&call, input, id_column.clone(), ctrl_c.clone())?;
+    let ids = ids_from_input(call, input, id_column.clone(), ctrl_c.clone())?;
 
     let mut workers = FuturesUnordered::new();
     let guard = state.lock().unwrap();
@@ -138,7 +138,7 @@ fn run_get(
 
     let mut results = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
         let (bucket, scope, collection) = namespace_from_args(
             bucket_flag.clone(),
@@ -170,7 +170,7 @@ fn run_get(
             ctrl_c.clone(),
             Instant::now().add(active_cluster.timeouts().data_timeout()),
             &mut client,
-            span.clone(),
+            span,
         )?;
 
         let client = Arc::new(client);
@@ -253,8 +253,8 @@ pub(crate) fn ids_from_input(
 ) -> Result<Vec<String>, ShellError> {
     let mut ids: Vec<String> = input
         .into_interruptible_iter(Some(ctrl_c))
-        .map(move |v| match v {
-            Value::String { val, .. } => Some(val.clone()),
+        .filter_map(move |v| match v {
+            Value::String { val, .. } => Some(val),
             Value::Record { cols, vals, .. } => {
                 if let Some(idx) = cols.iter().position(|x| x.clone() == id_column) {
                     if let Some(d) = vals.get(idx) {
@@ -271,7 +271,6 @@ pub(crate) fn ids_from_input(
             }
             _ => None,
         })
-        .flatten()
         .collect();
 
     if let Some(id) = args.positional_nth(0) {

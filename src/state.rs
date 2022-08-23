@@ -44,7 +44,7 @@ impl State {
         if self.clusters.contains_key(alias.as_str()) {
             return Err(ShellError::GenericError(
                 format!("Identifier {} is already registered to a cluster", alias),
-                "".into(),
+                "".to_string(),
                 None,
                 None,
                 Vec::new(),
@@ -69,7 +69,7 @@ impl State {
     pub fn set_active(&self, active: String) -> Result<(), ShellError> {
         if !self.clusters.contains_key(&active) {
             return Err(LabeledError {
-                label: "Cluster not found".into(),
+                label: "Cluster not found".to_string(),
                 msg: format!("The cluster named {} is not known", active),
                 span: None,
             }
@@ -89,10 +89,10 @@ impl State {
                 //    let _ = remote.bucket(remote.active_bucket().unwrap().as_str());
                 //}
 
-                if let Some(s) = remote.active_scope().clone() {
+                if let Some(s) = remote.active_scope() {
                     let _ = remote.set_active_scope(s);
                 }
-                if let Some(c) = remote.active_collection().clone() {
+                if let Some(c) = remote.active_collection() {
                     let _ = remote.set_active_collection(c);
                 }
             }
@@ -132,8 +132,8 @@ impl State {
             Some(a) => a,
             None => {
                 return Err(ShellError::GenericError(
-                    "No active Capella organization set".into(),
-                    "".into(),
+                    "No active Capella organization set".to_string(),
+                    "".to_string(),
                     None,
                     None,
                     Vec::new(),
@@ -143,8 +143,8 @@ impl State {
 
         self.capella_orgs.get(&*active).ok_or_else(|| {
             ShellError::GenericError(
-                "Active Capella organization not known".into(),
-                "".into(),
+                "Active Capella organization not known".to_string(),
+                "".to_string(),
                 None,
                 None,
                 Vec::new(),
@@ -159,7 +159,7 @@ impl State {
     pub fn set_active_capella_org(&self, active: String) -> Result<(), ShellError> {
         if !self.capella_orgs.contains_key(&active) {
             return Err(ShellError::GenericError(
-                "Capella organization not known".into(),
+                "Capella organization not known".to_string(),
                 format!("Capella organization {} has not been registered", active),
                 None,
                 None,
@@ -169,7 +169,7 @@ impl State {
 
         {
             let mut guard = self.active_capella_org.lock().unwrap();
-            *guard = Some(active.clone());
+            *guard = Some(active);
         }
 
         Ok(())
@@ -188,7 +188,7 @@ impl State {
                     "No cloud organization registered for cluster name {}",
                     identifier,
                 ),
-                "".into(),
+                "".to_string(),
                 None,
                 None,
                 Vec::new(),
@@ -241,7 +241,7 @@ impl RemoteCapellaOrganization {
     }
 
     pub fn timeout(&self) -> Duration {
-        self.timeout.clone()
+        self.timeout
     }
 
     pub fn active_project(&self) -> Option<String> {
@@ -361,8 +361,7 @@ impl RemoteCluster {
 
     pub fn timeouts(&self) -> ClusterTimeouts {
         let active = self.timeouts.lock().unwrap();
-        let x = active.clone();
-        x
+        active.clone()
     }
 
     pub fn set_timeouts(&self, timeouts: ClusterTimeouts) {

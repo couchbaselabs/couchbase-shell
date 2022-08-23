@@ -29,7 +29,7 @@ pub fn convert_row_to_nu_value(
             let mut vals = vec![];
             for (k, v) in o.iter() {
                 cols.push(k.clone());
-                vals.push(convert_json_value_to_nu_value(v, span.clone())?);
+                vals.push(convert_json_value_to_nu_value(v, span)?);
             }
             cols.push("cluster".to_string());
             vals.push(Value::String {
@@ -43,8 +43,7 @@ pub fn convert_row_to_nu_value(
             "row was not an object",
             v.to_string(),
             span,
-        ))
-        .into(),
+        )),
     }
 }
 
@@ -179,7 +178,7 @@ pub fn cluster_identifiers_from(
     default_active: bool,
 ) -> Result<Vec<String>, ShellError> {
     let state = state.lock().unwrap();
-    let identifier_arg: String = match args.get_flag(&engine_state, stack, "clusters")? {
+    let identifier_arg: String = match args.get_flag(engine_state, stack, "clusters")? {
         Some(arg) => arg,
         None => {
             if default_active {
@@ -293,11 +292,11 @@ pub(crate) fn find_project_id(
 pub fn duration_to_golang_string(duration: Duration) -> String {
     let mut total_secs = duration.as_secs();
     let secs = total_secs % 60;
-    total_secs = total_secs / 60;
+    total_secs /= 60;
     let mut golang_string = format!("{}s", secs);
     if total_secs > 0 {
         let minutes = total_secs % 60;
-        total_secs = total_secs / 60;
+        total_secs /= 60;
         golang_string = format!("{}m{}", minutes, golang_string);
         if total_secs > 0 {
             golang_string = format!("{}h{}", total_secs, golang_string)
@@ -321,10 +320,7 @@ impl NuValueMap {
 
     pub fn add_i64(&mut self, name: impl Into<String>, val: i64, span: Span) {
         self.cols.push(name.into());
-        self.vals.push(Value::Int {
-            val: val.into(),
-            span,
-        });
+        self.vals.push(Value::Int { val, span });
     }
 
     pub fn add_string(&mut self, name: impl Into<String>, val: impl Into<String>, span: Span) {
@@ -365,9 +361,7 @@ pub fn get_active_cluster<'a>(
 ) -> Result<&'a RemoteCluster, ShellError> {
     match guard.clusters().get(&identifier) {
         Some(c) => Ok(c),
-        None => {
-            return Err(cluster_not_found_error(identifier, span));
-        }
+        None => Err(cluster_not_found_error(identifier, span)),
     }
 }
 

@@ -68,14 +68,14 @@ fn buckets_get_all(
     let span = call.head;
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let guard = state.lock().unwrap();
 
     debug!("Running buckets");
 
     let mut results = vec![];
     for identifier in cluster_identifiers {
-        let cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        let cluster = get_active_cluster(identifier.clone(), &guard, span)?;
         validate_is_not_cloud(cluster, "buckets", span)?;
 
         let response = cluster.cluster().http_client().management_request(
@@ -96,9 +96,8 @@ fn buckets_get_all(
 
         for bucket in content.into_iter() {
             results.push(bucket_to_nu_value(
-                BucketSettings::try_from(bucket).map_err(|e| {
-                    generic_error(format!("Invalid setting {}", e.to_string()), None, span)
-                })?,
+                BucketSettings::try_from(bucket)
+                    .map_err(|e| generic_error(format!("Invalid setting {}", e), None, span))?,
                 identifier.clone(),
                 false,
                 span,
