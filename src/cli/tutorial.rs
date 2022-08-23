@@ -25,7 +25,7 @@ impl Command for Tutorial {
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("tutorial").category(Category::Custom("couchbase".into()))
+        Signature::build("tutorial").category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {
@@ -59,7 +59,7 @@ fn run_tutorial(
             if active_cluster.capella_org().is_none() {
                 let resp = active_cluster.cluster().http_client().management_request(
                     ManagementRequest::GetBucket {
-                        name: "travel-sample".into(),
+                        name: "travel-sample".to_string(),
                     },
                     Instant::now().add(active_cluster.timeouts().management_timeout()),
                     ctrl_c,

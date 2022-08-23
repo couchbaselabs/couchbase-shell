@@ -22,7 +22,7 @@ impl Command for TutorialPrev {
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("tutorial prev").category(Category::Custom("couchbase".into()))
+        Signature::build("tutorial prev").category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {

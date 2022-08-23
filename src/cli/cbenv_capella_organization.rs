@@ -30,7 +30,7 @@ impl Command for UseCapellaOrganization {
                 SyntaxShape::String,
                 "the identifier of the capella organization",
             )
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {

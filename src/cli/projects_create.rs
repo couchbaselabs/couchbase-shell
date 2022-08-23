@@ -31,7 +31,7 @@ impl Command for ProjectsCreate {
     fn signature(&self) -> Signature {
         Signature::build("projects create")
             .required("name", SyntaxShape::String, "The name of the project")
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {

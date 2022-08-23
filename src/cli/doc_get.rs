@@ -74,7 +74,7 @@ impl Command for DocGet {
                 "the maximum number of items to batch send at a time",
                 None,
             )
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {
@@ -121,7 +121,7 @@ fn run_get(
     let batch_size: Option<i64> = call.get_flag(&engine_state, stack, "batch-size")?;
     let id_column: String = call
         .get_flag(&engine_state, stack, "id-column")?
-        .unwrap_or_else(|| "id".into());
+        .unwrap_or_else(|| "id".to_string());
     let ids = ids_from_input(&call, input, id_column.clone(), ctrl_c.clone())?;
 
     let mut workers = FuturesUnordered::new();

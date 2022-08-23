@@ -1,13 +1,10 @@
-use crate::cli::buckets_builder::{
-    BucketSettings, DurabilityLevel, JSONBucketSettings, JSONCloudBucketSettings,
-};
+use crate::cli::buckets_builder::{BucketSettings, DurabilityLevel, JSONBucketSettings};
 use crate::cli::error::{
-    bucket_not_found_error, cant_run_against_hosted_capella_error, deserialize_error,
-    generic_error, serialize_error, unexpected_status_code_error,
+    deserialize_error, generic_error, serialize_error, unexpected_status_code_error,
 };
-use crate::cli::util::{cluster_identifiers_from, get_active_cluster};
-use crate::client::{CapellaRequest, ManagementRequest};
-use crate::state::{CapellaEnvironment, State};
+use crate::cli::util::{cluster_identifiers_from, get_active_cluster, validate_is_not_cloud};
+use crate::client::ManagementRequest;
+use crate::state::State;
 use log::debug;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
@@ -73,7 +70,7 @@ impl Command for BucketsUpdate {
                 "the clusters which should be contacted",
                 None,
             )
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {
@@ -117,133 +114,52 @@ fn buckets_update(
 
     for identifier in cluster_identifiers {
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        validate_is_not_cloud(active_cluster, "buckets", span)?;
 
-        if active_cluster.capella_org().is_some()
-            && (flush || durability.is_some() || expiry.is_some())
-        {
-            return Err(generic_error(
-                "Capella flag cannot be used with type, flush, durability, or expiry",
-                None,
+        let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
+        let get_response = active_cluster.cluster().http_client().management_request(
+            ManagementRequest::GetBucket { name: name.clone() },
+            deadline.clone(),
+            ctrl_c.clone(),
+        )?;
+        if get_response.status() != 200 {
+            debug!("Failed to get buckets from server");
+            return Err(unexpected_status_code_error(
+                get_response.status(),
+                get_response.content(),
                 span,
             ));
         }
 
-        let response = if let Some(plane) = active_cluster.capella_org() {
-            let cloud = guard.capella_org_for_cluster(plane)?.client();
+        let content: JSONBucketSettings = serde_json::from_str(get_response.content())
+            .map_err(|e| deserialize_error(e.to_string(), span))?;
+        let mut settings = BucketSettings::try_from(content)
+            .map_err(|e| generic_error(format!("Invalid setting {}", e.to_string()), None, span))?;
 
-            let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
-            let cluster = cloud.find_cluster(identifier.clone(), deadline, ctrl_c.clone())?;
+        update_bucket_settings(
+            &mut settings,
+            ram.map(|v| v as u64),
+            replicas.map(|v| v as u64),
+            flush,
+            durability.clone(),
+            expiry.map(|v| v as u64),
+            span.clone(),
+        )?;
 
-            if cluster.environment() == CapellaEnvironment::Hosted {
-                return Err(cant_run_against_hosted_capella_error(
-                    "buckets update",
-                    span,
-                ));
-            }
+        let form = settings
+            .as_form(true)
+            .map_err(|e| generic_error(format!("Invalid setting {}", e.to_string()), None, span))?;
+        let payload =
+            serde_urlencoded::to_string(&form).map_err(|e| serialize_error(e.to_string(), span))?;
 
-            let buckets_response = cloud.capella_request(
-                CapellaRequest::GetBuckets {
-                    cluster_id: cluster.id(),
-                },
-                deadline.clone(),
-                ctrl_c.clone(),
-            )?;
-            if buckets_response.status() != 200 {
-                debug!("Failed to get buckets from capella");
-                return Err(unexpected_status_code_error(
-                    buckets_response.status(),
-                    buckets_response.content(),
-                    span,
-                ));
-            }
-
-            let mut buckets: Vec<JSONCloudBucketSettings> =
-                serde_json::from_str(buckets_response.content())
-                    .map_err(|e| deserialize_error(e.to_string(), span))?;
-
-            // Cloud requires that updates are performed on an array of buckets, and we have to include all
-            // of the buckets that we want to keep so we need to pull out, change and reinsert the bucket that
-            // we want to change.
-            let idx = match buckets.iter().position(|b| b.name() == name.clone()) {
-                Some(i) => i,
-                None => {
-                    return Err(bucket_not_found_error(name, span));
-                }
-            };
-
-            let mut settings = BucketSettings::try_from(buckets.swap_remove(idx)).map_err(|e| {
-                generic_error(format!("Invalid setting {}", e.to_string()), None, span)
-            })?;
-            update_bucket_settings(
-                &mut settings,
-                ram.map(|v| v as u64),
-                replicas.map(|v| v as u64),
-                flush,
-                durability.clone(),
-                expiry.map(|v| v as u64),
-                span.clone(),
-            )?;
-
-            buckets.push(JSONCloudBucketSettings::try_from(&settings).map_err(|e| {
-                generic_error(format!("Invalid setting {}", e.to_string()), None, span)
-            })?);
-
-            cloud.capella_request(
-                CapellaRequest::UpdateBucket {
-                    cluster_id: cluster.id(),
-                    payload: serde_json::to_string(&buckets)
-                        .map_err(|e| serialize_error(e.to_string(), span))?,
-                },
-                deadline.clone(),
-                ctrl_c.clone(),
-            )?
-        } else {
-            let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
-            let get_response = active_cluster.cluster().http_client().management_request(
-                ManagementRequest::GetBucket { name: name.clone() },
-                deadline.clone(),
-                ctrl_c.clone(),
-            )?;
-            if get_response.status() != 200 {
-                debug!("Failed to get buckets from server");
-                return Err(unexpected_status_code_error(
-                    get_response.status(),
-                    get_response.content(),
-                    span,
-                ));
-            }
-
-            let content: JSONBucketSettings = serde_json::from_str(get_response.content())
-                .map_err(|e| deserialize_error(e.to_string(), span))?;
-            let mut settings = BucketSettings::try_from(content).map_err(|e| {
-                generic_error(format!("Invalid setting {}", e.to_string()), None, span)
-            })?;
-
-            update_bucket_settings(
-                &mut settings,
-                ram.map(|v| v as u64),
-                replicas.map(|v| v as u64),
-                flush,
-                durability.clone(),
-                expiry.map(|v| v as u64),
-                span.clone(),
-            )?;
-
-            let form = settings.as_form(true).map_err(|e| {
-                generic_error(format!("Invalid setting {}", e.to_string()), None, span)
-            })?;
-            let payload = serde_urlencoded::to_string(&form)
-                .map_err(|e| serialize_error(e.to_string(), span))?;
-
-            active_cluster.cluster().http_client().management_request(
-                ManagementRequest::UpdateBucket {
-                    name: name.clone(),
-                    payload,
-                },
-                deadline,
-                ctrl_c.clone(),
-            )?
-        };
+        let response = active_cluster.cluster().http_client().management_request(
+            ManagementRequest::UpdateBucket {
+                name: name.clone(),
+                payload,
+            },
+            deadline,
+            ctrl_c.clone(),
+        )?;
 
         match response.status() {
             200 => {}

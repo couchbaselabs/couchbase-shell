@@ -28,7 +28,7 @@ impl Command for TutorialPage {
     fn signature(&self) -> Signature {
         Signature::build("tutorial page")
             .optional("name", SyntaxShape::String, "the name of the page to go to")
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {

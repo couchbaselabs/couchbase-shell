@@ -30,7 +30,7 @@ impl Command for UseCollection {
                 SyntaxShape::String,
                 "the name of the collection",
             )
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {

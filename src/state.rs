@@ -3,20 +3,11 @@ use crate::config::ClusterTlsConfig;
 use crate::tutorial::Tutorial;
 use nu_plugin::LabeledError;
 use nu_protocol::ShellError;
-use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::{collections::HashMap, time::Duration};
-
-#[derive(Clone, Debug, Deserialize, Serialize, Copy, Ord, PartialOrd, Eq, PartialEq)]
-pub enum CapellaEnvironment {
-    #[serde(rename = "hosted")]
-    Hosted,
-    #[serde(rename = "inVpc")]
-    InVPC,
-}
 
 pub struct State {
     active: Mutex<String>,
@@ -212,7 +203,6 @@ pub struct RemoteCapellaOrganization {
     client: Mutex<Option<Arc<CapellaClient>>>,
     timeout: Duration,
     active_project: Mutex<Option<String>>,
-    active_cloud: Mutex<Option<String>>,
 }
 
 impl RemoteCapellaOrganization {
@@ -221,7 +211,6 @@ impl RemoteCapellaOrganization {
         access_key: String,
         timeout: Duration,
         active_project: Option<String>,
-        active_cloud: Option<String>,
     ) -> Self {
         Self {
             secret_key,
@@ -229,7 +218,6 @@ impl RemoteCapellaOrganization {
             client: Mutex::new(None),
             timeout,
             active_project: Mutex::new(active_project),
-            active_cloud: Mutex::new(active_cloud),
         }
     }
 
@@ -262,15 +250,6 @@ impl RemoteCapellaOrganization {
 
     pub fn set_active_project(&self, name: String) {
         let mut active = self.active_project.lock().unwrap();
-        *active = Some(name);
-    }
-
-    pub fn active_cloud(&self) -> Option<String> {
-        self.active_cloud.lock().unwrap().clone()
-    }
-
-    pub fn set_active_cloud(&self, name: String) {
-        let mut active = self.active_cloud.lock().unwrap();
         *active = Some(name);
     }
 }

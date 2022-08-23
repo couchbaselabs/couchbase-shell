@@ -45,7 +45,7 @@ impl Command for UsersRoles {
                 "filter roles based on the permission string",
                 None,
             )
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {

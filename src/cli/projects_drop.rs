@@ -31,7 +31,7 @@ impl Command for ProjectsDrop {
     fn signature(&self) -> Signature {
         Signature::build("projects drop")
             .required("name", SyntaxShape::String, "the name of the project")
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {

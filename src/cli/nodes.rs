@@ -1,8 +1,9 @@
-use crate::cli::util::{cluster_identifiers_from, get_active_cluster, NuValueMap};
+use crate::cli::util::{
+    cluster_identifiers_from, get_active_cluster, validate_is_not_cloud, NuValueMap,
+};
 use crate::state::State;
 
-use crate::cli::cloud_json::JSONCloudClusterHealthResponse;
-use crate::client::{CapellaRequest, ManagementRequest};
+use crate::client::ManagementRequest;
 use serde::Deserialize;
 use std::fmt;
 use std::ops::Add;
@@ -70,112 +71,60 @@ fn nodes(
     let mut nodes = vec![];
     for identifier in cluster_identifiers {
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        validate_is_not_cloud(active_cluster, "nodes", span.clone())?;
 
-        if let Some(plane) = active_cluster.capella_org() {
-            let cloud = guard.capella_org_for_cluster(plane)?.client();
-            let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
-            let cluster =
-                cloud.find_cluster(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
-            let response = cloud.capella_request(
-                CapellaRequest::GetClusterHealth {
-                    cluster_id: cluster.id(),
-                },
-                deadline,
-                ctrl_c.clone(),
-            )?;
-            if response.status() != 200 {
-                return Err(unexpected_status_code_error(
-                    response.status(),
-                    response.content(),
-                    span,
-                ));
-            }
-
-            let resp: JSONCloudClusterHealthResponse = serde_json::from_str(response.content())
-                .map_err(|e| serialize_error(e.to_string(), span))?;
-
-            let mut n = resp
-                .nodes()
-                .nodes()
-                .into_iter()
-                .map(|n| {
-                    let mut collected = NuValueMap::default();
-                    let services = n
-                        .services()
-                        .iter()
-                        .map(|n| format!("{}", n))
-                        .collect::<Vec<_>>()
-                        .join(",");
-
-                    collected.add_string("cluster", identifier.clone(), call.head);
-                    collected.add_string("hostname", n.name(), call.head);
-                    collected.add_string("status", n.status(), call.head);
-                    collected.add_string("services", services, call.head);
-                    collected.add_string("version", "", call.head);
-                    collected.add_string("os", "", call.head);
-                    collected.add_string("memory_total", "", call.head);
-                    collected.add_string("memory_free", "", call.head);
-                    collected.add_bool("capella", true, call.head);
-
-                    collected.into_value(call.head)
-                })
-                .collect::<Vec<_>>();
-
-            nodes.append(&mut n);
-        } else {
-            let response = active_cluster.cluster().http_client().management_request(
-                ManagementRequest::GetNodes,
-                Instant::now().add(active_cluster.timeouts().management_timeout()),
-                ctrl_c.clone(),
-            )?;
-            if response.status() != 200 {
-                return Err(unexpected_status_code_error(
-                    response.status(),
-                    response.content(),
-                    span,
-                ));
-            }
-
-            let resp: PoolInfo = match response.status() {
-                200 => serde_json::from_str(response.content())
-                    .map_err(|e| serialize_error(e.to_string(), call.span()))?,
-                _ => {
-                    return Err(unexpected_status_code_error(
-                        response.status(),
-                        response.content(),
-                        call.span(),
-                    ));
-                }
-            };
-
-            let mut n = resp
-                .nodes
-                .into_iter()
-                .map(|n| {
-                    let mut collected = NuValueMap::default();
-                    let services = n
-                        .services
-                        .iter()
-                        .map(|n| format!("{}", n))
-                        .collect::<Vec<_>>()
-                        .join(",");
-
-                    collected.add_string("cluster", identifier.clone(), call.head);
-                    collected.add_string("hostname", n.hostname, call.head);
-                    collected.add_string("status", n.status, call.head);
-                    collected.add_string("services", services, call.head);
-                    collected.add_string("version", n.version, call.head);
-                    collected.add_string("os", n.os, call.head);
-                    collected.add_i64("memory_total", n.memory_total as i64, call.head);
-                    collected.add_i64("memory_free", n.memory_free as i64, call.head);
-                    collected.add_bool("capella", false, call.head);
-
-                    collected.into_value(call.head)
-                })
-                .collect::<Vec<_>>();
-
-            nodes.append(&mut n);
+        let response = active_cluster.cluster().http_client().management_request(
+            ManagementRequest::GetNodes,
+            Instant::now().add(active_cluster.timeouts().management_timeout()),
+            ctrl_c.clone(),
+        )?;
+        if response.status() != 200 {
+            return Err(unexpected_status_code_error(
+                response.status(),
+                response.content(),
+                span,
+            ));
         }
+
+        let resp: PoolInfo = match response.status() {
+            200 => serde_json::from_str(response.content())
+                .map_err(|e| serialize_error(e.to_string(), call.span()))?,
+            _ => {
+                return Err(unexpected_status_code_error(
+                    response.status(),
+                    response.content(),
+                    call.span(),
+                ));
+            }
+        };
+
+        let mut n = resp
+            .nodes
+            .into_iter()
+            .map(|n| {
+                let mut collected = NuValueMap::default();
+                let services = n
+                    .services
+                    .iter()
+                    .map(|n| format!("{}", n))
+                    .collect::<Vec<_>>()
+                    .join(",");
+
+                collected.add_string("cluster", identifier.clone(), call.head);
+                collected.add_string("hostname", n.hostname, call.head);
+                collected.add_string("status", n.status, call.head);
+                collected.add_string("services", services, call.head);
+                collected.add_string("version", n.version, call.head);
+                collected.add_string("os", n.os, call.head);
+                collected.add_i64("memory_total", n.memory_total as i64, call.head);
+                collected.add_i64("memory_free", n.memory_free as i64, call.head);
+                collected.add_bool("capella", false, call.head);
+
+                collected.into_value(call.head)
+            })
+            .collect::<Vec<_>>();
+
+        nodes.append(&mut n);
     }
 
     Ok(Value::List {

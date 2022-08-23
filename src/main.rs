@@ -302,7 +302,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                 None => DEFAULT_MANAGEMENT_TIMEOUT,
             };
             let name = c.identifier();
-            let default_cloud = c.default_cloud();
             let default_project = c.default_project();
 
             let plane = RemoteCapellaOrganization::new(
@@ -310,7 +309,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                 c.access_key(),
                 management_timeout,
                 default_project,
-                default_cloud,
             );
 
             if active_capella_org.is_none() {
@@ -347,10 +345,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     context.ctrlc = Some(context_ctrlc);
 
     let delta = {
-        let mut working_set = nu_protocol::engine::StateWorkingSet::new(&context);
-        working_set.add_decl(Box::new(AllowLists::new(state.clone())));
-        working_set.add_decl(Box::new(AllowListsAdd::new(state.clone())));
-        working_set.add_decl(Box::new(AllowListsDrop::new(state.clone())));
+        let mut working_set = StateWorkingSet::new(&context);
         working_set.add_decl(Box::new(Analytics::new(state.clone())));
         working_set.add_decl(Box::new(AnalyticsBuckets::new(state.clone())));
         working_set.add_decl(Box::new(AnalyticsDatasets::new(state.clone())));
@@ -366,7 +361,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         working_set.add_decl(Box::new(BucketsGet::new(state.clone())));
         working_set.add_decl(Box::new(BucketsSample::new(state.clone())));
         working_set.add_decl(Box::new(BucketsUpdate::new(state.clone())));
-        working_set.add_decl(Box::new(Clouds::new(state.clone())));
         working_set.add_decl(Box::new(Clusters::new(state.clone())));
         working_set.add_decl(Box::new(ClustersCreate::new(state.clone())));
         working_set.add_decl(Box::new(ClustersDrop::new(state.clone())));
@@ -406,7 +400,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         working_set.add_decl(Box::new(TutorialPrev::new(state.clone())));
         working_set.add_decl(Box::new(UseBucket::new(state.clone())));
         working_set.add_decl(Box::new(UseCapellaOrganization::new(state.clone())));
-        working_set.add_decl(Box::new(UseCloud::new(state.clone())));
         working_set.add_decl(Box::new(UseCluster::new(state.clone())));
         working_set.add_decl(Box::new(UseCmd::new(state.clone())));
         working_set.add_decl(Box::new(UseCollection::new(state.clone())));

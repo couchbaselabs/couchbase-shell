@@ -29,7 +29,7 @@ impl Command for Projects {
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("projects").category(Category::Custom("couchbase".into()))
+        Signature::build("projects").category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {

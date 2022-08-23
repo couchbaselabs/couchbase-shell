@@ -26,7 +26,7 @@ impl Command for UseBucket {
     fn signature(&self) -> Signature {
         Signature::build("cb-env bucket")
             .required("identifier", SyntaxShape::String, "the name of the bucket")
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {

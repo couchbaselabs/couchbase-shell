@@ -185,8 +185,6 @@ pub struct CapellaOrganizationConfig {
     management_timeout: Option<Duration>,
     #[serde(rename(deserialize = "default-project", serialize = "default-project"))]
     default_project: Option<String>,
-    #[serde(rename(deserialize = "default-cloud", serialize = "default-cloud"))]
-    default_cloud: Option<String>,
 }
 
 impl CapellaOrganizationConfig {
@@ -196,7 +194,6 @@ impl CapellaOrganizationConfig {
         access_key: String,
         management_timeout: Option<Duration>,
         default_project: Option<String>,
-        default_cloud: Option<String>,
     ) -> Self {
         Self {
             identifier,
@@ -206,7 +203,6 @@ impl CapellaOrganizationConfig {
             },
             management_timeout,
             default_project,
-            default_cloud,
         }
     }
     pub fn identifier(&self) -> String {
@@ -223,9 +219,6 @@ impl CapellaOrganizationConfig {
     }
     pub fn default_project(&self) -> Option<String> {
         self.default_project.as_ref().cloned()
-    }
-    pub fn default_cloud(&self) -> Option<String> {
-        self.default_cloud.as_ref().cloned()
     }
 
     pub fn credentials_mut(&mut self) -> &mut CapellaOrganizationCredentials {

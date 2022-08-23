@@ -56,7 +56,7 @@ impl Command for UseTimeouts {
                 "the new timeout for management operations (in ms)",
                 None,
             )
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {

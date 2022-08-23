@@ -1,7 +1,6 @@
-use crate::cli::cloud_json::{JSONCloudsProjectsResponse, JSONCloudsResponse};
+use crate::cli::cloud_json::JSONCloudsProjectsResponse;
 use crate::cli::error::CBShellError::{
-    CloudNotFound, GenericError, MustBeCapella, MustNotBeCapella, ProjectNotFound,
-    UnexpectedResponseStatus,
+    GenericError, MustNotBeCapella, ProjectNotFound, UnexpectedResponseStatus,
 };
 use crate::cli::error::{
     cluster_not_found_error, deserialize_error, malformed_response_error, no_active_bucket_error,
@@ -32,7 +31,7 @@ pub fn convert_row_to_nu_value(
                 cols.push(k.clone());
                 vals.push(convert_json_value_to_nu_value(v, span.clone())?);
             }
-            cols.push("cluster".into());
+            cols.push("cluster".to_string());
             vals.push(Value::String {
                 val: cluster_identifier,
                 span,
@@ -186,7 +185,7 @@ pub fn cluster_identifiers_from(
             if default_active {
                 return Ok(vec![state.active()]);
             }
-            "".into()
+            "".to_string()
         }
     };
 
@@ -195,7 +194,7 @@ pub fn cluster_identifiers_from(
         Err(e) => {
             return Err(GenericError {
                 message: e.to_string(),
-                help: Some("Failed to parse identifier used for specifying clusters".into()),
+                help: Some("Failed to parse identifier used for specifying clusters".to_string()),
                 span: Some(args.head),
             }
             .into());
@@ -245,22 +244,6 @@ pub fn namespace_from_args(
     Ok((bucket, scope, collection))
 }
 
-pub fn validate_is_cloud(
-    cluster: &RemoteCluster,
-    command_name: impl Into<String>,
-    span: Span,
-) -> Result<(), ShellError> {
-    if cluster.capella_org().is_none() {
-        return Err(MustBeCapella {
-            command_name: command_name.into(),
-            span,
-        }
-        .into());
-    }
-
-    Ok(())
-}
-
 pub fn validate_is_not_cloud(
     cluster: &RemoteCluster,
     command_name: impl Into<String>,
@@ -303,34 +286,6 @@ pub(crate) fn find_project_id(
     }
 
     Err(ShellError::from(ProjectNotFound { name, span }))
-}
-
-pub(crate) fn find_cloud_id(
-    ctrl_c: Arc<AtomicBool>,
-    name: String,
-    client: &Arc<CapellaClient>,
-    deadline: Instant,
-    span: Span,
-) -> Result<String, ShellError> {
-    let response = client.capella_request(CapellaRequest::GetClouds {}, deadline, ctrl_c)?;
-    if response.status() != 200 {
-        return Err(UnexpectedResponseStatus {
-            status_code: response.status(),
-            message: response.content().to_string(),
-            span,
-        }
-        .into());
-    };
-    let clouds: JSONCloudsResponse = serde_json::from_str(response.content())
-        .map_err(|e| deserialize_error(e.to_string(), span))?;
-
-    for c in clouds.items() {
-        if c.name() == name {
-            return Ok(c.id().to_string());
-        }
-    }
-
-    Err(ShellError::from(CloudNotFound { name, span }))
 }
 
 // duration_to_golang_string creates a golang formatted string to use with timeouts. Unlike Golang

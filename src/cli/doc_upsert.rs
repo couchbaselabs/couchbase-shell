@@ -86,7 +86,7 @@ impl Command for DocUpsert {
                 "the maximum number of items to batch send at a time",
                 None,
             )
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {

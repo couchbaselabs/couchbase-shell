@@ -1,5 +1,5 @@
 use super::util::convert_json_value_to_nu_value;
-use crate::cli::util::{cluster_identifiers_from, get_active_cluster, validate_is_not_cloud};
+use crate::cli::util::{cluster_identifiers_from, get_active_cluster};
 use crate::client::ManagementRequest;
 use crate::state::State;
 use serde_json::{json, Map, Value};
@@ -38,7 +38,7 @@ impl Command for Whoami {
                 "the clusters which should be contacted",
                 None,
             )
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {
@@ -72,7 +72,6 @@ fn whoami(
     let mut entries = vec![];
     for identifier in cluster_identifiers {
         let cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
-        validate_is_not_cloud(cluster, "whoami", span)?;
 
         let response = cluster.cluster().http_client().management_request(
             ManagementRequest::Whoami,
@@ -93,7 +92,7 @@ fn whoami(
 
         let mut content: Map<String, Value> = serde_json::from_str(response.content())
             .map_err(|e| deserialize_error(e.to_string(), span))?;
-        content.insert("cluster".into(), json!(identifier.clone()));
+        content.insert("cluster".to_string(), json!(identifier.clone()));
         let converted = convert_json_value_to_nu_value(&Value::Object(content), span)?;
         entries.push(converted);
     }

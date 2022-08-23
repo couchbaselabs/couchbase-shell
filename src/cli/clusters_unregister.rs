@@ -36,7 +36,7 @@ impl Command for ClustersUnregister {
                 "whether or not to add the cluster to the .cbsh config file, defaults to false",
                 None,
             )
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {

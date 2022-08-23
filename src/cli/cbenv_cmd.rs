@@ -33,7 +33,7 @@ impl Command for UseCmd {
                 "show default execution environment for timeouts",
                 None,
             )
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {
@@ -73,11 +73,6 @@ fn use_cmd(
             guard
                 .active_capella_org_name()
                 .unwrap_or_else(|| String::from("")),
-            span,
-        );
-        results.add_string(
-            "cloud",
-            org.active_cloud().unwrap_or_else(|| String::from("")),
             span,
         );
         results.add_string(

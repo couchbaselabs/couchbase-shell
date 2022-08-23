@@ -1,12 +1,8 @@
 //! The `buckets get` command fetches buckets from the server.
-use crate::state::{CapellaEnvironment, State};
-
-use crate::cli::cloud_json::JSONCloudDeleteBucketRequest;
-use crate::cli::error::{
-    cant_run_against_hosted_capella_error, serialize_error, unexpected_status_code_error,
-};
-use crate::cli::util::{cluster_identifiers_from, get_active_cluster};
-use crate::client::{CapellaRequest, ManagementRequest};
+use crate::cli::error::unexpected_status_code_error;
+use crate::cli::util::{cluster_identifiers_from, get_active_cluster, validate_is_not_cloud};
+use crate::client::ManagementRequest;
+use crate::state::State;
 use log::debug;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
@@ -41,7 +37,7 @@ impl Command for BucketsDrop {
                 "the clusters which should be contacted",
                 None,
             )
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {
@@ -77,35 +73,13 @@ fn buckets_drop(
 
     for identifier in cluster_identifiers {
         let cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        validate_is_not_cloud(cluster, "buckets drop", span)?;
 
-        let result = if let Some(plane) = cluster.capella_org() {
-            let cloud = guard.capella_org_for_cluster(plane)?.client();
-            let deadline = Instant::now().add(cluster.timeouts().management_timeout());
-            let cluster =
-                cloud.find_cluster(identifier.clone(), deadline.clone(), ctrl_c.clone())?;
-
-            if cluster.environment() == CapellaEnvironment::Hosted {
-                return Err(cant_run_against_hosted_capella_error("buckets drop", span));
-            }
-
-            let req = JSONCloudDeleteBucketRequest::new(name.clone());
-            let payload =
-                serde_json::to_string(&req).map_err(|e| serialize_error(e.to_string(), span))?;
-            cloud.capella_request(
-                CapellaRequest::DeleteBucket {
-                    cluster_id: cluster.id(),
-                    payload,
-                },
-                deadline,
-                ctrl_c.clone(),
-            )?
-        } else {
-            cluster.cluster().http_client().management_request(
-                ManagementRequest::DropBucket { name: name.clone() },
-                Instant::now().add(cluster.timeouts().management_timeout()),
-                ctrl_c.clone(),
-            )?
-        };
+        let result = cluster.cluster().http_client().management_request(
+            ManagementRequest::DropBucket { name: name.clone() },
+            Instant::now().add(cluster.timeouts().management_timeout()),
+            ctrl_c.clone(),
+        )?;
 
         match result.status() {
             200 => {}

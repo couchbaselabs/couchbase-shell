@@ -38,7 +38,7 @@ impl Command for QueryAdvise {
                 "the clusters to query against",
                 None,
             )
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {

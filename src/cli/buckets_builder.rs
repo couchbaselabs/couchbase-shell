@@ -1,4 +1,4 @@
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
 use std::convert::TryFrom;
 use std::fmt;
 use std::fmt::{Display, Formatter};
@@ -328,45 +328,6 @@ pub struct JSONBucketSettings {
     conflict_resolution_type: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct JSONCloudBucketSettings {
-    name: String,
-    #[serde(rename = "memoryQuota")]
-    memory_quota: u64,
-    #[serde(rename = "replicas")]
-    num_replicas: u32,
-    #[serde(
-        rename = "conflictResolution",
-        skip_serializing_if = "String::is_empty"
-    )]
-    conflict_resolution_type: String,
-    #[serde(skip_serializing)]
-    status: String,
-}
-
-impl TryFrom<&BucketSettings> for JSONCloudBucketSettings {
-    type Error = BuilderError;
-
-    fn try_from(settings: &BucketSettings) -> Result<Self, Self::Error> {
-        let mut reso_type = "".to_string();
-        if let Some(reso) = settings.conflict_resolution_type {
-            reso_type = reso.to_string();
-        }
-        Ok(JSONCloudBucketSettings {
-            name: settings.name.clone(),
-            memory_quota: settings.ram_quota_mb,
-            num_replicas: settings.num_replicas,
-            conflict_resolution_type: reso_type,
-            status: "".to_string(),
-        })
-    }
-}
-impl JSONCloudBucketSettings {
-    pub fn name(&self) -> String {
-        self.name.clone()
-    }
-}
-
 impl TryFrom<JSONBucketSettings> for BucketSettings {
     type Error = BuilderError;
 
@@ -386,29 +347,6 @@ impl TryFrom<JSONBucketSettings> for BucketSettings {
                 settings.conflict_resolution_type.as_str(),
             )?),
             status: None,
-        })
-    }
-}
-
-impl TryFrom<JSONCloudBucketSettings> for BucketSettings {
-    type Error = BuilderError;
-
-    fn try_from(settings: JSONCloudBucketSettings) -> Result<Self, Self::Error> {
-        Ok(BucketSettings {
-            name: settings.name,
-            ram_quota_mb: settings.memory_quota,
-            flush_enabled: false,
-            num_replicas: settings.num_replicas,
-            replica_indexes: false,
-            bucket_type: BucketType::Couchbase,
-            eviction_policy: None,
-            max_expiry: Default::default(),
-            compression_mode: CompressionMode::Off,
-            durability_level: DurabilityLevel::None,
-            conflict_resolution_type: Some(ConflictResolutionType::try_from(
-                settings.conflict_resolution_type.as_str(),
-            )?),
-            status: Some(settings.status),
         })
     }
 }

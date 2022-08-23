@@ -32,7 +32,7 @@ impl Command for Help {
                 "string to find in command usage",
                 Some('f'),
             )
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {
