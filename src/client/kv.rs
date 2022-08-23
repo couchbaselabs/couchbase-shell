@@ -46,7 +46,7 @@ pub struct KvTlsConfig {
 
 impl KvTlsConfig {
     pub fn new(tls_config: ClusterTlsConfig) -> Result<KvTlsConfig, ClientError> {
-        let builder = rustls::ClientConfig::builder().with_safe_defaults();
+        let builder = ClientConfig::builder().with_safe_defaults();
         let config = if tls_config.accept_all_certs() {
             builder
                 .with_custom_certificate_verifier(Arc::new(InsecureCertVerifier {}))
@@ -57,7 +57,7 @@ impl KvTlsConfig {
                 let cert = fs::read(path).map_err(ClientError::from)?;
                 let mut reader = BufReader::new(&cert[..]);
                 read_all(&mut reader).map_err(|e| ClientError::RequestFailed {
-                    reason: Some(format!("Failed to read cert file {}", e.to_string())),
+                    reason: Some(format!("Failed to read cert file {}", e)),
                     key: None,
                 })?
             } else {
@@ -70,17 +70,14 @@ impl KvTlsConfig {
                     Item::X509Certificate(c) => {
                         root_cert_store.add(&Certificate(c)).map_err(|e| {
                             ClientError::RequestFailed {
-                                reason: Some(format!(
-                                    "Failed to create cert store {}",
-                                    e.to_string()
-                                )),
+                                reason: Some(format!("Failed to create cert store {}", e)),
                                 key: None,
                             }
                         })?
                     }
                     _ => {
                         return Err(ClientError::RequestFailed {
-                            reason: Some(format!("Unsupported certificate format")),
+                            reason: Some("Unsupported certificate format".to_string()),
                             key: None,
                         })
                     }

@@ -65,7 +65,7 @@ fn clusters_unregister(
     let save = call.get_flag(engine_state, stack, "save")?.unwrap_or(false);
 
     let mut guard = state.lock().unwrap();
-    if guard.active() == identifier.clone() {
+    if guard.active() == identifier {
         return Err(generic_error(
             "Cannot unregister the active cluster",
             "Change the active cluster using cb-env cluster first".to_string(),
@@ -81,5 +81,5 @@ fn clusters_unregister(
         update_config_file(&mut guard, call.head)?;
     };
 
-    return Ok(PipelineData::new(call.head));
+    Ok(PipelineData::new(call.head))
 }

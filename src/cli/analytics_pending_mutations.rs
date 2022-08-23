@@ -70,8 +70,8 @@ fn pending_mutations(
 
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
-        validate_is_not_cloud(active_cluster, "analytics pending-mutations", span.clone())?;
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
+        validate_is_not_cloud(active_cluster, "analytics pending-mutations", span)?;
 
         let response = active_cluster
             .cluster()
@@ -95,7 +95,7 @@ fn pending_mutations(
 
         let content: serde_json::Value = serde_json::from_str(response.content())
             .map_err(|e| deserialize_error(e.to_string(), span))?;
-        let converted = convert_row_to_nu_value(&content, span.clone(), identifier.clone())?;
+        let converted = convert_row_to_nu_value(&content, span, identifier.clone())?;
         results.push(converted);
     }
 

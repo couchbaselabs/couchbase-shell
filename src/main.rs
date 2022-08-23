@@ -69,16 +69,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut context = create_default_context();
 
     gather_parent_env_vars(&mut context, &init_cwd);
-    let mut stack = nu_protocol::engine::Stack::new();
-
-    // stack.vars.insert(
-    //     ENV_VARIABLE_ID,
-    //     Value::Record {
-    //         cols: vec![],
-    //         vals: vec![],
-    //         span: Span::new(0, 0),
-    //     },
-    // );
+    let mut stack = Stack::new();
 
     let mut args_to_cbshell = vec![];
     let mut args_to_script = vec![];
@@ -120,7 +111,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    args_to_cbshell.insert(0, "cbsh".into());
+    args_to_cbshell.insert(0, "cbsh".to_string());
 
     let shell_commandline_args = args_to_cbshell.join(" ");
 
@@ -412,7 +403,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         working_set.add_decl(Box::new(UsersRoles::new(state.clone())));
         working_set.add_decl(Box::new(UsersUpsert::new(state.clone())));
         working_set.add_decl(Box::new(Version));
-        working_set.add_decl(Box::new(Whoami::new(state.clone())));
+        working_set.add_decl(Box::new(Whoami::new(state)));
 
         working_set.render()
     };
@@ -609,7 +600,7 @@ impl Command for Cbsh {
             )
             .switch("silent", "run in silent mode", Some('s'))
             .switch("version", "print the version", Some('v'))
-            .category(Category::Custom("couchbase".into()))
+            .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {
@@ -622,7 +613,7 @@ impl Command for Cbsh {
         stack: &mut Stack,
         call: &Call,
         _input: PipelineData,
-    ) -> Result<nu_protocol::PipelineData, nu_protocol::ShellError> {
+    ) -> Result<PipelineData, ShellError> {
         Ok(Value::String {
             val: get_full_help(&Cbsh.signature(), &Cbsh.examples(), context, stack),
             span: call.head,
@@ -630,7 +621,7 @@ impl Command for Cbsh {
         .into_pipeline_data())
     }
 
-    fn examples(&self) -> Vec<nu_protocol::Example> {
+    fn examples(&self) -> Vec<Example> {
         vec![
             Example {
                 description: "Run a script",

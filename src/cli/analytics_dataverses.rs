@@ -71,14 +71,14 @@ fn dataverses(
 
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
         results.extend(do_non_mutation_analytics_query(
             identifier.clone(),
             active_cluster,
-            statement.clone(),
+            statement,
             ctrl_c.clone(),
-            span.clone(),
+            span,
             with_meta,
         )?);
     }

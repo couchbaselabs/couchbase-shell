@@ -75,14 +75,14 @@ fn dataverses(
 
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
         results.extend(do_non_mutation_analytics_query(
             identifier.clone(),
             active_cluster,
-            statement.clone(),
+            statement,
             ctrl_c.clone(),
-            span.clone(),
+            span,
             with_meta,
         )?);
     }
@@ -109,7 +109,7 @@ pub fn do_non_mutation_analytics_query(
 
     let mut results: Vec<Value> = vec![];
     if with_meta {
-        let converted = convert_row_to_nu_value(&content, span.clone(), identifier.clone())?;
+        let converted = convert_row_to_nu_value(&content, span, identifier)?;
         results.push(converted);
         return Ok(results);
     }
@@ -117,11 +117,7 @@ pub fn do_non_mutation_analytics_query(
     if let Some(content_results) = content.get("results") {
         if let Some(arr) = content_results.as_array() {
             for result in arr {
-                results.push(convert_row_to_nu_value(
-                    result,
-                    span.clone(),
-                    identifier.clone(),
-                )?);
+                results.push(convert_row_to_nu_value(result, span, identifier.clone())?);
             }
         } else {
             return Err(malformed_response_error(

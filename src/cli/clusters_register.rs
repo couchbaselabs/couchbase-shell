@@ -196,21 +196,11 @@ pub fn update_config_file(guard: &mut MutexGuard<State>, span: Span) -> Result<(
 
     fs::write(
         path,
-        config.to_str().map_err(|e| {
-            generic_error(
-                format!("Failed to write config file {}", e.to_string()),
-                None,
-                span,
-            )
-        })?,
+        config
+            .to_str()
+            .map_err(|e| generic_error(format!("Failed to write config file {}", e), None, span))?,
     )
-    .map_err(|e| {
-        generic_error(
-            format!("Failed to write config file {}", e.to_string()),
-            None,
-            span,
-        )
-    })?;
+    .map_err(|e| generic_error(format!("Failed to write config file {}", e), None, span))?;
 
     Ok(())
 }

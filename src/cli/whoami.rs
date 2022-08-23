@@ -66,12 +66,12 @@ fn whoami(
     let span = call.head;
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let guard = state.lock().unwrap();
 
     let mut entries = vec![];
     for identifier in cluster_identifiers {
-        let cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        let cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
         let response = cluster.cluster().http_client().management_request(
             ManagementRequest::Whoami,

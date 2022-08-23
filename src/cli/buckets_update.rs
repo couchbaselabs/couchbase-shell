@@ -109,17 +109,17 @@ fn buckets_update(
 
     debug!("Running buckets update for bucket {}", &name);
 
-    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let guard = state.lock().unwrap();
 
     for identifier in cluster_identifiers {
-        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
         validate_is_not_cloud(active_cluster, "buckets", span)?;
 
         let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
         let get_response = active_cluster.cluster().http_client().management_request(
             ManagementRequest::GetBucket { name: name.clone() },
-            deadline.clone(),
+            deadline,
             ctrl_c.clone(),
         )?;
         if get_response.status() != 200 {
@@ -134,7 +134,7 @@ fn buckets_update(
         let content: JSONBucketSettings = serde_json::from_str(get_response.content())
             .map_err(|e| deserialize_error(e.to_string(), span))?;
         let mut settings = BucketSettings::try_from(content)
-            .map_err(|e| generic_error(format!("Invalid setting {}", e.to_string()), None, span))?;
+            .map_err(|e| generic_error(format!("Invalid setting {}", e), None, span))?;
 
         update_bucket_settings(
             &mut settings,
@@ -143,12 +143,12 @@ fn buckets_update(
             flush,
             durability.clone(),
             expiry.map(|v| v as u64),
-            span.clone(),
+            span,
         )?;
 
         let form = settings
             .as_form(true)
-            .map_err(|e| generic_error(format!("Invalid setting {}", e.to_string()), None, span))?;
+            .map_err(|e| generic_error(format!("Invalid setting {}", e), None, span))?;
         let payload =
             serde_urlencoded::to_string(&form).map_err(|e| serialize_error(e.to_string(), span))?;
 
@@ -195,7 +195,7 @@ fn update_bucket_settings(
             Ok(bt) => bt,
             Err(e) => {
                 return Err(generic_error(
-                    format!("Failed to parse num replicas {}", e.to_string()),
+                    format!("Failed to parse num replicas {}", e),
                     None,
                     span,
                 ));

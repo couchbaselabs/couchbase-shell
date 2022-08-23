@@ -124,14 +124,14 @@ fn run_fake(
     } else {
         let path: String = match call.get_flag(engine_state, stack, "template")? {
             Some(p) => p,
-            None => return Err(ShellError::MissingParameter("template".into(), span)),
+            None => return Err(ShellError::MissingParameter("template".to_string(), span)),
         };
 
         let num_rows: i64 = call.get_flag(engine_state, stack, "num-rows")?.unwrap_or(1);
 
         let template = fs::read_to_string(path).map_err(|e| {
             generic_error(
-                format!("Failed to read template file {}", e.to_string()),
+                format!("Failed to read template file {}", e),
                 "Is the path to the file correct?".to_string(),
                 span,
             )
@@ -139,11 +139,7 @@ fn run_fake(
 
         let converted = std::iter::repeat_with(move || {
             let rendered = tera.render_str(&template, &ctx).map_err(|e| {
-                generic_error(
-                    format!("Failed to render template {}", e.to_string()),
-                    None,
-                    span,
-                )
+                generic_error(format!("Failed to render template {}", e), None, span)
             })?;
             let generated = serde_json::from_str(&rendered)
                 .map_err(|e| serialize_error(e.to_string(), span))?;

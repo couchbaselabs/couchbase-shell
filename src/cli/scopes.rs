@@ -71,13 +71,13 @@ fn run(
     let span = call.head;
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
 
     let guard = state.lock().unwrap();
 
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
         let bucket = get_bucket_or_active(active_cluster, engine_state, stack, call)?;
 

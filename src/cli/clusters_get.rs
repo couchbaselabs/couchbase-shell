@@ -111,5 +111,5 @@ fn clusters_get(
     collected.add_string("tenant_id", cluster.tenant_id(), span);
     collected.add_string("project_id", cluster.project_id(), span);
 
-    return Ok(collected.into_pipeline_data(span));
+    Ok(collected.into_pipeline_data(span))
 }

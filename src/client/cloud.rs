@@ -74,7 +74,7 @@ impl CapellaClient {
             .unwrap()
             .as_millis();
 
-        let bearer_payload = format!("{}\n{}\n{}", verb.as_str(), path, now_millis.to_string());
+        let bearer_payload = format!("{}\n{}\n{}", verb.as_str(), path, now_millis);
 
         type HmacSha256 = Hmac<Sha256>;
         let mut mac = HmacSha256::new_from_slice(self.secret_key.clone().as_bytes()).unwrap();

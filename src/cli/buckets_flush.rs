@@ -68,17 +68,17 @@ fn buckets_flush(
     let span = call.head;
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let name: String = call.req(engine_state, stack, 0)?;
     let bucket: String = call
         .get_flag(engine_state, stack, "bucket")?
-        .unwrap_or_else(|| "".into());
+        .unwrap_or_else(|| "".to_string());
 
     debug!("Running buckets flush for bucket {:?}", &bucket);
 
     for identifier in cluster_identifiers {
         let guard = state.lock().unwrap();
-        let cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        let cluster = get_active_cluster(identifier.clone(), &guard, span)?;
         validate_is_not_cloud(cluster, "buckets flush", span)?;
 
         let result = cluster.cluster().http_client().management_request(

@@ -76,7 +76,7 @@ fn buckets_get(
     let span = call.head;
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let bucket: String = call.req(engine_state, stack, 0)?;
 
     debug!("Running buckets get for bucket {:?}", &bucket);
@@ -84,7 +84,7 @@ fn buckets_get(
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
         let guard = state.lock().unwrap();
-        let cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        let cluster = get_active_cluster(identifier.clone(), &guard, span)?;
         validate_is_not_cloud(cluster, "buckets get", span)?;
 
         let response = cluster.cluster().http_client().management_request(
@@ -112,9 +112,8 @@ fn buckets_get(
         let content: JSONBucketSettings = serde_json::from_str(response.content())
             .map_err(|e| deserialize_error(e.to_string(), span))?;
         results.push(bucket_to_nu_value(
-            BucketSettings::try_from(content).map_err(|e| {
-                generic_error(format!("Invalid setting {}", e.to_string()), None, span)
-            })?,
+            BucketSettings::try_from(content)
+                .map_err(|e| generic_error(format!("Invalid setting {}", e), None, span))?,
             identifier,
             false,
             span,

@@ -74,7 +74,7 @@ fn run(
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
         let guard = state.lock().unwrap();
-        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
         let maybe_scope = query_context_from_args(active_cluster, engine_state, stack, call)?;
 
@@ -92,7 +92,7 @@ fn run(
             call.has_flag("with-meta"),
             identifier.clone(),
             response,
-            span.clone(),
+            span,
         )?);
     }
 

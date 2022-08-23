@@ -74,7 +74,7 @@ fn users_get_all(
 
     let mut results = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
         validate_is_not_cloud(active_cluster, "users", span)?;
 
         let response = active_cluster.cluster().http_client().management_request(

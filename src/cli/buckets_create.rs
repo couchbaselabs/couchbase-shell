@@ -104,7 +104,7 @@ fn buckets_create(
 
     debug!("Running buckets create for bucket {}", &name);
 
-    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let guard = state.lock().unwrap();
 
     let mut builder = BucketSettingsBuilder::new(name).ram_quota_mb(ram as u64);
@@ -152,14 +152,14 @@ fn buckets_create(
     let settings = builder.build();
 
     for identifier in cluster_identifiers {
-        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
         validate_is_not_cloud(active_cluster, "buckets create", span)?;
 
         let cluster = active_cluster.cluster();
 
         let form = settings
             .as_form(false)
-            .map_err(|e| generic_error(format!("Invalid setting {}", e.to_string()), None, span))?;
+            .map_err(|e| generic_error(format!("Invalid setting {}", e), None, span))?;
         let payload =
             serde_urlencoded::to_string(&form).map_err(|e| serialize_error(e.to_string(), span))?;
 

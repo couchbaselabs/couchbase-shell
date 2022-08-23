@@ -69,13 +69,13 @@ fn health(
     let span = call.head;
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
 
     let mut converted = vec![];
     for identifier in cluster_identifiers {
         let guard = state.lock().unwrap();
-        let cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
-        validate_is_not_cloud(cluster, "clusters health", span.clone())?;
+        let cluster = get_active_cluster(identifier.clone(), &guard, span)?;
+        validate_is_not_cloud(cluster, "clusters health", span)?;
 
         converted.push(check_autofailover(
             &identifier,
@@ -84,7 +84,7 @@ fn health(
             span,
         )?);
 
-        let bucket_names = grab_bucket_names(cluster, ctrl_c.clone(), span.clone())?;
+        let bucket_names = grab_bucket_names(cluster, ctrl_c.clone(), span)?;
         for bucket_name in bucket_names {
             converted.push(check_resident_ratio(
                 &bucket_name,

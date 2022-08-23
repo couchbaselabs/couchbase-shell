@@ -79,12 +79,12 @@ fn run(
 
     debug!("Running search query {} against {}", &query, &index);
 
-    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let guard = state.lock().unwrap();
 
     let mut results = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
         let response = active_cluster
             .cluster()
             .http_client()

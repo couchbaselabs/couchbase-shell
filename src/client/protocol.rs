@@ -372,7 +372,7 @@ pub fn _dump(input: &Bytes) -> String {
     let partition = slice.get_u16();
     output.push_str(&format!(" Partition: 0x{:x}\n", partition));
 
-    if let Some(body) = _body(&input) {
+    if let Some(body) = _body(input) {
         output.push_str(&format!("      Body: {:?}\n", body));
     }
 

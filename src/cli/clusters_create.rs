@@ -90,13 +90,7 @@ fn clusters_create(
             return Err(no_active_project_error(span));
         }
     };
-    let project_id = find_project_id(
-        ctrl_c.clone(),
-        project_name,
-        &client,
-        deadline,
-        span.clone(),
-    )?;
+    let project_id = find_project_id(ctrl_c.clone(), project_name, &client, deadline, span)?;
 
     let mut json: JSONCloudCreateClusterRequestV3 = serde_json::from_str(definition.as_str())
         .map_err(|e| serialize_error(e.to_string(), span))?;

@@ -70,7 +70,7 @@ fn clusters_drop(
     debug!("Running clusters drop for {}", &name);
 
     let guard = state.lock().unwrap();
-    let control = if let Some(c) = capella.clone() {
+    let control = if let Some(c) = capella {
         guard.capella_org_for_cluster(c)
     } else {
         guard.active_capella_org()
@@ -79,7 +79,7 @@ fn clusters_drop(
     let client = control.client();
 
     let deadline = Instant::now().add(control.timeout());
-    let cluster = client.find_cluster(name, deadline.clone(), ctrl_c.clone())?;
+    let cluster = client.find_cluster(name, deadline, ctrl_c.clone())?;
     let response = client.capella_request(
         CapellaRequest::DeleteClusterV3 {
             cluster_id: cluster.id(),
@@ -95,5 +95,5 @@ fn clusters_drop(
         ));
     };
 
-    return Ok(PipelineData::new(span));
+    Ok(PipelineData::new(span))
 }

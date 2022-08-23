@@ -81,7 +81,7 @@ fn collections_create(
     let span = call.head;
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let cluster_identifiers = cluster_identifiers_from(&engine_state, stack, &state, &call, true)?;
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let guard = state.lock().unwrap();
     let collection: String = call.req(engine_state, stack, 0)?;
     let expiry: i64 = call
@@ -89,7 +89,7 @@ fn collections_create(
         .unwrap_or(0);
 
     for identifier in cluster_identifiers {
-        let active_cluster = get_active_cluster(identifier.clone(), &guard, span.clone())?;
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
         let bucket = get_bucket_or_active(active_cluster, engine_state, stack, call)?;
 

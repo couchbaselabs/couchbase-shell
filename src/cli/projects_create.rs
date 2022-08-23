@@ -82,5 +82,5 @@ fn projects_create(
         ));
     };
 
-    return Ok(PipelineData::new(span));
+    Ok(PipelineData::new(span))
 }
