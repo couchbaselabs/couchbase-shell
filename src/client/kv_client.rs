@@ -232,7 +232,7 @@ impl KvClient {
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<CollectionManifest, ClientError> {
-        let path = format!("/pools/default/buckets/{}/scopes/", self.bucket.clone());
+        let path = format!("/pools/default/buckets/{}/scopes", self.bucket.clone());
         let mut final_error_content = None;
         let mut final_error_status = 0;
         for seed in &self.seeds {
