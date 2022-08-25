@@ -192,6 +192,10 @@ pub(crate) struct JSONCloudClusterV3 {
     #[serde(default)]
     #[serde(rename = "endpointsSrv")]
     endpoints_srv: Option<String>,
+    created_by: String,
+    #[serde(rename = "createdBy")]
+    modified_at: String,
+    #[serde(rename = "modifiedAt")]
 }
 
 impl JSONCloudClusterV3 {
@@ -203,6 +207,12 @@ impl JSONCloudClusterV3 {
     }
     pub fn tenant_id(&self) -> String {
         self.tenant_id.clone()
+    }
+    pub fn created_by(&self) -> String {
+        self.created_by.clone()
+    }
+    pub fn modified_at(&self) -> String {
+        self.modified_at.clone()
     }
     pub fn project_id(&self) -> String {
         self.project_id.clone()
