@@ -110,6 +110,8 @@ fn clusters_get(
     collected.add_string("version", cluster.version_name(), span);
     collected.add_string("tenant_id", cluster.tenant_id(), span);
     collected.add_string("project_id", cluster.project_id(), span);
+    collected.add_string("modified_date",cluster.modified_at(), span);
+    collected.add_string("created_by", cluster.created_by(),span);
 
     Ok(collected.into_pipeline_data(span))
 }
