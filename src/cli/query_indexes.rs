@@ -1,12 +1,7 @@
-use crate::cli::error::{
-    deserialize_error, malformed_response_error, unexpected_status_code_error,
-};
-use crate::cli::query::query_context_from_args;
-use crate::cli::util::{
-    cluster_identifiers_from, convert_row_to_nu_value, duration_to_golang_string,
-    get_active_cluster, NuValueMap,
-};
-use crate::client::{ManagementRequest, QueryRequest};
+use crate::cli::error::{deserialize_error, unexpected_status_code_error};
+use crate::cli::query::{handle_query_response, query_context_from_args, send_query};
+use crate::cli::util::{cluster_identifiers_from, get_active_cluster, NuValueMap};
+use crate::client::ManagementRequest;
 use crate::state::{RemoteCluster, State};
 use log::debug;
 use nu_protocol::ast::Call;
@@ -78,19 +73,21 @@ fn query(
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
-    let with_meta = call.has_flag("with-meta");
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
-    let guard = state.lock().unwrap();
 
     let fetch_defs = call.has_flag("definitions");
 
-    let statement = "select keyspace_id as `bucket`, name, state, `using` as `type`, ifmissing(condition, null) as condition, ifmissing(is_primary, false) as `primary`, index_key from system:indexes";
+    let statement = "select keyspace_id as `bucket`, name, state, `using` as `type`, \
+    ifmissing(condition, null) as condition, ifmissing(is_primary, false) as `primary`, \
+    index_key from system:indexes"
+        .to_string();
 
     debug!("Running n1ql query {}", &statement);
 
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
+        let guard = state.lock().unwrap();
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
         let maybe_scope = query_context_from_args(active_cluster, engine_state, stack, call)?;
 
@@ -101,42 +98,20 @@ fn query(
             continue;
         }
 
-        let response = active_cluster.cluster().http_client().query_request(
-            QueryRequest::Execute {
-                statement: statement.to_string(),
-                scope: maybe_scope,
-                timeout: duration_to_golang_string(active_cluster.timeouts().query_timeout()),
-            },
-            Instant::now().add(active_cluster.timeouts().query_timeout()),
+        let response = send_query(
+            active_cluster,
+            statement.clone(),
+            maybe_scope,
             ctrl_c.clone(),
         )?;
+        drop(guard);
 
-        let content: serde_json::Value =
-            serde_json::from_str(response.content()).map_err(|_e| {
-                unexpected_status_code_error(response.status(), response.content(), span)
-            })?;
-        if with_meta {
-            let converted = convert_row_to_nu_value(&content, span, identifier.clone())?;
-            results.push(converted);
-        } else if let Some(content_results) = content.get("results") {
-            if let Some(arr) = content_results.as_array() {
-                for result in arr {
-                    results.push(convert_row_to_nu_value(result, span, identifier.clone())?);
-                }
-            } else {
-                return Err(malformed_response_error(
-                    "query results not an array",
-                    content_results.to_string(),
-                    span,
-                ));
-            }
-        } else {
-            return Err(malformed_response_error(
-                "query top level object not an object",
-                content.to_string(),
-                span,
-            ));
-        }
+        results.extend(handle_query_response(
+            call.has_flag("with-meta"),
+            identifier.clone(),
+            response,
+            span,
+        )?);
     }
 
     Ok(Value::List {
