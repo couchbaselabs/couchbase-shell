@@ -192,10 +192,10 @@ pub(crate) struct JSONCloudClusterV3 {
     #[serde(default)]
     #[serde(rename = "endpointsSrv")]
     endpoints_srv: Option<String>,
-    created_by: String,
     #[serde(rename = "createdBy")]
+    created_by: String,
+    #[serde(rename = "modifiedAt")]
     modified_at: String,
-    #[serde(rename = "modifiedAt")],
 }
 
 impl JSONCloudClusterV3 {
