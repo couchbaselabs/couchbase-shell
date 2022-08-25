@@ -25,6 +25,7 @@ pub struct ShellConfig {
     clusters: Vec<ClusterConfig>,
 
     #[serde(alias = "capella-organization", default)]
+    #[serde(alias = "capella-organisation")]
     capella_orgs: Vec<CapellaOrganizationConfig>,
 
     /// Stores the path from which it got loaded, if present
