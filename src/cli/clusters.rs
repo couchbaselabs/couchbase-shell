@@ -98,6 +98,8 @@ fn clusters(
         collected.add_string("id", cluster.id(), span);
         collected.add_string("project_id", cluster.project_id(), span);
         collected.add_string("tenant_id", content.tenant_id(), span);
+        collected.add_string("modified_date",content.modified_at(), span);
+        collected.add_string("created_by", content.created_by(),span);
         results.push(collected.into_value(span))
     }
 
