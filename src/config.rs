@@ -36,13 +36,25 @@ impl ShellConfig {
     ///
     /// It first tries the `.cbsh/config` in the current directory, and if not found there
     /// it then tries the home directory (so `~/.cbsh/config`).
-    pub fn new() -> Self {
-        let mut config = try_config_from_path(std::env::current_dir().unwrap())
-            .or_else(|| try_config_from_path(dirs::home_dir().unwrap()))
-            .unwrap_or_default();
+    pub fn new(config_path: Option<String>) -> Self {
+        let (mut config, standalone_credentials) = if let Some(cp) = config_path {
+            let p = PathBuf::from(cp);
+            let config = try_config_from_path(p.clone()).unwrap_or_default();
 
-        let standalone_credentials = try_credentials_from_path(std::env::current_dir().unwrap())
-            .or_else(|| try_credentials_from_path(dirs::home_dir().unwrap()));
+            let standalone_credentials = try_credentials_from_path(p);
+
+            (config, standalone_credentials)
+        } else {
+            let config = try_config_from_dot_path(std::env::current_dir().unwrap())
+                .or_else(|| try_config_from_dot_path(dirs::home_dir().unwrap()))
+                .unwrap_or_default();
+
+            let standalone_credentials =
+                try_credentials_from_dot_path(std::env::current_dir().unwrap())
+                    .or_else(|| try_credentials_from_dot_path(dirs::home_dir().unwrap()));
+
+            (config, standalone_credentials)
+        };
 
         if let Some(standalone) = standalone_credentials {
             for value in config.clusters_mut() {
@@ -140,8 +152,12 @@ impl Default for ShellConfig {
     }
 }
 
-fn try_config_from_path(mut path: PathBuf) -> Option<ShellConfig> {
+fn try_config_from_dot_path(mut path: PathBuf) -> Option<ShellConfig> {
     path.push(".cbsh");
+    try_config_from_path(path)
+}
+
+fn try_config_from_path(mut path: PathBuf) -> Option<ShellConfig> {
     path.push("config");
 
     let read = fs::read_to_string(&path);
@@ -158,8 +174,12 @@ fn try_config_from_path(mut path: PathBuf) -> Option<ShellConfig> {
     }
 }
 
-fn try_credentials_from_path(mut path: PathBuf) -> Option<StandaloneCredentialsConfig> {
+fn try_credentials_from_dot_path(mut path: PathBuf) -> Option<StandaloneCredentialsConfig> {
     path.push(".cbsh");
+    try_credentials_from_path(path)
+}
+
+fn try_credentials_from_path(mut path: PathBuf) -> Option<StandaloneCredentialsConfig> {
     path.push("credentials");
 
     let read = fs::read_to_string(&path);

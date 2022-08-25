@@ -127,7 +127,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     debug!("Effective {:?}", opt);
 
-    let config = ShellConfig::new();
+    let config = ShellConfig::new(opt.config_path);
     debug!("Config {:?}", config);
 
     const DEFAULT_PASSWORD: &str = "password";
@@ -184,12 +184,12 @@ fn main() -> Result<(), Box<dyn Error>> {
             None,
             DEFAULT_KV_BATCH_SIZE,
         );
-        clusters.insert("default".into(), cluster);
+        clusters.insert("default".to_string(), cluster);
         String::from("default")
     } else {
         let mut active = None;
         for v in config.clusters() {
-            let name = v.identifier().to_owned();
+            let name = v.identifier().to_string();
 
             let mut username = v.username();
             let mut cpassword = v.password();
@@ -309,7 +309,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             capella_orgs.insert(name, plane);
         }
 
-        active.unwrap_or_else(|| "".into())
+        active.unwrap_or_else(|| "".to_string())
     };
 
     let state = Arc::new(Mutex::new(State::new(
@@ -523,6 +523,7 @@ struct CliOptions {
     disable_tls: bool,
     tls_cert_path: Option<String>,
     silent: bool,
+    config_path: Option<String>,
 }
 
 #[derive(Clone)]
@@ -600,6 +601,12 @@ impl Command for Cbsh {
             )
             .switch("silent", "run in silent mode", Some('s'))
             .switch("version", "print the version", Some('v'))
+            .named(
+                "config-dir",
+                SyntaxShape::String,
+                "path to the directory containing the config/credentials files",
+                None,
+            )
             .category(Category::Custom("couchbase".to_string()))
     }
 
@@ -688,6 +695,7 @@ fn parse_commandline_args(
             let tls_cert_path: Option<String> =
                 call.get_flag(context, &mut stack, "tls-cert-path")?;
             let silent = call.has_flag("silent");
+            let config_path: Option<String> = call.get_flag(context, &mut stack, "config-dir")?;
 
             fn extract_contents(
                 expression: Option<Expression>,
@@ -700,7 +708,7 @@ fn parse_commandline_args(
                             span: expr.span,
                         }))
                     } else {
-                        Err(ShellError::TypeMismatch("string".into(), expr.span))
+                        Err(ShellError::TypeMismatch("string".to_string(), expr.span))
                     }
                 } else {
                     Ok(None)
@@ -750,6 +758,7 @@ fn parse_commandline_args(
                 disable_tls,
                 tls_cert_path,
                 silent,
+                config_path,
             });
         }
     }
