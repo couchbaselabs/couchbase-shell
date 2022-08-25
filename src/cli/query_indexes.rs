@@ -1,6 +1,7 @@
 use crate::cli::error::{
     deserialize_error, malformed_response_error, unexpected_status_code_error,
 };
+use crate::cli::query::query_context_from_args;
 use crate::cli::util::{
     cluster_identifiers_from, convert_row_to_nu_value, duration_to_golang_string,
     get_active_cluster, NuValueMap,
@@ -49,6 +50,7 @@ impl Command for QueryIndexes {
                 None,
             )
             .switch("with-meta", "Includes related metadata in the result", None)
+            .switch("disable-context", "disable automatically detecting the query context based on the active bucket and scope", None)
             .category(Category::Custom("couchbase".to_string()))
     }
 
@@ -90,6 +92,7 @@ fn query(
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
+        let maybe_scope = query_context_from_args(active_cluster, engine_state, stack, call)?;
 
         if fetch_defs {
             let mut defs =
@@ -101,7 +104,7 @@ fn query(
         let response = active_cluster.cluster().http_client().query_request(
             QueryRequest::Execute {
                 statement: statement.to_string(),
-                scope: None,
+                scope: maybe_scope,
                 timeout: duration_to_golang_string(active_cluster.timeouts().query_timeout()),
             },
             Instant::now().add(active_cluster.timeouts().query_timeout()),
