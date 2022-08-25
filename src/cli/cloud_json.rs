@@ -195,7 +195,7 @@ pub(crate) struct JSONCloudClusterV3 {
     created_by: String,
     #[serde(rename = "createdBy")]
     modified_at: String,
-    #[serde(rename = "modifiedAt")]
+    #[serde(rename = "modifiedAt")],
 }
 
 impl JSONCloudClusterV3 {
