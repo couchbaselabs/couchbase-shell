@@ -40,30 +40,17 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - name: Install Rust (rustup)
-      run: rustup update ${{ matrix.rust }} --no-self-update && rustup default ${{ matrix.rust }}
-      if: matrix.os != 'macos-latest'
-      shell: bash
-
-    - name: Install Rust (macos)
-      run: |
-        curl https://sh.rustup.rs | sh -s -- -y
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-      if: matrix.os == 'macos-latest'
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
 
     - name: Build
-      run: cargo build --verbose --release
-      if: matrix.os == 'ubuntu-18.04'
-
-    - name: Build
-      run: cargo build --verbose --release
-      if: matrix.os == 'windows-latest'
-
-    - name: Build (macos)
-      run: cargo build --verbose --release
-      env:
-        MACOSX_DEPLOYMENT_TARGET: 10.9
-      if: matrix.os == 'macos-latest'
+      uses: actions-rs/cargo@v1
+      with:
+        command: build
+        args: --verbose --release
 
     - name: Create artifact directory
       run: mkdir artifacts
