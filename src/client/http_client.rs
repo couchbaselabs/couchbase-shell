@@ -439,7 +439,7 @@ impl ManagementRequest {
             },
             Self::UpsertUser { username, .. } => format!("/settings/rbac/users/local/{}", username),
             Self::CreateScope { bucket, .. } => {
-                format!("/pools/default/buckets/{}/scopes/", bucket)
+                format!("/pools/default/buckets/{}/scopes", bucket)
             }
             Self::DropScope { bucket, name } => {
                 format!("/pools/default/buckets/{}/scopes/{}", bucket, name)
