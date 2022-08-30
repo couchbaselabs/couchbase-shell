@@ -21,6 +21,7 @@ pub struct KvRequest {
 }
 
 impl KvRequest {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         opcode: Opcode,
         datatype: u8,
@@ -216,6 +217,7 @@ pub fn request(req: KvRequest, collections_enabled: bool) -> BytesMut {
 }
 
 // Creates a flexible request with optional framing extras
+#[allow(clippy::too_many_arguments)]
 pub fn _flexible_request(
     opcode: Opcode,
     datatype: u8,
@@ -267,6 +269,7 @@ pub fn _flexible_request(
 }
 
 /// Creates a regular, non-flex response with all fields necessary.
+#[allow(clippy::too_many_arguments)]
 pub fn _response(
     opcode: Opcode,
     datatype: u8,

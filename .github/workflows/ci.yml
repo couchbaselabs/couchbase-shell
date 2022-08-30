@@ -39,27 +39,16 @@ jobs:
             rust: stable
 
     steps:
-    - uses: actions/checkout@v1
-    - name: Cache cargo registry
-      uses: actions/cache@v1
-      with:
-        path: ~/.cargo/registry
-        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-    - name: Cache cargo index
-      uses: actions/cache@v1
-      with:
-        path: ~/.cargo/git
-        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
-    - name: Cache cargo build
-      uses: actions/cache@v1
-      with:
-        path: target
-        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    - uses: actions/checkout@v2
     - uses: actions-rs/toolchain@v1
       with:
         profile: minimal
         toolchain: stable
         override: true
+        components: clippy
+    - uses: Swatinem/rust-cache@v2
+      with:
+        key: "v1"
 
     - name: Build
       uses: actions-rs/cargo@v1
@@ -77,6 +66,11 @@ jobs:
         VCPKGRS_DYNAMIC: 1
         RUSTFLAGS: -Ctarget-feature=+crt-static
       if: matrix.os == 'windows-latest'
+
+    - name: Clippy
+      uses: actions-rs/clippy@master
+      with:
+        args: --all-features -- -D warnings
 
     - name: Test
       uses: actions-rs/cargo@v1
@@ -129,4 +123,3 @@ jobs:
         with:
           command: fmt
           args: --all -- --check
-

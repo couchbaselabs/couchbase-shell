@@ -269,6 +269,7 @@ pub struct RemoteCluster {
 }
 
 impl RemoteCluster {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         hostnames: Vec<String>,
         username: String,
