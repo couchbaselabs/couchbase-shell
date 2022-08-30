@@ -173,7 +173,7 @@ impl Client {
                 debug!("Address {} is not an ip v6 address", &addr);
             }
         };
-        return match addr.parse::<Ipv4Addr>() {
+        match addr.parse::<Ipv4Addr>() {
             Ok(_) => {
                 debug!("Address {} is an ip v4 address", &addr);
                 true
@@ -182,6 +182,6 @@ impl Client {
                 debug!("Address {} is not an ip v4 address", &addr);
                 false
             }
-        };
+        }
     }
 }

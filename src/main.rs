@@ -437,7 +437,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     if let Some(filepath) = opt.script {
         add_plugin_file(&mut context, None, CBSHELL_FOLDER);
-        let _ret_val = nu_cli::evaluate_file(
+        nu_cli::evaluate_file(
             filepath,
             &args_to_script,
             &mut context,

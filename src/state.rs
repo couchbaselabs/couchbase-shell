@@ -90,10 +90,10 @@ impl State {
                 //}
 
                 if let Some(s) = remote.active_scope() {
-                    let _ = remote.set_active_scope(s);
+                    remote.set_active_scope(s);
                 }
                 if let Some(c) = remote.active_collection() {
-                    let _ = remote.set_active_collection(c);
+                    remote.set_active_collection(c);
                 }
             }
             None => {}
@@ -141,7 +141,7 @@ impl State {
             }
         };
 
-        self.capella_orgs.get(&*active).ok_or_else(|| {
+        self.capella_orgs.get(active).ok_or_else(|| {
             ShellError::GenericError(
                 "Active Capella organization not known".to_string(),
                 "".to_string(),

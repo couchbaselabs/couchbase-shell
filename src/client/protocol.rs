@@ -2,6 +2,7 @@
 
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use std::convert::TryFrom;
+use std::fmt::Write as _;
 use std::fmt::{Display, Formatter};
 
 pub static HEADER_SIZE: usize = 24;
@@ -347,7 +348,7 @@ pub fn _body(input: &Bytes) -> Option<Bytes> {
 /// packet, but nonetheless it is helpful for testing.
 pub fn _dump(input: &Bytes) -> String {
     if input.len() < HEADER_SIZE {
-        return "Received less bytes than a KV header, invalid data?".into();
+        return "Received less bytes than a KV header, invalid data?".to_string();
     }
 
     let mut slice = input.slice(0..input.len());
@@ -355,28 +356,30 @@ pub fn _dump(input: &Bytes) -> String {
     let mut output = String::new();
     output.push_str("--- Packet Dump Info --\n");
     let magic = slice.get_u8();
-    output.push_str(&format!(
-        "     Magic: 0x{:x} ({:?})\n",
+    let _ = writeln!(
+        output,
+        "     Magic: 0x{:x} ({:?})",
         magic,
         Magic::from(magic)
-    ));
+    );
     let opcode = slice.get_u8();
-    output.push_str(&format!(
-        "    Opcode: 0x{:x} ({:?})\n",
+    let _ = writeln!(
+        output,
+        "    Opcode: 0x{:x} ({:?})",
         opcode,
         Opcode::try_from(opcode).unwrap()
-    ));
+    );
     let key_size = slice.get_u16();
-    output.push_str(&format!("   Key Len: {} bytes\n", key_size));
+    let _ = writeln!(output, "   Key Len: {} bytes", key_size);
     let extras_size = slice.get_u8();
-    output.push_str(&format!("Extras Len: {} bytes\n", extras_size));
+    let _ = writeln!(output, "Extras Len: {} bytes", extras_size);
     let datatype = slice.get_u8();
-    output.push_str(&format!("  Datatype: 0x{:x}\n", datatype));
+    let _ = writeln!(output, "  Datatype: 0x{:x}", datatype);
     let partition = slice.get_u16();
-    output.push_str(&format!(" Partition: 0x{:x}\n", partition));
+    let _ = writeln!(output, " Partition: 0x{:x}", partition);
 
     if let Some(body) = _body(input) {
-        output.push_str(&format!("      Body: {:?}\n", body));
+        let _ = writeln!(output, "      Body: {:?}", body);
     }
 
     output.push_str("-----------------------\n");
@@ -478,7 +481,7 @@ impl From<u8> for Magic {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Status {
     Success,
     AuthError,
