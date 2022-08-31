@@ -33,7 +33,7 @@ func main() {
 			scanner := bufio.NewScanner(f)
 			for scanner.Scan() {
 				line := strings.TrimSpace(scanner.Text())
-				if !strings.HasPrefix(line, "pub fn test_") {
+				if !strings.HasPrefix(line, "pub async fn test_") {
 					continue
 				}
 
@@ -56,7 +56,7 @@ func main() {
 	var testfns []string
 	for _, name := range testNames {
 		idx := strings.Index(name, "::")
-		testfns = append(testfns, fmt.Sprintf("TestFn::new(\"%s\", Box::pin(%s(config.clone())))", name[idx+2:], name))
+		testfns = append(testfns, fmt.Sprintf("TestFn::new(\"%s\", Box::pin(%s(cluster.clone())))", name[idx+2:], name))
 	}
 
 	err = os.WriteFile(*rootFlag+"/test_functions.rs", []byte(fmt.Sprintf(template, strings.Join(testfns, ",\n"))), 0644)
@@ -67,14 +67,13 @@ func main() {
 
 var template = `
 use crate::tests::*;
-use crate::util::TestConfig;
 use futures::Future;
 use std::pin::Pin;
 use std::sync::Arc;
-use crate::TestResult;
+use crate::ClusterUnderTest;
 
 // Sad panda noises
-pub fn tests(config: Arc<TestConfig>) -> Vec<TestFn> {
+pub fn tests(cluster: Arc<ClusterUnderTest>) -> Vec<TestFn> {
     vec![
         %s
     ]
@@ -82,13 +81,13 @@ pub fn tests(config: Arc<TestConfig>) -> Vec<TestFn> {
 
 pub struct TestFn {
     pub name: String,
-    pub func: Pin<Box<dyn Future<Output = TestResult<bool>> + Send + 'static>>,
+    pub func: Pin<Box<dyn Future<Output = bool> + Send + 'static>>,
 }
 
 impl TestFn {
     pub fn new(
         name: impl Into<String>,
-        func: Pin<Box<dyn Future<Output = TestResult<bool>> + Send + 'static>>,
+        func: Pin<Box<dyn Future<Output = bool> + Send + 'static>>,
     ) -> Self {
         Self {
             name: name.into(),

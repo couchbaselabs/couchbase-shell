@@ -1,3 +1,5 @@
+extern crate core;
+
 pub mod support;
 mod test_functions;
 pub mod tests;

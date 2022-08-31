@@ -1,5 +1,4 @@
 use crate::tests::*;
-
 use crate::ClusterUnderTest;
 use futures::Future;
 use std::pin::Pin;
@@ -19,6 +18,10 @@ pub fn tests(cluster: Arc<ClusterUnderTest>) -> Vec<TestFn> {
         TestFn::new(
             "test_upserts_a_document",
             Box::pin(doc_upsert::test_upserts_a_document(cluster.clone())),
+        ),
+        TestFn::new(
+            "test_execute_a_query",
+            Box::pin(query::test_execute_a_query(cluster.clone())),
         ),
     ]
 }

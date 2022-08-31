@@ -1,12 +1,12 @@
 use crate::cbsh;
-
 use crate::util::TestConfig;
 use log::debug;
 use nu_test_support::pipeline;
 use nu_test_support::playground::*;
 use std::path::PathBuf;
-
 use std::sync::Arc;
+use std::thread::sleep;
+use std::time::{Duration, Instant};
 
 pub struct CBPlayground {
     bucket: String,
@@ -14,10 +14,23 @@ pub struct CBPlayground {
     collection: Option<String>,
 }
 
+#[derive(Default)]
+pub struct PerTestOptions {
+    no_default_collection: bool,
+}
+
+impl PerTestOptions {
+    pub fn set_no_default_collection(mut self, no_default_collection: bool) -> PerTestOptions {
+        self.no_default_collection = no_default_collection;
+        self
+    }
+}
+
 impl CBPlayground {
     pub fn setup(
         topic: &str,
         config: Arc<TestConfig>,
+        opts: impl Into<Option<PerTestOptions>>,
         block: impl FnOnce(Dirs, &mut CBPlayground),
     ) {
         Playground::setup(topic, |dirs, _sandbox| {
@@ -49,23 +62,30 @@ tls-enabled = false",
                 config.username(),
                 config.password()
             );
-            if let Some(s) = config.scope() {
-                contents = format!(
-                    "
+            let add_collection = if let Some(o) = opts.into() {
+                !o.no_default_collection
+            } else {
+                true
+            };
+            if add_collection {
+                if let Some(s) = config.scope() {
+                    contents = format!(
+                        "
 {}
 default-scope = \"{}\"
                 ",
-                    contents, s
-                );
-            }
-            if let Some(c) = config.collection() {
-                contents = format!(
-                    "
+                        contents, s
+                    );
+                }
+                if let Some(c) = config.collection() {
+                    contents = format!(
+                        "
 {}
 default-collection = \"{}\"
                 ",
-                    contents, c
-                );
+                        contents, c
+                    );
+                }
             }
 
             config_dir.push("config");
@@ -77,12 +97,13 @@ default-collection = \"{}\"
     }
 
     #[allow(dead_code)]
-    pub fn create_document(&self, dirs: &Dirs, key: &str, content: &str) {
-        debug!("Creating doc: {}", &key);
+    pub fn create_document(&self, dirs: &Dirs, key: impl Into<String>, content: impl Into<String>) {
+        let doc_key = key.into();
+        debug!("Creating doc: {}", &doc_key);
         let mut command = format!(
             "doc upsert {} {}  --bucket {}",
-            key.clone(),
-            content,
+            doc_key.clone(),
+            content.into(),
             self.bucket
         );
         if let Some(s) = &self.scope {
@@ -95,11 +116,11 @@ default-collection = \"{}\"
 
         let out = cbsh!(cwd: dirs.test(), pipeline(command.as_str()));
 
-        debug!("Created doc: {}", &key);
+        debug!("Created doc: {}", &doc_key);
 
         assert_eq!("", out.err);
 
-        let json = self.parse_out_to_json(out.out);
+        let json = self.parse_out_to_json(out.out).unwrap();
 
         let arr = json.as_array().unwrap();
         assert_eq!(1, arr.len());
@@ -112,7 +133,25 @@ default-collection = \"{}\"
         assert_eq!("", item["failures"]);
     }
 
-    pub fn parse_out_to_json(&self, out: String) -> serde_json::Value {
-        serde_json::from_str(out.as_str()).unwrap()
+    pub fn parse_out_to_json(&self, out: String) -> Result<serde_json::Value, serde_json::Error> {
+        serde_json::from_str(out.as_str())
+    }
+
+    pub fn retry_until<F>(deadline: Instant, interval: Duration, func: F)
+    where
+        F: Fn() -> bool,
+    {
+        loop {
+            if Instant::now() > deadline {
+                panic!("Test failed to complete in time");
+            }
+
+            let success = func();
+            if success {
+                return;
+            }
+
+            sleep(interval);
+        }
     }
 }
