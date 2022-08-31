@@ -55,8 +55,7 @@ func main() {
 
 	var testfns []string
 	for _, name := range testNames {
-		idx := strings.Index(name, "::")
-		testfns = append(testfns, fmt.Sprintf("TestFn::new(\"%s\", Box::pin(%s(cluster.clone())))", name[idx+2:], name))
+		testfns = append(testfns, fmt.Sprintf("TestFn::new(\"%s\", Box::pin(%s(cluster.clone())))", name, name))
 	}
 
 	err = os.WriteFile(*rootFlag+"/test_functions.rs", []byte(fmt.Sprintf(template, strings.Join(testfns, ",\n"))), 0644)

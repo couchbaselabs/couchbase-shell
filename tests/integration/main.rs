@@ -9,12 +9,12 @@ use crate::util::config::{ClusterType, Config};
 use crate::util::mock::MockCluster;
 use crate::util::standalone::StandaloneCluster;
 use env_logger::Env;
-
 use nu_protocol::ShellError;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::io::ErrorKind;
 use std::sync::Arc;
+use std::time::Instant;
 use util::*;
 
 async fn setup() -> Arc<ClusterUnderTest> {
@@ -44,9 +44,9 @@ enum TestResultStatus {
 impl Display for TestResultStatus {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let alias = match *self {
-            TestResultStatus::Success => "success",
-            TestResultStatus::Failure => "failure",
-            TestResultStatus::Skipped => "skipped",
+            TestResultStatus::Success => "ok",
+            TestResultStatus::Failure => "FAILED",
+            TestResultStatus::Skipped => "ignored",
         };
 
         write!(f, "{}", alias)
@@ -76,17 +76,12 @@ impl From<ShellError> for TestError {
 
 #[derive(Debug)]
 struct TestOutcome {
-    name: String,
     result: TestResultStatus,
-    error: Option<TestError>,
 }
 
 impl Display for TestOutcome {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let mut out = format!("{} -> {}", self.name.clone(), self.result);
-        if let Some(e) = &self.error {
-            out = format!("{}: {}", out, e);
-        }
+        let mut out = format!("{}", self.result);
         write!(f, "{}", out)
     }
 }
@@ -95,31 +90,30 @@ impl Display for TestOutcome {
 async fn main() -> Result<(), std::io::Error> {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
 
+    let start = Instant::now();
     let cluster = setup().await;
 
     let mut success = 0;
     let mut failures = vec![];
     let mut skipped = 0;
-    for t in test_functions::tests(cluster.clone()) {
-        if cluster.config().test_enabled(t.name.clone()) {
-            println!();
-            println!("Running {}", t.name.clone());
+    let mut filtered = 0;
+    let tests = test_functions::tests(cluster.clone());
+    println!();
+    println!("running {} tests", tests.len());
+    for t in tests {
+        let result = if cluster.config().test_enabled(t.name.clone()) {
             let handle = tokio::spawn(t.func);
             let result = match handle.await {
                 Ok(was_skipped) => {
                     if was_skipped {
                         skipped += 1;
                         TestOutcome {
-                            name: t.name.to_string(),
                             result: TestResultStatus::Skipped,
-                            error: None,
                         }
                     } else {
                         success += 1;
                         TestOutcome {
-                            name: t.name.to_string(),
                             result: TestResultStatus::Success,
-                            error: None,
                         }
                     }
                 }
@@ -128,33 +122,42 @@ async fn main() -> Result<(), std::io::Error> {
                     // output to stderr anyway.
                     failures.push(t.name.clone());
                     TestOutcome {
-                        name: t.name.to_string(),
                         result: TestResultStatus::Failure,
-                        error: None,
                     }
                 }
             };
-
-            println!("{}", result);
-            println!();
+            result
         } else {
-            println!("Skipping {}, not enabled", t.name.clone());
-            skipped += 1;
-        }
+            filtered += 1;
+            TestOutcome {
+                result: TestResultStatus::Skipped,
+            }
+        };
+        println!("test {} ... {}", t.name.clone(), result);
     }
 
     teardown();
+    let elapsed = start.elapsed();
+
+    let overall = if failures.len() == 0 { "ok" } else { "FAILED" };
 
     println!();
+    println!(
+        "test result: {}. {} passed; {} failed; {} ignored; 0 measured; {} filtered out; finished in {}.{:.2}s",
+        overall,
+        success,
+        failures.len(),
+        skipped,
+        filtered,
+        elapsed.as_secs(),
+        elapsed.subsec_millis()
+    );
     println!(
         "Success: {}, Failures: {}, Skipped: {}",
         success,
         failures.len(),
         skipped
     );
-    if failures.len() > 0 {
-        println!("Failed: {}", failures.join(", "));
-    }
     println!();
 
     if failures.len() == 0 {

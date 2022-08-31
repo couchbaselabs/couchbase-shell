@@ -8,19 +8,19 @@ use std::sync::Arc;
 pub fn tests(cluster: Arc<ClusterUnderTest>) -> Vec<TestFn> {
     vec![
         TestFn::new(
-            "test_get_a_document",
+            "doc_get::test_get_a_document",
             Box::pin(doc_get::test_get_a_document(cluster.clone())),
         ),
         TestFn::new(
-            "test_get_a_document_not_found",
+            "doc_get::test_get_a_document_not_found",
             Box::pin(doc_get::test_get_a_document_not_found(cluster.clone())),
         ),
         TestFn::new(
-            "test_upserts_a_document",
+            "doc_upsert::test_upserts_a_document",
             Box::pin(doc_upsert::test_upserts_a_document(cluster.clone())),
         ),
         TestFn::new(
-            "test_execute_a_query",
+            "query::test_execute_a_query",
             Box::pin(query::test_execute_a_query(cluster.clone())),
         ),
     ]
