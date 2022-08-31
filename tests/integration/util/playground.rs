@@ -34,10 +34,23 @@ impl CBPlayground {
         block: impl FnOnce(Dirs, &mut CBPlayground),
     ) {
         Playground::setup(topic, |dirs, _sandbox| {
-            let mut playground = CBPlayground {
-                bucket: config.bucket(),
-                scope: config.scope(),
-                collection: config.collection(),
+            let add_collection = if let Some(o) = opts.into() {
+                !o.no_default_collection
+            } else {
+                true
+            };
+            let mut playground = if add_collection {
+                CBPlayground {
+                    bucket: config.bucket(),
+                    scope: config.scope(),
+                    collection: config.collection(),
+                }
+            } else {
+                CBPlayground {
+                    bucket: config.bucket(),
+                    scope: None,
+                    collection: None,
+                }
             };
             let mut config_dir = dirs.clone().test.join(".cbsh".to_string());
 
@@ -62,11 +75,7 @@ tls-enabled = false",
                 config.username(),
                 config.password()
             );
-            let add_collection = if let Some(o) = opts.into() {
-                !o.no_default_collection
-            } else {
-                true
-            };
+
             if add_collection {
                 if let Some(s) = config.scope() {
                     contents = format!(
@@ -137,9 +146,9 @@ default-collection = \"{}\"
         serde_json::from_str(out.as_str())
     }
 
-    pub fn retry_until<F>(deadline: Instant, interval: Duration, func: F)
+    pub fn retry_until<F>(deadline: Instant, interval: Duration, mut func: F)
     where
-        F: Fn() -> bool,
+        F: FnMut() -> bool,
     {
         loop {
             if Instant::now() > deadline {

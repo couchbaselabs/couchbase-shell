@@ -20,8 +20,18 @@ pub fn tests(cluster: Arc<ClusterUnderTest>) -> Vec<TestFn> {
             Box::pin(doc_upsert::test_upserts_a_document(cluster.clone())),
         ),
         TestFn::new(
-            "query::test_execute_a_query",
-            Box::pin(query::test_execute_a_query(cluster.clone())),
+            "query::test_should_send_context_with_a_query",
+            Box::pin(query::test_should_send_context_with_a_query(
+                cluster.clone(),
+            )),
+        ),
+        TestFn::new(
+            "query::test_should_execute_a_query",
+            Box::pin(query::test_should_execute_a_query(cluster.clone())),
+        ),
+        TestFn::new(
+            "query::test_should_fetch_meta",
+            Box::pin(query::test_should_fetch_meta(cluster.clone())),
         ),
     ]
 }

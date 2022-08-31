@@ -12,7 +12,7 @@ pub struct StandaloneCluster {
 }
 
 impl StandaloneCluster {
-    pub async fn start(c: Config, tests: Vec<String>) -> Self {
+    pub async fn start(c: Config) -> Self {
         let bucket = c.bucket().unwrap();
         let conn_str = c.conn_string().unwrap();
         let username = c.username().unwrap();
@@ -46,6 +46,19 @@ impl StandaloneCluster {
             (None, None)
         };
 
+        let enabled_features = if c.enabled_features().is_empty() {
+            features
+        } else {
+            let mut enabled = vec![];
+            let config_enabled = c.enabled_features();
+            for feature in features {
+                if config_enabled.contains(&feature) {
+                    enabled.push(feature)
+                }
+            }
+            enabled
+        };
+
         Self {
             config: Arc::new(TestConfig {
                 connstr: conn_str.clone(),
@@ -54,8 +67,7 @@ impl StandaloneCluster {
                 collection,
                 username,
                 password,
-                support_matrix: features,
-                enabled_tests: tests,
+                support_matrix: enabled_features,
             }),
         }
     }

@@ -22,11 +22,9 @@ async fn setup() -> Arc<ClusterUnderTest> {
     println!("Config: {:?}", &loaded_config);
     let server = match loaded_config.cluster_type() {
         ClusterType::Standalone => {
-            ClusterUnderTest::Standalone(StandaloneCluster::start(loaded_config, vec![]).await)
+            ClusterUnderTest::Standalone(StandaloneCluster::start(loaded_config).await)
         }
-        ClusterType::Mock => {
-            ClusterUnderTest::Mocked(MockCluster::start(loaded_config, vec![]).await)
-        }
+        ClusterType::Mock => ClusterUnderTest::Mocked(MockCluster::start(loaded_config).await),
     };
 
     Arc::new(server)
@@ -81,7 +79,7 @@ struct TestOutcome {
 
 impl Display for TestOutcome {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let mut out = format!("{}", self.result);
+        let out = format!("{}", self.result);
         write!(f, "{}", out)
     }
 }
@@ -96,43 +94,35 @@ async fn main() -> Result<(), std::io::Error> {
     let mut success = 0;
     let mut failures = vec![];
     let mut skipped = 0;
-    let mut filtered = 0;
     let tests = test_functions::tests(cluster.clone());
     println!();
     println!("running {} tests", tests.len());
     for t in tests {
-        let result = if cluster.config().test_enabled(t.name.clone()) {
-            let handle = tokio::spawn(t.func);
-            let result = match handle.await {
-                Ok(was_skipped) => {
-                    if was_skipped {
-                        skipped += 1;
-                        TestOutcome {
-                            result: TestResultStatus::Skipped,
-                        }
-                    } else {
-                        success += 1;
-                        TestOutcome {
-                            result: TestResultStatus::Success,
-                        }
-                    }
-                }
-                Err(_e) => {
-                    // The JoinError here doesn't tell us anything interesting but the panic will be
-                    // output to stderr anyway.
-                    failures.push(t.name.clone());
+        let handle = tokio::spawn(t.func);
+        let result = match handle.await {
+            Ok(was_skipped) => {
+                if was_skipped {
+                    skipped += 1;
                     TestOutcome {
-                        result: TestResultStatus::Failure,
+                        result: TestResultStatus::Skipped,
+                    }
+                } else {
+                    success += 1;
+                    TestOutcome {
+                        result: TestResultStatus::Success,
                     }
                 }
-            };
-            result
-        } else {
-            filtered += 1;
-            TestOutcome {
-                result: TestResultStatus::Skipped,
+            }
+            Err(_e) => {
+                // The JoinError here doesn't tell us anything interesting but the panic will be
+                // output to stderr anyway.
+                failures.push(t.name.clone());
+                TestOutcome {
+                    result: TestResultStatus::Failure,
+                }
             }
         };
+
         println!("test {} ... {}", t.name.clone(), result);
     }
 
@@ -143,20 +133,13 @@ async fn main() -> Result<(), std::io::Error> {
 
     println!();
     println!(
-        "test result: {}. {} passed; {} failed; {} ignored; 0 measured; {} filtered out; finished in {}.{:.2}s",
+        "test result: {}. {} passed; {} failed; {} ignored; 0 measured; 0 filtered out; finished in {}.{:.2}s",
         overall,
         success,
         failures.len(),
         skipped,
-        filtered,
         elapsed.as_secs(),
         elapsed.subsec_millis()
-    );
-    println!(
-        "Success: {}, Failures: {}, Skipped: {}",
-        success,
-        failures.len(),
-        skipped
     );
     println!();
 

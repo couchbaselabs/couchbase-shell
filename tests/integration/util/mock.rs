@@ -50,12 +50,12 @@ pub struct MockCluster {
 }
 
 impl MockCluster {
-    pub async fn start(c: Config, tests: Vec<String>) -> Self {
-        MockCluster::start_caves(c, tests).await
+    pub async fn start(c: Config) -> Self {
+        MockCluster::start_caves(c).await
     }
 
     // TODO: write caves binary to something like /tmp and check if binary already exists before fetch
-    async fn start_caves(c: Config, tests: Vec<String>) -> Self {
+    async fn start_caves(c: Config) -> Self {
         let mut version = CAVES_VERSION.to_string();
         if let Some(cc) = c.caves_version() {
             version = cc;
@@ -141,6 +141,19 @@ impl MockCluster {
         )
         .await;
 
+        let enabled_features = if c.enabled_features().is_empty() {
+            SUPPORTS.to_vec()
+        } else {
+            let mut enabled = vec![];
+            let config_enabled = c.enabled_features();
+            for feature in SUPPORTS.to_vec() {
+                if config_enabled.contains(&feature) {
+                    enabled.push(feature)
+                }
+            }
+            enabled
+        };
+
         Self {
             caves,
             config: Arc::new(TestConfig {
@@ -150,8 +163,7 @@ impl MockCluster {
                 collection: Some(collection),
                 username,
                 password,
-                support_matrix: SUPPORTS.to_vec(),
-                enabled_tests: tests,
+                support_matrix: enabled_features,
             }),
             _stream: stream,
         }

@@ -1,3 +1,4 @@
+use crate::features::TestFeature;
 use envconfig::Envconfig;
 
 #[derive(Debug, Copy, Clone)]
@@ -14,16 +15,16 @@ pub struct Config {
     conn_string: Option<String>,
     caves_version: Option<String>,
     bucket: Option<String>,
-    // enabled_tests: Vec<String>,
+    enabled_features: Vec<TestFeature>,
 }
 
 impl Config {
     pub fn cluster_type(&self) -> ClusterType {
         self.cluster_type
     }
-    // pub fn tests(&self) -> Vec<String> {
-    //     self.enabled_tests.clone()
-    // }
+    pub fn enabled_features(&self) -> Vec<TestFeature> {
+        self.enabled_features.clone()
+    }
     pub fn username(&self) -> Option<String> {
         self.username.clone()
     }
@@ -43,6 +44,17 @@ impl Config {
     pub fn parse() -> Config {
         let config = CLIConfig::init_from_env().unwrap();
 
+        let str_features = config.features();
+        let features = if str_features.is_empty() {
+            vec![]
+        } else {
+            let mut features = vec![];
+            for feature in str_features.split(',') {
+                features.push(TestFeature::from(feature))
+            }
+            features
+        };
+
         if let Some(conn_str) = config.conn_string() {
             let username = config.username();
             let password = config.password();
@@ -55,6 +67,7 @@ impl Config {
                 conn_string: Some(conn_str),
                 caves_version: None,
                 bucket: Some(bucket),
+                enabled_features: features,
             };
         }
 
@@ -65,6 +78,7 @@ impl Config {
             conn_string: None,
             caves_version: config.caves_version(),
             bucket: None,
+            enabled_features: features,
         }
     }
 }
@@ -81,8 +95,8 @@ pub struct CLIConfig {
     default_bucket: String,
     #[envconfig(from = "CAVES_VERSION")]
     caves_version: Option<String>,
-    // #[clap(short, long, value_parser, default_value_t = vec![])]
-    // disable: Vec<String>,
+    #[envconfig(from = "FEATURES", default = "")]
+    features: String,
 }
 
 impl CLIConfig {
@@ -100,5 +114,8 @@ impl CLIConfig {
     }
     pub fn caves_version(&self) -> Option<String> {
         self.caves_version.clone()
+    }
+    pub fn features(&self) -> String {
+        self.features.clone()
     }
 }

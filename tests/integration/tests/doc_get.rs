@@ -1,9 +1,14 @@
+use crate::features::TestFeature;
 use crate::util::playground;
 use crate::{cbsh, ClusterUnderTest, ConfigAware};
 use nu_test_support::pipeline;
 use std::sync::Arc;
 
 pub async fn test_get_a_document(cluster: Arc<ClusterUnderTest>) -> bool {
+    if !cluster.config().supports_feature(TestFeature::KeyValue) {
+        return true;
+    }
+
     playground::CBPlayground::setup("get_a_document", cluster.config(), None, |dirs, sandbox| {
         sandbox.create_document(&dirs, "get_a_document", r#"{"testkey": "testvalue"}"#);
 
@@ -18,6 +23,10 @@ pub async fn test_get_a_document(cluster: Arc<ClusterUnderTest>) -> bool {
 }
 
 pub async fn test_get_a_document_not_found(cluster: Arc<ClusterUnderTest>) -> bool {
+    if !cluster.config().supports_feature(TestFeature::KeyValue) {
+        return true;
+    }
+
     playground::CBPlayground::setup(
         "get_a_document_not_found",
         cluster.config(),

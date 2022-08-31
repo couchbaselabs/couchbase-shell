@@ -1,9 +1,14 @@
+use crate::features::TestFeature;
 use crate::util::playground;
 use crate::{cbsh, ClusterUnderTest, ConfigAware};
 use nu_test_support::pipeline;
 use std::sync::Arc;
 
 pub async fn test_upserts_a_document(cluster: Arc<ClusterUnderTest>) -> bool {
+    if !cluster.config().supports_feature(TestFeature::KeyValue) {
+        return true;
+    }
+
     playground::CBPlayground::setup(
         "upsert_a_document",
         cluster.config(),

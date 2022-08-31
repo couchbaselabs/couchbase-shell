@@ -18,7 +18,6 @@ pub struct TestConfig {
     username: String,
     password: String,
     support_matrix: Vec<TestFeature>,
-    enabled_tests: Vec<String>,
 }
 
 impl TestConfig {
@@ -51,13 +50,6 @@ impl TestConfig {
         }
 
         true
-    }
-    pub fn test_enabled(&self, test: String) -> bool {
-        if self.enabled_tests.is_empty() {
-            return true;
-        }
-
-        self.enabled_tests.contains(&test)
     }
 }
 
