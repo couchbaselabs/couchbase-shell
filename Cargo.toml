@@ -59,10 +59,11 @@ url = "2.1"
 uuid = { version = "1.1.2", features = ["v4"] }
 
 [dev-dependencies]
-nu-test-support = { version = "0.67.0"}
 dunce = "1.0.1"
+envconfig = "0.10.0"
 itertools = "0.10.3"
 lazy_static = "1.4.0"
+nu-test-support = { version = "0.67.0"}
 strum = "0.24.1"
 strum_macros = "0.24.3"
 

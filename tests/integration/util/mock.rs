@@ -1,5 +1,4 @@
 use super::{ConfigAware, TestConfig};
-use crate::util::config::CavesConfig;
 use bytes::Buf;
 use lazy_static::lazy_static;
 use log::debug;
@@ -20,6 +19,7 @@ use tokio::net::tcp::ReadHalf;
 use tokio::net::{TcpListener, TcpStream};
 
 use crate::util::features::TestFeature;
+use crate::{Config, StandaloneCluster};
 use uuid::Uuid;
 
 #[cfg(target_os = "windows")]
@@ -33,7 +33,7 @@ const CAVES_URL: &str = "https://github.com/couchbaselabs/gocaves/releases/downl
 const CAVES_VERSION: &str = "v0.0.1-41";
 
 lazy_static! {
-    static ref SUPPORTS: Vec<TestFeature> = vec![TestFeature::KeyValue,];
+    static ref SUPPORTS: Vec<TestFeature> = vec![TestFeature::KeyValue, TestFeature::Collections];
 }
 
 #[derive(Serialize, Deserialize)]
@@ -50,15 +50,15 @@ pub struct MockCluster {
 }
 
 impl MockCluster {
-    pub async fn start(c: Option<CavesConfig>, tests: Vec<String>) -> Self {
+    pub async fn start(c: Config, tests: Vec<String>) -> Self {
         MockCluster::start_caves(c, tests).await
     }
 
     // TODO: write caves binary to something like /tmp and check if binary already exists before fetch
-    async fn start_caves(c: Option<CavesConfig>, tests: Vec<String>) -> Self {
+    async fn start_caves(c: Config, tests: Vec<String>) -> Self {
         let mut version = CAVES_VERSION.to_string();
-        if let Some(cc) = c {
-            version = cc.version();
+        if let Some(cc) = c.caves_version() {
+            version = cc;
         }
         let path = std::env::temp_dir().join(Path::new(CAVES_BINARY));
         if path.exists() {
@@ -122,15 +122,34 @@ impl MockCluster {
         let addr = parse_create_cluster_response(create_msg);
         debug!("Setting hostnames to {}", &addr);
 
+        let username = "Administrator".to_string();
+        let password = "password".to_string();
+        let bucket = "default".to_string();
+        let scope = StandaloneCluster::create_scope(
+            format!("http://{}", addr.clone()),
+            bucket.clone(),
+            username.clone(),
+            password.clone(),
+        )
+        .await;
+        let collection = StandaloneCluster::create_collection(
+            format!("http://{}", addr.clone()),
+            bucket.clone(),
+            scope.clone(),
+            username.clone(),
+            password.clone(),
+        )
+        .await;
+
         Self {
             caves,
             config: Arc::new(TestConfig {
                 connstr: addr,
-                bucket: "default".into(),
-                scope: "_default".into(),
-                collection: "_default".into(),
-                username: "Administrator".into(),
-                password: "password".into(),
+                bucket,
+                scope: Some(scope),
+                collection: Some(collection),
+                username,
+                password,
                 support_matrix: SUPPORTS.to_vec(),
                 enabled_tests: tests,
             }),

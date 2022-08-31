@@ -1,127 +1,104 @@
-use serde_derive::Deserialize;
-use std::fs;
-use std::path::PathBuf;
+use envconfig::Envconfig;
 
-#[derive(Debug, Copy, Clone, Deserialize)]
+#[derive(Debug, Copy, Clone)]
 pub enum ClusterType {
-    #[serde(rename(deserialize = "standalone"))]
     Standalone,
-    #[serde(rename(deserialize = "mock"))]
     Mock,
 }
 
-// TODO: support disabling individual tests and also support feature flags
-#[derive(Debug, Deserialize)]
-pub struct FileConfig {
-    #[serde(rename(deserialize = "type"))]
-    cluster_type: ClusterType,
-    #[serde(rename(deserialize = "standalone"))]
-    standalone_config: Option<StandaloneConfig>,
-    #[serde(rename(deserialize = "mock"))]
-    caves_config: Option<CavesConfig>,
-    tests: Option<String>,
-}
-
+#[derive(Debug, Clone)]
 pub struct Config {
     cluster_type: ClusterType,
-    standalone_config: Option<StandaloneConfig>,
-    caves_config: Option<CavesConfig>,
-    enabled_tests: Vec<String>,
+    username: Option<String>,
+    password: Option<String>,
+    conn_string: Option<String>,
+    caves_version: Option<String>,
+    bucket: Option<String>,
+    // enabled_tests: Vec<String>,
 }
 
 impl Config {
     pub fn cluster_type(&self) -> ClusterType {
         self.cluster_type
     }
-    pub fn standalone_config(&self) -> Option<StandaloneConfig> {
-        self.standalone_config.clone()
+    // pub fn tests(&self) -> Vec<String> {
+    //     self.enabled_tests.clone()
+    // }
+    pub fn username(&self) -> Option<String> {
+        self.username.clone()
     }
-    pub fn mock_config(&self) -> Option<CavesConfig> {
-        self.caves_config.clone()
+    pub fn password(&self) -> Option<String> {
+        self.password.clone()
     }
-    pub fn tests(&self) -> Vec<String> {
-        self.enabled_tests.clone()
+    pub fn conn_string(&self) -> Option<String> {
+        self.conn_string.clone()
+    }
+    pub fn caves_version(&self) -> Option<String> {
+        self.caves_version.clone()
+    }
+    pub fn bucket(&self) -> Option<String> {
+        self.bucket.clone()
     }
 
-    pub fn try_load_config() -> Option<Config> {
-        let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        path.push("integration");
-        path.push("config.toml");
-        let config: FileConfig = match fs::read_to_string(&path) {
-            Ok(r) => match toml::from_str(&r) {
-                Ok(i) => Some(i),
-                Err(e) => {
-                    panic!("Failed to parse config file: {}", e);
-                }
-            },
-            Err(_e) => None,
-        }?;
+    pub fn parse() -> Config {
+        let config = CLIConfig::init_from_env().unwrap();
 
-        let enabled_tests = match config.tests {
-            Some(ref t) => t
-                .clone()
-                .split(",")
-                .map(|i| i.to_string())
-                .collect::<Vec<String>>(),
-            None => Vec::new(),
-        };
+        if let Some(conn_str) = config.conn_string() {
+            let username = config.username();
+            let password = config.password();
+            let bucket = config.default_bucket();
 
-        Some(Config {
-            enabled_tests,
-            standalone_config: config.standalone_config,
-            cluster_type: config.cluster_type,
-            caves_config: config.caves_config,
-        })
+            return Config {
+                cluster_type: ClusterType::Standalone,
+                username: Some(username),
+                password: Some(password),
+                conn_string: Some(conn_str),
+                caves_version: None,
+                bucket: Some(bucket),
+            };
+        }
+
+        Config {
+            cluster_type: ClusterType::Mock,
+            username: None,
+            password: None,
+            conn_string: None,
+            caves_version: config.caves_version(),
+            bucket: None,
+        }
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct StandaloneConfig {
+#[derive(Debug, Clone, Envconfig)]
+pub struct CLIConfig {
+    #[envconfig(from = "USERNAME", default = "Administrator")]
     username: String,
+    #[envconfig(from = "PASSWORD", default = "password")]
     password: String,
-    #[serde(alias = "conn-string")]
-    conn_string: String,
-    #[serde(alias = "default-bucket")]
-    default_bucket: Option<String>,
-    #[serde(alias = "default-scope")]
-    default_scope: Option<String>,
-    #[serde(alias = "default-collection")]
-    default_collection: Option<String>,
-    #[serde(alias = "server-version")]
-    server_version: Option<String>,
+    #[envconfig(from = "CONN_STRING")]
+    conn_string: Option<String>,
+    #[envconfig(from = "BUCKET", default = "default")]
+    default_bucket: String,
+    #[envconfig(from = "CAVES_VERSION")]
+    caves_version: Option<String>,
+    // #[clap(short, long, value_parser, default_value_t = vec![])]
+    // disable: Vec<String>,
 }
 
-impl StandaloneConfig {
+impl CLIConfig {
     pub fn username(&self) -> String {
         self.username.clone()
     }
     pub fn password(&self) -> String {
         self.password.clone()
     }
-    pub fn conn_string(&self) -> String {
+    pub fn conn_string(&self) -> Option<String> {
         self.conn_string.clone()
     }
-    pub fn default_bucket(&self) -> Option<String> {
+    pub fn default_bucket(&self) -> String {
         self.default_bucket.clone()
     }
-    pub fn default_scope(&self) -> Option<String> {
-        self.default_scope.clone()
-    }
-    pub fn default_collection(&self) -> Option<String> {
-        self.default_collection.clone()
-    }
-    pub fn server_version(&self) -> Option<String> {
-        self.server_version.clone()
-    }
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct CavesConfig {
-    version: String,
-}
-
-impl CavesConfig {
-    pub fn version(&self) -> String {
-        self.version.clone()
+    pub fn caves_version(&self) -> Option<String> {
+        self.caves_version.clone()
     }
 }

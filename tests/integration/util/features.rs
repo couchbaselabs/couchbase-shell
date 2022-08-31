@@ -4,4 +4,5 @@ use strum_macros::EnumIter;
 pub enum TestFeature {
     KeyValue,
     Query,
+    Collections,
 }

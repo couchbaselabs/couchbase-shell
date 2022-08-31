@@ -1,7 +1,6 @@
 pub mod config;
 pub mod features;
 pub mod mock;
-mod node_version;
 pub mod playground;
 pub mod standalone;
 
@@ -14,8 +13,8 @@ use std::sync::Arc;
 pub struct TestConfig {
     connstr: String,
     bucket: String,
-    scope: String,
-    collection: String,
+    scope: Option<String>,
+    collection: Option<String>,
     username: String,
     password: String,
     support_matrix: Vec<TestFeature>,
@@ -29,10 +28,10 @@ impl TestConfig {
     pub fn bucket(&self) -> String {
         self.bucket.clone()
     }
-    pub fn scope(&self) -> String {
+    pub fn scope(&self) -> Option<String> {
         self.scope.clone()
     }
-    pub fn collection(&self) -> String {
+    pub fn collection(&self) -> Option<String> {
         self.collection.clone()
     }
     pub fn username(&self) -> String {

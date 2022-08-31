@@ -1,10 +1,10 @@
-use crate::cbsh;
-use crate::util::{playground, TestConfig};
+use crate::util::playground;
+use crate::{cbsh, ClusterUnderTest, ConfigAware};
 use nu_test_support::pipeline;
 use std::sync::Arc;
 
-pub async fn test_get_a_document(config: Arc<TestConfig>) -> bool {
-    playground::CBPlayground::setup("get_a_document", config, |dirs, sandbox| {
+pub async fn test_get_a_document(cluster: Arc<ClusterUnderTest>) -> bool {
+    playground::CBPlayground::setup("get_a_document", cluster.config(), |dirs, sandbox| {
         sandbox.create_document(&dirs, "get_a_document", r#"{"testkey": "testvalue"}"#);
 
         let out = cbsh!(cwd: dirs.test(), pipeline(r#"doc get "get_a_document" | get content | first | to json"#));
@@ -17,13 +17,17 @@ pub async fn test_get_a_document(config: Arc<TestConfig>) -> bool {
     false
 }
 
-pub async fn test_get_a_document_not_found(config: Arc<TestConfig>) -> bool {
-    playground::CBPlayground::setup("get_a_document_not_found", config, |dirs, _sandbox| {
-        let out = cbsh!(cwd: dirs.test(), pipeline(r#"doc get "get_a_document_not_found" | get error | first"#));
+pub async fn test_get_a_document_not_found(cluster: Arc<ClusterUnderTest>) -> bool {
+    playground::CBPlayground::setup(
+        "get_a_document_not_found",
+        cluster.config(),
+        |dirs, _sandbox| {
+            let out = cbsh!(cwd: dirs.test(), pipeline(r#"doc get "get_a_document_not_found" | get error | first"#));
 
-        assert_eq!("", out.err);
-        assert!(out.out.contains("key not found"));
-    });
+            assert_eq!("", out.err);
+            assert!(out.out.contains("key not found"));
+        },
+    );
 
     false
 }

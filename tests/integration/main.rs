@@ -7,6 +7,7 @@ use crate::util::config::{ClusterType, Config};
 use crate::util::mock::MockCluster;
 use crate::util::standalone::StandaloneCluster;
 use env_logger::Env;
+
 use nu_protocol::ShellError;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
@@ -14,24 +15,19 @@ use std::io::ErrorKind;
 use std::sync::Arc;
 use util::*;
 
-async fn setup() -> (ClusterUnderTest, Arc<TestConfig>) {
-    let loaded_config = Config::try_load_config();
-    let server = match loaded_config {
-        Some(c) => match c.cluster_type() {
-            ClusterType::Standalone => ClusterUnderTest::Standalone(StandaloneCluster::start(
-                c.standalone_config()
-                    .expect("Standalone config required when standalone type used."),
-                c.tests(),
-            )),
-            ClusterType::Mock => {
-                ClusterUnderTest::Mocked(MockCluster::start(c.mock_config(), c.tests()).await)
-            }
-        },
-        None => ClusterUnderTest::Mocked(MockCluster::start(None, vec![]).await),
+async fn setup() -> Arc<ClusterUnderTest> {
+    let loaded_config = Config::parse();
+    println!("Config: {:?}", &loaded_config);
+    let server = match loaded_config.cluster_type() {
+        ClusterType::Standalone => {
+            ClusterUnderTest::Standalone(StandaloneCluster::start(loaded_config, vec![]).await)
+        }
+        ClusterType::Mock => {
+            ClusterUnderTest::Mocked(MockCluster::start(loaded_config, vec![]).await)
+        }
     };
-    let config = server.config();
 
-    (server, config)
+    Arc::new(server)
 }
 
 fn teardown() {}
@@ -97,13 +93,13 @@ impl Display for TestOutcome {
 async fn main() -> Result<(), std::io::Error> {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
 
-    let config = setup().await;
+    let cluster = setup().await;
 
     let mut success = 0;
     let mut failures = vec![];
     let mut skipped = 0;
-    for t in test_functions::tests(config.1.clone()) {
-        if config.1.clone().test_enabled(t.name.clone()) {
+    for t in test_functions::tests(cluster.clone()) {
+        if cluster.config().test_enabled(t.name.clone()) {
             println!();
             println!("Running {}", t.name.clone());
             let handle = tokio::spawn(t.func);

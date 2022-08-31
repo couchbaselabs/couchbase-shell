@@ -1,10 +1,10 @@
-use crate::cbsh;
-use crate::util::{playground, TestConfig};
+use crate::util::playground;
+use crate::{cbsh, ClusterUnderTest, ConfigAware};
 use nu_test_support::pipeline;
 use std::sync::Arc;
 
-pub async fn test_upserts_a_document(config: Arc<TestConfig>) -> bool {
-    playground::CBPlayground::setup("upsert_a_document", config, |dirs, sandbox| {
+pub async fn test_upserts_a_document(cluster: Arc<ClusterUnderTest>) -> bool {
+    playground::CBPlayground::setup("upsert_a_document", cluster.config(), |dirs, sandbox| {
         let out = cbsh!(cwd: dirs.test(), pipeline(r#"doc upsert test {"test": "test"} | first | to json"#));
 
         assert_eq!("", out.err);

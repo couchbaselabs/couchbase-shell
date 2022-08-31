@@ -10,8 +10,8 @@ use std::sync::Arc;
 
 pub struct CBPlayground {
     bucket: String,
-    scope: String,
-    collection: String,
+    scope: Option<String>,
+    collection: Option<String>,
 }
 
 impl CBPlayground {
@@ -35,24 +35,38 @@ impl CBPlayground {
 
             std::fs::create_dir(PathBuf::from(&config_dir)).expect("can not create cbsh directory");
 
-            let contents = format!(
+            let mut contents = format!(
                 "version = 1
 [[clusters]]
 identifier = \"local\"
 hostnames = [\"{}\"]
 default-bucket = \"{}\"
-default-collection = \"{}\"
-default-scope = \"{}\"
 username = \"{}\"
 password = \"{}\"
 tls-enabled = false",
                 config.connstr(),
                 config.bucket(),
-                config.collection(),
-                config.scope(),
                 config.username(),
                 config.password()
             );
+            if let Some(s) = config.scope() {
+                contents = format!(
+                    "
+{}
+default-scope = \"{}\"
+                ",
+                    contents, s
+                );
+            }
+            if let Some(c) = config.collection() {
+                contents = format!(
+                    "
+{}
+default-collection = \"{}\"
+                ",
+                    contents, c
+                );
+            }
 
             config_dir.push("config");
 
@@ -71,11 +85,11 @@ tls-enabled = false",
             content,
             self.bucket
         );
-        if !self.scope.is_empty() {
-            command = format!("{} --scope {}", command, self.scope)
+        if let Some(s) = &self.scope {
+            command = format!("{} --scope {}", command, s)
         }
-        if !self.collection.is_empty() {
-            command = format!("{} --collection {}", command, self.collection)
+        if let Some(c) = &self.collection {
+            command = format!("{} --collection {}", command, c)
         }
         command = format!("{} | to json", command);
 
