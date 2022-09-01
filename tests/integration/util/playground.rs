@@ -1,5 +1,5 @@
-use crate::cbsh;
 use crate::util::TestConfig;
+use crate::{cbsh, TestResult};
 use log::debug;
 use nu_test_support::pipeline;
 use nu_test_support::playground::*;
@@ -148,16 +148,22 @@ default-collection = \"{}\"
 
     pub fn retry_until<F>(deadline: Instant, interval: Duration, mut func: F)
     where
-        F: FnMut() -> bool,
+        F: FnMut() -> TestResult<bool>,
     {
         loop {
             if Instant::now() > deadline {
                 panic!("Test failed to complete in time");
             }
 
-            let success = func();
-            if success {
-                return;
+            match func() {
+                Ok(success) => {
+                    if success {
+                        return;
+                    }
+                }
+                Err(e) => {
+                    println!("Retry func returned error: {}", e)
+                }
             }
 
             sleep(interval);

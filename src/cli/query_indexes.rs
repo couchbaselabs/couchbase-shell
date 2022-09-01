@@ -78,7 +78,7 @@ fn query(
 
     let fetch_defs = call.has_flag("definitions");
 
-    let statement = "select keyspace_id as `bucket`, name, state, `using` as `type`, \
+    let statement = "select bucket_id as `bucket`, scope_id as `scope`, keyspace_id as `keyspace`, name, state, `using` as `type`, \
     ifmissing(condition, null) as condition, ifmissing(is_primary, false) as `primary`, \
     index_key from system:indexes"
         .to_string();

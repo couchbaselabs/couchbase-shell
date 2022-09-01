@@ -43,6 +43,7 @@ struct CreateConfig {
     id: String,
 }
 
+#[derive(Debug)]
 pub struct MockCluster {
     caves: Child,
     config: Arc<TestConfig>,

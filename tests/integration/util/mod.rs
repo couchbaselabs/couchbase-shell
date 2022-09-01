@@ -1,13 +1,17 @@
 pub mod config;
+pub mod error;
 pub mod features;
 pub mod mock;
 pub mod playground;
 pub mod standalone;
 
+use crate::error::TestError;
 use crate::util::features::TestFeature;
 use crate::util::mock::MockCluster;
 use crate::util::standalone::StandaloneCluster;
 use std::sync::Arc;
+
+pub type TestResult<T> = Result<T, TestError>;
 
 #[derive(Debug)]
 pub struct TestConfig {
@@ -53,6 +57,7 @@ impl TestConfig {
     }
 }
 
+#[derive(Debug)]
 pub enum ClusterUnderTest {
     Standalone(StandaloneCluster),
     Mocked(MockCluster),

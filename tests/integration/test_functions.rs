@@ -33,6 +33,22 @@ pub fn tests(cluster: Arc<ClusterUnderTest>) -> Vec<TestFn> {
             "query::test_should_fetch_meta",
             Box::pin(query::test_should_fetch_meta(cluster.clone())),
         ),
+        TestFn::new(
+            "query_indexes::test_should_get_indexes_with_context",
+            Box::pin(query_indexes::test_should_get_indexes_with_context(
+                cluster.clone(),
+            )),
+        ),
+        TestFn::new(
+            "query_indexes::test_should_get_indexes",
+            Box::pin(query_indexes::test_should_get_indexes(cluster.clone())),
+        ),
+        TestFn::new(
+            "query_indexes::test_should_get_index_definitions",
+            Box::pin(query_indexes::test_should_get_index_definitions(
+                cluster.clone(),
+            )),
+        ),
     ]
 }
 

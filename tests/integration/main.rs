@@ -9,8 +9,6 @@ use crate::util::config::{ClusterType, Config};
 use crate::util::mock::MockCluster;
 use crate::util::standalone::StandaloneCluster;
 use env_logger::Env;
-use nu_protocol::ShellError;
-use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::io::ErrorKind;
 use std::sync::Arc;
@@ -26,6 +24,7 @@ async fn setup() -> Arc<ClusterUnderTest> {
         }
         ClusterType::Mock => ClusterUnderTest::Mocked(MockCluster::start(loaded_config).await),
     };
+    println!("Cluster: {:?}", &server);
 
     Arc::new(server)
 }
@@ -48,27 +47,6 @@ impl Display for TestResultStatus {
         };
 
         write!(f, "{}", alias)
-    }
-}
-
-#[derive(Debug)]
-pub struct TestError {
-    reason: String,
-}
-
-impl Display for TestError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.reason.clone())
-    }
-}
-
-impl Error for TestError {}
-
-impl From<ShellError> for TestError {
-    fn from(e: ShellError) -> Self {
-        Self {
-            reason: e.to_string(),
-        }
     }
 }
 

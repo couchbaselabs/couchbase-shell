@@ -1,12 +1,26 @@
 use super::{ConfigAware, TestConfig};
 use crate::util::features::TestFeature;
-use crate::Config;
+use crate::{cbsh, playground, Config, TestResult};
+use lazy_static::lazy_static;
+use nu_test_support::pipeline;
 use serde_json::Value;
 use std::collections::HashMap;
+use std::ops::Add;
 use std::sync::Arc;
-
+use std::time;
+use std::time::Instant;
 use uuid::Uuid;
 
+lazy_static! {
+    static ref ALWAYS_SUPPORTS: Vec<TestFeature> = vec![
+        TestFeature::KeyValue,
+        TestFeature::Query,
+        TestFeature::QueryIndex,
+        TestFeature::QueryIndexDefinitions,
+    ];
+}
+
+#[derive(Debug)]
 pub struct StandaloneCluster {
     config: Arc<TestConfig>,
 }
@@ -59,17 +73,87 @@ impl StandaloneCluster {
             enabled
         };
 
-        Self {
-            config: Arc::new(TestConfig {
-                connstr: conn_str.clone(),
-                bucket: bucket.clone(),
-                scope,
-                collection,
-                username,
-                password,
-                support_matrix: enabled_features,
-            }),
-        }
+        let config = Arc::new(TestConfig {
+            connstr: conn_str.clone(),
+            bucket: bucket.clone(),
+            scope,
+            collection,
+            username,
+            password,
+            support_matrix: enabled_features,
+        });
+        StandaloneCluster::wait_for_scope(config.clone()).await;
+        StandaloneCluster::wait_for_collection(config.clone()).await;
+
+        Self { config }
+    }
+
+    async fn wait_for_scope(config: Arc<TestConfig>) {
+        let scope_name = match config.scope() {
+            None => {
+                return;
+            }
+            Some(s) => s,
+        };
+        playground::CBPlayground::setup("wait_for_scope", config, None, |dirs, sandbox| {
+            playground::CBPlayground::retry_until(
+                Instant::now().add(time::Duration::from_secs(30)),
+                time::Duration::from_millis(200),
+                || -> TestResult<bool> {
+                    let out = cbsh!(cwd: dirs.test(), pipeline(r#"scopes | get scope | to json"#));
+
+                    assert_eq!("", out.err);
+
+                    let json = sandbox.parse_out_to_json(out.out).unwrap();
+
+                    for scope in json.as_array().unwrap() {
+                        if scope.as_str().unwrap() == scope_name {
+                            return Ok(true);
+                        }
+                    }
+
+                    Ok(false)
+                },
+            );
+        });
+    }
+
+    async fn wait_for_collection(config: Arc<TestConfig>) {
+        let scope_name = match config.scope() {
+            None => {
+                return;
+            }
+            Some(s) => s,
+        };
+        let collection_name = match config.collection() {
+            None => {
+                return;
+            }
+            Some(c) => c,
+        };
+        playground::CBPlayground::setup("wait_for_scope", config, None, |dirs, sandbox| {
+            playground::CBPlayground::retry_until(
+                Instant::now().add(time::Duration::from_secs(30)),
+                time::Duration::from_millis(200),
+                || -> TestResult<bool> {
+                    let out = cbsh!(cwd: dirs.test(), pipeline(r#"collections | select scope collection | to json"#));
+
+                    assert_eq!("", out.err);
+
+                    let json = sandbox.parse_out_to_json(out.out).unwrap();
+
+                    for item in json.as_array().unwrap() {
+                        if item["scope"] == scope_name {
+                            if item["collection"] == collection_name {
+                                return Ok(true);
+                            }
+                        }
+                    }
+
+                    Ok(false)
+                },
+            );
+        });
     }
 
     async fn get_supported_features(
@@ -95,7 +179,7 @@ impl StandaloneCluster {
             .get("bucketCapabilities")
             .expect("bucketCapabilities not present in payload from cluster");
 
-        let mut features = vec![TestFeature::KeyValue, TestFeature::Query];
+        let mut features = ALWAYS_SUPPORTS.to_vec();
         for cap in caps.as_array().expect("bucketCapabilities not an array") {
             let c = cap.as_str().expect("bucket capability not a string");
             if c == "collections" {
