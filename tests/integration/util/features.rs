@@ -7,6 +7,7 @@ pub enum TestFeature {
     Collections,
     QueryIndex,
     QueryIndexDefinitions,
+    QueryIndexAdvise,
 }
 
 impl From<&str> for TestFeature {
@@ -17,6 +18,7 @@ impl From<&str> for TestFeature {
             "collections" => TestFeature::Collections,
             "queryindex" => TestFeature::QueryIndex,
             "queryindexdefs" => TestFeature::QueryIndexDefinitions,
+            "queryindexadvise" => TestFeature::QueryIndexAdvise,
             _ => panic!("Unrecognized feature : {}", feature),
         }
     }

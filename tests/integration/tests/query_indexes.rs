@@ -1,8 +1,8 @@
 use crate::features::TestFeature;
 use crate::playground::{CBPlayground, PerTestOptions};
 use crate::tests::query::create_index;
-use crate::{cbsh, ClusterUnderTest, ConfigAware, TestResult};
-use nu_test_support::pipeline;
+use crate::{ClusterUnderTest, ConfigAware, TestResult};
+
 use serde_json::Value;
 use std::collections::HashMap;
 use std::ops::Add;
@@ -26,31 +26,21 @@ struct Index {
 
 fn get_indexes(
     base_cmd: String,
-    cwd: &PathBuf,
     index_names: Vec<String>,
+    cwd: &PathBuf,
     sandbox: &mut CBPlayground,
     flags: impl Into<String>,
 ) -> HashMap<String, Value> {
     let mut indexes: HashMap<String, Value> = HashMap::new();
     let flags = flags.into();
-    CBPlayground::retry_until(
+    let cmd = format!("{} query indexes {} | to json", base_cmd, flags.clone());
+    sandbox.retry_until(
         Instant::now().add(time::Duration::from_secs(30)),
         time::Duration::from_millis(200),
-        || -> TestResult<bool> {
-            let out = cbsh!(
-                cwd,
-                pipeline(
-                    format!("{} query indexes {} | to json", base_cmd, flags.clone()).as_str()
-                )
-            );
-
-            if out.err != "" {
-                println!("Received error from query: {}", out.err);
-                return Ok(false);
-            }
-
-            let json = sandbox.parse_out_to_json(out.out)?;
-
+        cmd.as_str(),
+        cwd,
+        None,
+        |json| -> TestResult<bool> {
             match json.as_array() {
                 Some(arr) => {
                     indexes.drain();
@@ -120,41 +110,41 @@ pub async fn test_should_get_indexes_with_context(cluster: Arc<ClusterUnderTest>
         cluster.config(),
         PerTestOptions::default().set_no_default_collection(true),
         |dirs, sandbox| {
-            let (cmd, keyspace) = if let Some(s) = config.scope() {
-                (
-                    format!("cb-env scope \"{}\" |", s),
-                    config.collection().unwrap(),
-                )
-            } else {
-                ("".to_string(), config.bucket())
-            };
+            let scope = config.scope().unwrap();
+            let cmd = format!("cb-env scope \"{}\" |", scope.clone());
+            sandbox.set_scope(scope.clone());
+            let collection = config.collection().unwrap();
+            sandbox.set_collection(collection.clone());
 
             let fields = "`field1`,`field2`";
-            let mut index_name1 = String::new();
-            let mut index_name2 = String::new();
-            CBPlayground::retry_until(
-                Instant::now().add(time::Duration::from_secs(30)),
-                time::Duration::from_millis(200),
-                || -> TestResult<bool> {
-                    index_name1 = create_index(cmd.clone(), fields, keyspace.clone(), dirs.test())?;
-                    index_name2 = create_index(cmd.clone(), fields, keyspace.clone(), dirs.test())?;
-                    Ok(true)
-                },
+            let index_name1 = create_index(
+                cmd.clone(),
+                fields,
+                collection.clone(),
+                dirs.test(),
+                sandbox,
+            );
+            let index_name2 = create_index(
+                cmd.clone(),
+                fields,
+                collection.clone(),
+                dirs.test(),
+                sandbox,
             );
 
             let indexes = get_indexes(
                 cmd,
-                dirs.test(),
                 vec![index_name1.clone(), index_name2.clone()],
+                dirs.test(),
                 sandbox,
                 "",
             );
             assert_index(
                 Index {
                     bucket: config.bucket(),
-                    scope: config.scope().unwrap_or("".to_string()),
+                    scope: scope.clone(),
                     name: index_name1.clone(),
-                    keyspace: keyspace.clone(),
+                    keyspace: collection.clone(),
                     condition: Value::Null,
                     fields: fields
                         .split(',')
@@ -169,9 +159,9 @@ pub async fn test_should_get_indexes_with_context(cluster: Arc<ClusterUnderTest>
             assert_index(
                 Index {
                     bucket: config.bucket(),
-                    scope: config.scope().unwrap_or("".to_string()),
+                    scope,
                     name: index_name2.clone(),
-                    keyspace,
+                    keyspace: collection,
                     condition: Value::Null,
                     fields: fields
                         .split(',')
@@ -203,22 +193,15 @@ pub async fn test_should_get_indexes(cluster: Arc<ClusterUnderTest>) -> bool {
             let keyspace = config.bucket();
             let cmd = "".to_string();
             let fields = "`field1`,`field2`";
-            let mut index_name1 = String::new();
-            let mut index_name2 = String::new();
-            CBPlayground::retry_until(
-                Instant::now().add(time::Duration::from_secs(30)),
-                time::Duration::from_millis(200),
-                || -> TestResult<bool> {
-                    index_name1 = create_index(cmd.clone(), fields, keyspace.clone(), dirs.test())?;
-                    index_name2 = create_index(cmd.clone(), fields, keyspace.clone(), dirs.test())?;
-                    Ok(true)
-                },
-            );
+            let index_name1 =
+                create_index(cmd.clone(), fields, keyspace.clone(), dirs.test(), sandbox);
+            let index_name2 =
+                create_index(cmd.clone(), fields, keyspace.clone(), dirs.test(), sandbox);
 
             let indexes = get_indexes(
                 cmd,
-                dirs.test(),
                 vec![index_name1.clone(), index_name2.clone()],
+                dirs.test(),
                 sandbox,
                 "",
             );
@@ -276,20 +259,13 @@ pub async fn test_should_get_index_definitions(cluster: Arc<ClusterUnderTest>) -
             let keyspace = config.bucket();
             let cmd = "".to_string();
             let fields = "`field1`,`field2`";
-            let mut index_name = String::new();
-            CBPlayground::retry_until(
-                Instant::now().add(time::Duration::from_secs(30)),
-                time::Duration::from_millis(200),
-                || -> TestResult<bool> {
-                    index_name = create_index(cmd.clone(), fields, keyspace.clone(), dirs.test())?;
-                    Ok(true)
-                },
-            );
+            let index_name =
+                create_index(cmd.clone(), fields, keyspace.clone(), dirs.test(), sandbox);
 
             let indexes = get_indexes(
                 cmd,
-                dirs.test(),
                 vec![index_name.clone()],
+                dirs.test(),
                 sandbox,
                 "--definitions",
             );

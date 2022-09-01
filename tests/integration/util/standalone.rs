@@ -1,8 +1,8 @@
 use super::{ConfigAware, TestConfig};
 use crate::util::features::TestFeature;
-use crate::{cbsh, playground, Config, TestResult};
+use crate::{playground, Config, TestResult};
 use lazy_static::lazy_static;
-use nu_test_support::pipeline;
+
 use serde_json::Value;
 use std::collections::HashMap;
 use std::ops::Add;
@@ -17,6 +17,7 @@ lazy_static! {
         TestFeature::Query,
         TestFeature::QueryIndex,
         TestFeature::QueryIndexDefinitions,
+        TestFeature::QueryIndexAdvise,
     ];
 }
 
@@ -96,16 +97,14 @@ impl StandaloneCluster {
             Some(s) => s,
         };
         playground::CBPlayground::setup("wait_for_scope", config, None, |dirs, sandbox| {
-            playground::CBPlayground::retry_until(
+            let cmd = r#"scopes | get scope | to json"#;
+            sandbox.retry_until(
                 Instant::now().add(time::Duration::from_secs(30)),
                 time::Duration::from_millis(200),
-                || -> TestResult<bool> {
-                    let out = cbsh!(cwd: dirs.test(), pipeline(r#"scopes | get scope | to json"#));
-
-                    assert_eq!("", out.err);
-
-                    let json = sandbox.parse_out_to_json(out.out).unwrap();
-
+                cmd,
+                dirs.test(),
+                None,
+                |json| -> TestResult<bool> {
                     for scope in json.as_array().unwrap() {
                         if scope.as_str().unwrap() == scope_name {
                             return Ok(true);
@@ -132,16 +131,14 @@ impl StandaloneCluster {
             Some(c) => c,
         };
         playground::CBPlayground::setup("wait_for_scope", config, None, |dirs, sandbox| {
-            playground::CBPlayground::retry_until(
+            let cmd = r#"collections | select scope collection | to json"#;
+            sandbox.retry_until(
                 Instant::now().add(time::Duration::from_secs(30)),
                 time::Duration::from_millis(200),
-                || -> TestResult<bool> {
-                    let out = cbsh!(cwd: dirs.test(), pipeline(r#"collections | select scope collection | to json"#));
-
-                    assert_eq!("", out.err);
-
-                    let json = sandbox.parse_out_to_json(out.out).unwrap();
-
+                cmd,
+                dirs.test(),
+                None,
+                |json| -> TestResult<bool> {
                     for item in json.as_array().unwrap() {
                         if item["scope"] == scope_name {
                             if item["collection"] == collection_name {

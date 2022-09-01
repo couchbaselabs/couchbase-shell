@@ -36,3 +36,11 @@ impl From<String> for TestError {
         TestError { message }
     }
 }
+
+impl From<&str> for TestError {
+    fn from(message: &str) -> Self {
+        TestError {
+            message: message.to_string(),
+        }
+    }
+}

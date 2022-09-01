@@ -2,7 +2,8 @@ use crate::util::TestConfig;
 use crate::{cbsh, TestResult};
 use log::debug;
 use nu_test_support::pipeline;
-use nu_test_support::playground::*;
+use nu_test_support::playground::{Dirs, Playground};
+use serde_json::{Error, Value};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::thread::sleep;
@@ -105,6 +106,14 @@ default-collection = \"{}\"
         })
     }
 
+    pub fn set_scope(&mut self, scope: String) {
+        self.scope = Some(scope);
+    }
+
+    pub fn set_collection(&mut self, collection: String) {
+        self.collection = Some(collection);
+    }
+
     #[allow(dead_code)]
     pub fn create_document(&self, dirs: &Dirs, key: impl Into<String>, content: impl Into<String>) {
         let doc_key = key.into();
@@ -142,31 +151,76 @@ default-collection = \"{}\"
         assert_eq!("", item["failures"]);
     }
 
-    pub fn parse_out_to_json(&self, out: String) -> Result<serde_json::Value, serde_json::Error> {
+    pub fn parse_out_to_json(&self, out: String) -> Result<Value, Error> {
         serde_json::from_str(out.as_str())
     }
 
-    pub fn retry_until<F>(deadline: Instant, interval: Duration, mut func: F)
-    where
-        F: FnMut() -> TestResult<bool>,
+    pub fn retry_until<F>(
+        &self,
+        deadline: Instant,
+        interval: Duration,
+        cmd: &str,
+        cwd: &PathBuf,
+        opts: impl Into<Option<RetryExpectations>>,
+        mut func: F,
+    ) where
+        F: FnMut(Value) -> TestResult<bool>,
     {
+        let cmd = pipeline(cmd);
+        let expect_no_out = match opts.into() {
+            Some(v) => v.expect_no_out,
+            None => false,
+        };
         loop {
             if Instant::now() > deadline {
                 panic!("Test failed to complete in time");
             }
 
-            match func() {
+            let out = cbsh!(cwd, cmd);
+            if out.err != "" {
+                println!("Received content on stderr from command: {}", out.err);
+                sleep(interval);
+                continue;
+            }
+
+            if expect_no_out && out.out.is_empty() {
+                return;
+            } else if expect_no_out && !out.out.is_empty() {
+                println!("Expected no out but was {}", out.out);
+                sleep(interval);
+                continue;
+            }
+
+            if out.out.is_empty() {
+                println!("Output from command was empty");
+                sleep(interval);
+                continue;
+            }
+
+            let json = match self.parse_out_to_json(out.out.clone()) {
+                Ok(j) => j,
+                Err(e) => {
+                    println!("Failed to parse {}: {}", out.out, e);
+                    sleep(interval);
+                    continue;
+                }
+            };
+
+            match func(json) {
                 Ok(success) => {
                     if success {
                         return;
                     }
+                    println!("Retry func returned fail")
                 }
-                Err(e) => {
-                    println!("Retry func returned error: {}", e)
-                }
+                Err(e) => println!("Retry func returned error: {}", e),
             }
 
             sleep(interval);
         }
     }
+}
+
+pub struct RetryExpectations {
+    pub(crate) expect_no_out: bool,
 }

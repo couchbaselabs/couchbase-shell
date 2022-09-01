@@ -34,6 +34,16 @@ pub fn tests(cluster: Arc<ClusterUnderTest>) -> Vec<TestFn> {
             Box::pin(query::test_should_fetch_meta(cluster.clone())),
         ),
         TestFn::new(
+            "query_advise::test_should_get_advise_with_context",
+            Box::pin(query_advise::test_should_get_advise_with_context(
+                cluster.clone(),
+            )),
+        ),
+        TestFn::new(
+            "query_advise::test_should_get_advise",
+            Box::pin(query_advise::test_should_get_advise(cluster.clone())),
+        ),
+        TestFn::new(
             "query_indexes::test_should_get_indexes_with_context",
             Box::pin(query_indexes::test_should_get_indexes_with_context(
                 cluster.clone(),
