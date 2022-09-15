@@ -8,6 +8,7 @@ pub mod util;
 use crate::util::config::{ClusterType, Config};
 use crate::util::mock::MockCluster;
 use crate::util::standalone::StandaloneCluster;
+use ansi_term::Colour;
 use env_logger::Env;
 use std::fmt::{Display, Formatter};
 use std::io::ErrorKind;
@@ -41,9 +42,9 @@ enum TestResultStatus {
 impl Display for TestResultStatus {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let alias = match *self {
-            TestResultStatus::Success => "ok",
-            TestResultStatus::Failure => "FAILED",
-            TestResultStatus::Skipped => "ignored",
+            TestResultStatus::Success => Colour::Green.paint("ok"),
+            TestResultStatus::Failure => Colour::Red.paint("FAILED"),
+            TestResultStatus::Skipped => Colour::Yellow.paint("ignored"),
         };
 
         write!(f, "{}", alias)
@@ -107,7 +108,11 @@ async fn main() -> Result<(), std::io::Error> {
     teardown();
     let elapsed = start.elapsed();
 
-    let overall = if failures.len() == 0 { "ok" } else { "FAILED" };
+    let overall = if failures.len() == 0 {
+        Colour::Green.paint("ok")
+    } else {
+        Colour::Red.paint("FAILED")
+    };
 
     println!();
     println!(
