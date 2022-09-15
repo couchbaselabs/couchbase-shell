@@ -66,9 +66,6 @@ The downloaded archive contains an `example` directory which also contains sampl
 
 On top of [nushell](https://www.nushell.sh/) built-in commands, the following couchbase commands are available:
 
- - `allowlists` - List all whitelisted addresses (cloud)
- - `allowlists add` - Add a whitelist address (cloud)
- - `allowlists drop` - Remove a whitelist address (cloud)
  - `analytics <statement>` - Perform an analytics query
  - `analytics dataverses` - List all dataverses
  - `analytics datasets` - List all datasets
@@ -98,7 +95,7 @@ On top of [nushell](https://www.nushell.sh/) built-in commands, the following co
  - `clusters create` - Creates a new cluster against the active Capella organization
  - `clusters drop` - Deletes a cluster from the active Capella organization
  - `clusters get` - Gets a cluster from the active Capella organization
- - `aclusters health` - Performs health checks on the target cluster(s)
+ - `clusters health` - Performs health checks on the target cluster(s)
  - `clusters managed` - Lists all clusters currently managed by couchbase shell
  - `clusters register` - Registers a cluster for use with the shell
  - `clusters unregister` - Registers a cluster for use with the shell

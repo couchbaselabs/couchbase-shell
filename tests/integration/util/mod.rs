@@ -10,6 +10,7 @@ use crate::util::features::TestFeature;
 use crate::util::mock::MockCluster;
 use crate::util::standalone::StandaloneCluster;
 use std::sync::Arc;
+use uuid::Uuid;
 
 pub type TestResult<T> = Result<T, TestError>;
 
@@ -74,4 +75,8 @@ impl ConfigAware for ClusterUnderTest {
 
 pub trait ConfigAware {
     fn config(&self) -> Arc<TestConfig>;
+}
+
+pub fn new_doc_id() -> String {
+    format!("test-{}", Uuid::new_v4().to_string())
 }

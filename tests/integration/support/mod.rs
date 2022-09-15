@@ -1,3 +1,5 @@
+use nu_test_support::pipeline;
+
 pub mod fs;
 pub mod macros;
 
@@ -22,15 +24,8 @@ impl Outcome {
     }
 }
 
-pub fn pipeline(commands: &str) -> String {
-    commands
-        .trim()
-        .lines()
-        .map(|line| line.trim())
-        .collect::<Vec<&str>>()
-        .join(" ")
-        .trim_end()
-        .to_string()
+pub fn cb_pipeline(commands: impl Into<String>) -> String {
+    pipeline(commands.into().as_str())
 }
 
 pub fn shell_os_paths() -> Vec<std::path::PathBuf> {

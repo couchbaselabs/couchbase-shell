@@ -16,6 +16,26 @@ pub fn tests(cluster: Arc<ClusterUnderTest>) -> Vec<TestFn> {
             Box::pin(doc_get::test_get_a_document_not_found(cluster.clone())),
         ),
         TestFn::new(
+            "doc_insert::test_should_insert_a_document",
+            Box::pin(doc_insert::test_should_insert_a_document(cluster.clone())),
+        ),
+        TestFn::new(
+            "doc_insert::test_should_error_on_insert_twice",
+            Box::pin(doc_insert::test_should_error_on_insert_twice(
+                cluster.clone(),
+            )),
+        ),
+        TestFn::new(
+            "doc_remove::test_should_remove_a_document",
+            Box::pin(doc_remove::test_should_remove_a_document(cluster.clone())),
+        ),
+        TestFn::new(
+            "doc_remove::test_should_error_on_remove_doc_not_found",
+            Box::pin(doc_remove::test_should_error_on_remove_doc_not_found(
+                cluster.clone(),
+            )),
+        ),
+        TestFn::new(
             "doc_upsert::test_upserts_a_document",
             Box::pin(doc_upsert::test_upserts_a_document(cluster.clone())),
         ),
