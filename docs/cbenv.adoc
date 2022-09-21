@@ -84,7 +84,7 @@ The argument for this flag is an identifier combined with a regular expression.
 So imagine you have three clusters setup with the following identifiers:
 
 ```
-> clusters managed | get identifier
+> cb-env | get identifier
 ───┬────────
  0 │ prod-us-west
  1 │ prod-us-east
