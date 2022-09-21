@@ -7,23 +7,23 @@ use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, IntoPipelineData, PipelineData, ShellError, Signature, Value};
 
 #[derive(Clone)]
-pub struct ClustersManaged {
+pub struct CBEnvManaged {
     state: Arc<Mutex<State>>,
 }
 
-impl ClustersManaged {
+impl CBEnvManaged {
     pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
 
-impl Command for ClustersManaged {
+impl Command for CBEnvManaged {
     fn name(&self) -> &str {
-        "clusters managed"
+        "cb-env managed"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("clusters managed").category(Category::Custom("couchbase".to_string()))
+        Signature::build("cb-env managed").category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {

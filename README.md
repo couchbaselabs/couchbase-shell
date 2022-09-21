@@ -87,6 +87,7 @@ On top of [nushell](https://www.nushell.sh/) built-in commands, the following co
  - `cb-env cloud` - Sets the active cloud based on its identifier
  - `cb-env cluster` - Sets the active cluster based on its identifier
  - `cb-env collection` - Sets the active collection based on its name
+ - `cb-env managed` - Lists all clusters currently managed by couchbase shell
  - `cb-env project` - Sets the active cloud project based on its name
  - `cb-env scope` - Sets the active scope based on its name
  - `cb-env timeouts` - Sets the default timeouts
@@ -96,7 +97,6 @@ On top of [nushell](https://www.nushell.sh/) built-in commands, the following co
  - `clusters drop` - Deletes a cluster from the active Capella organization
  - `clusters get` - Gets a cluster from the active Capella organization
  - `clusters health` - Performs health checks on the target cluster(s)
- - `clusters managed` - Lists all clusters currently managed by couchbase shell
  - `clusters register` - Registers a cluster for use with the shell
  - `clusters unregister` - Registers a cluster for use with the shell
  - `collections` - Fetches collections through the HTTP API

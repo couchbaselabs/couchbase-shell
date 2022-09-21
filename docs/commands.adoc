@@ -4,10 +4,10 @@ The following sections discuss the individual couchbase specific commands in gre
 
 === Working with `clusters`
 
-The `clusters managed` command lists all the clusters you have registered with the shell.
+The `cb-env managed` command lists all the clusters you have registered with the shell.
 
 ```
-> clusters managed
+> cb-env managed
 ───┬────────┬─────┬────────────┬───────────────
  # │ active │ tls │ identifier │ username      
 ───┼────────┼─────┼────────────┼───────────────
