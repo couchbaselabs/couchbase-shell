@@ -358,8 +358,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         working_set.add_decl(Box::new(ClustersGet::new(state.clone())));
         working_set.add_decl(Box::new(ClustersHealth::new(state.clone())));
         working_set.add_decl(Box::new(CBEnvManaged::new(state.clone())));
-        working_set.add_decl(Box::new(ClustersRegister::new(state.clone())));
-        working_set.add_decl(Box::new(ClustersUnregister::new(state.clone())));
+        working_set.add_decl(Box::new(CbEnvRegister::new(state.clone())));
+        working_set.add_decl(Box::new(CbEnvUnregister::new(state.clone())));
         working_set.add_decl(Box::new(Collections::new(state.clone())));
         working_set.add_decl(Box::new(CollectionsCreate::new(state.clone())));
         working_set.add_decl(Box::new(CollectionsDrop::new(state.clone())));

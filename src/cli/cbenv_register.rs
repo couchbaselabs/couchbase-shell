@@ -12,23 +12,23 @@ use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, PipelineData, ShellError, Signature, Span, SyntaxShape};
 
 #[derive(Clone)]
-pub struct ClustersRegister {
+pub struct CbEnvRegister {
     state: Arc<Mutex<State>>,
 }
 
-impl ClustersRegister {
+impl CbEnvRegister {
     pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
 
-impl Command for ClustersRegister {
+impl Command for CbEnvRegister {
     fn name(&self) -> &str {
-        "clusters register"
+        "cb-env register"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("clusters register")
+        Signature::build("cb-env register")
             .required(
                 "identifier",
                 SyntaxShape::String,

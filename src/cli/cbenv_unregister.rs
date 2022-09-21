@@ -1,4 +1,4 @@
-use crate::cli::clusters_register::update_config_file;
+use crate::cli::cbenv_register::update_config_file;
 use crate::state::State;
 use std::sync::{Arc, Mutex};
 
@@ -9,23 +9,23 @@ use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
 
 #[derive(Clone)]
-pub struct ClustersUnregister {
+pub struct CbEnvUnregister {
     state: Arc<Mutex<State>>,
 }
 
-impl ClustersUnregister {
+impl CbEnvUnregister {
     pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
 
-impl Command for ClustersUnregister {
+impl Command for CbEnvUnregister {
     fn name(&self) -> &str {
-        "clusters unregister"
+        "cb-env unregister"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("clusters unregister")
+        Signature::build("cb-env unregister")
             .required(
                 "identifier",
                 SyntaxShape::String,
