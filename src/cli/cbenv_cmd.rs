@@ -90,7 +90,13 @@ fn use_cmd(
     } else {
         match guard.active_cluster() {
             Some(active) => {
+                let display_name = if let Some(dn) = active.display_name() {
+                    dn
+                } else {
+                    active.username().to_string()
+                };
                 results.add_string("username", active.username(), span);
+                results.add_string("display_name", display_name, span);
                 results.add_string("database", guard.active(), span);
                 results.add_string(
                     "bucket",
@@ -144,6 +150,7 @@ fn use_cmd(
             }
             None => {
                 results.add_string("username", String::from(""), span);
+                results.add_string("display_name", String::from(""), span);
                 results.add_string("cluster", String::from(""), span);
                 results.add_string("bucket", String::from(""), span);
                 results.add_string("scope", String::from(""), span);

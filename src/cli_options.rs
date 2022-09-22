@@ -26,6 +26,7 @@ pub struct CliOptions {
     pub tls_cert_path: Option<String>,
     pub config_path: Option<String>,
     pub logger_prefix: Option<String>,
+    pub display_name: Option<String>,
 }
 
 #[derive(Clone)]
@@ -50,6 +51,12 @@ impl Command for Cbsh {
                 SyntaxShape::String,
                 "username to authenticate as",
                 Some('u'),
+            )
+            .named(
+                "display-name",
+                SyntaxShape::String,
+                "name to show in the shell",
+                None,
             )
             .switch(
                 "password",
@@ -213,6 +220,8 @@ pub fn parse_commandline_args(
             let config_path: Option<String> = call.get_flag(context, &mut stack, "config-dir")?;
             let logger_prefix: Option<String> =
                 call.get_flag(context, &mut stack, "logger-prefix")?;
+            let display_name: Option<String> =
+                call.get_flag(context, &mut stack, "display-name")?;
 
             fn extract_contents(
                 expression: Option<Expression>,
@@ -281,6 +290,7 @@ pub fn parse_commandline_args(
                 tls_cert_path,
                 config_path,
                 logger_prefix,
+                display_name,
             });
         }
     }

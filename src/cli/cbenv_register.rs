@@ -51,6 +51,12 @@ impl Command for CbEnvRegister {
                 "the password to use for this database",
             )
             .named(
+                "display_name",
+                SyntaxShape::String,
+                "the display name to use for the user when this database is active",
+                None,
+            )
+            .named(
                 "default-bucket",
                 SyntaxShape::String,
                 "the default bucket to use with this database",
@@ -139,6 +145,7 @@ fn clusters_register(
     let cert_path = call.get_flag(engine_state, stack, "tls-cert-path")?;
     let save = call.get_flag(engine_state, stack, "save")?.unwrap_or(false);
     let capella = call.get_flag(engine_state, stack, "capella-organization")?;
+    let display_name = call.get_flag(engine_state, stack, "display-name")?;
 
     let hostnames = conn_string
         .split(",")
@@ -152,6 +159,7 @@ fn clusters_register(
             active_bucket: bucket,
             active_scope: scope,
             active_collection: collection,
+            display_name,
         },
         ClusterTlsConfig::new(tls_enabled, cert_path, tls_accept_all_certs),
         ClusterTimeouts::default(),

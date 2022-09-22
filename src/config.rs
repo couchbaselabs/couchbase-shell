@@ -259,6 +259,8 @@ pub struct ClusterConfig {
     default_scope: Option<String>,
     #[serde(rename(deserialize = "default-collection", serialize = "default-collection"))]
     default_collection: Option<String>,
+    #[serde(rename(deserialize = "display-name", serialize = "display-name"))]
+    display_name: Option<String>,
 
     #[serde(flatten)]
     credentials: ClusterCredentials,
@@ -330,6 +332,9 @@ impl ClusterConfig {
     pub fn kv_batch_size(&self) -> Option<u32> {
         self.kv_batch_size
     }
+    pub fn display_name(&self) -> Option<String> {
+        self.display_name.clone()
+    }
 }
 
 impl From<(String, &RemoteCluster)> for ClusterConfig {
@@ -356,6 +361,7 @@ impl From<(String, &RemoteCluster)> for ClusterConfig {
             },
             capella_org: cloud,
             kv_batch_size: Some(cluster.1.kv_batch_size()),
+            display_name: cluster.1.display_name(),
         }
     }
 }
