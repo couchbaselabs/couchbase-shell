@@ -7,7 +7,8 @@ use crate::cli::error::{
     malformed_response_error, no_active_bucket_error,
 };
 use crate::client::{CapellaClient, CapellaRequest};
-use crate::state::{RemoteCluster, State};
+use crate::state::State;
+use crate::RemoteCluster;
 use nu_engine::CallExt;
 use nu_protocol::ast::{Call, PathMember};
 use nu_protocol::engine::{EngineState, Stack};

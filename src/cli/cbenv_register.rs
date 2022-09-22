@@ -1,11 +1,12 @@
 use crate::config::{
     CapellaOrganizationConfig, ClusterConfig, ClusterTlsConfig, ShellConfig, DEFAULT_KV_BATCH_SIZE,
 };
-use crate::state::{ClusterTimeouts, RemoteCluster, State};
+use crate::state::State;
 use std::fs;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use crate::cli::error::generic_error;
+use crate::{ClusterTimeouts, RemoteCluster, RemoteClusterResources, RemoteClusterType};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -35,9 +36,9 @@ impl Command for CbEnvRegister {
                 "the identifier to use for this cluster",
             )
             .required(
-                "hostnames",
+                "conn-string",
                 SyntaxShape::String,
-                "the comma separated list of hosts to use for this cluster",
+                "the connection string to use for this cluster",
             )
             .required(
                 "username",
@@ -123,11 +124,7 @@ fn clusters_register(
 ) -> Result<PipelineData, ShellError> {
     let identifier: String = call.req(engine_state, stack, 0)?;
 
-    let hostnames = call
-        .req::<String>(engine_state, stack, 1)?
-        .split(',')
-        .map(|v| v.to_owned())
-        .collect();
+    let conn_string: String = call.req(engine_state, stack, 1)?;
     let username = call.req(engine_state, stack, 2)?;
     let password = call.req(engine_state, stack, 3)?;
     let bucket = call.get_flag(engine_state, stack, "default-bucket")?;
@@ -144,16 +141,22 @@ fn clusters_register(
     let capella = call.get_flag(engine_state, stack, "capella-organization")?;
 
     let cluster = RemoteCluster::new(
-        hostnames,
-        username,
-        password,
-        bucket,
-        scope,
-        collection,
+        RemoteClusterResources {
+            hostnames: conn_string
+                .split(",")
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>(),
+            username,
+            password,
+            active_bucket: bucket,
+            active_scope: scope,
+            active_collection: collection,
+        },
         ClusterTlsConfig::new(tls_enabled, cert_path, tls_accept_all_certs),
         ClusterTimeouts::default(),
         capella,
         DEFAULT_KV_BATCH_SIZE,
+        RemoteClusterType::Other, // TODO
     );
 
     let mut guard = state.lock().unwrap();

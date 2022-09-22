@@ -3,35 +3,36 @@
 extern crate core;
 
 mod cli;
+mod cli_options;
 mod client;
 mod config;
 mod config_files;
 mod default_context;
+mod remote_cluster;
 mod state;
 mod tutorial;
 
+use crate::cli::*;
+use crate::cli_options::{parse_commandline_args, parse_shell_args};
 use crate::config::{
     ShellConfig, DEFAULT_ANALYTICS_TIMEOUT, DEFAULT_DATA_TIMEOUT, DEFAULT_KV_BATCH_SIZE,
     DEFAULT_MANAGEMENT_TIMEOUT, DEFAULT_QUERY_TIMEOUT, DEFAULT_SEARCH_TIMEOUT,
 };
 use crate::config_files::{read_nu_config_file, CBSHELL_FOLDER};
 use crate::default_context::create_default_context;
-use crate::state::{RemoteCapellaOrganization, RemoteCluster};
-use crate::{cli::*, state::ClusterTimeouts};
+use crate::remote_cluster::{
+    ClusterTimeouts, RemoteCluster, RemoteClusterResources, RemoteClusterType,
+};
+use crate::state::RemoteCapellaOrganization;
 use chrono::Local;
 use config::ClusterTlsConfig;
 use env_logger::Env;
 use log::{debug, warn};
 use log::{error, info};
-use nu_cli::{add_plugin_file, gather_parent_env_vars, read_plugin_file, report_error};
-use nu_engine::{get_full_help, CallExt};
-use nu_parser::{escape_quote_string, parse};
-use nu_protocol::ast::{Call, Expr, Expression, PipelineElement};
-use nu_protocol::engine::{Command, EngineState, Stack, StateWorkingSet};
-use nu_protocol::{
-    BufferedReader, Category, Example, IntoPipelineData, PipelineData, RawStream, ShellError,
-    Signature, Span, Spanned, SyntaxShape, Value,
-};
+use nu_cli::{add_plugin_file, gather_parent_env_vars, read_plugin_file};
+
+use nu_protocol::engine::{Stack, StateWorkingSet};
+use nu_protocol::{BufferedReader, PipelineData, RawStream, Span};
 use serde::Deserialize;
 use state::State;
 use std::collections::HashMap;
@@ -44,9 +45,7 @@ use std::time::Duration;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let entire_start_time = std::time::Instant::now();
-    let mut logger_builder = env_logger::Builder::from_env(
-        Env::default().filter_or("CBSH_LOG", "info,isahc=error,surf=error,nu=warn"),
-    );
+    let mut logger_builder = create_logger_builder();
 
     let init_cwd = match std::env::current_dir() {
         Ok(cwd) => cwd,
@@ -63,49 +62,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     gather_parent_env_vars(&mut context, &init_cwd);
     let mut stack = Stack::new();
 
-    let mut args_to_cbshell = vec![];
-    let mut args_to_script = vec![];
-
-    let mut collect_arg_script = false;
-    let mut collect_arg_filename = false;
-    for arg in std::env::args().skip(1) {
-        if collect_arg_script {
-            if collect_arg_filename {
-                args_to_cbshell.push(if arg.contains(' ') {
-                    escape_quote_string(&arg)
-                } else {
-                    arg
-                });
-                collect_arg_filename = false;
-            } else {
-                args_to_script.push(if arg.contains(' ') {
-                    escape_quote_string(&arg)
-                } else {
-                    arg
-                });
-            }
-        } else if arg == "--script" {
-            collect_arg_script = true;
-            collect_arg_filename = true;
-            args_to_cbshell.push(if arg.contains(' ') {
-                escape_quote_string(&arg)
-            } else {
-                arg
-            });
-        } else if arg == "-c" || arg == "--command" {
-            args_to_cbshell.push(arg);
-        } else {
-            args_to_cbshell.push(if arg.contains(' ') {
-                escape_quote_string(&arg)
-            } else {
-                arg
-            });
-        }
-    }
-
-    args_to_cbshell.insert(0, "cbsh".to_string());
-
-    let shell_commandline_args = args_to_cbshell.join(" ");
+    let (shell_commandline_args, args_to_script) = parse_shell_args();
 
     let opt = match parse_commandline_args(&shell_commandline_args, &mut context) {
         Ok(o) => o,
@@ -147,32 +104,31 @@ fn main() -> Result<(), Box<dyn Error>> {
     const DEFAULT_HOSTNAME: &str = "localhost";
     const DEFAULT_USERNAME: &str = "Administrator";
 
-    let mut clusters = HashMap::new();
-    let mut capella_orgs = HashMap::new();
-
     let password = match opt.password {
         true => Some(rpassword::prompt_password("Password: ").unwrap()),
         false => None,
     };
 
+    let mut clusters = HashMap::new();
+    let mut capella_orgs = HashMap::new();
     let mut active_capella_org = None;
     let active = if config.clusters().is_empty() && config.capella_orgs().is_empty() {
-        let hostnames = if let Some(hosts) = opt.hostnames {
+        let conn_string = if let Some(hosts) = opt.conn_string {
             hosts
         } else {
-            DEFAULT_HOSTNAME.into()
+            DEFAULT_HOSTNAME.to_string()
         };
 
         let username = if let Some(user) = opt.username {
             user
         } else {
-            DEFAULT_USERNAME.into()
+            DEFAULT_USERNAME.to_string()
         };
 
         let rpassword = if let Some(pass) = password {
             pass
         } else {
-            DEFAULT_PASSWORD.into()
+            DEFAULT_PASSWORD.to_string()
         };
 
         let tls_config = ClusterTlsConfig::new(
@@ -186,16 +142,21 @@ fn main() -> Result<(), Box<dyn Error>> {
             );
         }
         let cluster = RemoteCluster::new(
-            validate_hostnames(hostnames.split(',').map(|v| v.to_owned()).collect()),
-            username,
-            rpassword,
-            opt.bucket,
-            opt.scope,
-            opt.collection,
+            RemoteClusterResources {
+                hostnames: validate_hostnames(
+                    conn_string.split(',').map(|v| v.to_owned()).collect(),
+                ),
+                username,
+                password: rpassword,
+                active_bucket: opt.bucket,
+                active_scope: opt.scope,
+                active_collection: opt.collection,
+            },
             tls_config,
             ClusterTimeouts::default(),
             None,
             DEFAULT_KV_BATCH_SIZE,
+            RemoteClusterType::Other, // TODO
         );
         clusters.insert("default".to_string(), cluster);
         String::from("default")
@@ -274,13 +235,16 @@ fn main() -> Result<(), Box<dyn Error>> {
                 None => DEFAULT_KV_BATCH_SIZE,
             };
 
+            let hostnames: Vec<_> = v.conn_string().split(",").map(|s| s.to_string()).collect();
             let cluster = RemoteCluster::new(
-                validate_hostnames(v.hostnames().clone()),
-                username,
-                cpassword,
-                default_bucket,
-                scope,
-                collection,
+                RemoteClusterResources {
+                    hostnames: validate_hostnames(hostnames),
+                    username,
+                    password: cpassword,
+                    active_bucket: default_bucket,
+                    active_scope: scope,
+                    active_collection: collection,
+                },
                 v.tls().clone(),
                 ClusterTimeouts::new(
                     data_timeout,
@@ -291,6 +255,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 ),
                 v.cloud_org(),
                 kv_batch_size,
+                RemoteClusterType::Other, // TODO
             );
             if !v.tls().clone().enabled() {
                 warn!(
@@ -521,294 +486,6 @@ struct Motd {
     msg: String,
 }
 
-#[derive(Clone, Debug)]
-struct CliOptions {
-    hostnames: Option<String>,
-    username: Option<String>,
-    password: bool,
-    cluster: Option<String>,
-    bucket: Option<String>,
-    scope: Option<String>,
-    collection: Option<String>,
-    command: Option<Spanned<String>>,
-    script: Option<String>,
-    stdin: bool,
-    no_motd: bool,
-    disable_tls: bool,
-    tls_cert_path: Option<String>,
-    config_path: Option<String>,
-    logger_prefix: Option<String>,
-}
-
-#[derive(Clone)]
-struct Cbsh;
-
-impl Command for Cbsh {
-    fn name(&self) -> &str {
-        "cbsh"
-    }
-
-    fn signature(&self) -> Signature {
-        Signature::build("cbsh")
-            .usage("The Couchbase Shell.")
-            .named(
-                "hostnames",
-                SyntaxShape::String,
-                "hostnames to connect to",
-                None,
-            )
-            .named(
-                "username",
-                SyntaxShape::String,
-                "username to authenticate as",
-                Some('u'),
-            )
-            .switch(
-                "password",
-                "use to specify a password to use for authentication",
-                Some('p'),
-            )
-            .named(
-                "cluster",
-                SyntaxShape::String,
-                "name to give to this configuration",
-                None,
-            )
-            .named(
-                "bucket",
-                SyntaxShape::String,
-                "name of the bucket to run operations against",
-                None,
-            )
-            .named(
-                "scope",
-                SyntaxShape::String,
-                "name of the scope to run operations against",
-                None,
-            )
-            .named(
-                "collection",
-                SyntaxShape::String,
-                "name of the collection to run operations against",
-                None,
-            )
-            .named(
-                "command",
-                SyntaxShape::String,
-                "command to run without starting an interactive shell session",
-                Some('c'),
-            )
-            .named(
-                "script",
-                SyntaxShape::String,
-                "filename of script to run without starting an interactive shell session",
-                None,
-            )
-            .switch("stdin", "redirect stdin", None)
-            .switch("no-motd", "disable message of the day", None)
-            .switch("disable-tls", "disable TLS", None)
-            .named(
-                "tls-cert-path",
-                SyntaxShape::String,
-                "path to certificate to use for TLS",
-                None,
-            )
-            .switch("version", "print the version", Some('v'))
-            .named(
-                "config-dir",
-                SyntaxShape::String,
-                "path to the directory containing the config/credentials files",
-                None,
-            )
-            .named(
-                "logger-prefix",
-                SyntaxShape::String,
-                "prefix to use for each log line",
-                None,
-            )
-            .category(Category::Custom("couchbase".to_string()))
-    }
-
-    fn usage(&self) -> &str {
-        "Alternative Shell and UI for Couchbase Server and Capella."
-    }
-
-    fn run(
-        &self,
-        context: &EngineState,
-        stack: &mut Stack,
-        call: &Call,
-        _input: PipelineData,
-    ) -> Result<PipelineData, ShellError> {
-        Ok(Value::String {
-            val: get_full_help(
-                &Cbsh.signature(),
-                &Cbsh.examples(),
-                context,
-                stack,
-                self.is_parser_keyword(),
-            ),
-            span: call.head,
-        }
-        .into_pipeline_data())
-    }
-
-    fn examples(&self) -> Vec<Example> {
-        vec![
-            Example {
-                description: "Run a script",
-                example: "cbsh myfile.nu",
-                result: None,
-            },
-            Example {
-                description: "Run cbshell interactively (as a shell or REPL)",
-                example: "cbsh",
-                result: None,
-            },
-        ]
-    }
-}
-
-fn parse_commandline_args(
-    commandline_args: &str,
-    context: &mut EngineState,
-) -> Result<CliOptions, ShellError> {
-    let (block, delta) = {
-        let mut working_set = StateWorkingSet::new(context);
-        working_set.add_decl(Box::new(Cbsh));
-
-        let (output, err) = parse(
-            &mut working_set,
-            None,
-            commandline_args.as_bytes(),
-            false,
-            &[],
-        );
-        if let Some(err) = err {
-            report_error(&working_set, &err);
-
-            std::process::exit(1);
-        }
-
-        working_set.hide_decl(b"cbsh");
-        (output, working_set.render())
-    };
-
-    let _ = context.merge_delta(delta);
-
-    let mut stack = Stack::new();
-
-    // We should have a successful parse now
-    if let Some(pipeline) = block.pipelines.get(0) {
-        if let Some(PipelineElement::Expression(
-            _,
-            Expression {
-                expr: Expr::Call(call),
-                ..
-            },
-        )) = pipeline.elements.get(0)
-        {
-            let hostnames: Option<String> = call.get_flag(context, &mut stack, "hostnames")?;
-            let username: Option<String> = call.get_flag(context, &mut stack, "username")?;
-            let password = call.has_flag("password");
-            let cluster: Option<String> = call.get_flag(context, &mut stack, "cluster")?;
-            let bucket: Option<String> = call.get_flag(context, &mut stack, "bucket")?;
-            let scope: Option<String> = call.get_flag(context, &mut stack, "scope")?;
-            let collection: Option<String> = call.get_flag(context, &mut stack, "collection")?;
-            let command: Option<Expression> = call.get_flag_expr("command");
-            let script: Option<String> = call.get_flag(context, &mut stack, "script")?;
-            let stdin = call.has_flag("stdin");
-            let no_motd = call.has_flag("no-motd");
-            let disable_tls = call.has_flag("disable-tls");
-            let tls_cert_path: Option<String> =
-                call.get_flag(context, &mut stack, "tls-cert-path")?;
-            let config_path: Option<String> = call.get_flag(context, &mut stack, "config-dir")?;
-            let logger_prefix: Option<String> =
-                call.get_flag(context, &mut stack, "logger-prefix")?;
-
-            fn extract_contents(
-                expression: Option<Expression>,
-            ) -> Result<Option<Spanned<String>>, ShellError> {
-                if let Some(expr) = expression {
-                    let str = expr.as_string();
-                    if let Some(str) = str {
-                        Ok(Some(Spanned {
-                            item: str,
-                            span: expr.span,
-                        }))
-                    } else {
-                        Err(ShellError::TypeMismatch("string".to_string(), expr.span))
-                    }
-                } else {
-                    Ok(None)
-                }
-            }
-
-            let command = extract_contents(command)?;
-
-            let help = call.has_flag("help");
-
-            if help {
-                let full_help = get_full_help(
-                    &Cbsh.signature(),
-                    &Cbsh.examples(),
-                    context,
-                    &mut stack,
-                    false,
-                );
-
-                let _ = std::panic::catch_unwind(move || {
-                    let stdout = std::io::stdout();
-                    let mut stdout = stdout.lock();
-                    let _ = stdout.write_all(full_help.as_bytes());
-                });
-
-                std::process::exit(1);
-            }
-
-            if call.has_flag("version") {
-                let version = env!("CARGO_PKG_VERSION").to_string();
-                let _ = std::panic::catch_unwind(move || {
-                    let stdout = std::io::stdout();
-                    let mut stdout = stdout.lock();
-                    let _ = stdout.write_all(format!("{}\n", version).as_bytes());
-                });
-
-                std::process::exit(0);
-            }
-
-            return Ok(CliOptions {
-                hostnames,
-                username,
-                password,
-                cluster,
-                bucket,
-                scope,
-                collection,
-                command,
-                script,
-                stdin,
-                no_motd,
-                disable_tls,
-                tls_cert_path,
-                config_path,
-                logger_prefix,
-            });
-        }
-    }
-
-    // Just give the help and exit if the above fails
-    let full_help = get_full_help(
-        &Cbsh.signature(),
-        &Cbsh.examples(),
-        context,
-        &mut stack,
-        false,
-    );
-    print!("{}", full_help);
-    std::process::exit(1);
-}
-
 fn validate_hostnames(hostnames: Vec<String>) -> Vec<String> {
     let mut validated = vec![];
     for hostname in hostnames {
@@ -848,4 +525,12 @@ fn validate_hostnames(hostnames: Vec<String>) -> Vec<String> {
     }
 
     validated
+}
+
+fn create_logger_builder() -> env_logger::Builder {
+    let logger_builder = env_logger::Builder::from_env(
+        Env::default().filter_or("CBSH_LOG", "info,isahc=error,surf=error,nu=warn"),
+    );
+
+    logger_builder
 }
