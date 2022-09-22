@@ -335,10 +335,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         working_set.add_decl(Box::new(BucketsGet::new(state.clone())));
         working_set.add_decl(Box::new(BucketsSample::new(state.clone())));
         working_set.add_decl(Box::new(BucketsUpdate::new(state.clone())));
-        working_set.add_decl(Box::new(Clusters::new(state.clone())));
-        working_set.add_decl(Box::new(ClustersCreate::new(state.clone())));
-        working_set.add_decl(Box::new(ClustersDrop::new(state.clone())));
-        working_set.add_decl(Box::new(ClustersGet::new(state.clone())));
+        working_set.add_decl(Box::new(Databases::new(state.clone())));
+        working_set.add_decl(Box::new(DatabasesCreate::new(state.clone())));
+        working_set.add_decl(Box::new(DatabasesDrop::new(state.clone())));
+        working_set.add_decl(Box::new(DatabasesGet::new(state.clone())));
         working_set.add_decl(Box::new(HealthCheck::new(state.clone())));
         working_set.add_decl(Box::new(CBEnvManaged::new(state.clone())));
         working_set.add_decl(Box::new(CbEnvRegister::new(state.clone())));

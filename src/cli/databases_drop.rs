@@ -1,38 +1,35 @@
-use crate::cli::cloud_json::JSONCloudClustersSummariesV3;
-use crate::cli::error::{
-    client_error_to_shell_error, deserialize_error, unexpected_status_code_error,
-};
-use crate::cli::util::NuValueMap;
 use crate::client::CapellaRequest;
 use crate::state::State;
-use nu_engine::CallExt;
-use nu_protocol::ast::Call;
-use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::{
-    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
-};
+use log::debug;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use crate::cli::error::{client_error_to_shell_error, unexpected_status_code_error};
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
+
 #[derive(Clone)]
-pub struct Clusters {
+pub struct DatabasesDrop {
     state: Arc<Mutex<State>>,
 }
 
-impl Clusters {
+impl DatabasesDrop {
     pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
 
-impl Command for Clusters {
+impl Command for DatabasesDrop {
     fn name(&self) -> &str {
-        "clusters"
+        "databases drop"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("clusters")
+        Signature::build("databases drop")
+            .required("name", SyntaxShape::String, "the name of the database")
             .named(
                 "capella",
                 SyntaxShape::String,
@@ -43,7 +40,7 @@ impl Command for Clusters {
     }
 
     fn usage(&self) -> &str {
-        "Lists all clusters on the active Capella organisation"
+        "Deletes a cluster from the active Capella organization"
     }
 
     fn run(
@@ -53,11 +50,11 @@ impl Command for Clusters {
         call: &Call,
         input: PipelineData,
     ) -> Result<PipelineData, ShellError> {
-        clusters(self.state.clone(), engine_state, stack, call, input)
+        clusters_drop(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn clusters(
+fn clusters_drop(
     state: Arc<Mutex<State>>,
     engine_state: &EngineState,
     stack: &mut Stack,
@@ -66,25 +63,35 @@ fn clusters(
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+
+    let name: String = call.req(engine_state, stack, 0)?;
     let capella = call.get_flag(engine_state, stack, "capella")?;
 
-    let guard = state.lock().unwrap();
+    debug!("Running clusters drop for {}", &name);
 
+    let guard = state.lock().unwrap();
     let control = if let Some(c) = capella {
         guard.capella_org_for_cluster(c)
     } else {
         guard.active_capella_org()
     }?;
+
     let client = control.client();
 
+    let deadline = Instant::now().add(control.timeout());
+    let cluster = client
+        .find_cluster(name, deadline, ctrl_c.clone())
+        .map_err(|e| client_error_to_shell_error(e, span))?;
     let response = client
         .capella_request(
-            CapellaRequest::GetClustersV3 {},
-            Instant::now().add(control.timeout()),
+            CapellaRequest::DeleteClusterV3 {
+                cluster_id: cluster.id(),
+            },
+            deadline,
             ctrl_c,
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
-    if response.status() != 200 {
+    if response.status() != 202 {
         return Err(unexpected_status_code_error(
             response.status(),
             response.content(),
@@ -92,22 +99,5 @@ fn clusters(
         ));
     };
 
-    let content: JSONCloudClustersSummariesV3 = serde_json::from_str(response.content())
-        .map_err(|e| deserialize_error(e.to_string(), span))?;
-
-    let mut results = vec![];
-    for cluster in content.items() {
-        let mut collected = NuValueMap::default();
-        collected.add_string("name", cluster.name(), span);
-        collected.add_string("id", cluster.id(), span);
-        collected.add_string("project_id", cluster.project_id(), span);
-        collected.add_string("tenant_id", content.tenant_id(), span);
-        results.push(collected.into_value(span))
-    }
-
-    Ok(Value::List {
-        vals: results,
-        span,
-    }
-    .into_pipeline_data())
+    Ok(PipelineData::new_with_metadata(None, span))
 }

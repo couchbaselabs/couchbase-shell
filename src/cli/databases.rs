@@ -1,35 +1,38 @@
+use crate::cli::cloud_json::JSONCloudClustersSummariesV3;
+use crate::cli::error::{
+    client_error_to_shell_error, deserialize_error, unexpected_status_code_error,
+};
+use crate::cli::util::NuValueMap;
 use crate::client::CapellaRequest;
 use crate::state::State;
-use log::debug;
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::{
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+};
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
-use crate::cli::error::{client_error_to_shell_error, unexpected_status_code_error};
-use nu_engine::CallExt;
-use nu_protocol::ast::Call;
-use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
-
 #[derive(Clone)]
-pub struct ClustersDrop {
+pub struct Databases {
     state: Arc<Mutex<State>>,
 }
 
-impl ClustersDrop {
+impl Databases {
     pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
 
-impl Command for ClustersDrop {
+impl Command for Databases {
     fn name(&self) -> &str {
-        "clusters drop"
+        "databases"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("clusters drop")
-            .required("name", SyntaxShape::String, "the name of the cluster")
+        Signature::build("databases")
             .named(
                 "capella",
                 SyntaxShape::String,
@@ -40,7 +43,7 @@ impl Command for ClustersDrop {
     }
 
     fn usage(&self) -> &str {
-        "Deletes a cluster from the active Capella organization"
+        "Lists all databases on the active Capella organisation"
     }
 
     fn run(
@@ -50,11 +53,11 @@ impl Command for ClustersDrop {
         call: &Call,
         input: PipelineData,
     ) -> Result<PipelineData, ShellError> {
-        clusters_drop(self.state.clone(), engine_state, stack, call, input)
+        clusters(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn clusters_drop(
+fn clusters(
     state: Arc<Mutex<State>>,
     engine_state: &EngineState,
     stack: &mut Stack,
@@ -63,35 +66,25 @@ fn clusters_drop(
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
-
-    let name: String = call.req(engine_state, stack, 0)?;
     let capella = call.get_flag(engine_state, stack, "capella")?;
 
-    debug!("Running clusters drop for {}", &name);
-
     let guard = state.lock().unwrap();
+
     let control = if let Some(c) = capella {
         guard.capella_org_for_cluster(c)
     } else {
         guard.active_capella_org()
     }?;
-
     let client = control.client();
 
-    let deadline = Instant::now().add(control.timeout());
-    let cluster = client
-        .find_cluster(name, deadline, ctrl_c.clone())
-        .map_err(|e| client_error_to_shell_error(e, span))?;
     let response = client
         .capella_request(
-            CapellaRequest::DeleteClusterV3 {
-                cluster_id: cluster.id(),
-            },
-            deadline,
+            CapellaRequest::GetClustersV3 {},
+            Instant::now().add(control.timeout()),
             ctrl_c,
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
-    if response.status() != 202 {
+    if response.status() != 200 {
         return Err(unexpected_status_code_error(
             response.status(),
             response.content(),
@@ -99,5 +92,22 @@ fn clusters_drop(
         ));
     };
 
-    Ok(PipelineData::new_with_metadata(None, span))
+    let content: JSONCloudClustersSummariesV3 = serde_json::from_str(response.content())
+        .map_err(|e| deserialize_error(e.to_string(), span))?;
+
+    let mut results = vec![];
+    for cluster in content.items() {
+        let mut collected = NuValueMap::default();
+        collected.add_string("name", cluster.name(), span);
+        collected.add_string("id", cluster.id(), span);
+        collected.add_string("project_id", cluster.project_id(), span);
+        collected.add_string("tenant_id", content.tenant_id(), span);
+        results.push(collected.into_value(span))
+    }
+
+    Ok(Value::List {
+        vals: results,
+        span,
+    }
+    .into_pipeline_data())
 }
