@@ -1,5 +1,4 @@
-use crate::cli::cloud_json::JSONCloudCreateClusterRequestV3;
-use crate::cli::util::find_project_id;
+use crate::cli::cloud_json::JSONCloudClusterV3;
 use crate::client::CapellaRequest;
 use crate::state::State;
 use log::debug;
@@ -8,37 +7,33 @@ use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 use crate::cli::error::{
-    client_error_to_shell_error, no_active_project_error, serialize_error,
-    unexpected_status_code_error,
+    client_error_to_shell_error, deserialize_error, unexpected_status_code_error,
 };
+use crate::cli::util::NuValueMap;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
 
 #[derive(Clone)]
-pub struct ClustersCreate {
+pub struct DatabasesGet {
     state: Arc<Mutex<State>>,
 }
 
-impl ClustersCreate {
+impl DatabasesGet {
     pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
 
-impl Command for ClustersCreate {
+impl Command for DatabasesGet {
     fn name(&self) -> &str {
-        "clusters create"
+        "databases get"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("clusters create")
-            .required(
-                "definition",
-                SyntaxShape::String,
-                "the definition of the cluster",
-            )
+        Signature::build("databases get")
+            .required("name", SyntaxShape::String, "the name of the database")
             .named(
                 "capella",
                 SyntaxShape::String,
@@ -49,7 +44,7 @@ impl Command for ClustersCreate {
     }
 
     fn usage(&self) -> &str {
-        "Creates a new cluster against the active Capella organization"
+        "Gets a database from the active Capella organization"
     }
 
     fn run(
@@ -59,11 +54,11 @@ impl Command for ClustersCreate {
         call: &Call,
         input: PipelineData,
     ) -> Result<PipelineData, ShellError> {
-        clusters_create(self.state.clone(), engine_state, stack, call, input)
+        clusters_get(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn clusters_create(
+fn clusters_get(
     state: Arc<Mutex<State>>,
     engine_state: &EngineState,
     stack: &mut Stack,
@@ -73,10 +68,10 @@ fn clusters_create(
     let span = call.head;
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let definition: String = call.req(engine_state, stack, 0)?;
+    let name: String = call.req(engine_state, stack, 0)?;
     let capella = call.get_flag(engine_state, stack, "capella")?;
 
-    debug!("Running clusters create for {}", &definition);
+    debug!("Running clusters get for {}", &name);
 
     let guard = state.lock().unwrap();
     let control = if let Some(c) = capella {
@@ -85,37 +80,43 @@ fn clusters_create(
         guard.active_capella_org()
     }?;
     let client = control.client();
+
     let deadline = Instant::now().add(control.timeout());
-
-    let project_name = match control.active_project() {
-        Some(p) => p,
-        None => {
-            return Err(no_active_project_error(span));
-        }
-    };
-    let project_id = find_project_id(ctrl_c.clone(), project_name, &client, deadline, span)?;
-
-    let mut json: JSONCloudCreateClusterRequestV3 = serde_json::from_str(definition.as_str())
-        .map_err(|e| serialize_error(e.to_string(), span))?;
-    json.set_project_id(project_id);
-
+    let cluster = client
+        .find_cluster(name, deadline, ctrl_c.clone())
+        .map_err(|e| client_error_to_shell_error(e, span))?;
     let response = client
         .capella_request(
-            CapellaRequest::CreateClusterV3 {
-                payload: serde_json::to_string(&json)
-                    .map_err(|e| serialize_error(e.to_string(), span))?,
+            CapellaRequest::GetClusterV3 {
+                cluster_id: cluster.id(),
             },
-            Instant::now().add(control.timeout()),
+            deadline,
             ctrl_c,
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
-    if response.status() != 202 {
+    if response.status() != 200 {
         return Err(unexpected_status_code_error(
             response.status(),
             response.content(),
             span,
         ));
     };
+    let cluster: JSONCloudClusterV3 = serde_json::from_str(response.content())
+        .map_err(|e| deserialize_error(e.to_string(), span))?;
 
-    Ok(PipelineData::new_with_metadata(None, span))
+    let mut collected = NuValueMap::default();
+    collected.add_string("name", cluster.name(), span);
+    collected.add_string("id", cluster.id(), span);
+    collected.add_string("status", cluster.status(), span);
+    collected.add_string(
+        "endpoint_srv",
+        cluster.endpoints_srv().unwrap_or_default(),
+        span,
+    );
+    collected.add_string("version", cluster.version_name(), span);
+    collected.add_string("tenant_id", cluster.tenant_id(), span);
+    collected.add_string("project_id", cluster.project_id(), span);
+    collected.add_string("cidr", cluster.place().cidr(), span);
+
+    Ok(collected.into_pipeline_data(span))
 }
