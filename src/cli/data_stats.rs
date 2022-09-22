@@ -31,9 +31,9 @@ impl nu_engine::WholeStreamCommand for DataStats {
     fn signature(&self) -> Signature {
         Signature::build("data stats")
             .named(
-                "clusters",
+                "databases",
                 SyntaxShape::String,
-                "the clusters which should be contacted",
+                "the databases which should be contacted",
                 None,
             )
             .named(

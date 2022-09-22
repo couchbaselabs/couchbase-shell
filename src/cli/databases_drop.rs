@@ -67,7 +67,7 @@ fn clusters_drop(
     let name: String = call.req(engine_state, stack, 0)?;
     let capella = call.get_flag(engine_state, stack, "capella")?;
 
-    debug!("Running clusters drop for {}", &name);
+    debug!("Running databases drop for {}", &name);
 
     let guard = state.lock().unwrap();
     let control = if let Some(c) = capella {

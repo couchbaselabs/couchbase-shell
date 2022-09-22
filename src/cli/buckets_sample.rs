@@ -40,9 +40,9 @@ impl Command for BucketsSample {
                 "the name of the bucket to load",
             )
             .named(
-                "clusters",
+                "databases",
                 SyntaxShape::String,
-                "the clusters which should be contacted",
+                "the databases which should be contacted",
                 None,
             )
             .category(Category::Custom("couchbase".to_string()))

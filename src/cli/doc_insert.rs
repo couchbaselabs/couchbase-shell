@@ -63,9 +63,9 @@ impl Command for DocInsert {
                 None,
             )
             .named(
-                "clusters",
+                "databases",
                 SyntaxShape::String,
-                "the clusters which should be contacted",
+                "the databases which should be contacted",
                 None,
             )
             .named(

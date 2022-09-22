@@ -34,9 +34,9 @@ impl Command for BucketsDrop {
         Signature::build("buckets drop")
             .required("name", SyntaxShape::String, "the name of the bucket")
             .named(
-                "clusters",
+                "databases",
                 SyntaxShape::String,
-                "the clusters which should be contacted",
+                "the databases which should be contacted",
                 None,
             )
             .category(Category::Custom("couchbase".to_string()))

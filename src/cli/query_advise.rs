@@ -33,9 +33,9 @@ impl Command for QueryAdvise {
             .switch("with-meta", "Includes related metadata in the result", None)
             .switch("disable-context", "disable automatically detecting the query context based on the active bucket and scope", None)
             .named(
-                "clusters",
+                "databases",
                 SyntaxShape::String,
-                "the clusters to query against",
+                "the databases to query against",
                 None,
             )
             .category(Category::Custom("couchbase".to_string()))

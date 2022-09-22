@@ -71,7 +71,7 @@ fn clusters_get(
     let name: String = call.req(engine_state, stack, 0)?;
     let capella = call.get_flag(engine_state, stack, "capella")?;
 
-    debug!("Running clusters get for {}", &name);
+    debug!("Running databases get for {}", &name);
 
     let guard = state.lock().unwrap();
     let control = if let Some(c) = capella {

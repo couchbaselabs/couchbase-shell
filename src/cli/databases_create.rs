@@ -76,7 +76,7 @@ fn clusters_create(
     let definition: String = call.req(engine_state, stack, 0)?;
     let capella = call.get_flag(engine_state, stack, "capella")?;
 
-    debug!("Running clusters create for {}", &definition);
+    debug!("Running databases create for {}", &definition);
 
     let guard = state.lock().unwrap();
     let control = if let Some(c) = capella {
