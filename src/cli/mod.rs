@@ -95,7 +95,7 @@ pub use clusters::Clusters;
 pub use clusters_create::ClustersCreate;
 pub use clusters_drop::ClustersDrop;
 pub use clusters_get::ClustersGet;
-pub use clusters_health::ClustersHealth;
+pub use clusters_health::HealthCheck;
 pub use collections::Collections;
 pub use collections_create::CollectionsCreate;
 pub use collections_drop::CollectionsDrop;
