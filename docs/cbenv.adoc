@@ -1,7 +1,7 @@
 [#_cb_env_and_the_environment]
 == `cb-env` and the Environment
 
-Whilst multiple clusters can be registered at the same time, there is only ever one cluster (at most) active.
+Whilst multiple databases can be registered at the same time, there is only ever one database (at most) active.
 The same is true for buckets, scopes, and collections.
 When a resource is active then it used as the default to run commands against (this can be overridden on a per command basis).
 
@@ -21,7 +21,7 @@ You can run the `cb-env` command, which will tell you which resources are curren
 If you were to now run a command then we would be running it:
 
 * As the user "Susan"
-* Against the "dev.local" cluster
+* Against the "dev.local" database
 * Against the "travel-sample" bucket
 * Against the "inventory" scope
 * Against the "hotel" collection
@@ -76,15 +76,15 @@ Both the output of `cb-env` and the prompt will reflect the changes.
 On many commands you will notice a set of flags which allow you to override the active execution environment.
 Different commands support different flags, depending on the command you can expect to see any of:
 
-* `--clusters`
+* `--databases`
 * `--bucket`
 * `--scope`
 * `--collection`
 
-==== The `--clusters` flag
+==== The `--databases` flag
 
 The argument for this flag is an identifier combined with a regular expression.
-So imagine you have three clusters setup with the following identifiers:
+So imagine you have three databases setup with the following identifiers:
 
 ```
 > cb-env | get identifier
@@ -96,12 +96,12 @@ So imagine you have three clusters setup with the following identifiers:
 ───┴────────
 ```
 
-If you wanted to run a command against all clusters in `prod-us`, you could use `--clusters prod-us.*`, e.g.
+If you wanted to run a command against all databases in `prod-us`, you could use `--databases prod-us.*`, e.g.
 
 ```
-> buckets --clusters prod-us.*
+> buckets --databases prod-us.*
 ───┬──────────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────
- # │   cluster    │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ capella
+ # │   database   │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ capella
 ───┼──────────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────
  0 │ prod-us-east │ default       │ couchbase │        1 │ none                 │  268.4 MB │ false         │        │ false
  1 │ prod-us-west │ default       │ couchbase │        1 │ none                 │  268.4 MB │ false         │        │ false
@@ -113,14 +113,14 @@ In the background this gets passed to a regex engine, so you can go a little cra
 
 ==== The `--bucket`, `--scope`, `--collection` flags
 
-These flags are a little different to the `--clusters` flag, they are not regular expressions and can only be used to defined a single name each.
-Unlike `--clusters` the name provided to these flags does not have to be already known to Couchbase Shell, they can refer to any bucket, scope, and collection that exist within your active cluster or defined cluster(s).
+These flags are a little different to the `--databases` flag, they are not regular expressions and can only be used to defined a single name each.
+Unlike `--databases` the name provided to these flags does not have to be already known to Couchbase Shell, they can refer to any bucket, scope, and collection that exist within your active database or defined database(s).
 For example:
 
 ```
 > doc get 1 --bucket travel-sample --scope tenant_agent_00 --collection users
 ───┬────┬─────────────────────┬──────────────────┬───────┬──────────────
- # │ id │         cas         │     content      │ error │   cluster
+ # │ id │         cas         │     content      │ error │   database
 ───┼────┼─────────────────────┼──────────────────┼───────┼──────────────
  0 │ 1  │ 1638870288919035904 │ [row 11 columns] │       │ prod-us-west
 ───┴────┴─────────────────────┴──────────────────┴───────┴──────────────

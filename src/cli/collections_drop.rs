@@ -44,9 +44,9 @@ impl Command for CollectionsDrop {
             )
             .named("scope", SyntaxShape::String, "the name of the scope", None)
             .named(
-                "clusters",
+                "databases",
                 SyntaxShape::String,
-                "the clusters to query against",
+                "the databases to query against",
                 None,
             )
             .category(Category::Custom("couchbase".to_string()))

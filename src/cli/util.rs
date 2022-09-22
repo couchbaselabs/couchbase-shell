@@ -33,7 +33,7 @@ pub fn convert_row_to_nu_value(
                 cols.push(k.clone());
                 vals.push(convert_json_value_to_nu_value(v, span)?);
             }
-            cols.push("cluster".to_string());
+            cols.push("database".to_string());
             vals.push(Value::String {
                 val: cluster_identifier,
                 span,
@@ -185,7 +185,7 @@ pub fn cluster_identifiers_from(
     default_active: bool,
 ) -> Result<Vec<String>, ShellError> {
     let state = state.lock().unwrap();
-    let identifier_arg: String = match args.get_flag(engine_state, stack, "clusters")? {
+    let identifier_arg: String = match args.get_flag(engine_state, stack, "databases")? {
         Some(arg) => arg,
         None => {
             if default_active {
@@ -200,7 +200,7 @@ pub fn cluster_identifiers_from(
         Err(e) => {
             return Err(GenericError {
                 message: e.to_string(),
-                help: Some("Failed to parse identifier used for specifying clusters".to_string()),
+                help: Some("Failed to parse identifier used for specifying databases".to_string()),
                 span: Some(args.head),
             }
             .into());

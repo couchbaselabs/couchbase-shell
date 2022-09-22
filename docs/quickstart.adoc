@@ -31,7 +31,7 @@ TIP: If you are running a recent macOS release (i.e. 10.15.x), you'll likely see
 
 image::mac-binary-unsigned.png[macOS Warning,600]
 
-=== Connecting to a Cluster
+=== Connecting to a Database
 
 If all you do is launch the shell through `./cbsh` it will try to connect to `localhost` using the `Administrator` username and the `password` password. You can modify this through CLI arguments (see `./cbsh -h` for more information). If `-p` is passed in, you will be prompted to enter a password upon start:
 
@@ -44,18 +44,18 @@ Password:
 > 
 ```
 
-While passing in command line arguments is great for exploring, you likely want to look at dotfile configuration support further down in the documentation which allows you to configure multiple clusters, TLS settings and more.
+While passing in command line arguments is great for exploring, you likely want to look at dotfile configuration support further down in the documentation which allows you to configure multiple databases, TLS settings and more.
 
-Once in the shell, you can start to execute commands (see the introduction section for more information). As a quick sanity check, list the nodes in the cluster:
+Once in the shell, you can start to execute commands (see the introduction section for more information). As a quick sanity check, list the nodes in the database:
 
 ```
 > nodes
-───┬─────────┬────────────────┬─────────┬─────────────────────────────────────┬───────────────────────┬───────────────────────────┬──────────────┬─────────────┬───────
- # │ cluster │    hostname    │ status  │              services               │        version        │            os             │ memory_total │ memory_free │ cloud 
-───┼─────────┼────────────────┼─────────┼─────────────────────────────────────┼───────────────────────┼───────────────────────────┼──────────────┼─────────────┼───────
- 0 │ default │ 127.0.0.1:8091 │ healthy │ backup,analytics,eventing,search,in │ 7.0.1-6102-enterprise │ x86_64-apple-darwin18.7.0 │      34.4 GB │     17.6 GB │ false 
-   │         │                │         │ dexing,kv,query                     │                       │                           │              │             │       
-───┴─────────┴────────────────┴─────────┴─────────────────────────────────────┴───────────────────────┴───────────────────────────┴──────────────┴─────────────┴───────
+───┬──────────┬────────────────┬─────────┬─────────────────────────────────────┬───────────────────────┬───────────────────────────┬──────────────┬─────────────┬───────
+ # │ database │    hostname    │ status  │              services               │        version        │            os             │ memory_total │ memory_free │ cloud 
+───┼──────────┼────────────────┼─────────┼─────────────────────────────────────┼───────────────────────┼───────────────────────────┼──────────────┼─────────────┼───────
+ 0 │ default  │ 127.0.0.1:8091 │ healthy │ backup,analytics,eventing,search,in │ 7.0.1-6102-enterprise │ x86_64-apple-darwin18.7.0 │      34.4 GB │     17.6 GB │ false 
+   │          │                │         │ dexing,kv,query                     │                       │                           │              │             │       
+───┴──────────┴────────────────┴─────────┴─────────────────────────────────────┴───────────────────────┴───────────────────────────┴──────────────┴─────────────┴───────
 ```
 
 Or if you have the `travel-sample` bucket installed you can switch to it and then fetch a document:
@@ -63,7 +63,7 @@ Or if you have the `travel-sample` bucket installed you can switch to it and the
 ```
 >  doc get airline_10 --bucket travel-sample | flatten
 ───┬────────────┬─────────────────────┬────────────┬─────────┬─────────────┬──────┬──────┬──────────┬───────────────┬───────┬─────────
- # │     id     │         cas         │ content_id │  type   │    name     │ iata │ icao │ callsign │    country    │ error │ cluster 
+ # │     id     │         cas         │ content_id │  type   │    name     │ iata │ icao │ callsign │    country    │ error │ database 
 ───┼────────────┼─────────────────────┼────────────┼─────────┼─────────────┼──────┼──────┼──────────┼───────────────┼───────┼─────────
  0 │ airline_10 │ 1629809626107281408 │         10 │ airline │ 40-Mile Air │ Q5   │ MLA  │ MILE-AIR │ United States │       │ default 
 ───┴────────────┴─────────────────────┴────────────┴─────────┴─────────────┴──────┴──────┴──────────┴───────────────┴───────┴─────────
@@ -71,7 +71,7 @@ Or if you have the `travel-sample` bucket installed you can switch to it and the
 
 === The config dotfiles
 
-Connecting to a single cluster through the command line is nice when you are starting out, but later on you will likely either connect to the same cluster all the time or even to a multitude of them. To help with this, you can create a `.cbsh` dot folder in your home directory and place a `config` file in it that the shell will read on startup.
+Connecting to a single database through the command line is nice when you are starting out, but later on you will likely either connect to the same database all the time or even to a multitude of them. To help with this, you can create a `.cbsh` dot folder in your home directory and place a `config` file in it that the shell will read on startup.
 
 The downloaded zip contains an example already, but here is a small sample config to help you get started as well:
 
@@ -93,6 +93,6 @@ password = "password"
 # password = "pass"
 ```
 
-This will register two clusters, one called `local` and one called `remote` (commented out). The file format is `toml` in case you wonder. Now when you start the shell, it will connect to `local` automatically and you are all set.
+This will register two databases, one called `local` and one called `remote` (commented out). The file format is `toml` in case you wonder. Now when you start the shell, it will connect to `local` automatically and you are all set.
 
 Please check out the reference section on additional parameters you can set as well as how to move the credentials to a separate `credentials` file in case you want to share your config with other people and they do not use the same credentials.

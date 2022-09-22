@@ -29,9 +29,9 @@ impl Command for AnalyticsIndexes {
         Signature::build("analytics indexes")
             .switch("with-meta", "Includes related metadata in the result", None)
             .named(
-                "clusters",
+                "databases",
                 SyntaxShape::String,
-                "the clusters which should be contacted",
+                "the databases which should be contacted",
                 None,
             )
             .category(Category::Custom("couchbase".to_string()))

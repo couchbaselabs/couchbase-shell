@@ -39,9 +39,9 @@ impl Command for ScopesDrop {
                 None,
             )
             .named(
-                "clusters",
+                "databases",
                 SyntaxShape::String,
-                "the clusters to query against",
+                "the databases to query against",
                 None,
             )
             .category(Category::Custom("couchbase".to_string()))

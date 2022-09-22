@@ -76,9 +76,9 @@ impl Command for DocUpsert {
                 None,
             )
             .named(
-                "clusters",
+                "databases",
                 SyntaxShape::String,
-                "the clusters which should be contacted",
+                "the databases which should be contacted",
                 None,
             )
             .named(
