@@ -20,23 +20,23 @@ use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 #[derive(Clone)]
-pub struct ClustersHealth {
+pub struct HealthCheck {
     state: Arc<Mutex<State>>,
 }
 
-impl ClustersHealth {
+impl HealthCheck {
     pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
 
-impl Command for ClustersHealth {
+impl Command for HealthCheck {
     fn name(&self) -> &str {
-        "clusters health"
+        "health"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("clusters health")
+        Signature::build("health")
             .named(
                 "clusters",
                 SyntaxShape::String,
