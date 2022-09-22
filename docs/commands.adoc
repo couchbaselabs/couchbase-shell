@@ -322,20 +322,6 @@ Similar to `doc get`, if you want to delete more than one document at the same t
 ───────────┴───
 ```
 
-=== `whoami`?
-
-Sometimes simple commands are helpful when debugging. The `whoami` command will ask the same question to the active cluster and return various information about the user.
-
-```
-> whoami
-─────────┬────────────────
- roles   │ [table 1 rows] 
- id      │ Administrator  
- domain  │ admin          
- cluster │ local          
-─────────┴────────────────
-```
-
 Since a user can have many roles, if you want to look at them they need to be unnested:
 
 ```

@@ -50,7 +50,9 @@ impl Command for UseCapellaOrganization {
         let mut result = NuValueMap::default();
         result.add_string(
             "capella_organization",
-            guard.active_capella_org_name().unwrap(),
+            guard
+                .active_capella_org_name()
+                .unwrap_or_else(|| String::from("")),
             call.head,
         );
 

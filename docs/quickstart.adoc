@@ -38,7 +38,7 @@ If all you do is launch the shell through `./cbsh` it will try to connect to `lo
 Note: Unless you specify TLS settings then PLAIN authentication is used and your credentials are sent in plaintext.
 
 ```
-❯ ./cbsh --username Administrator --hostnames 127.0.0.1 -p
+❯ ./cbsh --username Administrator --conn-string 127.0.0.1 -p
 Password: 
 👤 Administrator 🏠 my-local-cb-node in 🗄 travel-sample
 > 

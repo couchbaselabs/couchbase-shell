@@ -91,12 +91,10 @@ fn use_cmd(
         match guard.active_cluster() {
             Some(active) => {
                 results.add_string("username", active.username(), span);
-                results.add_string("cluster", guard.active(), span);
+                results.add_string("database", guard.active(), span);
                 results.add_string(
                     "bucket",
-                    active
-                        .active_bucket()
-                        .unwrap_or_else(|| String::from("<not set>")),
+                    active.active_bucket().unwrap_or_else(|| String::from("")),
                     span,
                 );
                 results.add_string(
@@ -145,11 +143,11 @@ fn use_cmd(
                 }
             }
             None => {
-                results.add_string("username", String::from("<not set>"), span);
-                results.add_string("cluster", String::from("<not set>"), span);
-                results.add_string("bucket", String::from("<not set>"), span);
-                results.add_string("scope", String::from("<not set>"), span);
-                results.add_string("collection", String::from("<not set>"), span);
+                results.add_string("username", String::from(""), span);
+                results.add_string("cluster", String::from(""), span);
+                results.add_string("bucket", String::from(""), span);
+                results.add_string("scope", String::from(""), span);
+                results.add_string("collection", String::from(""), span);
             }
         }
     }

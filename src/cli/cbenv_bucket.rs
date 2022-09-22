@@ -55,9 +55,7 @@ impl Command for UseBucket {
         let mut result = NuValueMap::default();
         result.add_string(
             "bucket",
-            active
-                .active_bucket()
-                .unwrap_or_else(|| String::from("<not set>")),
+            active.active_bucket().unwrap_or_else(|| String::from("")),
             span,
         );
 
