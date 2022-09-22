@@ -1,11 +1,23 @@
-use crate::client::Client;
+use crate::client::{Client, CAPELLA_SRV_SUFFIX};
 use crate::ClusterTlsConfig;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum RemoteClusterType {
+    Provisioned,
     Other,
+}
+
+impl From<Vec<String>> for RemoteClusterType {
+    fn from(hostnames: Vec<String>) -> Self {
+        if hostnames.len() == 1 && hostnames.contains(&CAPELLA_SRV_SUFFIX.to_string()) {
+            // This means that this is a Capella host.
+            RemoteClusterType::Provisioned
+        } else {
+            RemoteClusterType::Other
+        }
+    }
 }
 
 pub struct RemoteClusterResources {

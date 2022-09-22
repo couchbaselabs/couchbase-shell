@@ -15,6 +15,7 @@ use tokio::runtime::Runtime;
 use tokio::{select, time::Instant};
 
 const CLOUD_URL: &str = "https://cloudapi.cloud.couchbase.com";
+pub const CAPELLA_SRV_SUFFIX: &str = "cloud.couchbase.com";
 
 #[derive(Debug, Deserialize)]
 pub struct LimitedClusterSummary {

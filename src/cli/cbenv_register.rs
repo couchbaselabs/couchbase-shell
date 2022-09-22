@@ -140,12 +140,13 @@ fn clusters_register(
     let save = call.get_flag(engine_state, stack, "save")?.unwrap_or(false);
     let capella = call.get_flag(engine_state, stack, "capella-organization")?;
 
+    let hostnames = conn_string
+        .split(",")
+        .map(|s| s.to_string())
+        .collect::<Vec<String>>();
     let cluster = RemoteCluster::new(
         RemoteClusterResources {
-            hostnames: conn_string
-                .split(",")
-                .map(|s| s.to_string())
-                .collect::<Vec<String>>(),
+            hostnames: hostnames.clone(),
             username,
             password,
             active_bucket: bucket,
@@ -156,7 +157,7 @@ fn clusters_register(
         ClusterTimeouts::default(),
         capella,
         DEFAULT_KV_BATCH_SIZE,
-        RemoteClusterType::Other, // TODO
+        RemoteClusterType::from(hostnames),
     );
 
     let mut guard = state.lock().unwrap();
