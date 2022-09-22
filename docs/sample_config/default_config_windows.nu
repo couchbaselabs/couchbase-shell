@@ -1,7 +1,7 @@
 
 def build_collection_prompt [] {
     let content = (cb-env)
-    let user = $"($content | get username)"
+    let user = $"($content | get display_name)"
     let cluster = $"($content | get database)"
     let bucket = $"($content | get bucket)"
     let scope = $"($content | get scope)"

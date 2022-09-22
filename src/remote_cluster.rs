@@ -27,6 +27,7 @@ pub struct RemoteClusterResources {
     pub active_bucket: Option<String>,
     pub active_scope: Option<String>,
     pub active_collection: Option<String>,
+    pub display_name: Option<String>,
 }
 
 pub struct RemoteCluster {
@@ -42,6 +43,7 @@ pub struct RemoteCluster {
     capella_org: Option<String>,
     kv_batch_size: u32,
     cluster_type: RemoteClusterType,
+    display_name: Option<String>,
 }
 
 impl RemoteCluster {
@@ -67,6 +69,7 @@ impl RemoteCluster {
             capella_org,
             kv_batch_size,
             cluster_type,
+            display_name: resources.display_name,
         }
     }
 
@@ -154,6 +157,10 @@ impl RemoteCluster {
     #[allow(dead_code)]
     pub fn cluster_type(&self) -> RemoteClusterType {
         self.cluster_type
+    }
+
+    pub fn display_name(&self) -> Option<String> {
+        self.display_name.clone()
     }
 }
 

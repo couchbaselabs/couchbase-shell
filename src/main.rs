@@ -151,6 +151,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 active_bucket: opt.bucket,
                 active_scope: opt.scope,
                 active_collection: opt.collection,
+                display_name: opt.display_name,
             },
             tls_config,
             ClusterTimeouts::default(),
@@ -249,6 +250,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     active_bucket: default_bucket,
                     active_scope: scope,
                     active_collection: collection,
+                    display_name: v.display_name(),
                 },
                 v.tls().clone(),
                 ClusterTimeouts::new(
