@@ -64,7 +64,7 @@ impl Command for UseCollection {
             "collection",
             active
                 .active_collection()
-                .unwrap_or_else(|| String::from("<not set>")),
+                .unwrap_or_else(|| String::from("")),
             span,
         );
 

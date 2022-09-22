@@ -33,39 +33,39 @@ impl Command for CbEnvRegister {
             .required(
                 "identifier",
                 SyntaxShape::String,
-                "the identifier to use for this cluster",
+                "the identifier to use for this database",
             )
             .required(
                 "conn-string",
                 SyntaxShape::String,
-                "the connection string to use for this cluster",
+                "the connection string to use for this database",
             )
             .required(
                 "username",
                 SyntaxShape::String,
-                "the username use for this cluster",
+                "the username to use for this database",
             )
             .required(
                 "password",
                 SyntaxShape::String,
-                "the password to use for this cluster",
+                "the password to use for this database",
             )
             .named(
                 "default-bucket",
                 SyntaxShape::String,
-                "the default bucket to use with this cluster",
+                "the default bucket to use with this database",
                 None,
             )
             .named(
                 "default-scope",
                 SyntaxShape::String,
-                "the default scope to use with this cluster",
+                "the default scope to use with this database",
                 None,
             )
             .named(
                 "default-collection",
                 SyntaxShape::String,
-                "the default collection to use with this cluster",
+                "the default collection to use with this database",
                 None,
             )
             .named(
@@ -88,20 +88,20 @@ impl Command for CbEnvRegister {
             )
             .switch(
                 "save",
-                "whether or not to add the cluster to the .cbsh config file, defaults to false",
+                "whether or not to add the database to the .cbsh config file, defaults to false",
                 None,
             )
             .named(
                 "capella-organization",
                 SyntaxShape::String,
-                "capella organization that this cluster belongs to",
+                "capella organization that this database belongs to",
                 None,
             )
             .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {
-        "Registers a cluster for use with the shell"
+        "Registers a database for use with the shell"
     }
 
     fn run(

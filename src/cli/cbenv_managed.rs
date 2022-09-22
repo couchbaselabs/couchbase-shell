@@ -27,7 +27,7 @@ impl Command for CBEnvManaged {
     }
 
     fn usage(&self) -> &str {
-        "Lists all clusters currently managed by couchbase shell"
+        "Lists all databases currently managed by couchbase shell"
     }
 
     fn run(

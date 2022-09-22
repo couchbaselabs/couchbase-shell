@@ -11,7 +11,7 @@ You can run the `cb-env` command, which will tell you which resources are curren
 > cb-env
 ────────────┬───────────────
  username   │ Susan
- cluster    │ dev.local
+ database   │ dev.local
  bucket     │ travel-sample
  scope      │ inventory
  collection │ hotel
@@ -38,12 +38,15 @@ Usage:
 
 Subcommands:
   cb-env bucket - Sets the active bucket based on its name
-  cb-env cloud - Sets the active cloud based on its identifier
   cb-env capella-organization - Sets the active capella organization based on its identifier
-  cb-env cluster - Sets the active cluster based on its identifier
   cb-env collection - Sets the active collection based on its name
+  cb-env database - Sets the active database based on its identifier
+  cb-env managed - Lists all databases currently managed by couchbase shell
   cb-env project - Sets the active project based on its name
+  cb-env register - Registers a database for use with the shell
   cb-env scope - Sets the active scope based on its name
+  cb-env timeouts - Sets the active timeouts for operations
+  cb-env unregister - Registers a database for use with the shell
 ```
 
 For example if you change the active bucket:
@@ -59,7 +62,7 @@ For example if you change the active bucket:
 > cb-env
 ────────────┬─────────────
  username   │ Susan
- cluster    │ dev.local
+ database   │ dev.local
  bucket     │ beer-sample
  scope      │ inventory
  collection │ hotel

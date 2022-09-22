@@ -8,33 +8,33 @@ use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
 
 #[derive(Clone)]
-pub struct UseCluster {
+pub struct CbEnvDatabase {
     state: Arc<Mutex<State>>,
 }
 
-impl UseCluster {
+impl CbEnvDatabase {
     pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
 
-impl Command for UseCluster {
+impl Command for CbEnvDatabase {
     fn name(&self) -> &str {
-        "cb-env cluster"
+        "cb-env database"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("cb-env cluster")
+        Signature::build("cb-env database")
             .required(
                 "identifier",
                 SyntaxShape::String,
-                "the identifier of the cluster",
+                "the identifier of the database",
             )
             .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {
-        "Sets the active cluster based on its identifier"
+        "Sets the active database based on its identifier"
     }
 
     fn run(
@@ -48,7 +48,7 @@ impl Command for UseCluster {
         guard.set_active(call.req(engine_state, stack, 0)?)?;
 
         let mut result = NuValueMap::default();
-        result.add_string("cluster", guard.active(), call.head);
+        result.add_string("database", guard.active(), call.head);
 
         Ok(result.into_pipeline_data(call.head))
     }

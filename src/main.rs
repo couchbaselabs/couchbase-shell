@@ -374,7 +374,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         working_set.add_decl(Box::new(TutorialPrev::new(state.clone())));
         working_set.add_decl(Box::new(UseBucket::new(state.clone())));
         working_set.add_decl(Box::new(UseCapellaOrganization::new(state.clone())));
-        working_set.add_decl(Box::new(UseCluster::new(state.clone())));
+        working_set.add_decl(Box::new(CbEnvDatabase::new(state.clone())));
         working_set.add_decl(Box::new(UseCmd::new(state.clone())));
         working_set.add_decl(Box::new(UseCollection::new(state.clone())));
         working_set.add_decl(Box::new(UseProject::new(state.clone())));
