@@ -61,18 +61,18 @@ The `capella-organisation` section in the `config` file is used as follows:
 # Allows us to evolve in the future without breaking old config files
 version = 1
 
-[[cluster]]
+[[database]]
 identifier = "default"
-hostnames = ["127.0.0.1"]
+conn-string = "127.0.0.1"
 default-bucket = "travel-sample"
 # The following can be part of the config or credentials
 username = "Administrator"
 password = "password"
 
-[[cluster]]
+[[database]]
 # identifier *must* match the name of the cluster as provided in Couchbase Cloud
 identifier = "capellahostedcluster"
-hostnames = ["xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.dp.cloud.couchbase.com"]
+conn-string = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.dp.cloud.couchbase.com"
 default-bucket = "couchbasecloudbucket"
 username = "dave"
 password = "Pa55word!"

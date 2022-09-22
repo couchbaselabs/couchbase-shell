@@ -64,9 +64,9 @@ impl CBPlayground {
 
             let mut contents = format!(
                 "version = 1
-[[clusters]]
+[[database]]
 identifier = \"local\"
-hostnames = [\"{}\"]
+conn-string = \"{}\"
 default-bucket = \"{}\"
 username = \"{}\"
 password = \"{}\"

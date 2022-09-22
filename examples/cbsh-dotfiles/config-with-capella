@@ -1,9 +1,9 @@
 # Allows us to evolve in the future without breaking old config files
 version = 1
 
-[[cluster]]
+[[database]]
 identifier = "test"
-hostnames = ["d5637eaf-59a4-427e-aa8e-1aadd302728d.dp.cloud.couchbase.com"]
+conn-string = "d5637eaf-59a4-427e-aa8e-1aadd302728d.dp.cloud.couchbase.com"
 default-bucket = "couchbasecloudbucket"
 username = "dave"
 password = "Pa55word!"

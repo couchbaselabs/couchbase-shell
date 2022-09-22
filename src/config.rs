@@ -1,4 +1,4 @@
-use crate::state::RemoteCluster;
+use crate::remote_cluster::RemoteCluster;
 use log::debug;
 use log::error;
 use serde::{Deserialize, Serialize};
@@ -18,9 +18,10 @@ pub(crate) const DEFAULT_KV_BATCH_SIZE: u32 = 500;
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ShellConfig {
     version: usize,
-    /// Note: clusters is kept for backwards compatibility and
-    /// convenience, docs should only mention cluster
-    #[serde(alias = "cluster", default)]
+    /// Note: clusters and cluster is kept for backwards compatibility and
+    /// convenience, docs should only mention database
+    #[serde(alias = "database", default)]
+    #[serde(alias = "cluster")]
     #[serde(alias = "clusters")]
     clusters: Vec<ClusterConfig>,
 
@@ -250,7 +251,8 @@ impl CapellaOrganizationConfig {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ClusterConfig {
     identifier: String,
-    hostnames: Vec<String>,
+    #[serde(rename(deserialize = "conn-string", serialize = "conn-string"))]
+    conn_string: String,
     #[serde(rename(deserialize = "default-bucket", serialize = "default-bucket"))]
     default_bucket: Option<String>,
     #[serde(rename(deserialize = "default-scope", serialize = "default-scope"))]
@@ -281,8 +283,8 @@ impl ClusterConfig {
         self.identifier.as_ref()
     }
 
-    pub fn hostnames(&self) -> &Vec<String> {
-        &self.hostnames
+    pub fn conn_string(&self) -> &String {
+        &self.conn_string
     }
     pub fn username(&self) -> String {
         if let Some(u) = &self.credentials.username {
@@ -336,7 +338,7 @@ impl From<(String, &RemoteCluster)> for ClusterConfig {
 
         Self {
             identifier: cluster.0,
-            hostnames: cluster.1.hostnames().clone(),
+            conn_string: cluster.1.hostnames().join(","),
             default_collection: cluster.1.active_collection(),
             default_scope: cluster.1.active_scope(),
             default_bucket: cluster.1.active_bucket(),
@@ -496,10 +498,11 @@ impl Default for ClusterTlsConfig {
 pub struct StandaloneCredentialsConfig {
     #[allow(dead_code)]
     version: usize,
-    /// Note: clusters is kept for backwards compatibility and
-    /// convenience, docs should only mention cluster
+    /// Note: clusters and cluster are kept for backwards compatibility and
+    /// convenience, docs should only mention database
+    #[serde(alias = "database", default)]
     #[serde(alias = "cluster")]
-    #[serde(alias = "clusters", default)]
+    #[serde(alias = "clusters")]
     clusters: Vec<StandaloneClusterCredentials>,
 
     #[serde(alias = "capella-organization", default)]
