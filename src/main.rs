@@ -141,11 +141,11 @@ fn main() -> Result<(), Box<dyn Error>> {
                 "Using PLAIN authentication for cluster default, credentials will sent in plaintext - configure tls to disable this warning"
             );
         }
+        let (cluster_type, hostnames) =
+            validate_hostnames(conn_string.split(',').map(|v| v.to_owned()).collect());
         let cluster = RemoteCluster::new(
             RemoteClusterResources {
-                hostnames: validate_hostnames(
-                    conn_string.split(',').map(|v| v.to_owned()).collect(),
-                ),
+                hostnames,
                 username,
                 password: rpassword,
                 active_bucket: opt.bucket,
@@ -156,7 +156,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             ClusterTimeouts::default(),
             None,
             DEFAULT_KV_BATCH_SIZE,
-            RemoteClusterType::Other, // TODO
+            cluster_type,
         );
         clusters.insert("default".to_string(), cluster);
         String::from("default")
@@ -235,10 +235,15 @@ fn main() -> Result<(), Box<dyn Error>> {
                 None => DEFAULT_KV_BATCH_SIZE,
             };
 
-            let hostnames: Vec<_> = v.conn_string().split(",").map(|s| s.to_string()).collect();
+            let (cluster_type, hostnames) = validate_hostnames(
+                v.conn_string()
+                    .split(",")
+                    .map(|s| s.to_string())
+                    .collect::<Vec<String>>(),
+            );
             let cluster = RemoteCluster::new(
                 RemoteClusterResources {
-                    hostnames: validate_hostnames(hostnames),
+                    hostnames,
                     username,
                     password: cpassword,
                     active_bucket: default_bucket,
@@ -255,7 +260,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 ),
                 v.cloud_org(),
                 kv_batch_size,
-                RemoteClusterType::Other, // TODO
+                cluster_type,
             );
             if !v.tls().clone().enabled() {
                 warn!(
@@ -486,9 +491,9 @@ struct Motd {
     msg: String,
 }
 
-fn validate_hostnames(hostnames: Vec<String>) -> Vec<String> {
+fn validate_hostnames(hostnames: Vec<String>) -> (RemoteClusterType, Vec<String>) {
     let mut validated = vec![];
-    for hostname in hostnames {
+    for hostname in &hostnames {
         let host = if let Some(stripped_couchbase) = hostname.strip_prefix("couchbase://") {
             if let Some(stripped_port) = stripped_couchbase.strip_suffix(":11210") {
                 stripped_port.to_string()
@@ -518,13 +523,13 @@ fn validate_hostnames(hostnames: Vec<String>) -> Vec<String> {
         } else if let Some(stripped_http) = hostname.strip_prefix("https://") {
             stripped_http.to_string()
         } else {
-            hostname
+            hostname.to_string()
         };
 
         validated.push(host);
     }
 
-    validated
+    (RemoteClusterType::from(hostnames), validated)
 }
 
 fn create_logger_builder() -> env_logger::Builder {
