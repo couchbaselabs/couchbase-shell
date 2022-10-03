@@ -16,23 +16,10 @@ impl Tutorial {
         }
     }
 
-    fn additional_info(&self, travel_sample_exists: bool) -> String {
-        if travel_sample_exists {
-            return "".to_string();
-        }
-
-        SAMPLE_INFO.to_string()
-    }
-
-    pub fn current_step(&self, travel_sample_exists: bool) -> String {
+    pub fn current_step(&self) -> String {
         let step = *self.current_step.lock().unwrap();
         let key = STEPS_ORDER[step as usize];
-        format!(
-            "Page {}: {} {}",
-            key,
-            STEPS[key],
-            self.additional_info(travel_sample_exists)
-        )
+        format!("Page {}: {}", key, STEPS[key],)
     }
 
     pub fn next_tutorial_step(&self) -> String {
@@ -98,14 +85,6 @@ lazy_static! {
         "query",
         "conclusion"
     ];
-    static ref SAMPLE_INFO: &'static str = "
-Note: This tutorial uses the travel-sample bucket in examples and it looks like you don't have it enabled.
-You can enable it at any point by running:
-
-buckets load-sample travel-sample
-
-Be aware that it takes a minute or two to fully load all of the sample data and indexes etc... 
-        ";
     static ref STEPS: HashMap<&'static str, &'static str> = {
         let mut m = HashMap::new();
         m.insert("start", "
@@ -127,11 +106,11 @@ Try running 'tutorial next' now to move to the next step of the tutorial.
         m.insert(
             "overview",
             "
-cbsh is connected to one or more Couchbase Server clusters.
+cbsh is connected to one or more Couchbase Server databases.
 
-Try 'nodes' to list the nodes in the active cluster.
+Try 'nodes' to list the nodes in the active database.
 
-Try 'buckets get' to list the buckets in the active cluster.
+Try 'cb-env managed' to list the databases currently managed by Couchbase Shell.
 
 And, use 'tutorial next' to move to the next step in the tutorial.
     ",
@@ -155,39 +134,48 @@ Commands in cbsh can be pipelined into a chain of commands.
 
 Try...
 
-  buckets get | where name =~ \"travel\"
+  nodes | where status = \"healthy\"
 
-That pipes the tabular output of the buckets command to the where command.
+That pipes the tabular output of the nodes command to the where command.
 
 Try...
 
-  buckets get | where name =~ \"sample\" | to json --pretty 2
+  nodes | where status = \"healthy\" | to json
 
 Use 'tutorial next' to move to the next step in the tutorial.
     ",
         );
-        m.insert("doc", "
+        m.insert(
+            "doc",
+            "
+You can create document by using commands like 'doc upsert KEY VALUE'.
+
+Try...
+
+    doc upsert mydoc {\"my\":\"doc\"}
+
 You can retrieve documents by using the 'doc get KEY' command.
 
 Try...
 
-  doc get airline_10
+  doc get mydoc
 
 The doc command also takes optional flags in order to
 format or reshape the output data.
 
 Try...
 
-  doc get airline_10 | flatten
+  doc get mydoc | flatten
 
-You can pipe to flatten as many times as you need:
+You can use the -a flag to totally flatten the data:
 
-  doc get airline_10 | flatten | flatten | flatten
+  doc get mydoc | flatten -a
 
 To learn more, try 'help doc' and 'help doc get'.
 
 Use 'tutorial next' to move to the next step in the tutorial.
-    ");
+    ",
+        );
         m.insert("query", "
 You can use the query command to run N1QL queries (or SQL for JSON queries) against the Couchbase Server database.
 
