@@ -7,7 +7,7 @@ use crate::client::kv::{KvEndpoint, KvTlsConfig};
 use crate::client::{protocol, HTTPClient};
 use crate::config::ClusterTlsConfig;
 use bytes::{Buf, Bytes};
-use log::trace;
+use log::{debug, trace};
 use serde::Deserialize;
 use std::future::Future;
 use std::pin::Pin;
@@ -385,7 +385,8 @@ impl KvClient {
 struct BucketConfig {
     // rev: u64,
     #[serde(alias = "nodesExt")]
-    nodes_ext: Vec<NodeConfig>,
+    nodes_ext: Vec<NodeExtConfig>,
+    nodes: Vec<NodeConfig>,
     loaded_from: Option<String>,
     #[serde(alias = "vBucketServerMap")]
     vbucket_server_map: VBucketServerMap,
@@ -405,17 +406,33 @@ impl BucketConfig {
     }
 
     fn seeds(&self, key: &str) -> Vec<(String, u32)> {
+        let len_nodes = self.nodes.len();
         let default: Vec<(String, u32)> = self
             .nodes_ext
             .iter()
-            .filter(|node| node.services.contains_key(key))
+            .enumerate()
+            .filter(|&(i, node)| {
+                if i >= len_nodes {
+                    let hostname = if node.hostname.is_some() {
+                        node.hostname.as_ref().unwrap().clone()
+                    } else {
+                        self.loaded_from.as_ref().unwrap().clone()
+                    };
+                    debug!(
+                        "Node {} present in nodes ext but not in nodes, skipping",
+                        hostname
+                    );
+                    return false;
+                }
+                node.services.contains_key(key)
+            })
             .map(|node| {
-                let hostname = if node.hostname.is_some() {
-                    node.hostname.as_ref().unwrap().clone()
+                let hostname = if node.1.hostname.is_some() {
+                    node.1.hostname.as_ref().unwrap().clone()
                 } else {
                     self.loaded_from.as_ref().unwrap().clone()
                 };
-                (hostname, *node.services.get(key).unwrap())
+                (hostname, *node.1.services.get(key).unwrap())
             })
             .collect();
 
@@ -463,13 +480,20 @@ pub(crate) struct AlternateAddress {
 }
 
 #[derive(Deserialize, Debug)]
-pub(crate) struct NodeConfig {
+pub(crate) struct NodeExtConfig {
     pub(crate) services: HashMap<String, u32>,
     // #[serde(alias = "thisNode")]
     // pub(crate) this_node: Option<bool>,
     pub(crate) hostname: Option<String>,
     #[serde(alias = "alternateAddresses", default)]
     pub(crate) alternate_addresses: HashMap<String, AlternateAddress>,
+}
+
+#[derive(Deserialize, Debug)]
+pub(crate) struct NodeConfig {
+    // pub(crate) hostname: Option<String>,
+    // #[serde(default)]
+    // pub(crate) ports: HashMap<String, i32>,
 }
 
 #[derive(Deserialize, Debug)]

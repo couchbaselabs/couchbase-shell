@@ -62,7 +62,13 @@ impl KvTlsConfig {
                     key: None,
                 })?
             } else {
-                debug!("Adding Capella root CA to trust store");
+                for cert in rustls_native_certs::load_native_certs()
+                    .expect("Could not load native platform certs")
+                {
+                    root_cert_store.add(&Certificate(cert.0)).unwrap();
+                }
+
+                debug!("Adding Capella root CA to native trust store");
                 let mut reader = BufReader::new(CAPELLA_CERT.as_bytes());
                 read_all(&mut reader).expect("Failed to read capella certificate")
             };

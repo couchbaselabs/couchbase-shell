@@ -101,6 +101,7 @@ impl HTTPHandler {
 
                 client_builder.add_root_certificate(reqwest::Certificate::from_pem(&buf)?)
             } else {
+                debug!("Adding Capella root CA to native trust store");
                 client_builder
                     .add_root_certificate(reqwest::Certificate::from_pem(CAPELLA_CERT.as_bytes())?)
             };
