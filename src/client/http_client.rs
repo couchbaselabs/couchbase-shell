@@ -1,6 +1,6 @@
 use crate::client::error::{ClientError, ConfigurationLoadFailedReason};
 use crate::client::http_handler::{HTTPHandler, HttpResponse, HttpVerb};
-use crate::client::kv_client::NodeConfig;
+use crate::client::kv_client::NodeExtConfig;
 use crate::config::ClusterTlsConfig;
 use log::{debug, trace};
 use rand::Rng;
@@ -829,7 +829,7 @@ pub(crate) trait Config {
 struct ClusterConfig {
     // rev: u64,
     #[serde(alias = "nodesExt")]
-    nodes_ext: Vec<NodeConfig>,
+    nodes_ext: Vec<NodeExtConfig>,
     loaded_from: Option<String>,
 }
 
