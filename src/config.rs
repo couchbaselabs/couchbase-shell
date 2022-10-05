@@ -457,7 +457,7 @@ pub struct ClusterTlsConfig {
         deserialize = "tls-accept-all-certs",
         serialize = "tls-accept-all-certs"
     ))]
-    #[serde(default = "default_as_true")]
+    #[serde(default)]
     accept_all_certs: bool,
 }
 
