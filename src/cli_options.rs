@@ -27,6 +27,7 @@ pub struct CliOptions {
     pub config_path: Option<String>,
     pub logger_prefix: Option<String>,
     pub display_name: Option<String>,
+    pub no_config_prompt: bool,
 }
 
 #[derive(Clone)]
@@ -64,7 +65,7 @@ impl Command for Cbsh {
                 Some('p'),
             )
             .named(
-                "cluster",
+                "database",
                 SyntaxShape::String,
                 "name to give to this configuration",
                 None,
@@ -119,6 +120,11 @@ impl Command for Cbsh {
                 "logger-prefix",
                 SyntaxShape::String,
                 "prefix to use for each log line",
+                None,
+            )
+            .switch(
+                "disable-config-prompt",
+                "disable the prompt to create a new config",
                 None,
             )
             .category(Category::Custom("couchbase".to_string()))
@@ -222,6 +228,7 @@ pub fn parse_commandline_args(
                 call.get_flag(context, &mut stack, "logger-prefix")?;
             let display_name: Option<String> =
                 call.get_flag(context, &mut stack, "display-name")?;
+            let no_config_prompt = call.has_flag("disable-config-prompt");
 
             fn extract_contents(
                 expression: Option<Expression>,
@@ -291,6 +298,7 @@ pub fn parse_commandline_args(
                 config_path,
                 logger_prefix,
                 display_name,
+                no_config_prompt,
             });
         }
     }

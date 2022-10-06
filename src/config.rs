@@ -18,19 +18,25 @@ pub(crate) const DEFAULT_KV_BATCH_SIZE: u32 = 500;
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ShellConfig {
     version: usize,
+
+    /// Stores the path from which it got loaded, if present
+    #[serde(skip)]
+    path: Option<PathBuf>,
+
     /// Note: clusters and cluster is kept for backwards compatibility and
     /// convenience, docs should only mention database
     #[serde(alias = "database", default)]
     #[serde(alias = "cluster")]
     #[serde(alias = "clusters")]
+    #[serde(rename(serialize = "database"))]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     clusters: Vec<ClusterConfig>,
 
     #[serde(alias = "capella-organization", default)]
     #[serde(alias = "capella-organisation")]
+    #[serde(rename(serialize = "capella-organization"))]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     capella_orgs: Vec<CapellaOrganizationConfig>,
-
-    /// Stores the path from which it got loaded, if present
-    path: Option<PathBuf>,
 }
 
 impl ShellConfig {
@@ -38,18 +44,21 @@ impl ShellConfig {
     ///
     /// It first tries the `.cbsh/config` in the current directory, and if not found there
     /// it then tries the home directory (so `~/.cbsh/config`).
-    pub fn new(config_path: Option<String>) -> Self {
-        let (mut config, standalone_credentials) = if let Some(cp) = config_path {
-            let p = PathBuf::from(cp);
-            let config = try_config_from_path(p.clone()).unwrap_or_default();
+    pub fn new(config_path: Option<PathBuf>) -> Option<Self> {
+        let (mut config, standalone_credentials) = if let Some(p) = config_path {
+            let config = try_config_from_path(p.clone())
+                .expect("Config file could not be loaded from specific path");
 
             let standalone_credentials = try_credentials_from_path(p);
 
             (config, standalone_credentials)
         } else {
-            let config = try_config_from_dot_path(std::env::current_dir().unwrap())
+            let config = match try_config_from_dot_path(std::env::current_dir().unwrap())
                 .or_else(|| try_config_from_dot_path(dirs::home_dir().unwrap()))
-                .unwrap_or_default();
+            {
+                Some(c) => c,
+                None => return None,
+            };
 
             let standalone_credentials =
                 try_credentials_from_dot_path(std::env::current_dir().unwrap())
@@ -89,7 +98,7 @@ impl ShellConfig {
             }
         }
 
-        config
+        Some(config)
     }
 
     pub fn new_from_clusters(
@@ -248,6 +257,79 @@ impl CapellaOrganizationConfig {
     }
 }
 
+#[derive(Debug)]
+pub struct ClusterConfigBuilder {
+    identifier: String,
+    conn_string: String,
+    default_bucket: Option<String>,
+    default_scope: Option<String>,
+    default_collection: Option<String>,
+    display_name: Option<String>,
+    credentials: ClusterCredentials,
+    tls: Option<ClusterTlsConfig>,
+}
+
+impl ClusterConfigBuilder {
+    pub fn new(
+        identifier: impl Into<String>,
+        conn_string: impl Into<String>,
+        credentials: ClusterCredentials,
+    ) -> ClusterConfigBuilder {
+        Self {
+            identifier: identifier.into(),
+            conn_string: conn_string.into(),
+            default_bucket: None,
+            default_scope: None,
+            default_collection: None,
+            display_name: None,
+            credentials,
+            tls: None,
+        }
+    }
+
+    pub fn default_bucket(mut self, bucket: impl Into<Option<String>>) -> ClusterConfigBuilder {
+        self.default_bucket = bucket.into();
+        self
+    }
+
+    pub fn default_scope(mut self, scope: impl Into<Option<String>>) -> ClusterConfigBuilder {
+        self.default_scope = scope.into();
+        self
+    }
+
+    pub fn default_collection(
+        mut self,
+        collection: impl Into<Option<String>>,
+    ) -> ClusterConfigBuilder {
+        self.default_collection = collection.into();
+        self
+    }
+
+    pub fn tls_config(
+        mut self,
+        tls_config: impl Into<Option<ClusterTlsConfig>>,
+    ) -> ClusterConfigBuilder {
+        self.tls = tls_config.into();
+        self
+    }
+
+    pub fn build(self) -> ClusterConfig {
+        ClusterConfig {
+            identifier: self.identifier,
+            conn_string: self.conn_string,
+            default_bucket: self.default_bucket,
+            default_scope: self.default_scope,
+            default_collection: self.default_collection,
+            display_name: self.display_name,
+            credentials: self.credentials,
+            timeouts: ClusterConfigTimeouts::default(),
+            tls: self.tls.unwrap_or_default(),
+            kv_batch_size: None,
+            capella_org: None,
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ClusterConfig {
     identifier: String,
@@ -259,7 +341,7 @@ pub struct ClusterConfig {
     default_scope: Option<String>,
     #[serde(rename(deserialize = "default-collection", serialize = "default-collection"))]
     default_collection: Option<String>,
-    #[serde(rename(deserialize = "display-name", serialize = "display-name"))]
+    #[serde(rename(deserialize = "user-display-name", serialize = "user-display-name"))]
     display_name: Option<String>,
 
     #[serde(flatten)]
@@ -384,7 +466,11 @@ pub struct ClusterCredentials {
     password: Option<String>,
 }
 
-impl ClusterCredentials {}
+impl ClusterCredentials {
+    pub fn new(username: Option<String>, password: Option<String>) -> Self {
+        Self { username, password }
+    }
+}
 
 #[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct ClusterConfigTimeouts {
@@ -495,7 +581,7 @@ impl Default for ClusterTlsConfig {
         Self {
             enabled: true,
             cert_path: None,
-            accept_all_certs: true,
+            accept_all_certs: false,
         }
     }
 }
