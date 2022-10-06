@@ -13,10 +13,11 @@ mod state;
 mod tutorial;
 
 use crate::cli::*;
-use crate::cli_options::{parse_commandline_args, parse_shell_args};
+use crate::cli_options::{parse_commandline_args, parse_shell_args, CliOptions};
 use crate::config::{
-    ShellConfig, DEFAULT_ANALYTICS_TIMEOUT, DEFAULT_DATA_TIMEOUT, DEFAULT_KV_BATCH_SIZE,
-    DEFAULT_MANAGEMENT_TIMEOUT, DEFAULT_QUERY_TIMEOUT, DEFAULT_SEARCH_TIMEOUT,
+    ClusterConfigBuilder, ClusterCredentials, ShellConfig, DEFAULT_ANALYTICS_TIMEOUT,
+    DEFAULT_DATA_TIMEOUT, DEFAULT_KV_BATCH_SIZE, DEFAULT_MANAGEMENT_TIMEOUT, DEFAULT_QUERY_TIMEOUT,
+    DEFAULT_SEARCH_TIMEOUT,
 };
 use crate::config_files::{read_nu_config_file, CBSHELL_FOLDER};
 use crate::default_context::create_default_context;
@@ -37,6 +38,7 @@ use serde::Deserialize;
 use state::State;
 use std::collections::HashMap;
 use std::error::Error;
+use std::fs;
 use std::io::{BufReader, Write};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -97,73 +99,55 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     debug!("Effective {:?}", opt);
 
-    let config = ShellConfig::new(opt.config_path);
-    debug!("Config {:?}", config);
-
-    const DEFAULT_PASSWORD: &str = "password";
-    const DEFAULT_HOSTNAME: &str = "localhost";
-    const DEFAULT_USERNAME: &str = "Administrator";
-
     let password = match opt.password {
         true => Some(rpassword::prompt_password("Password: ").unwrap()),
         false => None,
     };
 
     let mut clusters = HashMap::new();
+    let config_path = if let Some(p) = opt.clone().config_path {
+        Some(PathBuf::from(p))
+    } else {
+        None
+    };
+    let config = match ShellConfig::new(config_path) {
+        Some(c) => Some(c),
+        None => {
+            if opt.command.is_some() || opt.script.is_some() || opt.clone().no_config_prompt {
+                let cluster = remote_cluster_from_opts(opt.clone(), password.clone());
+                clusters.insert("default".to_string(), cluster);
+                None
+            } else {
+                println!("No config file found");
+                println!("Would you like to create one now (Y/n)?");
+
+                let mut answer = String::new();
+                std::io::stdin()
+                    .read_line(&mut answer)
+                    .expect("Failed to read user input");
+
+                match answer.to_lowercase().trim() {
+                    "y" | "" => {
+                        let path = maybe_write_config_file(opt.clone(), password.clone());
+                        ShellConfig::new(Some(path))
+                    }
+                    _ => {
+                        let cluster = remote_cluster_from_opts(opt.clone(), password.clone());
+                        clusters.insert("default".to_string(), cluster);
+                        None
+                    }
+                }
+            }
+        }
+    };
+
+    debug!("Config {:?}", config);
+
     let mut capella_orgs = HashMap::new();
     let mut active_capella_org = None;
-    let active = if config.clusters().is_empty() && config.capella_orgs().is_empty() {
-        let conn_string = if let Some(hosts) = opt.conn_string {
-            hosts
-        } else {
-            DEFAULT_HOSTNAME.to_string()
-        };
-
-        let username = if let Some(user) = opt.username {
-            user
-        } else {
-            DEFAULT_USERNAME.to_string()
-        };
-
-        let rpassword = if let Some(pass) = password {
-            pass
-        } else {
-            DEFAULT_PASSWORD.to_string()
-        };
-
-        let tls_config = ClusterTlsConfig::new(
-            !opt.disable_tls,
-            opt.tls_cert_path.clone(),
-            opt.tls_cert_path.is_none(),
-        );
-        if !tls_config.enabled() {
-            warn!(
-                "Using PLAIN authentication for cluster default, credentials will sent in plaintext - configure tls to disable this warning"
-            );
-        }
-        let (cluster_type, hostnames) =
-            validate_hostnames(conn_string.split(',').map(|v| v.to_owned()).collect());
-        let cluster = RemoteCluster::new(
-            RemoteClusterResources {
-                hostnames,
-                username,
-                password: rpassword,
-                active_bucket: opt.bucket,
-                active_scope: opt.scope,
-                active_collection: opt.collection,
-                display_name: opt.display_name,
-            },
-            tls_config,
-            ClusterTimeouts::default(),
-            None,
-            DEFAULT_KV_BATCH_SIZE,
-            cluster_type,
-        );
-        clusters.insert("default".to_string(), cluster);
-        String::from("default")
-    } else {
+    let (active, config_location) = if let Some(c) = config {
         let mut active = None;
-        for v in config.clusters() {
+        for v in c.clusters() {
             let name = v.identifier().to_string();
 
             let mut username = v.username();
@@ -272,7 +256,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
             clusters.insert(name.clone(), cluster);
         }
-        for c in config.capella_orgs() {
+        for c in c.capella_orgs() {
             let management_timeout = match c.management_timeout() {
                 Some(t) => t.to_owned(),
                 None => DEFAULT_MANAGEMENT_TIMEOUT,
@@ -294,13 +278,15 @@ fn main() -> Result<(), Box<dyn Error>> {
             capella_orgs.insert(name, plane);
         }
 
-        active.unwrap_or_default()
+        (active.unwrap_or_default(), c.location().clone())
+    } else {
+        (String::from("default"), None)
     };
 
     let state = Arc::new(Mutex::new(State::new(
         clusters,
         active,
-        config.location().clone(),
+        config_location,
         capella_orgs,
         active_capella_org,
     )));
@@ -539,4 +525,185 @@ fn create_logger_builder() -> env_logger::Builder {
     );
 
     logger_builder
+}
+
+fn remote_cluster_from_opts(opt: CliOptions, password: Option<String>) -> RemoteCluster {
+    const DEFAULT_PASSWORD: &str = "password";
+    const DEFAULT_HOSTNAME: &str = "localhost";
+    const DEFAULT_USERNAME: &str = "Administrator";
+
+    let conn_string = if let Some(hosts) = opt.conn_string {
+        hosts
+    } else {
+        DEFAULT_HOSTNAME.to_string()
+    };
+
+    let username = if let Some(user) = opt.username {
+        user
+    } else {
+        DEFAULT_USERNAME.to_string()
+    };
+
+    let rpassword = if let Some(pass) = password {
+        pass
+    } else {
+        DEFAULT_PASSWORD.to_string()
+    };
+
+    let tls_config = ClusterTlsConfig::new(
+        !opt.disable_tls,
+        opt.tls_cert_path.clone(),
+        opt.tls_cert_path.is_none(),
+    );
+    if !tls_config.enabled() {
+        warn!(
+                "Using PLAIN authentication for cluster default, credentials will sent in plaintext - configure tls to disable this warning"
+            );
+    }
+    let (cluster_type, hostnames) =
+        validate_hostnames(conn_string.split(',').map(|v| v.to_owned()).collect());
+    RemoteCluster::new(
+        RemoteClusterResources {
+            hostnames,
+            username,
+            password: rpassword,
+            active_bucket: opt.bucket,
+            active_scope: opt.scope,
+            active_collection: opt.collection,
+            display_name: opt.display_name,
+        },
+        tls_config,
+        ClusterTimeouts::default(),
+        None,
+        DEFAULT_KV_BATCH_SIZE,
+        cluster_type,
+    )
+}
+
+fn maybe_write_config_file(opt: CliOptions, password: Option<String>) -> PathBuf {
+    let identifier = if let Some(c) = opt.cluster {
+        println!("Using {} as database identifier", c);
+        c
+    } else {
+        println!("Please enter an identifier for the default database:");
+        let mut answer = String::new();
+        std::io::stdin()
+            .read_line(&mut answer)
+            .expect("Failed to read user input");
+        answer.trim().to_string()
+    };
+    let conn_string = if let Some(c) = opt.conn_string {
+        println!("Using {} as connection string", c);
+        c
+    } else {
+        println!("Please enter connection string:");
+        let mut answer = String::new();
+        std::io::stdin()
+            .read_line(&mut answer)
+            .expect("Failed to read user input");
+        answer.trim().to_string()
+    };
+    validate_hostnames(
+        conn_string
+            .clone()
+            .split(",")
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>(),
+    );
+    let username = if let Some(user) = opt.username {
+        println!("Using {} as username", &user);
+        Some(user)
+    } else {
+        println!("Please enter username:");
+        read_input()
+    };
+    println!("Write password to config file (Y/n)?");
+    let mut write_password = String::new();
+    std::io::stdin()
+        .read_line(&mut write_password)
+        .expect("Failed to read user input");
+    let password = match write_password.to_lowercase().trim() {
+        "y" | "" => {
+            if let Some(pass) = password {
+                println!("Using password entered as password");
+                Some(pass)
+            } else {
+                println!("Please enter password:");
+                read_input()
+            }
+        }
+        _ => None,
+    };
+
+    let bucket = if let Some(bucket) = opt.bucket {
+        println!("Using {} as default bucket", &bucket);
+        Some(bucket)
+    } else {
+        println!("Please enter default bucket:");
+        read_input()
+    };
+    let scope = if let Some(scope) = opt.scope {
+        println!("Using {} as scope", &scope);
+        Some(scope)
+    } else {
+        println!("Please enter default scope:");
+        read_input()
+    };
+    let collection = if let Some(collection) = opt.collection {
+        println!("Using {} as collection", &collection);
+        Some(collection)
+    } else {
+        println!("Please enter default collection:");
+        read_input()
+    };
+    println!("Please enter directory for config file (.cbsh/):");
+    let mut path_answer = String::new();
+    std::io::stdin()
+        .read_line(&mut path_answer)
+        .expect("Failed to read user input");
+
+    let path = match path_answer.to_lowercase().trim() {
+        "" => {
+            let mut buf = std::env::current_dir().unwrap();
+            buf.push(".cbsh");
+            buf
+        }
+        _ => PathBuf::from(path_answer.trim().to_string()),
+    };
+
+    let config_builder = ClusterConfigBuilder::new(
+        identifier,
+        conn_string,
+        ClusterCredentials::new(username, password),
+    )
+    .default_bucket(bucket)
+    .default_scope(scope)
+    .default_collection(collection)
+    .tls_config(ClusterTlsConfig::new(!opt.disable_tls, None, false));
+
+    let config = ShellConfig::new_from_clusters(vec![config_builder.build()], vec![]);
+    let mut to_write_to = path.clone();
+    to_write_to.push("config");
+    println!("Writing config to {:?}", &to_write_to);
+    fs::write(
+        to_write_to,
+        config.to_str().expect("Failed to convert config to string"),
+    )
+    .expect("Failed to write config file");
+
+    path
+}
+
+fn read_input() -> Option<String> {
+    let mut answer = String::new();
+    std::io::stdin()
+        .read_line(&mut answer)
+        .expect("Failed to read user input");
+
+    answer = answer.trim().to_string();
+    if answer.is_empty() {
+        None
+    } else {
+        Some(answer)
+    }
 }
