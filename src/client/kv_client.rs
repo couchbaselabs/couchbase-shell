@@ -7,6 +7,8 @@ use crate::client::kv::{KvEndpoint, KvTlsConfig};
 use crate::client::{protocol, HTTPClient};
 use crate::config::ClusterTlsConfig;
 use bytes::{Buf, Bytes};
+use futures::stream::FuturesUnordered;
+use futures::StreamExt;
 use log::{debug, trace};
 use serde::Deserialize;
 use std::future::Future;
@@ -87,24 +89,41 @@ impl KvClient {
             None
         };
 
-        let mut endpoints = HashMap::new();
+        let mut workers = FuturesUnordered::new();
         for addr in config.key_value_seeds(tls_enabled) {
-            let connect = KvEndpoint::connect(
-                addr.0.clone(),
-                addr.1,
-                username.clone(),
-                password.clone(),
-                bucket.clone(),
-                kv_tls_config.clone(),
-            );
+            let hostname = addr.0.clone();
+            let port = addr.1;
+            let u = username.clone();
+            let p = password.clone();
+            let b = bucket.clone();
+            let tls = kv_tls_config.clone();
 
+            workers.push(tokio::spawn(async move {
+                KvEndpoint::connect(hostname, port, u, p, b, tls).await
+            }));
+        }
+
+        let mut endpoints = HashMap::new();
+        loop {
             let endpoint = select! {
-                res = connect => res,
+                res = workers.next() => {
+                    match res {
+                        Some(ep) => {
+                            // The top level result is a result containing what we want and a JoinError which
+                            // occurs if the future panics.
+                            match ep {
+                                Ok(r) => r,
+                                Err(e) => Err(ClientError::RequestFailed {reason: Some(e.to_string()), key: None}),
+                            }
+                        },
+                        None => break
+                    }
+                },
                 () = &mut deadline_sleep => Err(ClientError::Timeout{key: None}),
                 () = &mut ctrl_c_fut => Err(ClientError::Cancelled{key: None}),
+                else => {break}
             }?;
-
-            endpoints.insert(format!("{}:{}", addr.0, addr.1), endpoint);
+            endpoints.insert(endpoint.remote(), endpoint);
         }
 
         Ok(Self {

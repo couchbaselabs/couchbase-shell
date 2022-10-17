@@ -4,6 +4,7 @@ use crate::client::protocol::{request, KvRequest, KvResponse, Status};
 use crate::client::{protocol, ClientError};
 use crate::config::ClusterTlsConfig;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
+use futures::lock::Mutex as AsyncMutex;
 use futures::{SinkExt, StreamExt};
 use log::{debug, trace, warn};
 use rustls_pemfile::{read_all, Item};
@@ -12,7 +13,7 @@ use std::convert::TryFrom;
 use std::fs;
 use std::io::BufReader;
 use std::sync::atomic::{AtomicU32, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::SystemTime;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
@@ -106,7 +107,7 @@ impl KvTlsConfig {
 pub struct KvEndpoint {
     tx: mpsc::Sender<Bytes>,
     opaque: AtomicU32,
-    in_flight: Arc<Mutex<HashMap<u32, oneshot::Sender<KvResponse>>>>,
+    in_flight: Arc<AsyncMutex<HashMap<u32, oneshot::Sender<KvResponse>>>>,
     collections_enabled: bool,
     local_addr: String,
     remote_addr: String,
@@ -132,22 +133,21 @@ impl KvEndpoint {
         );
 
         if let Some(tls_config) = kv_tls_config {
-            let tcp_socket =
-                TcpStream::connect(&remote_addr)
-                    .await
-                    .map_err(|e| ClientError::RequestFailed {
-                        reason: Some(e.to_string()),
-                        key: None,
-                    })?;
+            let tcp_socket = TcpStream::connect(&remote_addr).await.map_err(|e| {
+                ClientError::KVCouldNotConnect {
+                    reason: e.to_string(),
+                    address: remote_addr.clone(),
+                }
+            })?;
             let local_addr = tcp_socket.local_addr()?;
 
             let connector = TlsConnector::from(Arc::new(tls_config.config()));
             let socket = connector
                 .connect(ServerName::try_from(hostname.as_str()).unwrap(), tcp_socket)
                 .await
-                .map_err(|e| ClientError::RequestFailed {
-                    reason: Some(e.to_string()),
-                    key: None,
+                .map_err(|e| ClientError::KVCouldNotConnect {
+                    reason: e.to_string(),
+                    address: remote_addr.clone(),
                 })?;
             KvEndpoint::setup(
                 username,
@@ -159,13 +159,12 @@ impl KvEndpoint {
             )
             .await
         } else {
-            let socket =
-                TcpStream::connect(&remote_addr)
-                    .await
-                    .map_err(|e| ClientError::RequestFailed {
-                        reason: Some(e.to_string()),
-                        key: None,
-                    })?;
+            let socket = TcpStream::connect(&remote_addr).await.map_err(|e| {
+                ClientError::KVCouldNotConnect {
+                    reason: e.to_string(),
+                    address: remote_addr.clone(),
+                }
+            })?;
             let local_addr = socket.local_addr()?;
 
             KvEndpoint::setup(
@@ -190,7 +189,7 @@ impl KvEndpoint {
     ) -> Result<KvEndpoint, ClientError> {
         let uuid = Uuid::new_v4().to_string();
         let (tx, mut rx) = mpsc::channel::<Bytes>(1024);
-        let in_flight = Arc::new(Mutex::new(
+        let in_flight = Arc::new(AsyncMutex::new(
             HashMap::<u32, oneshot::Sender<KvResponse>>::new(),
         ));
         let mut ep = KvEndpoint {
@@ -224,7 +223,7 @@ impl KvEndpoint {
                                 response.status(),
                             );
                             let requests = Arc::clone(&in_flight);
-                            let mut map = requests.lock().unwrap();
+                            let mut map = requests.lock().await;
                             let t = map.remove(&response.opaque());
                             drop(map);
                             drop(requests);
@@ -566,6 +565,10 @@ impl KvEndpoint {
         Err(error)
     }
 
+    pub fn remote(&self) -> String {
+        self.remote_addr.clone()
+    }
+
     async fn send(
         &self,
         mut req: KvRequest,
@@ -581,7 +584,7 @@ impl KvEndpoint {
             req.opcode(),
             req.opaque()
         );
-        let mut map = self.in_flight.lock().unwrap();
+        let mut map = self.in_flight.lock().await;
         map.insert(opaque, chan);
         drop(map);
 
@@ -593,7 +596,7 @@ impl KvEndpoint {
             Ok(_) => Ok(()),
             Err(e) => {
                 // If we failed to write the request then immediately drop it.
-                let mut map = self.in_flight.lock().unwrap();
+                let mut map = self.in_flight.lock().await;
                 map.remove(&opaque);
                 drop(map);
 
