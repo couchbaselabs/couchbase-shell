@@ -80,6 +80,10 @@ pub enum ClientError {
         reason: Option<String>,
         key: Option<String>,
     },
+    KVCouldNotConnect {
+        reason: String,
+        address: String,
+    },
 }
 
 impl ClientError {
@@ -114,6 +118,7 @@ impl ClientError {
             Self::Cancelled { .. } => "Request cancelled".to_string(),
             Self::CapellaClusterNotFound { .. } => "Cluster not found".to_string(),
             Self::RequestFailed { .. } => "Request failed".to_string(),
+            Self::KVCouldNotConnect { .. } => "Could not establish kv connection".to_string(),
         }
     }
 
@@ -165,6 +170,9 @@ impl ClientError {
                 Some(re) => re.to_string(),
                 None => "Request failed for an unspecified reason".to_string(),
             },
+            Self::KVCouldNotConnect { reason, address } => {
+                format!("could not connect to {}: {}", address, reason)
+            }
         }
     }
 
