@@ -135,7 +135,6 @@ pub(crate) fn run_kv_store_ops(
     req_builder: fn(String, Vec<u8>, u32) -> KeyValueRequest,
 ) -> Result<Vec<Value>, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
     let id_column = call
         .get_flag(engine_state, stack, "id-column")?
@@ -144,18 +143,6 @@ pub(crate) fn run_kv_store_ops(
     let content_column = call
         .get_flag(engine_state, stack, "content-column")?
         .unwrap_or_else(|| String::from("content"));
-
-    let expiry: i64 = call.get_flag(engine_state, stack, "expiry")?.unwrap_or(0);
-    let batch_size: Option<i64> = call.get_flag(engine_state, stack, "batch-size")?;
-
-    let bucket_flag = call.get_flag(engine_state, stack, "bucket")?;
-    let scope_flag = call.get_flag(engine_state, stack, "scope")?;
-    let collection_flag = call.get_flag(engine_state, stack, "collection")?;
-    let halt_on_error = call.has_flag("halt-on-error");
-
-    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
-
-    let guard = state.lock().unwrap();
 
     let input_args = if let Some(id) = call.opt::<String>(engine_state, stack, 0)? {
         if let Some(v) = call.opt::<Value>(engine_state, stack, 1)? {
@@ -199,6 +186,41 @@ pub(crate) fn run_kv_store_ops(
 
         all_items.push((item.0, value));
     }
+
+    run_kv_mutations(
+        state,
+        engine_state,
+        stack,
+        call,
+        span,
+        all_items,
+        req_builder,
+    )
+}
+
+pub fn run_kv_mutations(
+    state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    span: Span,
+    all_items: Vec<(String, Vec<u8>)>,
+    req_builder: fn(String, Vec<u8>, u32) -> KeyValueRequest,
+) -> Result<Vec<Value>, ShellError> {
+    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+
+    let expiry: i64 = call.get_flag(engine_state, stack, "expiry")?.unwrap_or(0);
+    let batch_size: Option<i64> = call.get_flag(engine_state, stack, "batch-size")?;
+
+    let bucket_flag = call.get_flag(engine_state, stack, "bucket")?;
+    let scope_flag = call.get_flag(engine_state, stack, "scope")?;
+    let collection_flag = call.get_flag(engine_state, stack, "collection")?;
+
+    let halt_on_error = call.has_flag("halt-on-error");
+
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
+
+    let guard = state.lock().unwrap();
 
     let mut all_values = vec![];
     if let Some(size) = batch_size {
