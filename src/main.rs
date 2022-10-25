@@ -336,6 +336,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         working_set.add_decl(Box::new(CollectionsDrop::new(state.clone())));
         working_set.add_decl(Box::new(Doc));
         working_set.add_decl(Box::new(DocGet::new(state.clone())));
+        working_set.add_decl(Box::new(DocImport::new(state.clone())));
         working_set.add_decl(Box::new(DocInsert::new(state.clone())));
         working_set.add_decl(Box::new(DocReplace::new(state.clone())));
         working_set.add_decl(Box::new(DocRemove::new(state.clone())));
