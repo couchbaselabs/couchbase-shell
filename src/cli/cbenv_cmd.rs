@@ -115,6 +115,7 @@ fn use_cmd(
                         .unwrap_or_else(|| String::from("")),
                     span,
                 );
+                results.add_string("cluster_type", active.cluster_type(), span);
                 if let Some(co) = active.capella_org() {
                     results.add_string("capella-organization", co, span);
                 }
@@ -155,6 +156,7 @@ fn use_cmd(
                 results.add_string("bucket", String::from(""), span);
                 results.add_string("scope", String::from(""), span);
                 results.add_string("collection", String::from(""), span);
+                results.add_string("cluster_type", String::from(""), span);
             }
         }
     }

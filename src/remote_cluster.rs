@@ -11,12 +11,32 @@ pub enum RemoteClusterType {
 
 impl From<Vec<String>> for RemoteClusterType {
     fn from(hostnames: Vec<String>) -> Self {
-        if hostnames.len() == 1 && hostnames.contains(&CAPELLA_SRV_SUFFIX.to_string()) {
+        if hostnames.len() == 1 && hostnames[0].contains(&CAPELLA_SRV_SUFFIX.to_string()) {
             // This means that this is a Capella host.
             RemoteClusterType::Provisioned
         } else {
             RemoteClusterType::Other
         }
+    }
+}
+
+impl From<String> for RemoteClusterType {
+    fn from(cluster_type: String) -> Self {
+        if cluster_type == "provisioned".to_string() {
+            RemoteClusterType::Provisioned
+        } else {
+            RemoteClusterType::Other
+        }
+    }
+}
+
+impl Into<String> for RemoteClusterType {
+    fn into(self) -> String {
+        match self {
+            RemoteClusterType::Provisioned => "provisioned",
+            RemoteClusterType::Other => "other",
+        }
+        .to_string()
     }
 }
 
