@@ -38,7 +38,7 @@ use serde::Deserialize;
 use state::State;
 use std::collections::HashMap;
 use std::error::Error;
-use std::fs;
+use std::fs::File;
 use std::io::{BufReader, Write};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -618,22 +618,13 @@ fn maybe_write_config_file(opt: CliOptions, password: Option<String>) -> PathBuf
         println!("Please enter username:");
         read_input()
     };
-    println!("Write password to config file (Y/n)?");
-    let mut write_password = String::new();
-    std::io::stdin()
-        .read_line(&mut write_password)
-        .expect("Failed to read user input");
-    let password = match write_password.to_lowercase().trim() {
-        "y" | "" => {
-            if let Some(pass) = password {
-                println!("Using password entered as password");
-                Some(pass)
-            } else {
-                println!("Please enter password:");
-                read_input()
-            }
-        }
-        _ => None,
+
+    let password = if let Some(pass) = password {
+        println!("Using password entered as password");
+        Some(pass)
+    } else {
+        println!("Please enter password:");
+        read_input()
     };
 
     let bucket = if let Some(bucket) = opt.bucket {
@@ -684,11 +675,19 @@ fn maybe_write_config_file(opt: CliOptions, password: Option<String>) -> PathBuf
 
     let config = ShellConfig::new_from_clusters(vec![config_builder.build()], vec![]);
     let mut to_write_to = path.clone();
+    if !to_write_to.exists() {
+        std::fs::create_dir_all(&to_write_to).expect("Failed to create config directory");
+    }
+
     to_write_to.push("config");
+    let mut output = File::create(&to_write_to).expect("Failed to create config file");
+
     println!("Writing config to {:?}", &to_write_to);
-    fs::write(
-        to_write_to,
-        config.to_str().expect("Failed to convert config to string"),
+
+    write!(
+        output,
+        "{}",
+        config.to_str().expect("Failed to convert config to string")
     )
     .expect("Failed to write config file");
 
