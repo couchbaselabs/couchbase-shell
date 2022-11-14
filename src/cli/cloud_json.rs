@@ -179,6 +179,18 @@ pub(crate) struct JSONCloudClusterVersion {
     name: String,
 }
 
+#[derive(Debug, Deserialize, Clone)]
+pub(crate) struct JSONCloudClusterPlaceV3 {
+    #[serde(rename = "CIDR")]
+    cidr: String,
+}
+
+impl JSONCloudClusterPlaceV3 {
+    pub fn cidr(&self) -> String {
+        self.cidr.clone()
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub(crate) struct JSONCloudClusterV3 {
     id: String,
@@ -192,6 +204,7 @@ pub(crate) struct JSONCloudClusterV3 {
     #[serde(default)]
     #[serde(rename = "endpointsSrv")]
     endpoints_srv: Option<String>,
+    place: JSONCloudClusterPlaceV3,
 }
 
 impl JSONCloudClusterV3 {
@@ -215,5 +228,8 @@ impl JSONCloudClusterV3 {
     }
     pub fn endpoints_srv(&self) -> Option<String> {
         self.endpoints_srv.as_ref().cloned()
+    }
+    pub fn place(&self) -> JSONCloudClusterPlaceV3 {
+        self.place.clone()
     }
 }
