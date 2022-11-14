@@ -25,36 +25,36 @@ pub fn create_default_context() -> EngineState {
         // Core
         bind_command! {
             Alias,
+            Ast,
+            Commandline,
             Debug,
             Def,
             DefEnv,
             Describe,
             Do,
-            Du,
             Echo,
             ErrorMake,
             ExportAlias,
             ExportCommand,
             ExportDef,
             ExportDefEnv,
-            ExportEnv,
             ExportExtern,
+            ExportUse,
             Extern,
             For,
             // Help,
             Hide,
-            History,
+            HideEnv,
             If,
             Ignore,
             Overlay,
-            OverlayAdd,
+            OverlayUse,
             OverlayList,
-            // OverlayNew,
-            OverlayRemove,
+            OverlayNew,
+            OverlayHide,
             Let,
             Metadata,
             Module,
-            Source,
             Use,
             // Version,
         };
@@ -133,6 +133,7 @@ pub fn create_default_context() -> EngineState {
         bind_command! {
             History,
             // Tutor, TODO(chvck): useful but we need to think about how this interacts with our tutorial
+            HistorySession,
         };
 
         // Path
@@ -153,12 +154,24 @@ pub fn create_default_context() -> EngineState {
         bind_command! {
             Benchmark,
             Complete,
-            Exec,
             External,
             NuCheck,
-            Ps,
             Sys,
         };
+
+        #[cfg(unix)]
+        bind_command! { Exec }
+
+        #[cfg(windows)]
+        bind_command! { RegistryQuery }
+
+        #[cfg(any(
+            target_os = "android",
+            target_os = "linux",
+            target_os = "macos",
+            target_os = "windows"
+        ))]
+        bind_command! { Ps };
 
         bind_command! { Which };
 
@@ -179,13 +192,16 @@ pub fn create_default_context() -> EngineState {
             SplitChars,
             SplitColumn,
             SplitRow,
+            SplitWords,
             Str,
             StrCamelCase,
             StrCapitalize,
             StrCollect,
             StrContains,
+            StrDistance,
             StrDowncase,
             StrEndswith,
+            StrJoin,
             StrReplace,
             StrIndexOf,
             StrKebabCase,
@@ -253,6 +269,7 @@ pub fn create_default_context() -> EngineState {
             AnsiGradient,
             AnsiStrip,
             Clear,
+            Du,
             KeybindingsDefault,
             Input,
             KeybindingsListen,
@@ -346,6 +363,7 @@ pub fn create_default_context() -> EngineState {
         // Env
         bind_command! {
             Env,
+            ExportEnv,
             LetEnv,
             LoadEnv,
             WithEnv,

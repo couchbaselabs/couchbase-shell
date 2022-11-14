@@ -430,30 +430,23 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     if let Some(c) = opt.command {
         add_plugin_file(&mut context, None, CBSHELL_FOLDER);
-        nu_cli::evaluate_commands(&c, &mut context, &mut stack, input, true, None)
+        nu_cli::evaluate_commands(&c, &mut context, &mut stack, input, None)
             .expect("Failed to run command");
         return Ok(());
     }
 
     if let Some(filepath) = opt.script {
         add_plugin_file(&mut context, None, CBSHELL_FOLDER);
-        nu_cli::evaluate_file(
-            filepath,
-            &args_to_script,
-            &mut context,
-            &mut stack,
-            input,
-            false,
-        )
-        .expect("Failed to run script");
+        nu_cli::evaluate_file(filepath, &args_to_script, &mut context, &mut stack, input)
+            .expect("Failed to run script");
 
         return Ok(());
     }
 
-    read_plugin_file(&mut context, &mut stack, None, CBSHELL_FOLDER, false);
+    read_plugin_file(&mut context, &mut stack, None, CBSHELL_FOLDER);
     read_nu_config_file(&mut context, &mut stack);
 
-    nu_cli::evaluate_repl(&mut context, &mut stack, "CouchbaseShell", false)
+    nu_cli::evaluate_repl(&mut context, &mut stack, "CouchbaseShell", None)
         .expect("evaluate loop failed");
     // nu_cli::evaluate_repl(&mut context, None, false).expect("evaluate loop failed");
     Ok(())
