@@ -223,7 +223,7 @@ fn run_get(
                             let mut collected = NuValueMap::default();
                             collected.add_string(
                                 &id_column,
-                                e.key().unwrap_or_else(|| "".to_string()),
+                                e.key().unwrap_or_default(),
                                 call.head,
                             );
                             collected.add_string("cas", "", call.head);

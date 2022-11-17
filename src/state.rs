@@ -81,22 +81,19 @@ impl State {
             *guard = active.clone();
         }
 
-        match self.active_cluster() {
-            Some(remote) => {
-                let _ = remote.cluster();
+        if let Some(remote) = self.active_cluster() {
+            let _ = remote.cluster();
 
-                //if remote.active_bucket().is_some() {
-                //    let _ = remote.bucket(remote.active_bucket().unwrap().as_str());
-                //}
+            //if remote.active_bucket().is_some() {
+            //    let _ = remote.bucket(remote.active_bucket().unwrap().as_str());
+            //}
 
-                if let Some(s) = remote.active_scope() {
-                    remote.set_active_scope(s);
-                }
-                if let Some(c) = remote.active_collection() {
-                    remote.set_active_collection(c);
-                }
+            if let Some(s) = remote.active_scope() {
+                remote.set_active_scope(s);
             }
-            None => {}
+            if let Some(c) = remote.active_collection() {
+                remote.set_active_collection(c);
+            }
         }
 
         for (k, v) in &self.clusters {
