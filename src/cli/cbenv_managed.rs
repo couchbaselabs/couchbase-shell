@@ -63,7 +63,7 @@ fn clusters(
             collected.add_string("username", String::from(v.username()), span);
             collected.add_string(
                 "capella_organization",
-                v.capella_org().unwrap_or_else(|| "".to_string()),
+                v.capella_org().unwrap_or_default(),
                 span,
             );
             collected.into_value(span)

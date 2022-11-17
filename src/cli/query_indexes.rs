@@ -174,12 +174,8 @@ fn index_definitions(
         .map(|d| {
             let mut collected = NuValueMap::default();
             collected.add_string("bucket", d.bucket, span);
-            collected.add_string("scope", d.scope.unwrap_or_else(|| "".to_string()), span);
-            collected.add_string(
-                "collection",
-                d.collection.unwrap_or_else(|| "".to_string()),
-                span,
-            );
+            collected.add_string("scope", d.scope.unwrap_or_default(), span);
+            collected.add_string("collection", d.collection.unwrap_or_default(), span);
             collected.add_string("name", d.index_name, span);
             collected.add_string("status", d.status, span);
             collected.add_string("storage_mode", d.storage_mode, span);

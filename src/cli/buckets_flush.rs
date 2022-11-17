@@ -72,7 +72,7 @@ fn buckets_flush(
     let name: String = call.req(engine_state, stack, 0)?;
     let bucket: String = call
         .get_flag(engine_state, stack, "bucket")?
-        .unwrap_or_else(|| "".to_string());
+        .unwrap_or_default();
 
     debug!("Running buckets flush for bucket {:?}", &bucket);
 

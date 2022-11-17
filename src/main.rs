@@ -309,7 +309,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             capella_orgs.insert(name, plane);
         }
 
-        active.unwrap_or_else(|| "".to_string())
+        active.unwrap_or_default()
     };
 
     let state = Arc::new(Mutex::new(State::new(

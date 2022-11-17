@@ -104,7 +104,7 @@ fn clusters_get(
     collected.add_string("status", cluster.status(), span);
     collected.add_string(
         "endpoint_srv",
-        cluster.endpoints_srv().unwrap_or_else(|| "".to_string()),
+        cluster.endpoints_srv().unwrap_or_default(),
         span,
     );
     collected.add_string("version", cluster.version_name(), span);
