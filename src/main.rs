@@ -42,7 +42,7 @@ use std::time::Duration;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut logger_builder = env_logger::Builder::from_env(
-        Env::default().filter_or("CBSH_LOG", "info,isahc=error,surf=error"),
+        Env::default().filter_or("CBSH_LOG", "info,isahc=error,surf=error,nu=warn"),
     );
     logger_builder.format(|buf, record| {
         let mut style = buf.style();
