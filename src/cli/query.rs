@@ -1,6 +1,6 @@
 use crate::cli::util::{
-    cluster_identifiers_from, convert_json_value_to_nu_value, convert_row_to_nu_value,
-    duration_to_golang_string, get_active_cluster,
+    cluster_identifiers_from, convert_row_to_nu_value, duration_to_golang_string,
+    get_active_cluster,
 };
 use crate::client::{HttpResponse, QueryRequest};
 use crate::state::State;
@@ -175,7 +175,8 @@ pub fn handle_query_response(
         } else if let Some(content_results) = content.get("results") {
             if let Some(arr) = content_results.as_array() {
                 for result in arr {
-                    results.push(convert_json_value_to_nu_value(result, span).unwrap());
+                    results
+                        .push(convert_row_to_nu_value(result, span, identifier.clone()).unwrap());
                 }
             } else {
                 return Err(malformed_response_error(

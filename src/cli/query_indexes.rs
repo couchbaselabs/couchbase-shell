@@ -80,7 +80,8 @@ fn query(
 
     let statement = "select bucket_id as `bucket`, scope_id as `scope`, keyspace_id as `keyspace`, name, state, `using` as `type`, \
     ifmissing(condition, null) as condition, ifmissing(is_primary, false) as `primary`, \
-    index_key from system:indexes"
+    index_key, CASE metadata.stats.last_known_scan_time WHEN 0 THEN 0 ELSE \
+    MILLIS_TO_STR(TRUNC(metadata.stats.last_known_scan_time / 1000000, 0)) END as `last_known_scan_time` from system:indexes"
         .to_string();
 
     debug!("Running n1ql query {}", &statement);
