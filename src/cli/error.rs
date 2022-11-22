@@ -188,7 +188,7 @@ impl From<CBShellError> for ShellError {
                 spanned_shell_error(format!("{} can only be used with databases registered to a Capella organisation", command_name), "Check the configuration file to ensure that the database has a capella-organisation entry".to_string(), span)
             },
             CBShellError::MustNotBeCapella { command_name, span } => {
-                spanned_shell_error(format!("{} cannot be run against Capella", command_name), "The command cannot be used with Capella databases. If the database is not Capella then check the configuration file to ensure that the database does not have a capella-organisation entry".to_string(), span)
+                spanned_shell_error(format!("{} cannot be run against Capella", command_name), "The command cannot be used with Capella databases.".to_string(), span)
             },
             CBShellError::NoActiveBucket { span } => spanned_shell_error(
                 "Unable to determine an active bucket",

@@ -8,7 +8,7 @@ use crate::cli::error::{
 };
 use crate::client::{CapellaClient, CapellaRequest};
 use crate::state::State;
-use crate::RemoteCluster;
+use crate::{RemoteCluster, RemoteClusterType};
 use nu_engine::CallExt;
 use nu_protocol::ast::{Call, PathMember};
 use nu_protocol::engine::{EngineState, Stack};
@@ -255,15 +255,14 @@ pub fn validate_is_not_cloud(
     command_name: impl Into<String>,
     span: Span,
 ) -> Result<(), ShellError> {
-    if cluster.capella_org().is_some() {
-        return Err(MustNotBeCapella {
+    match cluster.cluster_type() {
+        RemoteClusterType::Other => Ok(()),
+        _ => Err(MustNotBeCapella {
             command_name: command_name.into(),
             span,
         }
-        .into());
+        .into()),
     }
-
-    Ok(())
 }
 
 pub(crate) fn find_project_id(
