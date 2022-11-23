@@ -3,9 +3,7 @@
 use crate::state::State;
 
 use crate::cli::doc_get::ids_from_input;
-use crate::cli::doc_upsert::{
-    build_batched_kv_items, prime_manifest_if_required, process_kv_workers,
-};
+use crate::cli::doc_upsert::{build_batched_kv_items, process_kv_workers};
 use crate::cli::util::{
     cluster_identifiers_from, get_active_cluster, namespace_from_args, NuValueMap,
 };
@@ -135,22 +133,27 @@ fn run_get(
 
         let rt = Runtime::new().unwrap();
         let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
-        let mut client = rt.block_on(active_cluster.cluster().key_value_client(
+        let client = rt.block_on(active_cluster.cluster().key_value_client(
             bucket.clone(),
             deadline,
             ctrl_c.clone(),
             span,
         ))?;
 
-        prime_manifest_if_required(
-            &rt,
-            scope.clone(),
-            collection.clone(),
-            ctrl_c.clone(),
+        let cid = match rt.block_on(client.get_cid(
+            scope,
+            collection,
             Instant::now().add(active_cluster.timeouts().data_timeout()),
-            &mut client,
-            span,
-        )?;
+            ctrl_c.clone(),
+        )) {
+            Ok(cid) => cid,
+            Err(e) => {
+                let mut collected = NuValueMap::default();
+                collected.add_string("error", e.to_string(), call.head);
+                results.push(collected.into_value(call.head));
+                continue;
+            }
+        };
 
         if all_ids.is_empty() {
             all_ids = build_batched_kv_items(active_cluster.kv_batch_size(), ids.clone());
@@ -165,21 +168,13 @@ fn run_get(
         for items in all_ids.clone() {
             for item in items.clone() {
                 let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
-                let scope = scope.clone();
-                let collection = collection.clone();
                 let ctrl_c = ctrl_c.clone();
 
                 let client = client.clone();
 
                 workers.push(async move {
                     client
-                        .request(
-                            KeyValueRequest::Remove { key: item },
-                            scope,
-                            collection,
-                            deadline,
-                            ctrl_c,
-                        )
+                        .request(KeyValueRequest::Remove { key: item }, cid, deadline, ctrl_c)
                         .await
                 });
             }

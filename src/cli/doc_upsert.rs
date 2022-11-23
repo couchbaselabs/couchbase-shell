@@ -1,11 +1,11 @@
 //! The `doc upsert` command performs a KV upsert operation.
 
 use super::util::convert_nu_value_to_json_value;
-use crate::cli::error::{generic_error, serialize_error};
+use crate::cli::error::serialize_error;
 use crate::cli::util::{
     cluster_identifiers_from, get_active_cluster, namespace_from_args, NuValueMap,
 };
-use crate::client::{ClientError, KeyValueRequest, KvClient, KvResponse};
+use crate::client::{ClientError, KeyValueRequest, KvResponse};
 use crate::state::State;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
@@ -13,12 +13,11 @@ use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
-    Category, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape, Value,
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
 };
 use std::collections::HashSet;
 use std::future::Future;
 use std::ops::Add;
-use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 use tokio::time::Instant;
@@ -216,22 +215,27 @@ pub(crate) fn run_kv_store_ops(
             span,
         )?;
         let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
-        let mut client = rt.block_on(active_cluster.cluster().key_value_client(
+        let client = rt.block_on(active_cluster.cluster().key_value_client(
             bucket.clone(),
             deadline,
             ctrl_c.clone(),
             span,
         ))?;
 
-        prime_manifest_if_required(
-            &rt,
-            scope.clone(),
-            collection.clone(),
-            ctrl_c.clone(),
+        let cid = match rt.block_on(client.get_cid(
+            scope,
+            collection,
             Instant::now().add(active_cluster.timeouts().data_timeout()),
-            &mut client,
-            span,
-        )?;
+            ctrl_c.clone(),
+        )) {
+            Ok(cid) => cid,
+            Err(e) => {
+                let mut collected = NuValueMap::default();
+                collected.add_string("error", e.to_string(), call.head);
+                results.push(collected.into_value(call.head));
+                continue;
+            }
+        };
 
         let client = Arc::new(client);
 
@@ -247,8 +251,6 @@ pub(crate) fn run_kv_store_ops(
             for item in items.clone() {
                 let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
 
-                let scope = scope.clone();
-                let collection = collection.clone();
                 let ctrl_c = ctrl_c.clone();
 
                 let client = client.clone();
@@ -257,8 +259,7 @@ pub(crate) fn run_kv_store_ops(
                     client
                         .request(
                             req_builder(item.0, item.1, expiry as u32),
-                            scope,
-                            collection,
+                            cid,
                             deadline,
                             ctrl_c,
                         )
@@ -342,27 +343,4 @@ pub(crate) fn build_batched_kv_items<T>(
     all_items.push(these_items);
 
     all_items
-}
-
-pub(crate) fn prime_manifest_if_required(
-    rt: &Runtime,
-    scope: String,
-    collection: String,
-    ctrl_c: Arc<AtomicBool>,
-    deadline: Instant,
-    client: &mut KvClient,
-    span: Span,
-) -> Result<(), ShellError> {
-    if KvClient::is_non_default_scope_collection(scope, collection) {
-        rt.block_on(client.fetch_collections_manifest(deadline, ctrl_c))
-            .map_err(|e| {
-                generic_error(
-                    format!("Failed to fetch collections manifest {}", e),
-                    None,
-                    span,
-                )
-            })?;
-    }
-
-    Ok(())
 }

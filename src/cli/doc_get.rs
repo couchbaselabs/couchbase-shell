@@ -3,7 +3,7 @@
 use super::util::convert_json_value_to_nu_value;
 use crate::state::State;
 
-use crate::cli::doc_upsert::{build_batched_kv_items, prime_manifest_if_required};
+use crate::cli::doc_upsert::build_batched_kv_items;
 use crate::cli::util::{
     cluster_identifiers_from, get_active_cluster, namespace_from_args, NuValueMap,
 };
@@ -156,22 +156,27 @@ fn run_get(
 
         let rt = Runtime::new().unwrap();
         let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
-        let mut client = rt.block_on(active_cluster.cluster().key_value_client(
+        let client = rt.block_on(active_cluster.cluster().key_value_client(
             bucket.clone(),
             deadline,
             ctrl_c.clone(),
             span,
         ))?;
 
-        prime_manifest_if_required(
-            &rt,
-            scope.clone(),
-            collection.clone(),
-            ctrl_c.clone(),
+        let cid = match rt.block_on(client.get_cid(
+            scope,
+            collection,
             Instant::now().add(active_cluster.timeouts().data_timeout()),
-            &mut client,
-            span,
-        )?;
+            ctrl_c.clone(),
+        )) {
+            Ok(cid) => cid,
+            Err(e) => {
+                let mut collected = NuValueMap::default();
+                collected.add_string("error", e.to_string(), call.head);
+                results.push(collected.into_value(call.head));
+                continue;
+            }
+        };
 
         let client = Arc::new(client);
 
@@ -179,8 +184,6 @@ fn run_get(
             for id in ids {
                 let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
 
-                let scope = scope.clone();
-                let collection = collection.clone();
                 let ctrl_c = ctrl_c.clone();
                 let id = id.clone();
 
@@ -188,13 +191,7 @@ fn run_get(
 
                 workers.push(async move {
                     client
-                        .request(
-                            KeyValueRequest::Get { key: id },
-                            scope,
-                            collection,
-                            deadline,
-                            ctrl_c,
-                        )
+                        .request(KeyValueRequest::Get { key: id }, cid, deadline, ctrl_c)
                         .await
                 });
             }

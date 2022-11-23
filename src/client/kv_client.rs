@@ -1,12 +1,12 @@
 use crate::cli::CtrlcFuture;
 use crate::client::crc::cb_vb_map;
 use crate::client::error::ClientError;
-use crate::client::error::ClientError::CollectionNotFound;
 use crate::client::http_client::{PingResponse, ServiceType};
 use crate::client::http_handler::{status_to_reason, HTTPHandler};
 use crate::client::kv::{KvEndpoint, KvTlsConfig};
 use crate::client::protocol;
 use crate::config::ClusterTlsConfig;
+use bytes::{Buf, Bytes};
 use log::{debug, trace};
 use serde::Deserialize;
 use std::future::Future;
@@ -22,6 +22,7 @@ pub struct KvResponse {
     content: Option<serde_json::Value>,
     cas: u64,
     key: String,
+    extras: Option<Bytes>,
 }
 
 impl KvResponse {
@@ -36,16 +37,16 @@ impl KvResponse {
     pub fn key(&self) -> String {
         self.key.clone()
     }
+
+    pub fn extras(&mut self) -> Option<Bytes> {
+        self.extras.take()
+    }
 }
 
 pub struct KvClient {
-    seeds: Vec<String>,
-    manifest: Option<CollectionManifest>,
     endpoints: HashMap<String, KvEndpoint>,
     config: BucketConfig,
-    http_agent: HTTPHandler,
     tls_enabled: bool,
-    bucket: String,
 }
 
 impl KvClient {
@@ -70,7 +71,7 @@ impl KvClient {
 
         let http_agent = HTTPHandler::new(username.clone(), password.clone(), tls_config.clone());
         let config = KvClient::get_bucket_config(
-            seeds.clone(),
+            seeds,
             bucket.clone(),
             tls_config.clone(),
             &http_agent,
@@ -107,12 +108,8 @@ impl KvClient {
         }
 
         Ok(Self {
-            seeds,
-            manifest: None,
             config,
             endpoints,
-            http_agent,
-            bucket,
             tls_enabled: kv_tls_config.is_some(),
         })
     }
@@ -132,47 +129,6 @@ impl KvClient {
         let port = seed.1;
 
         (addr, port)
-    }
-
-    fn search_manifest(
-        &self,
-        key: String,
-        scope: String,
-        collection: String,
-    ) -> Result<u32, ClientError> {
-        if (scope.is_empty() || scope == "_default")
-            && (collection.is_empty() || collection == "_default")
-        {
-            trace!(
-                "Scope and collection names both empty or _default, not performing manifest lookup"
-            );
-            return Ok(0);
-        }
-
-        let scope_name = if scope.is_empty() {
-            trace!("Coerced empty scope name to _default");
-            "_default".into()
-        } else {
-            scope
-        };
-        let collection_name = if collection.is_empty() {
-            trace!("Coerced empty collection name to _default");
-            "_default".into()
-        } else {
-            collection
-        };
-
-        for s in &self.manifest.as_ref().unwrap().scopes {
-            if s.name == scope_name {
-                for c in &s.collections {
-                    if c.name == collection_name {
-                        return Ok(u32::from_str_radix(c.uid.as_str(), 16).unwrap());
-                    }
-                }
-            }
-        }
-        debug!("{}.{} not found in manifest", scope_name, collection_name);
-        Err(CollectionNotFound { key: Some(key) })
     }
 
     async fn get_bucket_config(
@@ -225,55 +181,6 @@ impl KvClient {
             reason = status_to_reason(final_error_status);
         }
         Err(ClientError::ConfigurationLoadFailed { reason })
-    }
-
-    async fn get_collection_manifest(
-        &self,
-        deadline: Instant,
-        ctrl_c: Arc<AtomicBool>,
-    ) -> Result<CollectionManifest, ClientError> {
-        let path = format!("/pools/default/buckets/{}/scopes", self.bucket.clone());
-        let mut final_error_content = None;
-        let mut final_error_status = 0;
-        for seed in &self.seeds {
-            let host_split: Vec<String> = seed.split(':').map(|v| v.to_owned()).collect();
-
-            let host: String;
-            let port: i32;
-            if host_split.len() == 1 {
-                host = seed.clone();
-                port = if self.tls_enabled { 18091 } else { 8091 };
-            } else {
-                host = host_split[0].clone();
-                port = host_split[1]
-                    .parse::<i32>()
-                    .map_err(|e| ClientError::RequestFailed {
-                        reason: Some(e.to_string()),
-                        key: None,
-                    })?;
-            }
-            let uri = format!("{}:{}{}", host, port, &path);
-            debug!("Fetching collections manifest from {}", uri);
-            let (content, status) = self
-                .http_agent
-                .http_get(&uri, deadline, ctrl_c.clone())
-                .await?;
-            if status != 200 {
-                if !content.is_empty() {
-                    final_error_content = Some(content);
-                }
-                final_error_status = status;
-                continue;
-            }
-            let manifest: CollectionManifest = serde_json::from_str(&content).unwrap();
-            trace!("Fetched collections manifest {:?}", &manifest);
-            return Ok(manifest);
-        }
-        let mut reason = final_error_content;
-        if reason.is_none() {
-            reason = status_to_reason(final_error_status);
-        }
-        Err(ClientError::CollectionManifestLoadFailed { reason })
     }
 
     pub async fn ping_all(
@@ -333,24 +240,6 @@ impl KvClient {
         Ok(results)
     }
 
-    pub async fn fetch_collections_manifest(
-        &mut self,
-        deadline: Instant,
-        ctrl_c: Arc<AtomicBool>,
-    ) -> Result<(), ClientError> {
-        let now = Instant::now();
-        if now >= deadline {
-            return Err(ClientError::Timeout { key: None });
-        }
-
-        self.manifest = Some(
-            self.get_collection_manifest(deadline, ctrl_c.clone())
-                .await?,
-        );
-
-        Ok(())
-    }
-
     pub fn is_non_default_scope_collection(scope: String, collection: String) -> bool {
         (!scope.is_empty() && scope != "_default")
             || (!collection.is_empty() && collection != "_default")
@@ -359,8 +248,7 @@ impl KvClient {
     pub async fn request(
         &self,
         request: KeyValueRequest,
-        scope: String,
-        collection: String,
+        cid: u32,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<KvResponse, ClientError> {
@@ -370,13 +258,12 @@ impl KvClient {
                 key: Some(request.key()),
             });
         }
-        let deadline_sleep = sleep(deadline.sub(now));
+        let deadline = deadline.sub(now);
+        let deadline_sleep = sleep(deadline);
         tokio::pin!(deadline_sleep);
 
         let ctrl_c_fut = CtrlcFuture::new(ctrl_c.clone());
         tokio::pin!(ctrl_c_fut);
-
-        let cid = self.search_manifest(request.key(), scope.clone(), collection.clone())?;
 
         let key = match request {
             KeyValueRequest::Get { ref key } => key.clone(),
@@ -427,6 +314,13 @@ impl KvClient {
             }
         };
 
+        self.handle_op_result(result)
+    }
+
+    fn handle_op_result(
+        &self,
+        result: Result<(protocol::KvResponse, Option<String>), ClientError>,
+    ) -> Result<KvResponse, ClientError> {
         match result {
             Ok(mut r) => {
                 let content = if let Some(body) = r.0.body() {
@@ -435,7 +329,7 @@ impl KvClient {
                         Err(e) => {
                             return Err(ClientError::RequestFailed {
                                 reason: Some(e.to_string()),
-                                key: Some(key),
+                                key: r.1,
                             });
                         }
                     }
@@ -445,52 +339,98 @@ impl KvClient {
                 Ok(KvResponse {
                     content,
                     cas: r.0.cas(),
-                    key: r.1,
+                    key: r.1.unwrap_or_default(),
+                    extras: r.0.extras(),
                 })
             }
             Err(e) => Err(e),
         }
     }
 
+    pub async fn get_cid(
+        &self,
+        scope: String,
+        collection: String,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<u32, ClientError> {
+        if !KvClient::is_non_default_scope_collection(scope.clone(), collection.clone()) {
+            trace!(
+                "Scope and collection names both empty or _default, not performing manifest lookup"
+            );
+            return Ok(0);
+        }
+
+        let scope_name = if scope.is_empty() {
+            trace!("Coerced empty scope name to _default");
+            "_default".to_string()
+        } else {
+            scope
+        };
+        let collection_name = if collection.is_empty() {
+            trace!("Coerced empty collection name to _default");
+            "_default".to_string()
+        } else {
+            collection
+        };
+
+        let deadline_sleep = sleep(deadline.sub(Instant::now()));
+        tokio::pin!(deadline_sleep);
+
+        let ctrl_c_fut = CtrlcFuture::new(ctrl_c.clone());
+        tokio::pin!(ctrl_c_fut);
+
+        let (addr, port) = self.node_for_partition(0);
+        let ep = self
+            .endpoints
+            .get(format!("{}:{}", addr.clone(), port).as_str())
+            .unwrap();
+
+        let op = ep.get_cid(scope_name, collection_name);
+
+        let resp = self
+            .handle_op_future(None, op, deadline_sleep, ctrl_c_fut)
+            .await;
+
+        let mut result = self.handle_op_result(resp)?;
+        match result.extras() {
+            Some(mut e) => {
+                if e.len() < 12 {
+                    return Err(ClientError::RequestFailed {
+                        reason: Some(
+                            "Response from get collection id not expected format".to_string(),
+                        ),
+                        key: None,
+                    });
+                }
+                // Skip over the manifest uid
+                e.advance(8);
+                Ok(e.get_u32())
+            }
+            None => Err(ClientError::RequestFailed {
+                reason: Some("Response from get collection id not expected format".to_string()),
+                key: None,
+            }),
+        }
+    }
+
+    // handle_op_future resolves the future into a result containing (response, key) or an error.
     async fn handle_op_future(
         &self,
-        key: String,
+        key: impl Into<Option<String>>,
         op: impl Future<Output = Result<protocol::KvResponse, ClientError>>,
         mut deadline_sleep: Pin<&mut Sleep>,
         mut ctrl_c: Pin<&mut CtrlcFuture>,
-    ) -> Result<(protocol::KvResponse, String), ClientError> {
+    ) -> Result<(protocol::KvResponse, Option<String>), ClientError> {
+        let key = key.into();
         let res = select! {
             res = op => res,
-            () = &mut deadline_sleep => Err(ClientError::Timeout{key: Some(key.clone())}),
-            () = &mut ctrl_c => Err(ClientError::Cancelled{key: Some(key.clone())}),
-        };
+            () = &mut deadline_sleep => Err(ClientError::Timeout{key: key.clone()}),
+            () = &mut ctrl_c => Err(ClientError::Cancelled{key: key.clone()}),
+        }?;
 
-        match res {
-            Ok(r) => Ok((r, key)),
-            Err(e) => Err(e),
-        }
+        Ok((res, key))
     }
-}
-
-#[derive(Deserialize, Debug)]
-struct CollectionManifestCollection {
-    uid: String,
-    name: String,
-    // #[serde(alias = "maxTTL")]
-    // max_ttl: Option<u32>,
-}
-
-#[derive(Deserialize, Debug)]
-struct CollectionManifestScope {
-    // uid: String,
-    name: String,
-    collections: Vec<CollectionManifestCollection>,
-}
-
-#[derive(Deserialize, Debug)]
-struct CollectionManifest {
-    // uid: String,
-    scopes: Vec<CollectionManifestScope>,
 }
 
 #[derive(Deserialize, Debug)]

@@ -5,6 +5,7 @@ use log::debug;
 use serde_derive::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+#[cfg(not(target_os = "windows"))]
 use std::fs;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::PermissionsExt;
@@ -27,10 +28,10 @@ const CAVES_BINARY: &str = "gocaves-windows.exe";
 #[cfg(target_os = "macos")]
 const CAVES_BINARY: &str = "gocaves-macos";
 #[cfg(target_os = "linux")]
-const CAVES_BINARY: &str = "gocaves-linux";
+const CAVES_BINARY: &str = "gocaves-linux-amd64";
 
 const CAVES_URL: &str = "https://github.com/couchbaselabs/gocaves/releases/download";
-const CAVES_VERSION: &str = "v0.0.1-41";
+const CAVES_VERSION: &str = "v0.0.1-75";
 
 lazy_static! {
     static ref SUPPORTS: Vec<TestFeature> = vec![TestFeature::KeyValue, TestFeature::Collections];

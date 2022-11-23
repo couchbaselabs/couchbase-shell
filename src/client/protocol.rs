@@ -67,7 +67,7 @@ pub struct KvResponse {
     opaque: u32,
     cas: u64,
     // key: Option<Bytes>,
-    // extras: Option<Bytes>,
+    extras: Option<Bytes>,
     body: Option<Bytes>,
 }
 
@@ -80,7 +80,7 @@ impl From<&Bytes> for KvResponse {
         let flexible = magic.is_flexible();
 
         // 1
-        let opcode = Opcode::try_from(slice.get_u8()).unwrap();
+        let opcode = Opcode::try_from(slice.get_u8()).expect("unknown opcode");
 
         let flexible_extras_len = if flexible {
             // 2
@@ -112,7 +112,7 @@ impl From<&Bytes> for KvResponse {
         let cas = slice.get_u64();
         let body_len = total_body_len - key_len - extras_len - flexible_extras_len;
 
-        let _extras = if extras_len > 0 {
+        let extras = if extras_len > 0 {
             Some(input.slice(
                 (HEADER_SIZE + flexible_extras_len)
                     ..(HEADER_SIZE + flexible_extras_len + extras_len),
@@ -139,7 +139,7 @@ impl From<&Bytes> for KvResponse {
         KvResponse {
             opaque,
             body,
-            // extras,
+            extras,
             // key,
             status: Status::from(status),
             // datatype,
@@ -169,6 +169,11 @@ impl KvResponse {
 
     pub fn opcode(&self) -> Opcode {
         self.opcode
+    }
+
+    // extras takes the extras from the response.
+    pub fn extras(&mut self) -> Option<Bytes> {
+        self.extras.take()
     }
 }
 
@@ -399,6 +404,7 @@ pub enum Opcode {
     ErrorMap,
     Auth,
     SelectBucket,
+    GetCollectionID,
 }
 
 impl Opcode {
@@ -414,6 +420,7 @@ impl Opcode {
             Self::Auth => 0x21,
             Self::SelectBucket => 0x89,
             Self::ErrorMap => 0xFE,
+            Self::GetCollectionID => 0xBB,
         }
     }
 }
@@ -439,6 +446,7 @@ impl TryFrom<u8> for Opcode {
             0x21 => Opcode::Auth,
             0x89 => Opcode::SelectBucket,
             0xFE => Opcode::ErrorMap,
+            0xBB => Opcode::GetCollectionID,
             _ => return Err(input),
         })
     }
