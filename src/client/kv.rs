@@ -347,6 +347,38 @@ impl KvEndpoint {
         }
     }
 
+    pub async fn get_cid(
+        &self,
+        scope_name: String,
+        collection_name: String,
+    ) -> Result<KvResponse, ClientError> {
+        let req = KvRequest::new(
+            protocol::Opcode::GetCollectionID,
+            0,
+            0,
+            0,
+            None,
+            None,
+            Some(Bytes::from(
+                format!("{}.{}", scope_name, collection_name).into_bytes(),
+            )),
+            0,
+        );
+
+        let (tx, rx) = oneshot::channel::<KvResponse>();
+        self.send(req, tx).await?;
+
+        let response = match rx.await {
+            Ok(r) => Ok(r),
+            Err(e) => Err(ClientError::RequestFailed {
+                reason: Some(e.to_string()),
+                key: None,
+            }),
+        }?;
+        self.status_to_error(response.status(), None)?;
+        Ok(response)
+    }
+
     pub async fn get(
         &self,
         key: String,
