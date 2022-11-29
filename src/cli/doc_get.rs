@@ -3,10 +3,8 @@
 use super::util::convert_json_value_to_nu_value;
 use crate::state::State;
 
-use crate::cli::doc_upsert::build_batched_kv_items;
-use crate::cli::util::{
-    cluster_identifiers_from, get_active_cluster, namespace_from_args, NuValueMap,
-};
+use crate::cli::doc_upsert::{build_batched_kv_items, get_active_cluster_client_cid};
+use crate::cli::util::{cluster_identifiers_from, NuValueMap};
 use crate::client::KeyValueRequest;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
@@ -17,11 +15,13 @@ use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 use tokio::time::Instant;
 
+use crate::cli::error::generic_error;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
-    Category, Example, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+    Category, Example, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape,
+    Value,
 };
 
 #[derive(Clone)]
@@ -74,6 +74,7 @@ impl Command for DocGet {
                 "the maximum number of items to batch send at a time",
                 None,
             )
+            .switch("halt-on-error", "halt on any errors", Some('e'))
             .category(Category::Custom("couchbase".to_string()))
     }
 
@@ -135,50 +136,41 @@ fn run_get(
     let bucket_flag = call.get_flag(engine_state, stack, "bucket")?;
     let scope_flag = call.get_flag(engine_state, stack, "scope")?;
     let collection_flag = call.get_flag(engine_state, stack, "collection")?;
+    let halt_on_error = call.has_flag("halt-on-error");
 
     let mut results = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
-
-        let (bucket, scope, collection) = namespace_from_args(
+        let rt = Runtime::new().unwrap();
+        let (active_cluster, client, cid) = match get_active_cluster_client_cid(
+            &rt,
+            identifier.clone(),
+            &guard,
             bucket_flag.clone(),
             scope_flag.clone(),
             collection_flag.clone(),
-            active_cluster,
+            ctrl_c.clone(),
             span,
-        )?;
+        ) {
+            Ok(c) => c,
+            Err(e) => {
+                if halt_on_error {
+                    return Err(e);
+                }
+
+                let collected = GetResult::new(identifier.clone())
+                    .id_column(&id_column)
+                    .error(e.to_string())
+                    .into_value(call.head);
+                results.push(collected);
+                continue;
+            }
+        };
 
         if all_ids.is_empty() {
             all_ids = build_batched_kv_items(active_cluster.kv_batch_size(), ids.clone());
         }
 
         debug!("Running kv get for docs {:?}", &ids);
-
-        let rt = Runtime::new().unwrap();
-        let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
-        let client = rt.block_on(active_cluster.cluster().key_value_client(
-            bucket.clone(),
-            deadline,
-            ctrl_c.clone(),
-            span,
-        ))?;
-
-        let cid = match rt.block_on(client.get_cid(
-            scope,
-            collection,
-            Instant::now().add(active_cluster.timeouts().data_timeout()),
-            ctrl_c.clone(),
-        )) {
-            Ok(cid) => cid,
-            Err(e) => {
-                let mut collected = NuValueMap::default();
-                collected.add_string("error", e.to_string(), call.head);
-                results.push(collected.into_value(call.head));
-                continue;
-            }
-        };
-
-        let client = Arc::new(client);
 
         for ids in all_ids.clone() {
             for id in ids {
@@ -199,39 +191,45 @@ fn run_get(
                 while let Some(response) = workers.next().await {
                     match response {
                         Ok(mut res) => {
-                            let mut collected = NuValueMap::default();
-                            collected.add_string(&id_column, res.key(), call.head);
-                            collected.add_i64("cas", res.cas() as i64, call.head);
-                            let content = res.content().unwrap();
+                            let mut collected = GetResult::new(&identifier)
+                                .id_column(&id_column)
+                                .key(res.key())
+                                .cas(res.cas() as i64);
+
+                            let content = res.content().unwrap_or_default();
                             match convert_json_value_to_nu_value(&content, call.head) {
                                 Ok(c) => {
-                                    collected.add("content", c);
-                                    collected.add_string("error", "", call.head);
+                                    collected = collected.content(c);
                                 }
                                 Err(e) => {
-                                    collected.add_string("content", "", call.head);
-                                    collected.add_string("error", e.to_string(), call.head);
+                                    if halt_on_error {
+                                        return Err(e);
+                                    }
+                                    collected = collected.error(e.to_string());
                                 }
                             }
-                            collected.add_string("cluster", identifier.clone(), call.head);
                             results.push(collected.into_value(call.head));
                         }
                         Err(e) => {
-                            let mut collected = NuValueMap::default();
-                            collected.add_string(
-                                &id_column,
-                                e.key().unwrap_or_default(),
-                                call.head,
-                            );
-                            collected.add_string("cas", "", call.head);
-                            collected.add_string("content", "", call.head);
-                            collected.add_string("error", e.to_string(), call.head);
-                            collected.add_string("cluster", identifier.clone(), call.head);
-                            results.push(collected.into_value(call.head));
+                            if halt_on_error {
+                                return Err(generic_error(
+                                    "Failed to fetch document",
+                                    Some(e.to_string()),
+                                    call.head,
+                                ));
+                            }
+
+                            let collected = GetResult::new(&identifier)
+                                .id_column(&id_column)
+                                .key(e.key().unwrap_or_default())
+                                .error(e.to_string())
+                                .into_value(call.head);
+                            results.push(collected);
                         }
                     }
                 }
-            });
+                Ok(())
+            })?;
         }
     }
 
@@ -277,4 +275,66 @@ pub(crate) fn ids_from_input(
     }
 
     Ok(ids)
+}
+
+#[derive(Debug)]
+struct GetResult {
+    error: Option<String>,
+    content: Option<Value>,
+    key: Option<String>,
+    cluster: String,
+    cas: Option<i64>,
+    id_column: Option<String>,
+}
+
+impl GetResult {
+    pub fn new(cluster: impl Into<String>) -> GetResult {
+        Self {
+            error: None,
+            content: None,
+            key: None,
+            cluster: cluster.into(),
+            cas: None,
+            id_column: None,
+        }
+    }
+
+    pub fn id_column(mut self, id_column: impl Into<String>) -> Self {
+        self.id_column = Some(id_column.into());
+        self
+    }
+
+    pub fn content(mut self, content: Value) -> GetResult {
+        self.content = Some(content);
+        self
+    }
+
+    pub fn key(mut self, key: String) -> GetResult {
+        self.key = Some(key);
+        self
+    }
+
+    pub fn cas(mut self, cas: i64) -> GetResult {
+        self.cas = Some(cas);
+        self
+    }
+
+    fn error(mut self, err: String) -> GetResult {
+        self.error = Some(err);
+        self
+    }
+
+    fn into_value(self, span: Span) -> Value {
+        let mut collected = NuValueMap::default();
+        collected.add_string(
+            self.id_column.unwrap_or_else(|| "id".to_string()),
+            self.key.unwrap_or_default(),
+            span,
+        );
+        collected.add("content", self.content.unwrap_or_default());
+        collected.add_i64("cas", self.cas.unwrap_or_default(), span);
+        collected.add_string("error", self.error.unwrap_or_default(), span);
+        collected.add_string("cluster", self.cluster, span);
+        collected.into_value(span)
+    }
 }

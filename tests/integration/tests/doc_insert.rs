@@ -54,7 +54,7 @@ pub async fn test_should_error_on_insert_twice(cluster: Arc<ClusterUnderTest>) -
             assert_eq!(0, json["success"]);
             assert_eq!(1, json["processed"]);
             assert_eq!(1, json["failed"]);
-            assert_eq!("key already exists", json["failures"]);
+            assert_eq!("Key already exists", json["failures"]);
         },
     );
 

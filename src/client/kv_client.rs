@@ -1,13 +1,13 @@
 use crate::cli::CtrlcFuture;
 use crate::client::crc::cb_vb_map;
 use crate::client::error::ClientError;
-use crate::client::http_client::{PingResponse, ServiceType};
-use crate::client::http_handler::{status_to_reason, HTTPHandler};
+use crate::client::http_client::{Config, PingResponse, ServiceType};
+use crate::client::http_handler::HTTPHandler;
 use crate::client::kv::{KvEndpoint, KvTlsConfig};
-use crate::client::protocol;
+use crate::client::{protocol, HTTPClient};
 use crate::config::ClusterTlsConfig;
 use bytes::{Buf, Bytes};
-use log::{debug, trace};
+use log::trace;
 use serde::Deserialize;
 use std::future::Future;
 use std::pin::Pin;
@@ -70,11 +70,11 @@ impl KvClient {
         tokio::pin!(ctrl_c_fut);
 
         let http_agent = HTTPHandler::new(username.clone(), password.clone(), tls_config.clone());
-        let config = KvClient::get_bucket_config(
-            seeds,
-            bucket.clone(),
-            tls_config.clone(),
+        let config: BucketConfig = HTTPClient::get_config(
+            &seeds,
+            &tls_config.clone(),
             &http_agent,
+            bucket.clone(),
             deadline,
             ctrl_c.clone(),
         )
@@ -129,58 +129,6 @@ impl KvClient {
         let port = seed.1;
 
         (addr, port)
-    }
-
-    async fn get_bucket_config(
-        seeds: Vec<String>,
-        bucket: String,
-        tls_config: ClusterTlsConfig,
-        http_agent: &HTTPHandler,
-        deadline: Instant,
-        ctrl_c: Arc<AtomicBool>,
-    ) -> Result<BucketConfig, ClientError> {
-        let path = format!("/pools/default/b/{}", bucket);
-        let mut final_error_content = None;
-        let mut final_error_status = 0;
-        for seed in seeds {
-            let host_split: Vec<String> = seed.split(':').map(|v| v.to_owned()).collect();
-
-            let host: String;
-            let port: i32;
-            if host_split.len() == 1 {
-                host = seed.clone();
-                port = if tls_config.enabled() { 18091 } else { 8091 };
-            } else {
-                host = host_split[0].clone();
-                port = host_split[1]
-                    .parse::<i32>()
-                    .map_err(|e| ClientError::RequestFailed {
-                        reason: Some(e.to_string()),
-                        key: None,
-                    })?;
-            }
-
-            let uri = format!("{}:{}{}", host, port, &path);
-            debug!("Fetching config from {}", uri);
-            let (content, status) = http_agent.http_get(&uri, deadline, ctrl_c.clone()).await?;
-            if status != 200 {
-                if !content.is_empty() {
-                    final_error_content = Some(content);
-                }
-                final_error_status = status;
-                continue;
-            }
-            let mut config: BucketConfig = serde_json::from_str(&content).unwrap();
-            config.set_loaded_from(host);
-
-            trace!("Fetched config {:?}", &config);
-            return Ok(config);
-        }
-        let mut reason = final_error_content;
-        if reason.is_none() {
-            reason = status_to_reason(final_error_status);
-        }
-        Err(ClientError::ConfigurationLoadFailed { reason })
     }
 
     pub async fn ping_all(
@@ -443,15 +391,17 @@ struct BucketConfig {
     vbucket_server_map: VBucketServerMap,
 }
 
+impl Config for BucketConfig {
+    fn set_loaded_from(&mut self, loaded_from: String) {
+        self.loaded_from = Some(loaded_from);
+    }
+}
+
 impl BucketConfig {
     pub fn key_value_seeds(&self, tls: bool) -> Vec<(String, u32)> {
         let key = if tls { "kvSSL" } else { "kv" };
 
         self.seeds(key)
-    }
-
-    pub fn set_loaded_from(&mut self, loaded_from: String) {
-        self.loaded_from = Some(loaded_from);
     }
 
     fn seeds(&self, key: &str) -> Vec<(String, u32)> {

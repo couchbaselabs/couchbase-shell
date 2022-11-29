@@ -1,6 +1,7 @@
 use crate::cli::buckets_builder::{BucketSettings, DurabilityLevel, JSONBucketSettings};
 use crate::cli::error::{
-    deserialize_error, generic_error, serialize_error, unexpected_status_code_error,
+    client_error_to_shell_error, deserialize_error, generic_error, serialize_error,
+    unexpected_status_code_error,
 };
 use crate::cli::util::{cluster_identifiers_from, get_active_cluster, validate_is_not_cloud};
 use crate::client::ManagementRequest;
@@ -117,11 +118,15 @@ fn buckets_update(
         validate_is_not_cloud(active_cluster, "buckets", span)?;
 
         let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
-        let get_response = active_cluster.cluster().http_client().management_request(
-            ManagementRequest::GetBucket { name: name.clone() },
-            deadline,
-            ctrl_c.clone(),
-        )?;
+        let get_response = active_cluster
+            .cluster()
+            .http_client()
+            .management_request(
+                ManagementRequest::GetBucket { name: name.clone() },
+                deadline,
+                ctrl_c.clone(),
+            )
+            .map_err(|e| client_error_to_shell_error(e, span))?;
         if get_response.status() != 200 {
             debug!("Failed to get buckets from server");
             return Err(unexpected_status_code_error(
@@ -152,14 +157,18 @@ fn buckets_update(
         let payload =
             serde_urlencoded::to_string(&form).map_err(|e| serialize_error(e.to_string(), span))?;
 
-        let response = active_cluster.cluster().http_client().management_request(
-            ManagementRequest::UpdateBucket {
-                name: name.clone(),
-                payload,
-            },
-            deadline,
-            ctrl_c.clone(),
-        )?;
+        let response = active_cluster
+            .cluster()
+            .http_client()
+            .management_request(
+                ManagementRequest::UpdateBucket {
+                    name: name.clone(),
+                    payload,
+                },
+                deadline,
+                ctrl_c.clone(),
+            )
+            .map_err(|e| client_error_to_shell_error(e, span))?;
 
         match response.status() {
             200 => {}

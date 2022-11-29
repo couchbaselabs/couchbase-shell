@@ -74,6 +74,7 @@ impl Command for DocInsert {
                 "the maximum number of items to batch send at a time",
                 None,
             )
+            .switch("halt-on-error", "halt on any errors", Some('e'))
             .category(Category::Custom("couchbase".to_string()))
     }
 

@@ -1,3 +1,4 @@
+use crate::client::ClientError;
 use nu_protocol::{ShellError, Span};
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone)]
@@ -207,4 +208,8 @@ pub fn generic_error(
         span: Some(span),
     }
     .into()
+}
+
+pub fn client_error_to_shell_error(error: ClientError, span: Span) -> ShellError {
+    generic_error(error.message(), error.expanded_message(), span)
 }

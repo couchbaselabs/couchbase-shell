@@ -1,26 +1,24 @@
 //! The `doc remove` command performs a KV remove operation.
 
-use crate::state::State;
-
 use crate::cli::doc_get::ids_from_input;
-use crate::cli::doc_upsert::{build_batched_kv_items, process_kv_workers};
-use crate::cli::util::{
-    cluster_identifiers_from, get_active_cluster, namespace_from_args, NuValueMap,
+use crate::cli::doc_upsert::{
+    build_batched_kv_items, get_active_cluster_client_cid, process_kv_workers, MutationResult,
 };
+use crate::cli::util::cluster_identifiers_from;
 use crate::client::KeyValueRequest;
+use crate::state::State;
 use futures::stream::FuturesUnordered;
-use std::collections::HashSet;
-use std::ops::Add;
-use std::sync::{Arc, Mutex};
-use tokio::runtime::Runtime;
-use tokio::time::Instant;
-
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
 };
+use std::collections::HashSet;
+use std::ops::Add;
+use std::sync::{Arc, Mutex};
+use tokio::runtime::Runtime;
+use tokio::time::Instant;
 
 #[derive(Clone)]
 pub struct DocRemove {
@@ -72,6 +70,7 @@ impl Command for DocRemove {
                 "the maximum number of items to batch send at a time",
                 None,
             )
+            .switch("halt-on-error", "halt on any errors", Some('e'))
             .category(Category::Custom("couchbase".to_string()))
     }
 
@@ -114,6 +113,7 @@ fn run_get(
     let bucket_flag = call.get_flag(engine_state, stack, "bucket")?;
     let scope_flag = call.get_flag(engine_state, stack, "scope")?;
     let collection_flag = call.get_flag(engine_state, stack, "collection")?;
+    let halt_on_error = call.has_flag("halt-on-error");
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
 
@@ -121,36 +121,29 @@ fn run_get(
 
     let mut results = vec![];
     for identifier in cluster_identifiers {
-        let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
-
-        let (bucket, scope, collection) = namespace_from_args(
+        let rt = Runtime::new().unwrap();
+        let (active_cluster, client, cid) = match get_active_cluster_client_cid(
+            &rt,
+            identifier.clone(),
+            &guard,
             bucket_flag.clone(),
             scope_flag.clone(),
             collection_flag.clone(),
-            active_cluster,
-            span,
-        )?;
-
-        let rt = Runtime::new().unwrap();
-        let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
-        let client = rt.block_on(active_cluster.cluster().key_value_client(
-            bucket.clone(),
-            deadline,
             ctrl_c.clone(),
             span,
-        ))?;
-
-        let cid = match rt.block_on(client.get_cid(
-            scope,
-            collection,
-            Instant::now().add(active_cluster.timeouts().data_timeout()),
-            ctrl_c.clone(),
-        )) {
-            Ok(cid) => cid,
+        ) {
+            Ok(c) => c,
             Err(e) => {
-                let mut collected = NuValueMap::default();
-                collected.add_string("error", e.to_string(), call.head);
-                results.push(collected.into_value(call.head));
+                if halt_on_error {
+                    return Err(e);
+                }
+
+                let mut failures = HashSet::new();
+                failures.insert(e.to_string());
+                let collected = MutationResult::new(identifier.clone())
+                    .fail_reasons(failures)
+                    .into_value(call.head);
+                results.push(collected);
                 continue;
             }
         };
@@ -158,8 +151,6 @@ fn run_get(
         if all_ids.is_empty() {
             all_ids = build_batched_kv_items(active_cluster.kv_batch_size(), ids.clone());
         }
-
-        let client = Arc::new(client);
 
         let mut workers = FuturesUnordered::new();
         let mut success = 0;
@@ -179,7 +170,7 @@ fn run_get(
                 });
             }
 
-            let worked = process_kv_workers(workers, &rt);
+            let worked = process_kv_workers(workers, &rt, halt_on_error, span)?;
 
             success += worked.success;
             failed += worked.failed;
@@ -187,14 +178,10 @@ fn run_get(
             workers = FuturesUnordered::new()
         }
 
-        let mut collected = NuValueMap::default();
-        collected.add_i64("processed", (success + failed) as i64, span);
-        collected.add_i64("success", success as i64, span);
-        collected.add_i64("failed", failed as i64, span);
-
-        let reasons = fail_reasons.into_iter().collect::<Vec<String>>().join(", ");
-        collected.add_string("failures", reasons, span);
-        collected.add_string("cluster", identifier.clone(), span);
+        let collected = MutationResult::new(identifier.clone())
+            .success(success)
+            .failed(failed)
+            .fail_reasons(fail_reasons);
 
         results.push(collected.into_value(span));
     }

@@ -1,4 +1,6 @@
-use crate::cli::error::{deserialize_error, unexpected_status_code_error};
+use crate::cli::error::{
+    client_error_to_shell_error, deserialize_error, unexpected_status_code_error,
+};
 use crate::cli::util::{
     cluster_identifiers_from, convert_row_to_nu_value, get_active_cluster, validate_is_not_cloud,
 };
@@ -80,7 +82,8 @@ fn pending_mutations(
                 AnalyticsQueryRequest::PendingMutations,
                 Instant::now().add(active_cluster.timeouts().analytics_timeout()),
                 ctrl_c.clone(),
-            )?;
+            )
+            .map_err(|e| client_error_to_shell_error(e, span))?;
 
         match response.status() {
             200 => {}

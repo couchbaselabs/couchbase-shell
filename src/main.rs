@@ -1,5 +1,7 @@
 #![recursion_limit = "256"]
 
+extern crate core;
+
 mod cli;
 mod client;
 mod config;

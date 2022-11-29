@@ -1,17 +1,21 @@
-use crate::client::error::ClientError;
-use crate::client::http_handler::{status_to_reason, HTTPHandler, HttpResponse, HttpVerb};
+use crate::client::error::{ClientError, ConfigurationLoadFailedReason};
+use crate::client::http_handler::{HTTPHandler, HttpResponse, HttpVerb};
 use crate::client::kv_client::NodeConfig;
 use crate::config::ClusterTlsConfig;
 use log::{debug, trace};
 use rand::Rng;
+use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde_json::json;
+use std::fmt::Debug;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::time::Duration;
 use std::{collections::HashMap, ops::Sub};
 use tokio::runtime::Runtime;
 use tokio::time::Instant;
+
+const CLUSTER_CONFIG_URI: &str = "/pools/default/nodeServices";
 
 pub struct HTTPClient {
     seeds: Vec<String>,
@@ -33,62 +37,105 @@ impl HTTPClient {
         }
     }
 
-    async fn get_config(
-        &self,
+    pub(crate) async fn get_config<T>(
+        seeds: &Vec<String>,
+        tls_config: &ClusterTlsConfig,
+        http_agent: &HTTPHandler,
+        bucket: impl Into<Option<String>>,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
-    ) -> Result<ClusterConfig, ClientError> {
-        let path = "/pools/default/nodeServices";
-        let mut final_error_content = None;
+    ) -> Result<T, ClientError>
+    where
+        T: DeserializeOwned + Debug + Config,
+    {
+        let bucket = bucket.into();
+        let path = match &bucket {
+            Some(b) => format!("/pools/default/b/{}", b),
+            None => CLUSTER_CONFIG_URI.to_string(),
+        };
+        let mut final_error_reason = None;
         let mut final_error_status = 0;
-        for seed in &self.seeds {
+        for seed in seeds {
             let host_split: Vec<String> = seed.split(':').map(|v| v.to_owned()).collect();
 
             let host: String;
             let port: i32;
             if host_split.len() == 1 {
                 host = seed.clone();
-                port = if self.tls_config.enabled() {
-                    18091
-                } else {
-                    8091
-                };
+                port = if tls_config.enabled() { 18091 } else { 8091 };
             } else {
                 host = host_split[0].clone();
-                port = host_split[1]
-                    .parse::<i32>()
-                    .map_err(|e| ClientError::RequestFailed {
-                        reason: Some(e.to_string()),
-                        key: None,
-                    })?;
+                port = match host_split[1].parse::<i32>() {
+                    Ok(p) => p,
+                    Err(e) => {
+                        final_error_reason =
+                            Some(format!("Failed to get port from seed {}: {}", &seed, e));
+                        continue;
+                    }
+                }
             }
 
             let uri = format!("{}:{}{}", host, port, &path);
 
             debug!("Fetching config from {}", uri);
 
-            let (content, status) = self
-                .http_client
-                .http_get(&uri, deadline, ctrl_c.clone())
-                .await?;
+            let (content, status) = match http_agent.http_get(&uri, deadline, ctrl_c.clone()).await
+            {
+                Ok((content, status)) => (content, status),
+                Err(e) => {
+                    final_error_reason = Some(e.expanded_message());
+                    continue;
+                }
+            };
             if status != 200 {
                 if !content.is_empty() {
-                    final_error_content = Some(content);
+                    final_error_reason = Some(content);
                 }
                 final_error_status = status;
                 continue;
             }
-            let mut config: ClusterConfig = serde_json::from_str(&content).unwrap();
+            let mut config: T = match serde_json::from_str(&content) {
+                Ok(c) => c,
+                Err(e) => {
+                    final_error_reason =
+                        Some(format!("Failed to deserialize cluster config: {}", e));
+                    continue;
+                }
+            };
             config.set_loaded_from(host);
 
             trace!("Fetched config {:?}", &config);
 
             return Ok(config);
         }
-        let mut reason = final_error_content;
-        if reason.is_none() {
-            reason = status_to_reason(final_error_status);
-        }
+
+        let reason = match final_error_status {
+            401 => ConfigurationLoadFailedReason::Unauthorized,
+            403 => ConfigurationLoadFailedReason::Forbidden,
+            404 => ConfigurationLoadFailedReason::NotFound { bucket },
+            _ => match final_error_reason {
+                Some(reason) => {
+                    if reason.contains("timed out") {
+                        return Err(ClientError::ClusterNotContactable {
+                            cluster: seeds.join(","),
+                            reason: "timeout".to_string(),
+                        });
+                    } else if reason.contains("connect error") {
+                        return Err(ClientError::ClusterNotContactable {
+                            cluster: seeds.join(","),
+                            reason: "connect error".to_string(),
+                        });
+                    }
+                    ConfigurationLoadFailedReason::Unknown { reason }
+                }
+                None => ConfigurationLoadFailedReason::Unknown {
+                    reason: format!(
+                        "Failed to load config object for an unknown reason. Status code: {}",
+                        final_error_status
+                    ),
+                },
+            },
+        };
         Err(ClientError::ConfigurationLoadFailed { reason })
     }
 
@@ -131,7 +178,15 @@ impl HTTPClient {
     ) -> Result<Vec<PingResponse>, ClientError> {
         let rt = Runtime::new().unwrap();
         rt.block_on(async {
-            let config = self.get_config(deadline, ctrl_c.clone()).await?;
+            let config: ClusterConfig = HTTPClient::get_config(
+                &self.seeds,
+                &self.tls_config,
+                &self.http_client,
+                None,
+                deadline,
+                ctrl_c.clone(),
+            )
+            .await?;
 
             let mut results: Vec<PingResponse> = Vec::new();
             for seed in config.search_seeds(self.tls_config.enabled()) {
@@ -185,7 +240,15 @@ impl HTTPClient {
     ) -> Result<HttpResponse, ClientError> {
         let rt = Runtime::new().unwrap();
         rt.block_on(async {
-            let config = self.get_config(deadline, ctrl_c.clone()).await?;
+            let config: ClusterConfig = HTTPClient::get_config(
+                &self.seeds,
+                &self.tls_config,
+                &self.http_client,
+                None,
+                deadline,
+                ctrl_c.clone(),
+            )
+            .await?;
 
             let path = request.path();
             if let Some(seed) = config.random_management_seed(self.tls_config.enabled()) {
@@ -224,7 +287,15 @@ impl HTTPClient {
     ) -> Result<HttpResponse, ClientError> {
         let rt = Runtime::new().unwrap();
         rt.block_on(async {
-            let config = self.get_config(deadline, ctrl_c.clone()).await?;
+            let config: ClusterConfig = HTTPClient::get_config(
+                &self.seeds,
+                &self.tls_config,
+                &self.http_client,
+                None,
+                deadline,
+                ctrl_c.clone(),
+            )
+            .await?;
 
             let path = request.path();
             if let Some(seed) = config.random_query_seed(self.tls_config.enabled()) {
@@ -262,7 +333,15 @@ impl HTTPClient {
     ) -> Result<HttpResponse, ClientError> {
         let rt = Runtime::new().unwrap();
         rt.block_on(async {
-            let config = self.get_config(deadline, ctrl_c.clone()).await?;
+            let config: ClusterConfig = HTTPClient::get_config(
+                &self.seeds,
+                &self.tls_config,
+                &self.http_client,
+                None,
+                deadline,
+                ctrl_c.clone(),
+            )
+            .await?;
 
             let path = request.path();
             if let Some(seed) = config.random_analytics_seed(self.tls_config.enabled()) {
@@ -300,7 +379,15 @@ impl HTTPClient {
     ) -> Result<HttpResponse, ClientError> {
         let rt = Runtime::new().unwrap();
         rt.block_on(async {
-            let config = self.get_config(deadline, ctrl_c.clone()).await?;
+            let config: ClusterConfig = HTTPClient::get_config(
+                &self.seeds,
+                &self.tls_config,
+                &self.http_client,
+                None,
+                deadline,
+                ctrl_c.clone(),
+            )
+            .await?;
 
             let path = request.path();
             if let Some(seed) = config.random_search_seed(self.tls_config.enabled()) {
@@ -737,12 +824,22 @@ impl ServiceType {
     }
 }
 
+pub(crate) trait Config {
+    fn set_loaded_from(&mut self, loaded_from: String);
+}
+
 #[derive(Deserialize, Debug)]
 struct ClusterConfig {
     // rev: u64,
     #[serde(alias = "nodesExt")]
     nodes_ext: Vec<NodeConfig>,
     loaded_from: Option<String>,
+}
+
+impl Config for ClusterConfig {
+    fn set_loaded_from(&mut self, loaded_from: String) {
+        self.loaded_from = Some(loaded_from);
+    }
 }
 
 impl ClusterConfig {
@@ -774,10 +871,6 @@ impl ClusterConfig {
         let key = if tls { "capiSSL" } else { "capi" };
 
         self.seeds(key)
-    }
-
-    pub fn set_loaded_from(&mut self, loaded_from: String) {
-        self.loaded_from = Some(loaded_from);
     }
 
     fn seeds(&self, key: &str) -> Vec<(String, u32)> {

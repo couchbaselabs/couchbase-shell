@@ -9,7 +9,9 @@ use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 use crate::cli::collections::get_bucket_or_active;
-use crate::cli::error::{no_active_scope_error, unexpected_status_code_error};
+use crate::cli::error::{
+    client_error_to_shell_error, no_active_scope_error, unexpected_status_code_error,
+};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -99,15 +101,19 @@ fn collections_drop(
             &collection, &bucket, &scope_name
         );
 
-        let response = active_cluster.cluster().http_client().management_request(
-            DropCollection {
-                scope: scope_name,
-                bucket,
-                name: collection.clone(),
-            },
-            Instant::now().add(active_cluster.timeouts().management_timeout()),
-            ctrl_c.clone(),
-        )?;
+        let response = active_cluster
+            .cluster()
+            .http_client()
+            .management_request(
+                DropCollection {
+                    scope: scope_name,
+                    bucket,
+                    name: collection.clone(),
+                },
+                Instant::now().add(active_cluster.timeouts().management_timeout()),
+                ctrl_c.clone(),
+            )
+            .map_err(|e| client_error_to_shell_error(e, span))?;
 
         match response.status() {
             200 => {}

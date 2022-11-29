@@ -1,4 +1,6 @@
-use crate::cli::error::{deserialize_error, unexpected_status_code_error};
+use crate::cli::error::{
+    client_error_to_shell_error, deserialize_error, unexpected_status_code_error,
+};
 use crate::cli::query::{handle_query_response, query_context_from_args, send_query};
 use crate::cli::util::{cluster_identifiers_from, get_active_cluster, NuValueMap};
 use crate::client::ManagementRequest;
@@ -104,6 +106,7 @@ fn query(
             statement.clone(),
             maybe_scope,
             ctrl_c.clone(),
+            span,
         )?;
         drop(guard);
 
@@ -150,11 +153,15 @@ fn index_definitions(
 ) -> Result<Vec<Value>, ShellError> {
     debug!("Running fetch n1ql indexes");
 
-    let response = cluster.cluster().http_client().management_request(
-        ManagementRequest::IndexStatus,
-        Instant::now().add(cluster.timeouts().query_timeout()),
-        ctrl_c,
-    )?;
+    let response = cluster
+        .cluster()
+        .http_client()
+        .management_request(
+            ManagementRequest::IndexStatus,
+            Instant::now().add(cluster.timeouts().query_timeout()),
+            ctrl_c,
+        )
+        .map_err(|e| client_error_to_shell_error(e, span))?;
 
     match response.status() {
         200 => {}

@@ -1,4 +1,7 @@
-use crate::cli::error::{deserialize_error, no_active_cluster_error, unexpected_status_code_error};
+use crate::cli::error::{
+    client_error_to_shell_error, deserialize_error, no_active_cluster_error,
+    unexpected_status_code_error,
+};
 use crate::cli::util::{convert_json_value_to_nu_value, validate_is_not_cloud};
 use crate::client::ManagementRequest;
 use crate::state::State;
@@ -70,11 +73,14 @@ fn buckets(
 
     validate_is_not_cloud(active_cluster, "buckets config", span)?;
 
-    let response = cluster.http_client().management_request(
-        ManagementRequest::GetBucket { name: bucket_name },
-        Instant::now().add(active_cluster.timeouts().management_timeout()),
-        ctrl_c,
-    )?;
+    let response = cluster
+        .http_client()
+        .management_request(
+            ManagementRequest::GetBucket { name: bucket_name },
+            Instant::now().add(active_cluster.timeouts().management_timeout()),
+            ctrl_c,
+        )
+        .map_err(|e| client_error_to_shell_error(e, span))?;
 
     match response.status() {
         200 => {}

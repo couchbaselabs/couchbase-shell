@@ -9,7 +9,9 @@ use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
-use crate::cli::error::{bucket_not_found_error, unexpected_status_code_error};
+use crate::cli::error::{
+    bucket_not_found_error, client_error_to_shell_error, unexpected_status_code_error,
+};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -81,11 +83,15 @@ fn buckets_flush(
         let cluster = get_active_cluster(identifier.clone(), &guard, span)?;
         validate_is_not_cloud(cluster, "buckets flush", span)?;
 
-        let result = cluster.cluster().http_client().management_request(
-            ManagementRequest::FlushBucket { name: name.clone() },
-            Instant::now().add(cluster.timeouts().management_timeout()),
-            ctrl_c.clone(),
-        )?;
+        let result = cluster
+            .cluster()
+            .http_client()
+            .management_request(
+                ManagementRequest::FlushBucket { name: name.clone() },
+                Instant::now().add(cluster.timeouts().management_timeout()),
+                ctrl_c.clone(),
+            )
+            .map_err(|e| client_error_to_shell_error(e, span))?;
 
         match result.status() {
             200 => {}

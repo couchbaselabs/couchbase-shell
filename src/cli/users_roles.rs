@@ -1,4 +1,6 @@
-use crate::cli::error::{deserialize_error, unexpected_status_code_error};
+use crate::cli::error::{
+    client_error_to_shell_error, deserialize_error, unexpected_status_code_error,
+};
 use crate::cli::user_builder::RoleAndDescription;
 use crate::cli::util::{
     cluster_identifiers_from, get_active_cluster, validate_is_not_cloud, NuValueMap,
@@ -83,13 +85,17 @@ fn run_async(
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
         validate_is_not_cloud(active_cluster, "user roles", span)?;
 
-        let response = active_cluster.cluster().http_client().management_request(
-            ManagementRequest::GetRoles {
-                permission: permission.clone(),
-            },
-            Instant::now().add(active_cluster.timeouts().management_timeout()),
-            ctrl_c.clone(),
-        )?;
+        let response = active_cluster
+            .cluster()
+            .http_client()
+            .management_request(
+                ManagementRequest::GetRoles {
+                    permission: permission.clone(),
+                },
+                Instant::now().add(active_cluster.timeouts().management_timeout()),
+                ctrl_c.clone(),
+            )
+            .map_err(|e| client_error_to_shell_error(e, span))?;
 
         let roles: Vec<RoleAndDescription> = match response.status() {
             200 => serde_json::from_str(response.content())

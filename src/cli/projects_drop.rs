@@ -6,7 +6,7 @@ use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
-use crate::cli::error::unexpected_status_code_error;
+use crate::cli::error::{client_error_to_shell_error, unexpected_status_code_error};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -69,11 +69,13 @@ fn projects_drop(
     let deadline = Instant::now().add(control.timeout());
     let project_id = find_project_id(ctrl_c.clone(), name, &client, deadline, span)?;
 
-    let response = client.capella_request(
-        CapellaRequest::DeleteProject { project_id },
-        deadline,
-        ctrl_c,
-    )?;
+    let response = client
+        .capella_request(
+            CapellaRequest::DeleteProject { project_id },
+            deadline,
+            ctrl_c,
+        )
+        .map_err(|e| client_error_to_shell_error(e, span))?;
     if response.status() != 204 {
         return Err(unexpected_status_code_error(
             response.status(),

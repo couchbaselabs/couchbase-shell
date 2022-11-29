@@ -1,6 +1,6 @@
 use crate::cli::error::{
-    deserialize_error, no_active_bucket_error, no_active_cluster_error,
-    unexpected_status_code_error,
+    client_error_to_shell_error, deserialize_error, no_active_bucket_error,
+    no_active_cluster_error, unexpected_status_code_error,
 };
 use crate::cli::util::{convert_json_value_to_nu_value, duration_to_golang_string};
 use crate::client::QueryRequest;
@@ -102,15 +102,19 @@ impl Command for TransactionsListAtrs {
             "select meta().id, meta().xattrs.attempts from `{}` where meta().id like '_txn:atr%'",
             bucket
         );
-        let response = active_cluster.cluster().http_client().query_request(
-            QueryRequest::Execute {
-                statement,
-                scope: None,
-                timeout: duration_to_golang_string(active_cluster.timeouts().query_timeout()),
-            },
-            Instant::now().add(active_cluster.timeouts().management_timeout()),
-            ctrl_c,
-        )?;
+        let response = active_cluster
+            .cluster()
+            .http_client()
+            .query_request(
+                QueryRequest::Execute {
+                    statement,
+                    scope: None,
+                    timeout: duration_to_golang_string(active_cluster.timeouts().query_timeout()),
+                },
+                Instant::now().add(active_cluster.timeouts().management_timeout()),
+                ctrl_c,
+            )
+            .map_err(|e| client_error_to_shell_error(e, span))?;
 
         match response.status() {
             200 => {}

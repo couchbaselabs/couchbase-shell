@@ -1,5 +1,5 @@
 //! The `buckets get` command fetches buckets from the server.
-use crate::cli::error::unexpected_status_code_error;
+use crate::cli::error::{client_error_to_shell_error, unexpected_status_code_error};
 use crate::cli::util::{cluster_identifiers_from, get_active_cluster, validate_is_not_cloud};
 use crate::client::ManagementRequest;
 use crate::state::State;
@@ -75,11 +75,15 @@ fn buckets_drop(
         let cluster = get_active_cluster(identifier.clone(), &guard, span)?;
         validate_is_not_cloud(cluster, "buckets drop", span)?;
 
-        let result = cluster.cluster().http_client().management_request(
-            ManagementRequest::DropBucket { name: name.clone() },
-            Instant::now().add(cluster.timeouts().management_timeout()),
-            ctrl_c.clone(),
-        )?;
+        let result = cluster
+            .cluster()
+            .http_client()
+            .management_request(
+                ManagementRequest::DropBucket { name: name.clone() },
+                Instant::now().add(cluster.timeouts().management_timeout()),
+                ctrl_c.clone(),
+            )
+            .map_err(|e| client_error_to_shell_error(e, span))?;
 
         match result.status() {
             200 => {}

@@ -16,6 +16,7 @@ use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
+use tokio::sync::oneshot::Receiver;
 use tokio::sync::{mpsc, oneshot};
 use tokio_rustls::rustls::client::{ServerCertVerified, ServerCertVerifier};
 use tokio_rustls::rustls::{Certificate, ClientConfig, Error, ServerName};
@@ -331,20 +332,33 @@ impl KvEndpoint {
         Ok(ep)
     }
 
-    fn status_to_error(&self, status: Status, key: Option<String>) -> Result<(), ClientError> {
-        match status {
-            Status::Success => Ok(()),
-            Status::AuthError => Err(ClientError::AuthError),
-            Status::AccessError => Err(ClientError::AccessError),
-            Status::KeyNotFound => Err(ClientError::KeyNotFound { key }),
-            Status::KeyExists => Err(ClientError::KeyAlreadyExists { key }),
-            Status::CollectionUnknown => Err(ClientError::CollectionNotFound { key }),
-            Status::ScopeUnknown => Err(ClientError::ScopeNotFound { key }),
-            _ => Err(ClientError::RequestFailed {
-                reason: Some(status.as_string()),
-                key,
+    async fn await_response(
+        &self,
+        rx: Receiver<KvResponse>,
+        key: impl Into<Option<String>>,
+    ) -> Result<KvResponse, ClientError> {
+        match rx.await {
+            Ok(r) => Ok(r),
+            Err(e) => Err(ClientError::RequestFailed {
+                reason: Some(e.to_string()),
+                key: key.into(),
             }),
         }
+    }
+
+    async fn await_and_handle_doc_response(
+        &self,
+        rx: Receiver<KvResponse>,
+        key: String,
+        cid: u32,
+    ) -> Result<KvResponse, ClientError> {
+        let mut response = self.await_response(rx, key.clone()).await?;
+        let status = response.status();
+        if status != Status::Success {
+            let reason = ClientError::try_parse_kv_fail_body(&mut response);
+            return Err(ClientError::make_kv_doc_op_error(status, reason, key, cid));
+        }
+        Ok(response)
     }
 
     pub async fn get_cid(
@@ -368,15 +382,25 @@ impl KvEndpoint {
         let (tx, rx) = oneshot::channel::<KvResponse>();
         self.send(req, tx).await?;
 
-        let response = match rx.await {
-            Ok(r) => Ok(r),
-            Err(e) => Err(ClientError::RequestFailed {
-                reason: Some(e.to_string()),
+        let mut resp = self.await_response(rx, None).await?;
+        if resp.status() == Status::Success {
+            return Ok(resp);
+        }
+        let reason = ClientError::try_parse_kv_fail_body(&mut resp);
+        let error = match resp.status() {
+            Status::AuthError => ClientError::AuthError { reason },
+            Status::AccessError => ClientError::AccessError { reason },
+            Status::CollectionUnknown => ClientError::CollectionNotFound {
+                scope_name,
+                name: collection_name,
+            },
+            Status::ScopeUnknown => ClientError::ScopeNotFound { name: scope_name },
+            _ => ClientError::RequestFailed {
+                reason: Some(reason.unwrap_or_else(|| resp.status().as_string())),
                 key: None,
-            }),
-        }?;
-        self.status_to_error(response.status(), None)?;
-        Ok(response)
+            },
+        };
+        Err(error)
     }
 
     pub async fn get(
@@ -390,7 +414,7 @@ impl KvEndpoint {
             0,
             partition,
             0,
-            Some(key.clone().into()),
+            Some(Bytes::from(key.clone())),
             None,
             None,
             collection_id,
@@ -399,15 +423,8 @@ impl KvEndpoint {
         let (tx, rx) = oneshot::channel::<KvResponse>();
         self.send(req, tx).await?;
 
-        let response = match rx.await {
-            Ok(r) => Ok(r),
-            Err(e) => Err(ClientError::RequestFailed {
-                reason: Some(e.to_string()),
-                key: Some(key.clone()),
-            }),
-        }?;
-        self.status_to_error(response.status(), Some(key))?;
-        Ok(response)
+        self.await_and_handle_doc_response(rx, key, collection_id)
+            .await
     }
 
     pub async fn set(
@@ -426,7 +443,7 @@ impl KvEndpoint {
             0,
             partition,
             0,
-            Some(key.clone().into()),
+            Some(Bytes::from(key.clone())),
             Some(extras.freeze()),
             Some(value.into()),
             collection_id,
@@ -435,15 +452,8 @@ impl KvEndpoint {
         let (tx, rx) = oneshot::channel::<KvResponse>();
         self.send(req, tx).await?;
 
-        let response = match rx.await {
-            Ok(r) => Ok(r),
-            Err(e) => Err(ClientError::RequestFailed {
-                reason: Some(e.to_string()),
-                key: Some(key.clone()),
-            }),
-        }?;
-        self.status_to_error(response.status(), Some(key))?;
-        Ok(response)
+        self.await_and_handle_doc_response(rx, key, collection_id)
+            .await
     }
 
     pub async fn add(
@@ -462,7 +472,7 @@ impl KvEndpoint {
             0,
             partition,
             0,
-            Some(key.clone().into()),
+            Some(Bytes::from(key.clone())),
             Some(extras.freeze()),
             Some(value.into()),
             collection_id,
@@ -471,15 +481,8 @@ impl KvEndpoint {
         let (tx, rx) = oneshot::channel::<KvResponse>();
         self.send(req, tx).await?;
 
-        let response = match rx.await {
-            Ok(r) => Ok(r),
-            Err(e) => Err(ClientError::RequestFailed {
-                reason: Some(e.to_string()),
-                key: Some(key.clone()),
-            }),
-        }?;
-        self.status_to_error(response.status(), Some(key))?;
-        Ok(response)
+        self.await_and_handle_doc_response(rx, key, collection_id)
+            .await
     }
 
     pub async fn replace(
@@ -498,7 +501,7 @@ impl KvEndpoint {
             0,
             partition,
             0,
-            Some(key.clone().into()),
+            Some(Bytes::from(key.clone())),
             Some(extras.freeze()),
             Some(value.into()),
             collection_id,
@@ -507,15 +510,8 @@ impl KvEndpoint {
         let (tx, rx) = oneshot::channel::<KvResponse>();
         self.send(req, tx).await?;
 
-        let response = match rx.await {
-            Ok(r) => Ok(r),
-            Err(e) => Err(ClientError::RequestFailed {
-                reason: Some(e.to_string()),
-                key: Some(key.clone()),
-            }),
-        }?;
-        self.status_to_error(response.status(), Some(key))?;
-        Ok(response)
+        self.await_and_handle_doc_response(rx, key, collection_id)
+            .await
     }
 
     pub async fn remove(
@@ -529,7 +525,7 @@ impl KvEndpoint {
             0,
             partition,
             0,
-            Some(key.clone().into()),
+            Some(Bytes::from(key.clone())),
             None,
             None,
             collection_id,
@@ -538,15 +534,8 @@ impl KvEndpoint {
         let (tx, rx) = oneshot::channel::<KvResponse>();
         self.send(req, tx).await?;
 
-        let response = match rx.await {
-            Ok(r) => Ok(r),
-            Err(e) => Err(ClientError::RequestFailed {
-                reason: Some(e.to_string()),
-                key: Some(key.clone()),
-            }),
-        }?;
-        self.status_to_error(response.status(), Some(key))?;
-        Ok(response)
+        self.await_and_handle_doc_response(rx, key, collection_id)
+            .await
     }
 
     pub async fn noop(&self) -> Result<KvResponse, ClientError> {
@@ -555,15 +544,20 @@ impl KvEndpoint {
         let (tx, rx) = oneshot::channel::<KvResponse>();
         self.send(req, tx).await?;
 
-        let response = match rx.await {
-            Ok(r) => Ok(r),
-            Err(e) => Err(ClientError::RequestFailed {
-                reason: Some(e.to_string()),
+        let mut resp = self.await_response(rx, None).await?;
+        if resp.status() == Status::Success {
+            return Ok(resp);
+        }
+        let reason = ClientError::try_parse_kv_fail_body(&mut resp);
+        let error = match resp.status() {
+            Status::AuthError => ClientError::AuthError { reason },
+            Status::AccessError => ClientError::AccessError { reason },
+            _ => ClientError::RequestFailed {
+                reason: Some(reason.unwrap_or_else(|| resp.status().as_string())),
                 key: None,
-            }),
-        }?;
-        self.status_to_error(response.status(), None)?;
-        Ok(response)
+            },
+        };
+        Err(error)
     }
 
     async fn send(
@@ -681,7 +675,7 @@ impl KvEndpoint {
             0,
             0,
             0,
-            Some("PLAIN".into()),
+            Some(Bytes::from("PLAIN")),
             None,
             Some(body.freeze()),
             0,
