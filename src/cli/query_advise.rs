@@ -85,6 +85,7 @@ fn run(
             statement.clone(),
             maybe_scope,
             ctrl_c.clone(),
+            span,
         )?;
         drop(guard);
 

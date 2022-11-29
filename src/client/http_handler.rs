@@ -30,16 +30,6 @@ impl HttpVerb {
     }
 }
 
-pub(crate) fn status_to_reason(status: u16) -> Option<String> {
-    match status {
-        400 => Some("bad request".to_string()),
-        401 => Some("unauthorized".to_string()),
-        403 => Some("forbidden".to_string()),
-        404 => Some("not found".to_string()),
-        _ => None,
-    }
-}
-
 #[derive(Debug)]
 pub struct HttpResponse {
     content: String,
@@ -146,7 +136,21 @@ impl HTTPHandler {
 
         select! {
             result = res_fut => {
-                let response = result.map_err(ClientError::from)?;
+                let response = match result {
+                    Ok(r) => Ok(r),
+                    Err(e) => {
+                        if e.is_timeout() {
+                            Err(ClientError::Timeout {
+                                key: None,
+                            })
+                        } else {
+                            Err(ClientError::RequestFailed {
+                                reason: Some(format!("{}", e)),
+                                key: None,
+                            })
+                        }
+                    }
+                }?;
                 let status = response.status().into();
                 let content = response.text().await?;
                 Ok((content, status))

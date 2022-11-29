@@ -6,7 +6,7 @@ use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
-use crate::cli::error::unexpected_status_code_error;
+use crate::cli::error::{client_error_to_shell_error, unexpected_status_code_error};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -75,13 +75,17 @@ fn users_drop(
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
         validate_is_not_cloud(active_cluster, "users", span)?;
 
-        let response = active_cluster.cluster().http_client().management_request(
-            ManagementRequest::DropUser {
-                username: username.clone(),
-            },
-            Instant::now().add(active_cluster.timeouts().management_timeout()),
-            ctrl_c.clone(),
-        )?;
+        let response = active_cluster
+            .cluster()
+            .http_client()
+            .management_request(
+                ManagementRequest::DropUser {
+                    username: username.clone(),
+                },
+                Instant::now().add(active_cluster.timeouts().management_timeout()),
+                ctrl_c.clone(),
+            )
+            .map_err(|e| client_error_to_shell_error(e, span))?;
 
         match response.status() {
             200 => {}

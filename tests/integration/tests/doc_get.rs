@@ -35,7 +35,7 @@ pub async fn test_get_a_document_not_found(cluster: Arc<ClusterUnderTest>) -> bo
             let out = cbsh!(cwd: dirs.test(), pipeline(r#"doc get "get_a_document_not_found" | get error | first"#));
 
             assert_eq!("", out.err);
-            assert!(out.out.contains("key not found"));
+            assert!(out.out.contains("Key not found"));
         },
     );
 

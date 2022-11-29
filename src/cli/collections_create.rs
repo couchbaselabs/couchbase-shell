@@ -9,7 +9,10 @@ use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 use crate::cli::collections::get_bucket_or_active;
-use crate::cli::error::{no_active_scope_error, serialize_error, unexpected_status_code_error};
+use crate::cli::error::{
+    client_error_to_shell_error, no_active_scope_error, serialize_error,
+    unexpected_status_code_error,
+};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -116,15 +119,19 @@ fn collections_create(
         let form_encoded =
             serde_urlencoded::to_string(&form).map_err(|e| serialize_error(e.to_string(), span))?;
 
-        let response = active_cluster.cluster().http_client().management_request(
-            CreateCollection {
-                scope: scope_name,
-                bucket,
-                payload: form_encoded,
-            },
-            Instant::now().add(active_cluster.timeouts().management_timeout()),
-            ctrl_c.clone(),
-        )?;
+        let response = active_cluster
+            .cluster()
+            .http_client()
+            .management_request(
+                CreateCollection {
+                    scope: scope_name,
+                    bucket,
+                    payload: form_encoded,
+                },
+                Instant::now().add(active_cluster.timeouts().management_timeout()),
+                ctrl_c.clone(),
+            )
+            .map_err(|e| client_error_to_shell_error(e, span))?;
 
         match response.status() {
             200 => {}

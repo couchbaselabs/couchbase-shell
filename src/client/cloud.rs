@@ -186,10 +186,7 @@ impl CapellaClient {
             Some(i) => i,
             None => {
                 // No items entry means no clusters.
-                return Err(ClientError::RequestFailed {
-                    reason: Some("Cluster not found".to_string()),
-                    key: None,
-                });
+                return Err(ClientError::CapellaClusterNotFound { name: cluster_name });
             }
         };
 
@@ -202,7 +199,7 @@ impl CapellaClient {
             }
         }
 
-        Err(ClientError::ClusterNotFound { name: cluster_name })
+        Err(ClientError::CapellaClusterNotFound { name: cluster_name })
     }
 
     pub fn capella_request(

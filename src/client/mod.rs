@@ -7,7 +7,6 @@ pub use crate::client::http_client::{
 pub use crate::client::http_handler::HttpResponse;
 pub use crate::client::kv_client::{KeyValueRequest, KvClient, KvResponse};
 use log::debug;
-use nu_protocol::{ShellError, Span};
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
@@ -70,8 +69,7 @@ impl Client {
         bucket: String,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
-        span: Span,
-    ) -> Result<KvClient, ShellError> {
+    ) -> Result<KvClient, ClientError> {
         KvClient::connect(
             self.seeds.clone(),
             self.username.clone(),
@@ -82,18 +80,6 @@ impl Client {
             ctrl_c,
         )
         .await
-        .map_err(|e| {
-            ShellError::GenericError(
-                format!("Failed to connect to cluster: {}", e),
-                format!(
-                    "Check server ports and cluster encryption setting. Does the bucket {} exist?",
-                    bucket
-                ),
-                Some(span),
-                None,
-                Vec::new(),
-            )
-        })
     }
 
     fn try_lookup_srv(addr: String) -> Result<Vec<String>, ClientError> {

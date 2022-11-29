@@ -1,5 +1,7 @@
 use crate::cli::collections::{get_bucket_or_active, Manifest};
-use crate::cli::error::{deserialize_error, unexpected_status_code_error};
+use crate::cli::error::{
+    client_error_to_shell_error, deserialize_error, unexpected_status_code_error,
+};
 use crate::cli::util::{cluster_identifiers_from, get_active_cluster, NuValueMap};
 use crate::client::ManagementRequest;
 use crate::state::State;
@@ -83,11 +85,15 @@ fn run(
 
         debug!("Running scopes get for bucket {:?}", &bucket);
 
-        let response = active_cluster.cluster().http_client().management_request(
-            ManagementRequest::GetScopes { bucket },
-            Instant::now().add(active_cluster.timeouts().management_timeout()),
-            ctrl_c.clone(),
-        )?;
+        let response = active_cluster
+            .cluster()
+            .http_client()
+            .management_request(
+                ManagementRequest::GetScopes { bucket },
+                Instant::now().add(active_cluster.timeouts().management_timeout()),
+                ctrl_c.clone(),
+            )
+            .map_err(|e| client_error_to_shell_error(e, span))?;
 
         let manifest: Manifest = match response.status() {
             200 => serde_json::from_str(response.content())

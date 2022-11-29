@@ -102,7 +102,7 @@ pub fn do_non_mutation_analytics_query(
     span: Span,
     with_meta: bool,
 ) -> Result<Vec<Value>, ShellError> {
-    let response = send_analytics_query(active_cluster, None, statement, ctrl_c)?;
+    let response = send_analytics_query(active_cluster, None, statement, ctrl_c, span)?;
 
     let content: serde_json::Value = serde_json::from_str(response.content())
         .map_err(|_e| unexpected_status_code_error(response.status(), response.content(), span))?;

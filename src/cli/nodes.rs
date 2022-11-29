@@ -10,7 +10,9 @@ use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
-use crate::cli::error::{serialize_error, unexpected_status_code_error};
+use crate::cli::error::{
+    client_error_to_shell_error, serialize_error, unexpected_status_code_error,
+};
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value};
@@ -73,11 +75,15 @@ fn nodes(
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
         validate_is_not_cloud(active_cluster, "nodes", span)?;
 
-        let response = active_cluster.cluster().http_client().management_request(
-            ManagementRequest::GetNodes,
-            Instant::now().add(active_cluster.timeouts().management_timeout()),
-            ctrl_c.clone(),
-        )?;
+        let response = active_cluster
+            .cluster()
+            .http_client()
+            .management_request(
+                ManagementRequest::GetNodes,
+                Instant::now().add(active_cluster.timeouts().management_timeout()),
+                ctrl_c.clone(),
+            )
+            .map_err(|e| client_error_to_shell_error(e, span))?;
         if response.status() != 200 {
             return Err(unexpected_status_code_error(
                 response.status(),

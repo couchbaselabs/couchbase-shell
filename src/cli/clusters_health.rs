@@ -10,7 +10,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
-use crate::cli::error::deserialize_error;
+use crate::cli::error::{client_error_to_shell_error, deserialize_error};
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
@@ -108,11 +108,15 @@ fn grab_bucket_names(
     ctrl_c: Arc<AtomicBool>,
     span: Span,
 ) -> Result<Vec<String>, ShellError> {
-    let response = cluster.cluster().http_client().management_request(
-        ManagementRequest::GetBuckets,
-        Instant::now().add(cluster.timeouts().management_timeout()),
-        ctrl_c,
-    )?;
+    let response = cluster
+        .cluster()
+        .http_client()
+        .management_request(
+            ManagementRequest::GetBuckets,
+            Instant::now().add(cluster.timeouts().management_timeout()),
+            ctrl_c,
+        )
+        .map_err(|e| client_error_to_shell_error(e, span))?;
     let resp: Vec<BucketInfo> = serde_json::from_str(response.content())
         .map_err(|e| deserialize_error(e.to_string(), span))?;
     Ok(resp.into_iter().map(|b| b.name).collect::<Vec<_>>())
@@ -129,11 +133,15 @@ fn check_autofailover(
     ctrl_c: Arc<AtomicBool>,
     span: Span,
 ) -> Result<Value, ShellError> {
-    let response = cluster.cluster().http_client().management_request(
-        ManagementRequest::SettingsAutoFailover,
-        Instant::now().add(cluster.timeouts().management_timeout()),
-        ctrl_c,
-    )?;
+    let response = cluster
+        .cluster()
+        .http_client()
+        .management_request(
+            ManagementRequest::SettingsAutoFailover,
+            Instant::now().add(cluster.timeouts().management_timeout()),
+            ctrl_c,
+        )
+        .map_err(|e| client_error_to_shell_error(e, span))?;
     let resp: AutoFailoverSettings = serde_json::from_str(response.content())
         .map_err(|e| deserialize_error(e.to_string(), span))?;
 
@@ -167,13 +175,17 @@ fn check_resident_ratio(
     ctrl_c: Arc<AtomicBool>,
     span: Span,
 ) -> Result<Value, ShellError> {
-    let response = cluster.cluster().http_client().management_request(
-        ManagementRequest::BucketStats {
-            name: bucket_name.to_string(),
-        },
-        Instant::now().add(cluster.timeouts().management_timeout()),
-        ctrl_c,
-    )?;
+    let response = cluster
+        .cluster()
+        .http_client()
+        .management_request(
+            ManagementRequest::BucketStats {
+                name: bucket_name.to_string(),
+            },
+            Instant::now().add(cluster.timeouts().management_timeout()),
+            ctrl_c,
+        )
+        .map_err(|e| client_error_to_shell_error(e, span))?;
     let resp: BucketStats = serde_json::from_str(response.content())
         .map_err(|e| deserialize_error(e.to_string(), span))?;
     let ratio = match resp.op.samples.active_resident_ratios.last() {

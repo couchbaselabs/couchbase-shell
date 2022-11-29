@@ -1,5 +1,7 @@
 use crate::cli::cloud_json::JSONCloudClustersSummariesV3;
-use crate::cli::error::{deserialize_error, unexpected_status_code_error};
+use crate::cli::error::{
+    client_error_to_shell_error, deserialize_error, unexpected_status_code_error,
+};
 use crate::cli::util::NuValueMap;
 use crate::client::CapellaRequest;
 use crate::state::State;
@@ -75,11 +77,13 @@ fn clusters(
     }?;
     let client = control.client();
 
-    let response = client.capella_request(
-        CapellaRequest::GetClustersV3 {},
-        Instant::now().add(control.timeout()),
-        ctrl_c,
-    )?;
+    let response = client
+        .capella_request(
+            CapellaRequest::GetClustersV3 {},
+            Instant::now().add(control.timeout()),
+            ctrl_c,
+        )
+        .map_err(|e| client_error_to_shell_error(e, span))?;
     if response.status() != 200 {
         return Err(unexpected_status_code_error(
             response.status(),

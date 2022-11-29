@@ -14,7 +14,8 @@ use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 use crate::cli::error::{
-    bucket_not_found_error, deserialize_error, generic_error, unexpected_status_code_error,
+    bucket_not_found_error, client_error_to_shell_error, deserialize_error, generic_error,
+    unexpected_status_code_error,
 };
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
@@ -87,13 +88,17 @@ fn buckets_get(
         let cluster = get_active_cluster(identifier.clone(), &guard, span)?;
         validate_is_not_cloud(cluster, "buckets get", span)?;
 
-        let response = cluster.cluster().http_client().management_request(
-            ManagementRequest::GetBucket {
-                name: bucket.clone(),
-            },
-            Instant::now().add(cluster.timeouts().query_timeout()),
-            ctrl_c.clone(),
-        )?;
+        let response = cluster
+            .cluster()
+            .http_client()
+            .management_request(
+                ManagementRequest::GetBucket {
+                    name: bucket.clone(),
+                },
+                Instant::now().add(cluster.timeouts().query_timeout()),
+                ctrl_c.clone(),
+            )
+            .map_err(|e| client_error_to_shell_error(e, span))?;
 
         match response.status() {
             200 => {}

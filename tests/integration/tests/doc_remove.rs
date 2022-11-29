@@ -52,7 +52,7 @@ pub async fn test_should_error_on_remove_doc_not_found(cluster: Arc<ClusterUnder
             assert_eq!(0, json["success"]);
             assert_eq!(1, json["processed"]);
             assert_eq!(1, json["failed"]);
-            assert_eq!("key not found", json["failures"]);
+            assert_eq!("Key not found", json["failures"]);
         },
     );
 

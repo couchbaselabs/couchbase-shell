@@ -1,5 +1,7 @@
 use crate::cli::buckets_builder::{BucketSettingsBuilder, BucketType, DurabilityLevel};
-use crate::cli::error::{generic_error, serialize_error, unexpected_status_code_error};
+use crate::cli::error::{
+    client_error_to_shell_error, generic_error, serialize_error, unexpected_status_code_error,
+};
 use crate::cli::util::{cluster_identifiers_from, get_active_cluster, validate_is_not_cloud};
 use crate::client::ManagementRequest;
 use crate::state::State;
@@ -163,11 +165,14 @@ fn buckets_create(
         let payload =
             serde_urlencoded::to_string(&form).map_err(|e| serialize_error(e.to_string(), span))?;
 
-        let response = cluster.http_client().management_request(
-            ManagementRequest::CreateBucket { payload },
-            Instant::now().add(active_cluster.timeouts().management_timeout()),
-            ctrl_c.clone(),
-        )?;
+        let response = cluster
+            .http_client()
+            .management_request(
+                ManagementRequest::CreateBucket { payload },
+                Instant::now().add(active_cluster.timeouts().management_timeout()),
+                ctrl_c.clone(),
+            )
+            .map_err(|e| client_error_to_shell_error(e, span))?;
 
         match response.status() {
             200 => {}

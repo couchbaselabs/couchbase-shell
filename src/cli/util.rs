@@ -3,7 +3,8 @@ use crate::cli::error::CBShellError::{
     GenericError, MustNotBeCapella, ProjectNotFound, UnexpectedResponseStatus,
 };
 use crate::cli::error::{
-    cluster_not_found_error, deserialize_error, malformed_response_error, no_active_bucket_error,
+    client_error_to_shell_error, cluster_not_found_error, deserialize_error,
+    malformed_response_error, no_active_bucket_error,
 };
 use crate::client::{CapellaClient, CapellaRequest};
 use crate::state::{RemoteCluster, State};
@@ -266,7 +267,9 @@ pub(crate) fn find_project_id(
     deadline: Instant,
     span: Span,
 ) -> Result<String, ShellError> {
-    let response = client.capella_request(CapellaRequest::GetProjects {}, deadline, ctrl_c)?;
+    let response = client
+        .capella_request(CapellaRequest::GetProjects {}, deadline, ctrl_c)
+        .map_err(|e| client_error_to_shell_error(e, span))?;
     if response.status() != 200 {
         return Err(UnexpectedResponseStatus {
             status_code: response.status(),

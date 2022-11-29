@@ -8,7 +8,10 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::time::Instant;
 
-use crate::cli::error::{deserialize_error, no_active_bucket_error, unexpected_status_code_error};
+use crate::cli::error::{
+    client_error_to_shell_error, deserialize_error, no_active_bucket_error,
+    unexpected_status_code_error,
+};
 use crate::RemoteCluster;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
@@ -92,11 +95,15 @@ fn collections_get(
             &bucket, &scope
         );
 
-        let response = active_cluster.cluster().http_client().management_request(
-            ManagementRequest::GetCollections { bucket },
-            Instant::now().add(active_cluster.timeouts().management_timeout()),
-            ctrl_c.clone(),
-        )?;
+        let response = active_cluster
+            .cluster()
+            .http_client()
+            .management_request(
+                ManagementRequest::GetCollections { bucket },
+                Instant::now().add(active_cluster.timeouts().management_timeout()),
+                ctrl_c.clone(),
+            )
+            .map_err(|e| client_error_to_shell_error(e, span))?;
 
         let manifest: Manifest = match response.status() {
             200 => serde_json::from_str(response.content())

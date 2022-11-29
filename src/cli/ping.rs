@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 use tokio::time::Instant;
 
-use crate::cli::error::no_active_bucket_error;
+use crate::cli::error::{client_error_to_shell_error, no_active_bucket_error};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -129,12 +129,13 @@ fn run_ping(
 
         // TODO: do this in parallel to http ops.
         let kv_deadline = Instant::now().add(cluster.timeouts().data_timeout());
-        let mut client = rt.block_on(cluster.cluster().key_value_client(
-            bucket_name.clone(),
-            kv_deadline,
-            ctrl_c.clone(),
-            span,
-        ))?;
+        let mut client = rt
+            .block_on(cluster.cluster().key_value_client(
+                bucket_name.clone(),
+                kv_deadline,
+                ctrl_c.clone(),
+            ))
+            .map_err(|e| client_error_to_shell_error(e, span))?;
 
         let kv_result = rt.block_on(client.ping_all(kv_deadline, ctrl_c.clone()));
         match kv_result {

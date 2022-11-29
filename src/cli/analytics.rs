@@ -1,5 +1,6 @@
 use crate::cli::error::{
-    deserialize_error, malformed_response_error, unexpected_status_code_error,
+    client_error_to_shell_error, deserialize_error, malformed_response_error,
+    unexpected_status_code_error,
 };
 use crate::cli::util::{
     cluster_identifiers_from, convert_row_to_nu_value, duration_to_golang_string,
@@ -13,7 +14,7 @@ use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
-    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape, Value,
 };
 use std::collections::HashMap;
 use std::ops::Add;
@@ -110,6 +111,7 @@ fn run(
             maybe_scope,
             statement.clone(),
             ctrl_c.clone(),
+            span,
         )?;
 
         if with_meta {
@@ -166,6 +168,7 @@ pub fn send_analytics_query(
     scope: Option<(String, String)>,
     statement: impl Into<String>,
     ctrl_c: Arc<AtomicBool>,
+    span: Span,
 ) -> Result<HttpResponse, ShellError> {
     let response = active_cluster
         .cluster()
@@ -178,7 +181,8 @@ pub fn send_analytics_query(
             },
             Instant::now().add(active_cluster.timeouts().analytics_timeout()),
             ctrl_c,
-        )?;
+        )
+        .map_err(|e| client_error_to_shell_error(e, span))?;
 
     Ok(response)
 }

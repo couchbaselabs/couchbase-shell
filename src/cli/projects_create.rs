@@ -6,7 +6,9 @@ use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
-use crate::cli::error::{serialize_error, unexpected_status_code_error};
+use crate::cli::error::{
+    client_error_to_shell_error, serialize_error, unexpected_status_code_error,
+};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -66,14 +68,16 @@ fn projects_create(
     let control = guard.active_capella_org()?;
     let client = control.client();
     let project = JSONCloudCreateProjectRequest::new(name);
-    let response = client.capella_request(
-        CapellaRequest::CreateProject {
-            payload: serde_json::to_string(&project)
-                .map_err(|e| serialize_error(e.to_string(), span))?,
-        },
-        Instant::now().add(control.timeout()),
-        ctrl_c,
-    )?;
+    let response = client
+        .capella_request(
+            CapellaRequest::CreateProject {
+                payload: serde_json::to_string(&project)
+                    .map_err(|e| serialize_error(e.to_string(), span))?,
+            },
+            Instant::now().add(control.timeout()),
+            ctrl_c,
+        )
+        .map_err(|e| client_error_to_shell_error(e, span))?;
     if response.status() != 201 {
         return Err(unexpected_status_code_error(
             response.status(),

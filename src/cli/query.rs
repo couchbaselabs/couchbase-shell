@@ -12,7 +12,8 @@ use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 use crate::cli::error::{
-    deserialize_error, malformed_response_error, unexpected_status_code_error,
+    client_error_to_shell_error, deserialize_error, malformed_response_error,
+    unexpected_status_code_error,
 };
 use crate::RemoteCluster;
 use nu_engine::CallExt;
@@ -107,6 +108,7 @@ fn query(
             statement.clone(),
             maybe_scope,
             ctrl_c.clone(),
+            span,
         )?;
         drop(guard);
 
@@ -130,16 +132,21 @@ pub fn send_query(
     statement: String,
     scope: Option<(String, String)>,
     ctrl_c: Arc<AtomicBool>,
+    span: Span,
 ) -> Result<HttpResponse, ShellError> {
-    let response = cluster.cluster().http_client().query_request(
-        QueryRequest::Execute {
-            statement,
-            scope,
-            timeout: duration_to_golang_string(cluster.timeouts().query_timeout()),
-        },
-        Instant::now().add(cluster.timeouts().query_timeout()),
-        ctrl_c,
-    )?;
+    let response = cluster
+        .cluster()
+        .http_client()
+        .query_request(
+            QueryRequest::Execute {
+                statement,
+                scope,
+                timeout: duration_to_golang_string(cluster.timeouts().query_timeout()),
+            },
+            Instant::now().add(cluster.timeouts().query_timeout()),
+            ctrl_c,
+        )
+        .map_err(|e| client_error_to_shell_error(e, span))?;
 
     Ok(response)
 }

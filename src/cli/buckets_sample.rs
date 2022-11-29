@@ -1,4 +1,6 @@
-use crate::cli::error::{deserialize_error, unexpected_status_code_error};
+use crate::cli::error::{
+    client_error_to_shell_error, deserialize_error, unexpected_status_code_error,
+};
 use crate::cli::util::{
     cluster_identifiers_from, get_active_cluster, validate_is_not_cloud, NuValueMap,
 };
@@ -81,13 +83,17 @@ fn load_sample_bucket(
 
         validate_is_not_cloud(cluster, "buckets sample", span)?;
 
-        let response = cluster.cluster().http_client().management_request(
-            ManagementRequest::LoadSampleBucket {
-                name: format!("[\"{}\"]", bucket_name),
-            },
-            Instant::now().add(cluster.timeouts().management_timeout()),
-            ctrl_c.clone(),
-        )?;
+        let response = cluster
+            .cluster()
+            .http_client()
+            .management_request(
+                ManagementRequest::LoadSampleBucket {
+                    name: format!("[\"{}\"]", bucket_name),
+                },
+                Instant::now().add(cluster.timeouts().management_timeout()),
+                ctrl_c.clone(),
+            )
+            .map_err(|e| client_error_to_shell_error(e, span))?;
 
         match response.status() {
             202 => {}

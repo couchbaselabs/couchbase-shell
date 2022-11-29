@@ -1,4 +1,4 @@
-use crate::cli::error::unexpected_status_code_error;
+use crate::cli::error::{client_error_to_shell_error, unexpected_status_code_error};
 use crate::cli::util::{
     cluster_identifiers_from, duration_to_golang_string, get_active_cluster, NuValueMap,
 };
@@ -96,7 +96,8 @@ fn run(
                 },
                 Instant::now().add(active_cluster.timeouts().search_timeout()),
                 ctrl_c.clone(),
-            )?;
+            )
+            .map_err(|e| client_error_to_shell_error(e, span))?;
 
         let rows: SearchResultData = match response.status() {
             200 => serde_json::from_str(response.content()).map_err(|_e| {
