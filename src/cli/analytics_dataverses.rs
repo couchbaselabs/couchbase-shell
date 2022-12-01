@@ -1,4 +1,4 @@
-use crate::cli::analytics_buckets::do_non_mutation_analytics_query;
+use crate::cli::analytics::do_analytics_query;
 use crate::cli::util::{cluster_identifiers_from, get_active_cluster};
 use crate::state::State;
 use log::debug;
@@ -73,13 +73,15 @@ fn dataverses(
     for identifier in cluster_identifiers {
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
-        results.extend(do_non_mutation_analytics_query(
+        results.extend(do_analytics_query(
             identifier.clone(),
             active_cluster,
+            None,
             statement,
             ctrl_c.clone(),
             span,
             with_meta,
+            false,
         )?);
     }
 

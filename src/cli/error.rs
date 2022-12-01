@@ -49,6 +49,50 @@ impl From<i64> for QueryErrorReason {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone)]
+pub enum AnalyticsErrorReason {
+    AuthorizationError,
+    APIError,
+    ConnectionError,
+    RuntimeError,
+    CompilationError,
+    InternalError,
+    MultiErrors,
+    UnknownError,
+}
+
+impl Display for AnalyticsErrorReason {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let message = match self {
+            AnalyticsErrorReason::AuthorizationError => "Analytics authorization error",
+            AnalyticsErrorReason::APIError => "Analytics API error",
+            AnalyticsErrorReason::ConnectionError => "Analytics connection error",
+            AnalyticsErrorReason::RuntimeError => "Analytics runtime error",
+            AnalyticsErrorReason::CompilationError => "Analytics compilation error",
+            AnalyticsErrorReason::InternalError => "Analytics internal error",
+            AnalyticsErrorReason::MultiErrors => "Multiple analytics errors",
+            AnalyticsErrorReason::UnknownError => "Unknown analytics error",
+        };
+
+        write!(f, "{}", message)
+    }
+}
+
+impl From<i64> for AnalyticsErrorReason {
+    fn from(code: i64) -> Self {
+        let group = code / 1000;
+        match group {
+            20 => Self::AuthorizationError,
+            21 => Self::APIError,
+            22 => Self::ConnectionError,
+            23 => Self::CompilationError,
+            24 => Self::CompilationError,
+            25 => Self::InternalError,
+            _ => Self::UnknownError,
+        }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone)]
 pub enum CBShellError {
     BucketNotFound {
         name: String,
@@ -107,6 +151,12 @@ pub enum CBShellError {
     },
     QueryError {
         error_reason: QueryErrorReason,
+        status_code: Option<i64>,
+        message: String,
+        span: Span,
+    },
+    AnalyticsError {
+        error_reason: AnalyticsErrorReason,
         status_code: Option<i64>,
         message: String,
         span: Span,
@@ -178,6 +228,13 @@ impl From<CBShellError> for ShellError {
                 let help = match status_code {
                     Some(s) => format!("Received error from query engine, message: {}, code: {}", message, s),
                     None => format!("Received multiple errors from query engine, message: {}", message)
+                };
+                spanned_shell_error(error_reason.to_string(), help, span)
+            },
+            CBShellError::AnalyticsError {error_reason, status_code, message, span} => {
+                let help = match status_code {
+                    Some(s) => format!("Received error from analytics engine, message: {}, code: {}", message, s),
+                    None => format!("Received multiple errors from analytics engine, message: {}", message)
                 };
                 spanned_shell_error(error_reason.to_string(), help, span)
             }
@@ -280,6 +337,23 @@ pub fn query_error(
         error_reason: reason
             .into()
             .unwrap_or_else(|| QueryErrorReason::UnknownError),
+        status_code: status_code.into(),
+        message,
+        span,
+    }
+    .into()
+}
+
+pub fn analytics_error(
+    reason: impl Into<Option<AnalyticsErrorReason>>,
+    status_code: impl Into<Option<i64>>,
+    message: String,
+    span: Span,
+) -> ShellError {
+    CBShellError::AnalyticsError {
+        error_reason: reason
+            .into()
+            .unwrap_or_else(|| AnalyticsErrorReason::UnknownError),
         status_code: status_code.into(),
         message,
         span,
