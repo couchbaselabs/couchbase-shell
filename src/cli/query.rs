@@ -12,8 +12,8 @@ use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 use crate::cli::error::{
-    client_error_to_shell_error, deserialize_error, malformed_response_error,
-    unexpected_status_code_error,
+    client_error_to_shell_error, deserialize_error, malformed_response_error, query_error,
+    unexpected_status_code_error, QueryErrorReason,
 };
 use crate::RemoteCluster;
 use nu_engine::CallExt;
@@ -157,28 +157,66 @@ pub fn handle_query_response(
     response: HttpResponse,
     span: Span,
 ) -> Result<Vec<Value>, ShellError> {
+    if response.status() != 200 {
+        return Err(unexpected_status_code_error(
+            response.status(),
+            response.content(),
+            span,
+        ));
+    }
+
     let mut results: Vec<Value> = vec![];
     if with_meta {
-        let content: serde_json::Value =
-            serde_json::from_str(response.content()).map_err(|_e| {
-                unexpected_status_code_error(response.status(), response.content(), span)
-            })?;
+        let content: serde_json::Value = serde_json::from_str(response.content())
+            .map_err(|e| deserialize_error(e.to_string(), span))?;
         results.push(convert_row_to_nu_value(&content, span, identifier)?);
     } else {
         let content: HashMap<String, serde_json::Value> = serde_json::from_str(response.content())
             .map_err(|e| deserialize_error(e.to_string(), span))?;
         if let Some(content_errors) = content.get("errors") {
-            if let Some(arr) = content_errors.as_array() {
-                for result in arr {
-                    results.push(convert_row_to_nu_value(result, span, identifier.clone())?);
+            return if let Some(arr) = content_errors.as_array() {
+                if arr.len() == 1 {
+                    let e = match arr.get(0) {
+                        Some(e) => e,
+                        None => {
+                            return Err(malformed_response_error(
+                                "query errors present but empty",
+                                content_errors.to_string(),
+                                span,
+                            ))
+                        }
+                    };
+                    let code = e.get("code").map(|c| c.as_i64().unwrap_or_default());
+                    let reason = match code {
+                        Some(c) => QueryErrorReason::from(c),
+                        None => QueryErrorReason::UnknownError,
+                    };
+                    let msg = match e.get("msg") {
+                        Some(msg) => msg.to_string(),
+                        None => "".to_string(),
+                    };
+                    Err(query_error(reason, code, msg, span))
+                } else {
+                    let messages = arr
+                        .into_iter()
+                        .map(|e| e.to_string())
+                        .collect::<Vec<String>>()
+                        .join(",");
+
+                    Err(query_error(
+                        QueryErrorReason::MultiErrors,
+                        None,
+                        messages,
+                        span,
+                    ))
                 }
             } else {
-                return Err(malformed_response_error(
+                Err(malformed_response_error(
                     "query errors not an array",
                     content_errors.to_string(),
                     span,
-                ));
-            }
+                ))
+            };
         } else if let Some(content_results) = content.get("results") {
             if let Some(arr) = content_results.as_array() {
                 for result in arr {
