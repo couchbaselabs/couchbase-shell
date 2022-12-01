@@ -103,7 +103,14 @@ fn buckets_get(
         match response.status() {
             200 => {}
             404 => {
-                return Err(bucket_not_found_error(bucket, span));
+                if response
+                    .content()
+                    .to_string()
+                    .to_lowercase()
+                    .contains("resource not found")
+                {
+                    return Err(bucket_not_found_error(bucket, span));
+                }
             }
             _ => {
                 return Err(unexpected_status_code_error(
