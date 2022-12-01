@@ -1,7 +1,7 @@
 use crate::cli::buckets_builder::{BucketSettings, DurabilityLevel, JSONBucketSettings};
 use crate::cli::error::{
-    client_error_to_shell_error, deserialize_error, generic_error, serialize_error,
-    unexpected_status_code_error,
+    bucket_not_found_error, client_error_to_shell_error, deserialize_error, generic_error,
+    serialize_error, unexpected_status_code_error,
 };
 use crate::cli::util::{cluster_identifiers_from, get_active_cluster, validate_is_not_cloud};
 use crate::client::ManagementRequest;
@@ -174,6 +174,16 @@ fn buckets_update(
             200 => {}
             201 => {}
             202 => {}
+            404 => {
+                if response
+                    .content()
+                    .to_string()
+                    .to_lowercase()
+                    .contains("resource not found")
+                {
+                    return Err(bucket_not_found_error(name, span));
+                }
+            }
             _ => {
                 return Err(unexpected_status_code_error(
                     response.status(),

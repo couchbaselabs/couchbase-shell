@@ -10,7 +10,9 @@ use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
-use crate::cli::error::{client_error_to_shell_error, deserialize_error};
+use crate::cli::error::{
+    client_error_to_shell_error, deserialize_error, unexpected_status_code_error,
+};
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
@@ -142,6 +144,13 @@ fn check_autofailover(
             ctrl_c,
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
+    if response.status() != 200 {
+        return Err(unexpected_status_code_error(
+            response.status(),
+            response.content(),
+            span,
+        ));
+    };
     let resp: AutoFailoverSettings = serde_json::from_str(response.content())
         .map_err(|e| deserialize_error(e.to_string(), span))?;
 
@@ -186,6 +195,13 @@ fn check_resident_ratio(
             ctrl_c,
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
+    if response.status() != 200 {
+        return Err(unexpected_status_code_error(
+            response.status(),
+            response.content(),
+            span,
+        ));
+    };
     let resp: BucketStats = serde_json::from_str(response.content())
         .map_err(|e| deserialize_error(e.to_string(), span))?;
     let ratio = match resp.op.samples.active_resident_ratios.last() {
