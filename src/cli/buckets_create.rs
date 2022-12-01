@@ -161,7 +161,7 @@ fn buckets_create(
 
         let form = settings
             .as_form(false)
-            .map_err(|e| generic_error(format!("Invalid setting {}", e), None, span))?;
+            .map_err(|e| generic_error("Invalid argument", e.to_string(), span))?;
         let payload =
             serde_urlencoded::to_string(&form).map_err(|e| serialize_error(e.to_string(), span))?;
 

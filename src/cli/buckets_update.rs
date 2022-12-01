@@ -139,7 +139,7 @@ fn buckets_update(
         let content: JSONBucketSettings = serde_json::from_str(get_response.content())
             .map_err(|e| deserialize_error(e.to_string(), span))?;
         let mut settings = BucketSettings::try_from(content)
-            .map_err(|e| generic_error(format!("Invalid setting {}", e), None, span))?;
+            .map_err(|e| generic_error("Invalid argument", e.to_string(), span))?;
 
         update_bucket_settings(
             &mut settings,
@@ -153,7 +153,7 @@ fn buckets_update(
 
         let form = settings
             .as_form(true)
-            .map_err(|e| generic_error(format!("Invalid setting {}", e), None, span))?;
+            .map_err(|e| generic_error("Invalid argument", e.to_string(), span))?;
         let payload =
             serde_urlencoded::to_string(&form).map_err(|e| serialize_error(e.to_string(), span))?;
 
@@ -215,7 +215,7 @@ fn update_bucket_settings(
             Err(e) => {
                 return Err(generic_error(
                     format!("Failed to parse num replicas {}", e),
-                    None,
+                    "Num replicas must be an unsigned 32 bit integer".to_string(),
                     span,
                 ));
             }
