@@ -10,7 +10,8 @@ use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 use crate::cli::error::{
-    client_error_to_shell_error, deserialize_error, generic_error, unexpected_status_code_error,
+    client_error_to_shell_error, deserialize_error, malformed_response_error,
+    unexpected_status_code_error,
 };
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -102,8 +103,17 @@ fn buckets_get_all(
 
         for bucket in content.into_iter() {
             results.push(bucket_to_nu_value(
-                BucketSettings::try_from(bucket)
-                    .map_err(|e| generic_error(format!("Invalid setting {}", e), None, span))?,
+                BucketSettings::try_from(bucket).map_err(|e| {
+                    malformed_response_error(
+                        "Could not parse bucket settings",
+                        format!(
+                            "Error: {}, response content: {}",
+                            e,
+                            response.content().to_string()
+                        ),
+                        span,
+                    )
+                })?,
                 identifier.clone(),
                 false,
                 span,

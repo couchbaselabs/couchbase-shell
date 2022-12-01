@@ -14,8 +14,8 @@ use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 use crate::cli::error::{
-    bucket_not_found_error, client_error_to_shell_error, deserialize_error, generic_error,
-    unexpected_status_code_error,
+    bucket_not_found_error, client_error_to_shell_error, deserialize_error,
+    malformed_response_error, unexpected_status_code_error,
 };
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
@@ -124,8 +124,17 @@ fn buckets_get(
         let content: JSONBucketSettings = serde_json::from_str(response.content())
             .map_err(|e| deserialize_error(e.to_string(), span))?;
         results.push(bucket_to_nu_value(
-            BucketSettings::try_from(content)
-                .map_err(|e| generic_error(format!("Invalid setting {}", e), None, span))?,
+            BucketSettings::try_from(content).map_err(|e| {
+                malformed_response_error(
+                    "Could not parse bucket settings",
+                    format!(
+                        "Error: {}, response content: {}",
+                        e,
+                        response.content().to_string()
+                    ),
+                    span,
+                )
+            })?,
             identifier,
             false,
             span,
