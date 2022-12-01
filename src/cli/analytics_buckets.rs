@@ -1,15 +1,15 @@
-use crate::cli::analytics::send_analytics_query;
-use crate::cli::error::{malformed_response_error, unexpected_status_code_error};
-use crate::cli::util::{cluster_identifiers_from, convert_row_to_nu_value, get_active_cluster};
+use crate::cli::analytics::do_analytics_query;
+
+use crate::cli::util::{cluster_identifiers_from, get_active_cluster};
 use crate::state::State;
-use crate::RemoteCluster;
+
 use log::debug;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
-    Category, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape, Value,
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
 };
-use std::sync::atomic::AtomicBool;
+
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
@@ -77,13 +77,15 @@ fn dataverses(
     for identifier in cluster_identifiers {
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
-        results.extend(do_non_mutation_analytics_query(
+        results.extend(do_analytics_query(
             identifier.clone(),
             active_cluster,
+            None,
             statement,
             ctrl_c.clone(),
             span,
             with_meta,
+            false,
         )?);
     }
 
@@ -92,47 +94,4 @@ fn dataverses(
         span,
     }
     .into_pipeline_data())
-}
-
-pub fn do_non_mutation_analytics_query(
-    identifier: String,
-    active_cluster: &RemoteCluster,
-    statement: impl Into<String>,
-    ctrl_c: Arc<AtomicBool>,
-    span: Span,
-    with_meta: bool,
-) -> Result<Vec<Value>, ShellError> {
-    let response = send_analytics_query(active_cluster, None, statement, ctrl_c, span)?;
-
-    let content: serde_json::Value = serde_json::from_str(response.content())
-        .map_err(|_e| unexpected_status_code_error(response.status(), response.content(), span))?;
-
-    let mut results: Vec<Value> = vec![];
-    if with_meta {
-        let converted = convert_row_to_nu_value(&content, span, identifier)?;
-        results.push(converted);
-        return Ok(results);
-    }
-
-    if let Some(content_results) = content.get("results") {
-        if let Some(arr) = content_results.as_array() {
-            for result in arr {
-                results.push(convert_row_to_nu_value(result, span, identifier.clone())?);
-            }
-        } else {
-            return Err(malformed_response_error(
-                "analytics rows not an array",
-                content_results.to_string(),
-                span,
-            ));
-        }
-    } else {
-        return Err(malformed_response_error(
-            "analytics toplevel result not an object",
-            content.to_string(),
-            span,
-        ));
-    }
-
-    Ok(results)
 }
