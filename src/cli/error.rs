@@ -1,5 +1,52 @@
 use crate::client::ClientError;
 use nu_protocol::{ShellError, Span};
+use std::fmt::{Display, Formatter};
+
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone)]
+pub enum QueryErrorReason {
+    ServiceError,
+    AdminError,
+    ParseSyntaxError,
+    PlanError,
+    GeneralError,
+    ExecError,
+    DatastoreError,
+    MultiErrors,
+    UnknownError,
+}
+
+impl Display for QueryErrorReason {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let message = match self {
+            QueryErrorReason::ServiceError => "Query service error",
+            QueryErrorReason::AdminError => "Query admin error",
+            QueryErrorReason::ParseSyntaxError => "Query syntax error",
+            QueryErrorReason::PlanError => "Query plan error",
+            QueryErrorReason::GeneralError => "Query general error",
+            QueryErrorReason::ExecError => "Query exec error",
+            QueryErrorReason::DatastoreError => "Query datastore error",
+            QueryErrorReason::MultiErrors => "Multiple query errors",
+            QueryErrorReason::UnknownError => "Unknown query error",
+        };
+
+        write!(f, "{}", message)
+    }
+}
+
+impl From<i64> for QueryErrorReason {
+    fn from(code: i64) -> Self {
+        let group = code / 1000;
+        match group {
+            1 => Self::ServiceError,
+            2 => Self::AdminError,
+            3 => Self::ParseSyntaxError,
+            4 => Self::PlanError,
+            5 => Self::GeneralError,
+            10 | 11 | 12 | 13 | 14 | 15 => Self::DatastoreError,
+            _ => Self::UnknownError,
+        }
+    }
+}
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone)]
 pub enum CBShellError {
@@ -58,6 +105,12 @@ pub enum CBShellError {
         message: String,
         span: Span,
     },
+    QueryError {
+        error_reason: QueryErrorReason,
+        status_code: Option<i64>,
+        message: String,
+        span: Span,
+    },
 }
 
 impl From<CBShellError> for ShellError {
@@ -79,7 +132,7 @@ impl From<CBShellError> for ShellError {
                 span,
             } => spanned_shell_error(message, help, span),
             CBShellError::MalformedResponse {message, response, span} => {
-                spanned_shell_error(format!("Malformed response, {} - {}", message, response), "Please raise this as a bug".to_string(), span)
+                spanned_shell_error("Malformed response".to_string(), format!("Malformed response, {} - {}. Please raise this as a bug", message, response), span)
             }
             CBShellError::MustBeCapella { command_name, span } => {
                 spanned_shell_error(format!("{} can only be used with clusters registered to a Capella organisation", command_name), "Check the configuration file to ensure that the cluster has a capella-organisation entry".to_string(), span)
@@ -99,7 +152,7 @@ impl From<CBShellError> for ShellError {
             ),
             CBShellError::NoActiveProject { span } => spanned_shell_error(
                 "Unable to determine an active project",
-                "Set an active bucket using cb-env project".to_string(),
+                "Set an active project using cb-env project".to_string(),
                 span,
             ),
             CBShellError::NoActiveScope { span } => spanned_shell_error(
@@ -113,13 +166,20 @@ impl From<CBShellError> for ShellError {
                 span,
             ),
             CBShellError::RequestSerializationError { message, span } => {
-                spanned_shell_error(message, "Serialization of the request body failed".to_string(), span)
+                spanned_shell_error("Serialization of the request body failed".to_string(),format!("Error from the serializer: {}", message),span)
             },
             CBShellError::ResponseDeserializationError { message, span } => {
-                spanned_shell_error(message, "Deserialization of the response body failed".to_string(), span)
+                spanned_shell_error("Deserialization of the request body failed".to_string(),format!("Error from the deserializer: {}", message),span)
             }
             CBShellError::UnexpectedResponseStatus { status_code, message, span} => {
-                spanned_shell_error(format!("Unexpected status code: {}, body: {}", status_code, message), None, span)
+                spanned_shell_error("Unexpected status code".to_string(),format!("Unexpected status code: {}, body: {}", status_code, message), span)
+            },
+            CBShellError::QueryError {error_reason, status_code, message, span} => {
+                let help = match status_code {
+                    Some(s) => format!("Received error from query engine, message: {}, code: {}", message, s),
+                    None => format!("Received multiple errors from query engine, message: {}", message)
+                };
+                spanned_shell_error(error_reason.to_string(), help, span)
             }
         }
     }
@@ -206,6 +266,23 @@ pub fn generic_error(
         message: message.into(),
         help: help.into(),
         span: Some(span),
+    }
+    .into()
+}
+
+pub fn query_error(
+    reason: impl Into<Option<QueryErrorReason>>,
+    status_code: impl Into<Option<i64>>,
+    message: String,
+    span: Span,
+) -> ShellError {
+    CBShellError::QueryError {
+        error_reason: reason
+            .into()
+            .unwrap_or_else(|| QueryErrorReason::UnknownError),
+        status_code: status_code.into(),
+        message,
+        span,
     }
     .into()
 }
