@@ -81,5 +81,5 @@ fn clusters_unregister(
         update_config_file(&mut guard, call.head)?;
     };
 
-    Ok(PipelineData::new(call.head))
+    Ok(PipelineData::new_with_metadata(None, call.head))
 }

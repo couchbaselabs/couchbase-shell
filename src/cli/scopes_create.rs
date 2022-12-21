@@ -115,5 +115,5 @@ fn run(
         }
     }
 
-    Ok(PipelineData::new(span))
+    Ok(PipelineData::new_with_metadata(None, span))
 }

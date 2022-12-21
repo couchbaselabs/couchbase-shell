@@ -26,7 +26,7 @@ use nu_cli::{add_plugin_file, gather_parent_env_vars, read_plugin_file, report_e
 use nu_command::BufferedReader;
 use nu_engine::{get_full_help, CallExt};
 use nu_parser::{escape_quote_string, parse};
-use nu_protocol::ast::{Call, Expr, Expression};
+use nu_protocol::ast::{Call, Expr, Expression, PipelineElement};
 use nu_protocol::engine::{Command, EngineState, Stack, StateWorkingSet};
 use nu_protocol::{
     Category, Example, IntoPipelineData, PipelineData, RawStream, ShellError, Signature, Span,
@@ -425,9 +425,10 @@ fn main() -> Result<(), Box<dyn Error>> {
             exit_code: None,
             span: Span::new(0, 0),
             metadata: None,
+            trim_end_newline: false,
         }
     } else {
-        PipelineData::new(Span::new(0, 0))
+        PipelineData::new_with_metadata(None, Span::new(0, 0))
     };
 
     if let Some(c) = opt.command {
@@ -617,7 +618,13 @@ impl Command for Cbsh {
         _input: PipelineData,
     ) -> Result<PipelineData, ShellError> {
         Ok(Value::String {
-            val: get_full_help(&Cbsh.signature(), &Cbsh.examples(), context, stack),
+            val: get_full_help(
+                &Cbsh.signature(),
+                &Cbsh.examples(),
+                context,
+                stack,
+                self.is_parser_keyword(),
+            ),
             span: call.head,
         }
         .into_pipeline_data())
@@ -670,10 +677,13 @@ fn parse_commandline_args(
 
     // We should have a successful parse now
     if let Some(pipeline) = block.pipelines.get(0) {
-        if let Some(Expression {
-            expr: Expr::Call(call),
-            ..
-        }) = pipeline.expressions.get(0)
+        if let Some(PipelineElement::Expression(
+            _,
+            Expression {
+                expr: Expr::Call(call),
+                ..
+            },
+        )) = pipeline.elements.get(0)
         {
             let hostnames: Option<String> = call.get_flag(context, &mut stack, "hostnames")?;
             let username: Option<String> = call.get_flag(context, &mut stack, "username")?;
@@ -715,8 +725,13 @@ fn parse_commandline_args(
             let help = call.has_flag("help");
 
             if help {
-                let full_help =
-                    get_full_help(&Cbsh.signature(), &Cbsh.examples(), context, &mut stack);
+                let full_help = get_full_help(
+                    &Cbsh.signature(),
+                    &Cbsh.examples(),
+                    context,
+                    &mut stack,
+                    false,
+                );
 
                 let _ = std::panic::catch_unwind(move || {
                     let stdout = std::io::stdout();
@@ -759,7 +774,13 @@ fn parse_commandline_args(
     }
 
     // Just give the help and exit if the above fails
-    let full_help = get_full_help(&Cbsh.signature(), &Cbsh.examples(), context, &mut stack);
+    let full_help = get_full_help(
+        &Cbsh.signature(),
+        &Cbsh.examples(),
+        context,
+        &mut stack,
+        false,
+    );
     print!("{}", full_help);
     std::process::exit(1);
 }
