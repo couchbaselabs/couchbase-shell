@@ -7,19 +7,19 @@ def build_collection_prompt [] {
     let scope = $"($content | get scope)"
     let collection = $"($content | get collection)"
     
-    let collection_prompt = if $scope == "" && $collection == "" {
+    let collection_prompt = if $scope == "" and $collection == "" {
         ""
     } else {
-        if $scope != "" && $collection == "" {
-            build-string '.' ($scope) '.<notset>'
-        } else if $scope == "" && $collection != "" {
-            build-string '.<notset>.' ($collection)
+        if $scope != "" and $collection == "" {
+            '.' + ($scope) + '.<notset>'
+        } else if $scope == "" and $collection != "" {
+            '.<notset>.' + ($collection)
        } else {
-            build-string '.' ($scope) '.' ($collection)
+            '.' + ($scope) + '.' + ($collection)
        }
     }
     
-    let prompt = $"(build-string ansi ub) ($user) (ansi reset) ' at ' (ansi yb) ($cluster) (ansi reset) ' in ' (ansi wb) ($bucket) ($collection_prompt) (ansi reset))"
+    let prompt = $"('(ansi ub) + ($user) + (ansi reset) + ' at ' + (ansi yb) + ($cluster) + (ansi reset) + ' in ' + (ansi wb) + ($bucket) + ($collection_prompt) + (ansi reset))"
     
     $prompt
 }

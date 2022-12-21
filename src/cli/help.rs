@@ -1,19 +1,17 @@
-use serde::Deserialize;
+use nu_command::help::highlight_search_string;
+use std::borrow::Borrow;
 
+use nu_color_config::StyleComputer;
 use nu_engine::{get_full_help, CallExt};
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
-    span, Category, IntoInterruptiblePipelineData, IntoPipelineData, PipelineData, ShellError,
-    Signature, Spanned, SyntaxShape, Value,
+    span, Category, Example, IntoInterruptiblePipelineData, IntoPipelineData, PipelineData,
+    ShellError, Signature, Spanned, SyntaxShape, Type, Value,
 };
 
 #[derive(Clone)]
 pub struct Help;
-
-#[derive(Deserialize)]
-pub struct HelpArgs {}
-
 impl Command for Help {
     fn name(&self) -> &str {
         "help"
@@ -21,6 +19,7 @@ impl Command for Help {
 
     fn signature(&self) -> Signature {
         Signature::build("help")
+            .input_output_types(vec![(Type::Nothing, Type::String)])
             .rest(
                 "rest",
                 SyntaxShape::String,
@@ -29,10 +28,10 @@ impl Command for Help {
             .named(
                 "find",
                 SyntaxShape::String,
-                "string to find in command usage",
+                "string to find in command names, usage, and search terms",
                 Some('f'),
             )
-            .category(Category::Custom("couchbase".to_string()))
+            .category(Category::Core)
     }
 
     fn usage(&self) -> &str {
@@ -48,6 +47,31 @@ impl Command for Help {
     ) -> Result<PipelineData, ShellError> {
         help(engine_state, stack, call)
     }
+
+    fn examples(&self) -> Vec<Example> {
+        vec![
+            Example {
+                description: "show all commands and sub-commands",
+                example: "help commands",
+                result: None,
+            },
+            Example {
+                description: "show help for single command",
+                example: "help match",
+                result: None,
+            },
+            Example {
+                description: "show help for single sub-command",
+                example: "help str lpad",
+                result: None,
+            },
+            Example {
+                description: "search for string in command names, usage and search terms",
+                example: "help --find char",
+                result: None,
+            },
+        ]
+    }
 }
 
 fn help(
@@ -58,53 +82,112 @@ fn help(
     let head = call.head;
     let find: Option<Spanned<String>> = call.get_flag(engine_state, stack, "find")?;
     let rest: Vec<Spanned<String>> = call.rest(engine_state, stack, 0)?;
+    let commands = engine_state.get_decl_ids_sorted(false);
 
-    let full_commands = engine_state.get_signatures_with_examples(false);
+    // 🚩The following two-lines are copied from filters/find.rs:
+    let style_computer = StyleComputer::from_config(engine_state, stack);
+    // Currently, search results all use the same style.
+    // Also note that this sample string is passed into user-written code (the closure that may or may not be
+    // defined for "string").
+    let string_style = style_computer.compute("string", &Value::string("search result", head));
 
     if let Some(f) = find {
+        let org_search_string = f.item.clone();
         let search_string = f.item.to_lowercase();
         let mut found_cmds_vec = Vec::new();
 
-        for (sig, _, is_plugin, is_custom) in full_commands {
+        for decl_id in commands {
             let mut cols = vec![];
             let mut vals = vec![];
+            let decl = engine_state.get_decl(decl_id);
+            let sig = decl.signature().update_from_command(decl.borrow());
+            let signatures = sig.to_string();
+            let key = sig.name;
+            let usage = sig.usage;
+            let search_terms = sig.search_terms;
 
-            let key = sig.name.clone();
-            let c = sig.usage.clone();
-            let e = sig.extra_usage.clone();
-            if key.to_lowercase().contains(&search_string)
-                || c.to_lowercase().contains(&search_string)
-                || e.to_lowercase().contains(&search_string)
-            {
-                cols.push("name".to_string());
+            let matches_term = if !search_terms.is_empty() {
+                search_terms
+                    .iter()
+                    .any(|term| term.to_lowercase().contains(&search_string))
+            } else {
+                false
+            };
+
+            let key_match = key.to_lowercase().contains(&search_string);
+            let usage_match = usage.to_lowercase().contains(&search_string);
+            if key_match || usage_match || matches_term {
+                cols.push("name".into());
                 vals.push(Value::String {
-                    val: key,
+                    val: if key_match {
+                        highlight_search_string(&key, &org_search_string, &string_style)?
+                    } else {
+                        key
+                    },
                     span: head,
                 });
 
-                cols.push("category".to_string());
+                cols.push("category".into());
+                vals.push(Value::string(sig.category.to_string(), head));
+
+                cols.push("command_type".into());
                 vals.push(Value::String {
-                    val: sig.category.to_string(),
+                    val: format!("{:?}", decl.command_type()).to_lowercase(),
                     span: head,
                 });
 
-                cols.push("is_plugin".to_string());
-                vals.push(Value::Bool {
-                    val: is_plugin,
+                cols.push("usage".into());
+                vals.push(Value::String {
+                    val: if usage_match {
+                        highlight_search_string(&usage, &org_search_string, &string_style)?
+                    } else {
+                        usage
+                    },
                     span: head,
                 });
 
-                cols.push("is_custom".to_string());
-                vals.push(Value::Bool {
-                    val: is_custom,
+                cols.push("signatures".into());
+                vals.push(Value::String {
+                    val: if decl.is_parser_keyword() {
+                        "".to_string()
+                    } else {
+                        signatures
+                    },
                     span: head,
                 });
 
-                cols.push("usage".to_string());
-                vals.push(Value::String { val: c, span: head });
-
-                cols.push("extra_usage".to_string());
-                vals.push(Value::String { val: e, span: head });
+                cols.push("search_terms".into());
+                vals.push(if search_terms.is_empty() {
+                    Value::nothing(head)
+                } else {
+                    Value::String {
+                        val: if matches_term {
+                            search_terms
+                                .iter()
+                                .map(|term| {
+                                    if term.to_lowercase().contains(&search_string) {
+                                        match highlight_search_string(
+                                            term,
+                                            &org_search_string,
+                                            &string_style,
+                                        ) {
+                                            Ok(s) => s,
+                                            Err(_) => {
+                                                string_style.paint(term.to_string()).to_string()
+                                            }
+                                        }
+                                    } else {
+                                        string_style.paint(term.to_string()).to_string()
+                                    }
+                                })
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        } else {
+                            search_terms.join(", ")
+                        },
+                        span: head,
+                    }
+                });
 
                 found_cmds_vec.push(Value::Record {
                     cols,
@@ -123,43 +206,58 @@ fn help(
         let mut found_cmds_vec = Vec::new();
 
         if rest[0].item == "commands" {
-            for (sig, _, is_plugin, is_custom) in full_commands {
+            for decl_id in commands {
                 let mut cols = vec![];
                 let mut vals = vec![];
 
-                let key = sig.name.clone();
-                let c = sig.usage.clone();
-                let e = sig.extra_usage.clone();
+                let decl = engine_state.get_decl(decl_id);
+                let sig = decl.signature().update_from_command(decl.borrow());
 
-                cols.push("name".to_string());
+                let signatures = sig.to_string();
+                let key = sig.name;
+                let usage = sig.usage;
+                let search_terms = sig.search_terms;
+
+                cols.push("name".into());
                 vals.push(Value::String {
                     val: key,
                     span: head,
                 });
 
-                cols.push("category".to_string());
+                cols.push("category".into());
+                vals.push(Value::string(sig.category.to_string(), head));
+
+                cols.push("command_type".into());
                 vals.push(Value::String {
-                    val: sig.category.to_string(),
+                    val: format!("{:?}", decl.command_type()).to_lowercase(),
                     span: head,
                 });
 
-                cols.push("is_plugin".to_string());
-                vals.push(Value::Bool {
-                    val: is_plugin,
+                cols.push("usage".into());
+                vals.push(Value::String {
+                    val: usage,
                     span: head,
                 });
 
-                cols.push("is_custom".to_string());
-                vals.push(Value::Bool {
-                    val: is_custom,
+                cols.push("signatures".into());
+                vals.push(Value::String {
+                    val: if decl.is_parser_keyword() {
+                        "".to_string()
+                    } else {
+                        signatures
+                    },
                     span: head,
                 });
 
-                cols.push("usage".to_string());
-                vals.push(Value::String { val: c, span: head });
-
-                cols.push("extra_usage".to_string());
-                vals.push(Value::String { val: e, span: head });
+                cols.push("search_terms".into());
+                vals.push(if search_terms.is_empty() {
+                    Value::nothing(head)
+                } else {
+                    Value::String {
+                        val: search_terms.join(", "),
+                        span: head,
+                    }
+                });
 
                 found_cmds_vec.push(Value::Record {
                     cols,
@@ -181,11 +279,12 @@ fn help(
                 name.push_str(&r.item);
             }
 
-            let output = full_commands
+            let output = engine_state
+                .get_signatures_with_examples(false)
                 .iter()
-                .filter(|(signature, _, _, _)| signature.name == name)
-                .map(|(signature, examples, _, _)| {
-                    get_full_help(signature, examples, engine_state, stack)
+                .filter(|(signature, _, _, _, _)| signature.name == name)
+                .map(|(signature, examples, _, _, is_parser_keyword)| {
+                    get_full_help(signature, examples, engine_state, stack, *is_parser_keyword)
                 })
                 .collect::<Vec<String>>();
 
@@ -226,10 +325,6 @@ Open a JSON file, transform the data, and upsert it into your active bucket:
 
 You can also learn more at https://couchbase.sh/docs/ and https://www.nushell.sh/book/"#;
 
-        Ok(Value::String {
-            val: msg.to_string(),
-            span: head,
-        }
-        .into_pipeline_data())
+        Ok(Value::string(msg, head).into_pipeline_data())
     }
 }

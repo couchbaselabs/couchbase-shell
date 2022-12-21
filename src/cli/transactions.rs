@@ -34,6 +34,7 @@ impl Command for Transactions {
                 &Vec::<Example>::new(),
                 engine_state,
                 stack,
+                self.is_parser_keyword(),
             ),
             span: call.head,
         }

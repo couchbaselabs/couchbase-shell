@@ -163,7 +163,7 @@ fn clusters_register(
         update_config_file(&mut guard, call.head)?;
     }
 
-    Ok(PipelineData::new(call.head))
+    Ok(PipelineData::new_with_metadata(None, call.head))
 }
 
 pub fn update_config_file(guard: &mut MutexGuard<State>, span: Span) -> Result<(), ShellError> {
