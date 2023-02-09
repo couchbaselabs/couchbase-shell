@@ -11,9 +11,9 @@ The documentation is available [here](https://couchbase.sh/docs/).
 
 First, download the archive for your operating system.
 
- - [Linux 1.0.0-beta.5](https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.5/cbsh-1.0.0-beta.5-linux.tar.gz)
- - [macOS 1.0.0-beta.5](https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.5/cbsh-1.0.0-beta.5-mac.zip)
- - [Windows 1.0.0-beta.5](https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.5/cbsh-1.0.0-beta.5-windows.zip)
+ - [Linux 0.75.0](https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.0/cbsh-0.75.0-linux.tar.gz)
+ - [macOS 0.75.0](https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.0/cbsh-0.75.0-mac.zip)
+ - [Windows 0.75.0](https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.0/cbsh-0.75.0-windows.zip)
 
 You do not need any extra dependencies to run `cbsh`, it comes "batteries included".
 
@@ -23,7 +23,7 @@ After extracting the archive, run the `cbsh` binary in your terminal.
 
 ```
 ❯ ./cbsh --version
-The Couchbase Shell 1.0.0-beta.5
+The Couchbase Shell 0.75.0
 ```
 
 ## Basic Usage
@@ -143,7 +143,7 @@ If you just want to use it and don't want to bother compiling all the time, you 
 
 ```
 ❯ cargo install --path .
-  Installing couchbase-shell v1.0.0-beta.3 (/Users/michaelnitschinger/couchbase/code/rust/couchbase-shell)
+  Installing couchbase-shell v0.75.0 (/Users/michaelnitschinger/couchbase/code/rust/couchbase-shell)
     Updating crates.io index
   Downloaded plist v1.2.1
   Downloaded onig v6.3.0

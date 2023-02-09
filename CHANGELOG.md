@@ -2,6 +2,21 @@
 
 All user visible changes to this project will be documented in this file.
 
+## 0.75.0 - 2023-02-09
+
+- Nushell pinned to 0.75
+- Pulled all beta and alpha release versions and updated version numbering
+  - Couchbase Shell versions will now map to the Nushell version being used
+- Bundle Capella root CA to allow seamlessly connecting over TLS 
+- Automatically detect when `query_context` should be sent
+- Update when SRV lookups are performed
+- Statically link OpenSSL
+- Various logging and error enhancements
+- Remove support for Capella InVpc
+- Renamed `clusters managed` to `cb-env managed`
+- Renamed `clusters register/unregister` to `cb-env register/unregister`
+- Expose CIDR in result of `clusters`
+- Fetch collection id over memcached rather than http
 
 ## 1.0.0-beta.5 - 2022-05-30
 

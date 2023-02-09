@@ -898,7 +898,7 @@ checksum = "5827cebf4670468b8772dd191856768aedcb1b0278a04f989f7766351917b9dc"
 
 [[package]]
 name = "couchbase-shell"
-version = "1.0.0-beta.5"
+version = "0.75.0"
 dependencies = [
  "ansi_term",
  "async-stream",
