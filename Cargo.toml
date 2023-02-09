@@ -24,15 +24,15 @@ humantime-serde = "1.0"
 lazy_static = "1.4.0"
 log = "0.4"
 mime_guess = "2.0"
-nu = { version = "0.73.0", features = ["dataframe"] }
-nu-protocol = { version = "0.73.0" }
-nu-color-config = { version = "0.73.0" }
-nu-command = { version = "0.73.0" }
-nu-parser = { version = "0.73.0" }
-nu-path = { version = "0.73.0" }
-nu-cli = { version = "0.73.0" }
-nu-engine = { version = "0.73.0" }
-nu-plugin = { version = "0.73.0" }
+nu = { version = "0.75.0", features = ["dataframe"] }
+nu-protocol = { version = "0.75.0" }
+nu-color-config = { version = "0.75.0" }
+nu-command = { version = "0.75.0" }
+nu-parser = { version = "0.75.0" }
+nu-path = { version = "0.75.0" }
+nu-cli = { version = "0.75.0" }
+nu-engine = { version = "0.75.0" }
+nu-plugin = { version = "0.75.0" }
 num-bigint = "0.4"
 num-traits = "0.2.14"
 openssl = { version = "0.10", features = ["vendored"] }
@@ -64,7 +64,7 @@ dunce = "1.0.1"
 envconfig = "0.10.0"
 itertools = "0.10.3"
 lazy_static = "1.4.0"
-nu-test-support = { version = "0.73.0"}
+nu-test-support = { version = "0.75.0"}
 strum = "0.24.1"
 strum_macros = "0.24.3"
 

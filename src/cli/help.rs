@@ -1,17 +1,17 @@
-use nu_command::help::highlight_search_string;
-use std::borrow::Borrow;
-
-use nu_color_config::StyleComputer;
-use nu_engine::{get_full_help, CallExt};
+use nu_command::help_aliases::help_aliases;
+use nu_command::help_commands::help_commands;
+use nu_command::help_modules::help_modules;
+use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
-    span, Category, Example, IntoInterruptiblePipelineData, IntoPipelineData, PipelineData,
-    ShellError, Signature, Spanned, SyntaxShape, Type, Value,
+    span, Category, Example, IntoPipelineData, PipelineData, ShellError, Signature, Span, Spanned,
+    SyntaxShape, Type, Value,
 };
 
 #[derive(Clone)]
 pub struct Help;
+
 impl Command for Help {
     fn name(&self) -> &str {
         "help"
@@ -23,7 +23,7 @@ impl Command for Help {
             .rest(
                 "rest",
                 SyntaxShape::String,
-                "the name of command to get help on",
+                "the name of command, alias or module to get help on",
             )
             .named(
                 "find",
@@ -35,7 +35,11 @@ impl Command for Help {
     }
 
     fn usage(&self) -> &str {
-        "Display help information about commands."
+        "Display help information about different parts of Nushell."
+    }
+
+    fn extra_usage(&self) -> &str {
+        r#"`help word` searches for "word" in commands, aliases and modules, in that order."#
     }
 
     fn run(
@@ -45,264 +49,12 @@ impl Command for Help {
         call: &Call,
         _input: PipelineData,
     ) -> Result<PipelineData, ShellError> {
-        help(engine_state, stack, call)
-    }
+        let head = call.head;
+        let find: Option<Spanned<String>> = call.get_flag(engine_state, stack, "find")?;
+        let rest: Vec<Spanned<String>> = call.rest(engine_state, stack, 0)?;
 
-    fn examples(&self) -> Vec<Example> {
-        vec![
-            Example {
-                description: "show all commands and sub-commands",
-                example: "help commands",
-                result: None,
-            },
-            Example {
-                description: "show help for single command",
-                example: "help match",
-                result: None,
-            },
-            Example {
-                description: "show help for single sub-command",
-                example: "help str lpad",
-                result: None,
-            },
-            Example {
-                description: "search for string in command names, usage and search terms",
-                example: "help --find char",
-                result: None,
-            },
-        ]
-    }
-}
-
-fn help(
-    engine_state: &EngineState,
-    stack: &mut Stack,
-    call: &Call,
-) -> Result<PipelineData, ShellError> {
-    let head = call.head;
-    let find: Option<Spanned<String>> = call.get_flag(engine_state, stack, "find")?;
-    let rest: Vec<Spanned<String>> = call.rest(engine_state, stack, 0)?;
-    let commands = engine_state.get_decl_ids_sorted(false);
-
-    // 🚩The following two-lines are copied from filters/find.rs:
-    let style_computer = StyleComputer::from_config(engine_state, stack);
-    // Currently, search results all use the same style.
-    // Also note that this sample string is passed into user-written code (the closure that may or may not be
-    // defined for "string").
-    let string_style = style_computer.compute("string", &Value::string("search result", head));
-
-    if let Some(f) = find {
-        let org_search_string = f.item.clone();
-        let search_string = f.item.to_lowercase();
-        let mut found_cmds_vec = Vec::new();
-
-        for decl_id in commands {
-            let mut cols = vec![];
-            let mut vals = vec![];
-            let decl = engine_state.get_decl(decl_id);
-            let sig = decl.signature().update_from_command(decl.borrow());
-            let signatures = sig.to_string();
-            let key = sig.name;
-            let usage = sig.usage;
-            let search_terms = sig.search_terms;
-
-            let matches_term = if !search_terms.is_empty() {
-                search_terms
-                    .iter()
-                    .any(|term| term.to_lowercase().contains(&search_string))
-            } else {
-                false
-            };
-
-            let key_match = key.to_lowercase().contains(&search_string);
-            let usage_match = usage.to_lowercase().contains(&search_string);
-            if key_match || usage_match || matches_term {
-                cols.push("name".into());
-                vals.push(Value::String {
-                    val: if key_match {
-                        highlight_search_string(&key, &org_search_string, &string_style)?
-                    } else {
-                        key
-                    },
-                    span: head,
-                });
-
-                cols.push("category".into());
-                vals.push(Value::string(sig.category.to_string(), head));
-
-                cols.push("command_type".into());
-                vals.push(Value::String {
-                    val: format!("{:?}", decl.command_type()).to_lowercase(),
-                    span: head,
-                });
-
-                cols.push("usage".into());
-                vals.push(Value::String {
-                    val: if usage_match {
-                        highlight_search_string(&usage, &org_search_string, &string_style)?
-                    } else {
-                        usage
-                    },
-                    span: head,
-                });
-
-                cols.push("signatures".into());
-                vals.push(Value::String {
-                    val: if decl.is_parser_keyword() {
-                        "".to_string()
-                    } else {
-                        signatures
-                    },
-                    span: head,
-                });
-
-                cols.push("search_terms".into());
-                vals.push(if search_terms.is_empty() {
-                    Value::nothing(head)
-                } else {
-                    Value::String {
-                        val: if matches_term {
-                            search_terms
-                                .iter()
-                                .map(|term| {
-                                    if term.to_lowercase().contains(&search_string) {
-                                        match highlight_search_string(
-                                            term,
-                                            &org_search_string,
-                                            &string_style,
-                                        ) {
-                                            Ok(s) => s,
-                                            Err(_) => {
-                                                string_style.paint(term.to_string()).to_string()
-                                            }
-                                        }
-                                    } else {
-                                        string_style.paint(term.to_string()).to_string()
-                                    }
-                                })
-                                .collect::<Vec<_>>()
-                                .join(", ")
-                        } else {
-                            search_terms.join(", ")
-                        },
-                        span: head,
-                    }
-                });
-
-                found_cmds_vec.push(Value::Record {
-                    cols,
-                    vals,
-                    span: head,
-                });
-            }
-        }
-
-        return Ok(found_cmds_vec
-            .into_iter()
-            .into_pipeline_data(engine_state.ctrlc.clone()));
-    }
-
-    if !rest.is_empty() {
-        let mut found_cmds_vec = Vec::new();
-
-        if rest[0].item == "commands" {
-            for decl_id in commands {
-                let mut cols = vec![];
-                let mut vals = vec![];
-
-                let decl = engine_state.get_decl(decl_id);
-                let sig = decl.signature().update_from_command(decl.borrow());
-
-                let signatures = sig.to_string();
-                let key = sig.name;
-                let usage = sig.usage;
-                let search_terms = sig.search_terms;
-
-                cols.push("name".into());
-                vals.push(Value::String {
-                    val: key,
-                    span: head,
-                });
-
-                cols.push("category".into());
-                vals.push(Value::string(sig.category.to_string(), head));
-
-                cols.push("command_type".into());
-                vals.push(Value::String {
-                    val: format!("{:?}", decl.command_type()).to_lowercase(),
-                    span: head,
-                });
-
-                cols.push("usage".into());
-                vals.push(Value::String {
-                    val: usage,
-                    span: head,
-                });
-
-                cols.push("signatures".into());
-                vals.push(Value::String {
-                    val: if decl.is_parser_keyword() {
-                        "".to_string()
-                    } else {
-                        signatures
-                    },
-                    span: head,
-                });
-
-                cols.push("search_terms".into());
-                vals.push(if search_terms.is_empty() {
-                    Value::nothing(head)
-                } else {
-                    Value::String {
-                        val: search_terms.join(", "),
-                        span: head,
-                    }
-                });
-
-                found_cmds_vec.push(Value::Record {
-                    cols,
-                    vals,
-                    span: head,
-                });
-            }
-
-            Ok(found_cmds_vec
-                .into_iter()
-                .into_pipeline_data(engine_state.ctrlc.clone()))
-        } else {
-            let mut name = String::new();
-
-            for r in &rest {
-                if !name.is_empty() {
-                    name.push(' ');
-                }
-                name.push_str(&r.item);
-            }
-
-            let output = engine_state
-                .get_signatures_with_examples(false)
-                .iter()
-                .filter(|(signature, _, _, _, _)| signature.name == name)
-                .map(|(signature, examples, _, _, is_parser_keyword)| {
-                    get_full_help(signature, examples, engine_state, stack, *is_parser_keyword)
-                })
-                .collect::<Vec<String>>();
-
-            if !output.is_empty() {
-                Ok(Value::String {
-                    val: output.join("======================\n\n"),
-                    span: call.head,
-                }
-                .into_pipeline_data())
-            } else {
-                Err(ShellError::CommandNotFound(span(&[
-                    rest[0].span,
-                    rest[rest.len() - 1].span,
-                ])))
-            }
-        }
-    } else {
-        let msg = r#"Welcome to Couchbase Shell, powered by Nushell. Shell Yeah!
+        if rest.is_empty() && find.is_none() {
+            let msg = r#"Welcome to Couchbase Shell, powered by Nushell. Shell Yeah!
 
 Here are some tips to help you get started.
   * help commands - list all available commands
@@ -325,6 +77,50 @@ Open a JSON file, transform the data, and upsert it into your active bucket:
 
 You can also learn more at https://couchbase.sh/docs/ and https://www.nushell.sh/book/"#;
 
-        Ok(Value::string(msg, head).into_pipeline_data())
+            Ok(Value::string(msg, head).into_pipeline_data())
+        } else if find.is_some() {
+            help_commands(engine_state, stack, call)
+        } else {
+            let result = help_aliases(engine_state, stack, call);
+
+            let result = if let Err(ShellError::AliasNotFound(_)) = result {
+                help_commands(engine_state, stack, call)
+            } else {
+                result
+            };
+
+            let result = if let Err(ShellError::CommandNotFound(_)) = result {
+                help_modules(engine_state, stack, call)
+            } else {
+                result
+            };
+
+            if let Err(ShellError::ModuleNotFoundAtRuntime(_, _)) = result {
+                let rest_spans: Vec<Span> = rest.iter().map(|arg| arg.span).collect();
+                Err(ShellError::NotFound(span(&rest_spans)))
+            } else {
+                result
+            }
+        }
+    }
+
+    fn examples(&self) -> Vec<Example> {
+        vec![
+            Example {
+                description: "show help for single command, alias, or module",
+                example: "help match",
+                result: None,
+            },
+            Example {
+                description: "show help for single sub-command, alias, or module",
+                example: "help str lpad",
+                result: None,
+            },
+            Example {
+                description: "search for string in command names, usage and search terms",
+                example: "help --find char",
+                result: None,
+            },
+        ]
     }
 }
