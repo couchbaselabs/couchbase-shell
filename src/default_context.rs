@@ -45,6 +45,10 @@ pub fn create_default_context() -> EngineState {
             Extern,
             For,
             // Help,
+            HelpAliases,
+            HelpCommands,
+            HelpModules,
+            HelpOperators,
             HelpOperators,
             Hide,
             HideEnv,
@@ -343,7 +347,6 @@ pub fn create_default_context() -> EngineState {
             Use,
             Upsert,
             Where,
-            ToUrl,
             ToXml,
             ToYaml,
         };
@@ -390,7 +393,6 @@ pub fn create_default_context() -> EngineState {
             MathAbs,
             MathAvg,
             MathCeil,
-            MathEval,
             MathFloor,
             MathMax,
             MathMedian,
@@ -423,9 +425,13 @@ pub fn create_default_context() -> EngineState {
 
         // Network
         bind_command! {
-            Fetch,
-            Post,
+            Http,
+            HttpGet,
+            HttpPost,
             Url,
+            UrlBuildQuery,
+            UrlEncode,
+            UrlJoin,
             UrlParse,
             Port,
         }

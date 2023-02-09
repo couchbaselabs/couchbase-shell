@@ -23,14 +23,13 @@ use env_logger::Env;
 use log::{debug, warn, LevelFilter};
 use log::{error, info};
 use nu_cli::{add_plugin_file, gather_parent_env_vars, read_plugin_file, report_error};
-use nu_command::BufferedReader;
 use nu_engine::{get_full_help, CallExt};
 use nu_parser::{escape_quote_string, parse};
 use nu_protocol::ast::{Call, Expr, Expression, PipelineElement};
 use nu_protocol::engine::{Command, EngineState, Stack, StateWorkingSet};
 use nu_protocol::{
-    Category, Example, IntoPipelineData, PipelineData, RawStream, ShellError, Signature, Span,
-    Spanned, SyntaxShape, Value,
+    BufferedReader, Category, Example, IntoPipelineData, PipelineData, RawStream, ShellError,
+    Signature, Span, Spanned, SyntaxShape, Value,
 };
 use serde::Deserialize;
 use state::State;
@@ -43,6 +42,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 fn main() -> Result<(), Box<dyn Error>> {
+    let entire_start_time = std::time::Instant::now();
     let mut logger_builder = env_logger::Builder::from_env(
         Env::default().filter_or("CBSH_LOG", "info,isahc=error,surf=error,nu=warn"),
     );
@@ -420,6 +420,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 Box::new(BufferedReader::new(buf_reader)),
                 Some(ctrlc),
                 Span::new(0, 0),
+                None,
             )),
             stderr: None,
             exit_code: None,
@@ -449,8 +450,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     read_plugin_file(&mut context, &mut stack, None, CBSHELL_FOLDER);
     read_nu_config_file(&mut context, &mut stack);
 
-    nu_cli::evaluate_repl(&mut context, &mut stack, "CouchbaseShell", None)
-        .expect("evaluate loop failed");
+    nu_cli::evaluate_repl(
+        &mut context,
+        &mut stack,
+        "CouchbaseShell",
+        None,
+        entire_start_time,
+    )
+    .expect("evaluate loop failed");
     // nu_cli::evaluate_repl(&mut context, None, false).expect("evaluate loop failed");
     Ok(())
 }
