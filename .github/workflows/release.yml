@@ -1,8 +1,5 @@
-on:
-  push:
-    # Sequence of patterns matched against refs/tags
-    tags:
-      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
+on: workflow_dispatch
 
 name: Create Release
 
@@ -15,7 +12,8 @@ env:
   # Space separated paths to include in the archive.
   # Start relative paths with a dot if you don't want
   # paths to be preserved. Use "/" as a delimiter.
-  RELEASE_ADDS: README.md LICENSE examples LICENSE_AGREEMENT NOTICES
+  RELEASE_ADDS: README.md LICENSE LICENSE_AGREEMENT NOTICES
+  RELEASE_ADDS_WINDOWS: README.md,LICENSE,LICENSE_AGREEMENT,NOTICES
 
 
 jobs:
@@ -25,39 +23,72 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        build: [linux, macos, windows]
+        build: [linux, aarch64-linux-gnu, macos, aarch64-macos, windows]
         include:
           - build: linux
-            os: ubuntu-18.04
+            os: ubuntu-22.04
             rust: stable
+            builddir: debug
+          - build: aarch64-linux-gnu
+            os: ubuntu-22.04
+            rust: stable
+            builddir: aarch64-unknown-linux-gnu/debug
+          - build: aarch64-macos
+            os: macos-latest
+            rust: stable
+            builddir: aarch64-apple-darwin/debug
           - build: macos
             os: macos-latest
             rust: stable
           - build: windows
             os: windows-latest
             rust: stable
+    outputs:
+      version: ${{ steps.version.outputs.value }}
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
 
     - uses: actions-rs/toolchain@v1
       with:
         profile: minimal
         toolchain: stable
         override: true
+        
+    - uses: SebRollen/toml-action@v1.0.1
+      id: version
+      with:
+        file: 'Cargo.toml'
+        field: 'package.version'
 
     - name: Build
       uses: actions-rs/cargo@v1
       with:
         command: build
         args: --verbose --release
+      if: matrix.os != 'windows-latest'
 
-    - name: Create artifact directory
-      run: mkdir artifacts
+    - name: Build
+      uses: actions-rs/cargo@v1
+      with:
+        command: build
+        args: --verbose --release
+      env:
+        VCPKGRS_DYNAMIC: 1
+        RUSTFLAGS: -Ctarget-feature=+crt-static
+      if: matrix.os == 'windows-latest'
+
+#    - name: Test
+#      uses: actions-rs/cargo@v1
+#      with:
+#        command: test
+#        args: --verbose
 
     - name: Create archive for Linux
-      run: 7z a -ttar -so -an ./target/release/${{ env.RELEASE_BIN }} ${{ env.RELEASE_ADDS }} | 7z a -si ./artifacts/${{ env.RELEASE_BIN }}-linux-x86_64.tar.gz
-      if: matrix.os == 'ubuntu-18.04'
+      id: createarchivelinux
+      run: |
+        7z a -ttar -so -an ./target/release/${{ env.RELEASE_BIN }} ${{ env.RELEASE_ADDS }} | 7z a -si ${{ env.RELEASE_BIN }}-${{ matrix.build }}.tar.gz
+      if: matrix.os == 'ubuntu-22.04'
 
     - name: Install p7zip
       # 7Zip not available on MacOS, install p7zip via homebrew.
@@ -65,19 +96,49 @@ jobs:
       if: matrix.os == 'macos-latest'
 
     - name: Create archive for MacOS
-      run: 7z a -tzip ./artifacts/${{ env.RELEASE_BIN }}-mac-x86_64.zip ./target/release/${{ env.RELEASE_BIN }} ${{ env.RELEASE_ADDS }}
+      id: createarchivemacos
+      run: |
+        7z a -tzip ${{ env.RELEASE_BIN }}-${{ matrix.build }}.zip ./target/release/${{ env.RELEASE_BIN }} ${{ env.RELEASE_ADDS }}
       if: matrix.os == 'macos-latest'
 
     - name: Create archive for Windows
+      id: createarchivewindows
       run: |
         choco install 7zip
-        7z a -tzip ./artifacts/${{ env.RELEASE_BIN }}-windows-x86_64.zip ./target/release/${{ env.RELEASE_BIN_WINDOWS }} ${{ env.RELEASE_ADDS }}
+        7z a -tzip ${{ env.RELEASE_BIN }}-${{ matrix.build }}.zip ./target/release/${{ env.RELEASE_BIN_WINDOWS }} ${{ env.RELEASE_ADDS }}
       if: matrix.os == 'windows-latest'
 
-    # This will double-zip
-    # See - https://github.com/actions/upload-artifact/issues/39
-    - uses: actions/upload-artifact@v1
-      name: Upload archive
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
       with:
-        name: ${{ runner.os }}
-        path: artifacts/
+        name: ${{ env.RELEASE_BIN }}-${{ matrix.build }}
+        path: ${{ env.RELEASE_BIN }}-${{ matrix.build }}*
+        if-no-files-found: error
+
+  release:
+    needs: [build]
+    name: Create release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          custom_tag: ${{ needs.build.outputs.version }}
+          default_bump: false
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Add Artifacts to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.RELEASE_BIN }}*/*
+          tag_name: v${{ needs.build.outputs.version }}
+          draft: true
+          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: Release v${{ needs.build.outputs.version }}
+          fail_on_unmatched_files: true
+          body: ${{ steps.tag_version.changelog }}
