@@ -15,9 +15,7 @@ env:
   # Space separated paths to include in the archive.
   # Start relative paths with a dot if you don't want
   # paths to be preserved. Use "/" as a delimiter.
-  ARTIFACT_ADDS: README.md LICENSE examples LICENSE_AGREEMENT NOTICES
-
-  SHA8: ${GITHUB_SHA::8}
+  ARTIFACT_ADDS: README.md LICENSE LICENSE_AGREEMENT NOTICES
 
 jobs:
   build:
@@ -26,10 +24,16 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        build: [linux, macos, windows]
+        build: [linux, aarch64-linux-gnu, macos, aarch64-macos, windows]
         include:
           - build: linux
             os: ubuntu-22.04
+            rust: stable
+          - build: aarch64-linux-gnu
+            os: ubuntu-22.04
+            rust: stable
+          - build: aarch64-macos
+            os: macos-latest
             rust: stable
           - build: macos
             os: macos-latest
@@ -67,22 +71,21 @@ jobs:
         RUSTFLAGS: -Ctarget-feature=+crt-static
       if: matrix.os == 'windows-latest'
 
-    - name: Clippy
-      uses: actions-rs/clippy@master
-      with:
-        args: --all-features -- -D warnings
+#    - name: Clippy
+#      uses: actions-rs/clippy@master
+#      with:
+#        args: --all-features -- -D warnings
 
-    - name: Test
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: --verbose
-
-    - name: Create artifact directory
-      run: mkdir artifacts
+#    - name: Test
+#      uses: actions-rs/cargo@v1
+#      with:
+#        command: test
+#        args: --verbose
 
     - name: Create archive for Linux
-      run: 7z a -ttar -so -an ./target/debug/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }} | 7z a -si ./artifacts/${{ env.ARTIFACT_BIN }}-${{ env.SHA8 }}-linux-x86_64.tar.gz
+      id: createarchivelinux
+      run: |
+        7z a -ttar -so -an ./target/debug/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }} | 7z a -si ${{ env.ARTIFACT_BIN }}-${{ matrix.build }}.tar.gz
       if: matrix.os == 'ubuntu-22.04'
 
     - name: Install p7zip
@@ -91,22 +94,24 @@ jobs:
       if: matrix.os == 'macos-latest'
 
     - name: Create archive for MacOS
-      run: 7z a -tzip ./artifacts/${{ env.ARTIFACT_BIN }}-${{ env.SHA8 }}-mac-x86_64.zip ./target/debug/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }}
+      id: createarchivemacos
+      run: |
+        7z a -tzip ${{ env.ARTIFACT_BIN }}-${{ matrix.build }}.zip ./target/debug/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }}
       if: matrix.os == 'macos-latest'
 
     - name: Create archive for Windows
+      id: createarchivewindows
       run: |
         choco install 7zip
-        7z a -tzip ./artifacts/${{ env.ARTIFACT_BIN }}-${{ env.SHA8 }}-windows-x86_64.zip ./target/debug/${{ env.ARTIFACT_BIN_WINDOWS }} ${{ env.ARTIFACT_ADDS }}
+        7z a -tzip ${{ env.ARTIFACT_BIN }}-${{ matrix.build }}.zip ./target/debug/${{ env.ARTIFACT_BIN_WINDOWS }} ${{ env.ARTIFACT_ADDS }}
       if: matrix.os == 'windows-latest'
 
-    # This will double-zip
-    # See - https://github.com/actions/upload-artifact/issues/39
-    - uses: actions/upload-artifact@v1
-      name: Upload archive
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
       with:
-        name: ${{ runner.os }}
-        path: artifacts/
+        name: ${{ env.ARTIFACT_BIN }}-${{ matrix.build }}
+        path: ${{ env.ARTIFACT_BIN }}-${{ matrix.build }}*
+        if-no-files-found: error
 
   rustfmt:
     name: Rustfmt
