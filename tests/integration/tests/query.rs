@@ -26,9 +26,7 @@ pub fn create_primary_index(
         time::Duration::from_millis(200),
         cmd.as_str(),
         cwd,
-        RetryExpectations {
-            expect_no_out: true,
-        },
+        RetryExpectations::AllowAnyOut,
         |_json| -> TestResult<bool> { Ok(true) },
     );
     Ok(())
@@ -56,9 +54,7 @@ pub fn create_index(
         time::Duration::from_millis(200),
         cmd.as_str(),
         cwd,
-        RetryExpectations {
-            expect_no_out: true,
-        },
+        RetryExpectations::AllowAnyOut,
         |_json| -> TestResult<bool> { Ok(true) },
     );
 
@@ -94,7 +90,7 @@ pub async fn test_should_send_context_with_a_query(cluster: Arc<ClusterUnderTest
                 time::Duration::from_millis(200),
                 cmd.as_str(),
                 dirs.test(),
-                None,
+                RetryExpectations::ExpectOut,
                 |json| -> TestResult<bool> {
                     if "testvalue" != json["testkey"] {
                         println!(
@@ -133,7 +129,7 @@ pub async fn test_should_execute_a_query(cluster: Arc<ClusterUnderTest>) -> bool
                 time::Duration::from_millis(200),
                 cmd.as_str(),
                 dirs.test(),
-                None,
+                RetryExpectations::ExpectOut,
                 |json| -> TestResult<bool> {
                     if "testvalue" != json["testkey"] {
                         println!(
@@ -177,7 +173,7 @@ pub async fn test_should_fetch_meta(cluster: Arc<ClusterUnderTest>) -> bool {
                 time::Duration::from_millis(200),
                 cmd.as_str(),
                 dirs.test(),
-                None,
+                RetryExpectations::ExpectOut,
                 |json| -> TestResult<bool> {
                     val = json.clone();
                     Ok(true)

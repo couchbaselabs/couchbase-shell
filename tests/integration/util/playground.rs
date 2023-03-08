@@ -161,16 +161,12 @@ default-collection = \"{}\"
         interval: Duration,
         cmd: &str,
         cwd: &PathBuf,
-        opts: impl Into<Option<RetryExpectations>>,
+        opts: RetryExpectations,
         mut func: F,
     ) where
         F: FnMut(Value) -> TestResult<bool>,
     {
         let cmd = pipeline(cmd);
-        let expect_no_out = match opts.into() {
-            Some(v) => v.expect_no_out,
-            None => false,
-        };
         loop {
             if Instant::now() > deadline {
                 panic!("Test failed to complete in time");
@@ -183,18 +179,23 @@ default-collection = \"{}\"
                 continue;
             }
 
-            if expect_no_out && out.out.is_empty() {
+            if opts == RetryExpectations::AllowAnyOut {
+                println!("Any output allowed");
                 return;
-            } else if expect_no_out && !out.out.is_empty() {
-                println!("Expected no out but was {}", out.out);
-                sleep(interval);
-                continue;
-            }
-
-            if out.out.is_empty() {
-                println!("Output from command was empty");
-                sleep(interval);
-                continue;
+            } else if opts == RetryExpectations::ExpectOut {
+                if out.out.is_empty() {
+                    println!("Output from command was empty");
+                    sleep(interval);
+                    continue;
+                }
+            } else if opts == RetryExpectations::ExpectNoOut {
+                if out.out.is_empty() {
+                    return;
+                } else {
+                    println!("Expected no out but was {}", out.out);
+                    sleep(interval);
+                    continue;
+                }
             }
 
             let json = match self.parse_out_to_json(out.out.clone()) {
@@ -221,6 +222,9 @@ default-collection = \"{}\"
     }
 }
 
-pub struct RetryExpectations {
-    pub(crate) expect_no_out: bool,
+#[derive(Ord, PartialOrd, Eq, PartialEq)]
+pub enum RetryExpectations {
+    ExpectOut,
+    ExpectNoOut,
+    AllowAnyOut,
 }

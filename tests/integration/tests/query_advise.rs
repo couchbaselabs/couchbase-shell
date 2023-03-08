@@ -1,5 +1,5 @@
 use crate::features::TestFeature;
-use crate::playground::{CBPlayground, PerTestOptions};
+use crate::playground::{CBPlayground, PerTestOptions, RetryExpectations};
 use crate::tests::query::create_index;
 use crate::{ClusterUnderTest, ConfigAware, TestResult};
 
@@ -39,7 +39,7 @@ pub async fn test_should_get_advise_with_context(cluster: Arc<ClusterUnderTest>)
                 time::Duration::from_millis(200),
                 cmd.as_str(),
                 dirs.test(),
-                None,
+                RetryExpectations::ExpectOut,
                 |json| -> TestResult<bool> {
                     advice = json.clone();
                     Ok(true)
@@ -80,7 +80,7 @@ pub async fn test_should_get_advise(cluster: Arc<ClusterUnderTest>) -> bool {
                 time::Duration::from_millis(200),
                 cmd,
                 dirs.test(),
-                None,
+                RetryExpectations::ExpectOut,
                 |json| -> TestResult<bool> {
                     advice = json.clone();
                     Ok(true)
