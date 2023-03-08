@@ -16,6 +16,7 @@ pub struct Config {
     caves_version: Option<String>,
     bucket: Option<String>,
     enabled_features: Vec<TestFeature>,
+    data_timeout: String,
 }
 
 impl Config {
@@ -39,6 +40,9 @@ impl Config {
     }
     pub fn bucket(&self) -> Option<String> {
         self.bucket.clone()
+    }
+    pub fn data_timeout(&self) -> String {
+        self.data_timeout.clone()
     }
 
     pub fn parse() -> Config {
@@ -68,6 +72,7 @@ impl Config {
                 caves_version: None,
                 bucket: Some(bucket),
                 enabled_features: features,
+                data_timeout: config.data_timeout().unwrap_or_else(|| "5s".into()),
             };
         }
 
@@ -79,6 +84,7 @@ impl Config {
             caves_version: config.caves_version(),
             bucket: None,
             enabled_features: features,
+            data_timeout: config.data_timeout().unwrap_or_else(|| "5s".into()),
         }
     }
 }
@@ -97,6 +103,8 @@ pub struct CLIConfig {
     caves_version: Option<String>,
     #[envconfig(from = "FEATURES", default = "")]
     features: String,
+    #[envconfig(from = "DATA_TIMEOUT")]
+    data_timeout: Option<String>,
 }
 
 impl CLIConfig {
@@ -117,5 +125,8 @@ impl CLIConfig {
     }
     pub fn features(&self) -> String {
         self.features.clone()
+    }
+    pub fn data_timeout(&self) -> Option<String> {
+        self.data_timeout.clone()
     }
 }

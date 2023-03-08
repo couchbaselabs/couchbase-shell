@@ -1,0 +1,61 @@
+name: tests
+
+on:
+  pull_request:       # trigger on pull requests
+  push:
+    branches:         # array of glob patterns matching against refs/heads. Optional; defaults to all
+      - main
+
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        server:
+          - 7.1.1
+          - 7.0.3
+        platform:
+          - ubuntu-20.04
+
+    runs-on: ${{ matrix.platform }}
+    services:
+      couchbase:
+        image: couchbase:enterprise-${{ matrix.server }}
+        ports:
+          - 8091-8096:8091-8096
+          - 18091-18096:18091-18096
+          - 11210:11210
+          - 11207:11207
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: "v1"
+          cache-on-failure: "true"  
+
+      - name: Sleep for 30 seconds  # It takes a while for the cluster to be available and init-cluster fails if it isn't
+        run: sleep 30s
+        shell: bash
+          
+      - name: Initialize couchbase
+          #        env:
+        #          CB_TRAVEL_SAMPLE: yes
+        run: ./.github/bin/init-cluster
+      - name: Check couchbase
+        run: ./.github/bin/check-cluster
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        env:
+          CONN_STRING: http://127.0.0.1:8091
+          RUST_LOG: debug
+          DATA_TIMEOUT: "30s"
+        with:
+          command: test
+          args: --quiet

@@ -44,8 +44,7 @@ pub async fn test_should_error_on_insert_twice(cluster: Arc<ClusterUnderTest>) -
         |dirs, sandbox| {
             let key = new_doc_id();
             let content = r#"{"test": "test"}"#;
-            let out = cbsh!(cwd: dirs.test(), cb_pipeline(format!("doc insert {} {} | first | to json", &key, content)));
-            assert_eq!("", out.err);
+            sandbox.create_document(&dirs, key.clone(), r#"{"testkey": "testvalue"}"#);
 
             let out = cbsh!(cwd: dirs.test(), cb_pipeline(format!("doc insert {} {} | first | to json", &key, content)));
 

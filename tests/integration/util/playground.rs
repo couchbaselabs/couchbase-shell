@@ -70,11 +70,13 @@ hostnames = [\"{}\"]
 default-bucket = \"{}\"
 username = \"{}\"
 password = \"{}\"
-tls-enabled = false",
+tls-enabled = false
+data-timeout = \"{}\"",
                 config.connstr(),
                 config.bucket(),
                 config.username(),
-                config.password()
+                config.password(),
+                config.data_timeout(),
             );
 
             if add_collection {

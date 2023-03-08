@@ -25,10 +25,14 @@ use uuid::Uuid;
 
 #[cfg(target_os = "windows")]
 const CAVES_BINARY: &str = "gocaves-windows.exe";
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", target_arch = "x86_64"))]
 const CAVES_BINARY: &str = "gocaves-macos";
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+const CAVES_BINARY: &str = "gocaves-macos-arm64";
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 const CAVES_BINARY: &str = "gocaves-linux-amd64";
+#[cfg(all(target_os = "linux", target_arch = "aarch64"))]
+const CAVES_BINARY: &str = "gocaves-linux-arm64";
 
 const CAVES_URL: &str = "https://github.com/couchbaselabs/gocaves/releases/download";
 const CAVES_VERSION: &str = "v0.0.1-75";
@@ -166,6 +170,7 @@ impl MockCluster {
                 username,
                 password,
                 support_matrix: enabled_features,
+                data_timeout: c.data_timeout(),
             }),
             _stream: stream,
         }

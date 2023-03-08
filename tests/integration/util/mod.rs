@@ -23,6 +23,7 @@ pub struct TestConfig {
     username: String,
     password: String,
     support_matrix: Vec<TestFeature>,
+    data_timeout: String,
 }
 
 impl TestConfig {
@@ -55,6 +56,9 @@ impl TestConfig {
         }
 
         true
+    }
+    pub fn data_timeout(&self) -> String {
+        self.data_timeout.clone()
     }
 }
 

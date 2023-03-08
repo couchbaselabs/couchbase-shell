@@ -1,0 +1,11 @@
+# So, you want to update the Rust toolchain...
+# The key is making sure all our dependencies support the version of Rust we're using,
+# and that nushell compiles on all the platforms tested in our CI.
+
+# Here's some documentation on how to use this file:
+# https://rust-lang.github.io/rustup/overrides.html#the-toolchain-file
+
+[toolchain]
+# The default profile includes rustc, rust-std, cargo, rust-docs, rustfmt and clippy.
+# https://rust-lang.github.io/rustup/concepts/profiles.html
+profile = "default"

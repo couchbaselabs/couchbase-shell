@@ -24,48 +24,47 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        build: [linux, aarch64-linux-gnu, macos, aarch64-macos, windows]
+        target: [x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu, x86_64-apple-darwin, aarch64-apple-darwin, x86_64-pc-windows-msvc]
         include:
-          - build: linux
+          - target: x86_64-unknown-linux-gnu
             os: ubuntu-22.04
-            rust: stable
-          - build: aarch64-linux-gnu
+          - target: aarch64-unknown-linux-gnu
             os: ubuntu-22.04
-            rust: stable
-          - build: aarch64-macos
+          - target: aarch64-apple-darwin
             os: macos-latest
-            rust: stable
-          - build: macos
+          - target: x86_64-apple-darwin
             os: macos-latest
-            rust: stable
-          - build: windows
+          - target: x86_64-pc-windows-msvc
             os: windows-latest
-            rust: stable
-
+        
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
-        override: true
-        components: clippy
-    - uses: Swatinem/rust-cache@v2
-      with:
-        key: "v1"
+    - uses: actions/checkout@v3
+
+    - name: Update Rust Toolchain Target
+      run: |
+        echo "targets = ['${{matrix.target}}']" >> rust-toolchain.toml
+
+    - name: Setup Rust toolchain and cache
+      uses: actions-rust-lang/setup-rust-toolchain@v1.4.3
+      
+    - name: Install aarch64-linux gcc
+      run: sudo apt-get install gcc-aarch64-linux-gnu -y
+      if: matrix.target == 'aarch64-unknown-linux-gnu'
 
     - name: Build
       uses: actions-rs/cargo@v1
+      env:
+        CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: 'aarch64-linux-gnu-gcc'
       with:
         command: build
-        args: --verbose
+        args: --verbose --target ${{ matrix.target }}
       if: matrix.os != 'windows-latest'
 
     - name: Build
       uses: actions-rs/cargo@v1
       with:
         command: build
-        args: --verbose
+        args: --verbose --target ${{ matrix.target }}
       env:
         VCPKGRS_DYNAMIC: 1
         RUSTFLAGS: -Ctarget-feature=+crt-static
@@ -76,16 +75,19 @@ jobs:
 #      with:
 #        args: --all-features -- -D warnings
 
-#    - name: Test
-#      uses: actions-rs/cargo@v1
-#      with:
-#        command: test
-#        args: --verbose
+    - name: Test
+      uses: actions-rs/cargo@v1
+      env:
+        DATA_TIMEOUT: "15s"
+        RUST_LOG: debug
+      with:
+        command: test
+        args: --quiet
 
     - name: Create archive for Linux
       id: createarchivelinux
       run: |
-        7z a -ttar -so -an ./target/debug/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }} | 7z a -si ${{ env.ARTIFACT_BIN }}-${{ matrix.build }}.tar.gz
+        7z a -ttar -so -an ./target/debug/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }} | 7z a -si ${{ env.ARTIFACT_BIN }}-${{ matrix.target }}.tar.gz
       if: matrix.os == 'ubuntu-22.04'
 
     - name: Install p7zip
@@ -96,21 +98,21 @@ jobs:
     - name: Create archive for MacOS
       id: createarchivemacos
       run: |
-        7z a -tzip ${{ env.ARTIFACT_BIN }}-${{ matrix.build }}.zip ./target/debug/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }}
+        7z a -tzip ${{ env.ARTIFACT_BIN }}-${{ matrix.target }}.zip ./target/debug/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }}
       if: matrix.os == 'macos-latest'
 
     - name: Create archive for Windows
       id: createarchivewindows
       run: |
         choco install 7zip
-        7z a -tzip ${{ env.ARTIFACT_BIN }}-${{ matrix.build }}.zip ./target/debug/${{ env.ARTIFACT_BIN_WINDOWS }} ${{ env.ARTIFACT_ADDS }}
+        7z a -tzip ${{ env.ARTIFACT_BIN }}-${{ matrix.target }}.zip ./target/debug/${{ env.ARTIFACT_BIN_WINDOWS }} ${{ env.ARTIFACT_ADDS }}
       if: matrix.os == 'windows-latest'
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ env.ARTIFACT_BIN }}-${{ matrix.build }}
-        path: ${{ env.ARTIFACT_BIN }}-${{ matrix.build }}*
+        name: ${{ env.ARTIFACT_BIN }}-${{ matrix.target }}
+        path: ${{ env.ARTIFACT_BIN }}-${{ matrix.target }}*
         if-no-files-found: error
 
   rustfmt:

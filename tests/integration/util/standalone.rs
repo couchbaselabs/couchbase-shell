@@ -83,6 +83,7 @@ impl StandaloneCluster {
             username,
             password,
             support_matrix: enabled_features,
+            data_timeout: c.data_timeout(),
         });
         StandaloneCluster::wait_for_scope(config.clone()).await;
         StandaloneCluster::wait_for_collection(config.clone()).await;
