@@ -20,6 +20,8 @@ macro_rules! cbsh {
         pub use std::io::prelude::*;
         pub use std::process::{Command, Stdio};
         pub use $crate::support::NATIVE_PATH_ENV_VAR;
+        pub use std::time::Instant;
+        pub use std::ops::Sub;
 
         let test_bins = $crate::support::fs::binaries();
 
@@ -44,6 +46,7 @@ macro_rules! cbsh {
 
         let target_cwd = $crate::support::fs::in_directory(&$cwd);
 
+        let start = Instant::now();
         let process = match Command::new($crate::support::fs::executable_path())
             .env("PWD", &target_cwd)  // setting PWD is enough to set cwd
             .env(NATIVE_PATH_ENV_VAR, paths_joined)
@@ -74,6 +77,12 @@ macro_rules! cbsh {
 
         let out = $crate::support::macros::read_std(&output.stdout);
         let err = String::from_utf8_lossy(&output.stderr);
+        let taken = Instant::now().sub(start);
+
+        println!("=== cmd\n{:?}", path);
+        println!("Took: {:?}\n", taken);
+        println!("=== stdout\n{}", out);
+        println!("=== stderr\n{}", err);
 
         $crate::support::Outcome::new(out,err.into_owned())
     }};

@@ -12,11 +12,12 @@ pub async fn test_get_a_document(cluster: Arc<ClusterUnderTest>) -> bool {
     playground::CBPlayground::setup("get_a_document", cluster.config(), None, |dirs, sandbox| {
         sandbox.create_document(&dirs, "get_a_document", r#"{"testkey": "testvalue"}"#);
 
-        let out = cbsh!(cwd: dirs.test(), pipeline(r#"doc get "get_a_document" | get content | first | to json"#));
+        let out =
+            cbsh!(cwd: dirs.test(), pipeline(r#"doc get "get_a_document" | first | to json"#));
         let json = sandbox.parse_out_to_json(out.out).unwrap();
 
         assert_eq!("", out.err);
-        assert_eq!("testvalue", json["testkey"]);
+        assert_eq!(r#"{"testkey":"testvalue"}"#, json["content"].to_string());
     });
 
     false
@@ -32,7 +33,7 @@ pub async fn test_get_a_document_not_found(cluster: Arc<ClusterUnderTest>) -> bo
         cluster.config(),
         None,
         |dirs, _sandbox| {
-            let out = cbsh!(cwd: dirs.test(), pipeline(r#"doc get "get_a_document_not_found" | get error | first"#));
+            let out = cbsh!(cwd: dirs.test(), pipeline(r#"doc get "get_a_document_not_found" | first | to json"#));
 
             assert_eq!("", out.err);
             assert!(out.out.contains("Key not found"));
