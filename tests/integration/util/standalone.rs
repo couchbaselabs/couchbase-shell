@@ -3,6 +3,7 @@ use crate::util::features::TestFeature;
 use crate::{playground, Config, TestResult};
 use lazy_static::lazy_static;
 
+use crate::playground::RetryExpectations;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::ops::Add;
@@ -103,7 +104,7 @@ impl StandaloneCluster {
                 time::Duration::from_millis(200),
                 cmd,
                 dirs.test(),
-                None,
+                RetryExpectations::ExpectOut,
                 |json| -> TestResult<bool> {
                     for scope in json.as_array().unwrap() {
                         if scope.as_str().unwrap() == scope_name {
@@ -137,7 +138,7 @@ impl StandaloneCluster {
                 time::Duration::from_millis(200),
                 cmd,
                 dirs.test(),
-                None,
+                RetryExpectations::ExpectOut,
                 |json| -> TestResult<bool> {
                     for item in json.as_array().unwrap() {
                         if item["scope"] == scope_name {

@@ -1,5 +1,5 @@
 use crate::features::TestFeature;
-use crate::playground::{CBPlayground, PerTestOptions};
+use crate::playground::{CBPlayground, PerTestOptions, RetryExpectations};
 use crate::tests::query::create_index;
 use crate::{ClusterUnderTest, ConfigAware, TestResult};
 
@@ -39,7 +39,7 @@ fn get_indexes(
         time::Duration::from_millis(200),
         cmd.as_str(),
         cwd,
-        None,
+        RetryExpectations::ExpectOut,
         |json| -> TestResult<bool> {
             match json.as_array() {
                 Some(arr) => {
