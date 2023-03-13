@@ -17,7 +17,7 @@ pub fn create_primary_index(
     sandbox: &mut CBPlayground,
 ) -> TestResult<()> {
     let cmd = format!(
-        "{} query \"CREATE PRIMARY INDEX IF NOT EXISTS ON `{}`\"",
+        "{} query \"CREATE PRIMARY INDEX ON `{}`\"",
         base_cmd.into(),
         keyspace
     );
@@ -26,7 +26,10 @@ pub fn create_primary_index(
         time::Duration::from_millis(200),
         cmd.as_str(),
         cwd,
-        RetryExpectations::AllowAnyOut,
+        RetryExpectations::AllowAny {
+            allow_err: true,
+            allow_out: true,
+        },
         |_json| -> TestResult<bool> { Ok(true) },
     );
     Ok(())
@@ -43,7 +46,7 @@ pub fn create_index(
     uuid.truncate(6);
     let index_name = format!("test-{}", uuid);
     let cmd = format!(
-        "{} query \"CREATE INDEX `{}` IF NOT EXISTS ON `{}`({})\"",
+        "{} query \"CREATE INDEX `{}` ON `{}`({})\"",
         base_cmd.into(),
         index_name.clone(),
         keyspace,
@@ -54,7 +57,10 @@ pub fn create_index(
         time::Duration::from_millis(200),
         cmd.as_str(),
         cwd,
-        RetryExpectations::AllowAnyOut,
+        RetryExpectations::AllowAny {
+            allow_err: true,
+            allow_out: true,
+        },
         |_json| -> TestResult<bool> { Ok(true) },
     );
 
