@@ -87,6 +87,7 @@ impl StandaloneCluster {
         });
         StandaloneCluster::wait_for_scope(config.clone()).await;
         StandaloneCluster::wait_for_collection(config.clone()).await;
+        StandaloneCluster::wait_for_kv(config.clone()).await;
 
         Self { config }
     }
@@ -114,6 +115,26 @@ impl StandaloneCluster {
                     }
 
                     Ok(false)
+                },
+            );
+        });
+    }
+
+    async fn wait_for_kv(config: Arc<TestConfig>) {
+        playground::CBPlayground::setup("wait_for_kv", config, None, |dirs, sandbox| {
+            let cmd = r#"doc upsert wait_for_kv {"test": "test"} | first | to json"#;
+            sandbox.retry_until(
+                Instant::now().add(time::Duration::from_secs(30)),
+                time::Duration::from_millis(200),
+                cmd,
+                dirs.test(),
+                RetryExpectations::ExpectOut,
+                |json| -> TestResult<bool> {
+                    let v = json.as_object().unwrap();
+                    match v.get("success") {
+                        Some(i) => Ok(i.as_i64().unwrap() == 1),
+                        None => Ok(false),
+                    }
                 },
             );
         });
