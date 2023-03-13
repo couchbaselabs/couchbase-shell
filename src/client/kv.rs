@@ -575,20 +575,27 @@ impl KvEndpoint {
             req.opcode(),
             req.opaque()
         );
+        let mut map = self.in_flight.lock().unwrap();
+        map.insert(opaque, chan);
+        drop(map);
+
         match self
             .tx
             .send(request(req, self.collections_enabled).freeze())
             .await
         {
-            Ok(_) => {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                // If we failed to write the request then immediately drop it.
                 let mut map = self.in_flight.lock().unwrap();
-                map.insert(opaque, chan);
-                Ok(())
+                map.remove(&opaque);
+                drop(map);
+
+                return Err(ClientError::RequestFailed {
+                    reason: Some(e.to_string()),
+                    key: None,
+                });
             }
-            Err(e) => Err(ClientError::RequestFailed {
-                reason: Some(e.to_string()),
-                key: None,
-            }),
         }
     }
 
