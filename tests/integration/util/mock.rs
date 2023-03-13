@@ -1,7 +1,7 @@
 use super::{ConfigAware, TestConfig};
 use bytes::Buf;
 use lazy_static::lazy_static;
-use log::debug;
+use log::{debug, error};
 use serde_derive::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -12,6 +12,8 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::Arc;
+use std::thread::sleep;
+use std::time;
 use tokio::fs::File;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::AsyncWriteExt;
@@ -270,10 +272,21 @@ fn start_caves_process(path: &PathBuf, port: u16) -> Child {
 
     // Caves outputs a lot of info, we need to redirect this so that our tests don't pick it up
     // on stdout.
-    cmd.arg("-control-port")
-        .arg(format!("{}", port))
-        .stderr(Stdio::null())
-        .stdout(Stdio::null())
-        .spawn()
-        .expect("Failed to spawn child process for caves")
+    // Sometimes spawning caves will error as the file is busy.
+    for _i in 0..5 {
+        match cmd
+            .arg("-control-port")
+            .arg(format!("{}", port))
+            .stderr(Stdio::null())
+            .stdout(Stdio::null())
+            .spawn()
+        {
+            Ok(c) => return c,
+            Err(e) => error!("Failed to spawn child process for caves {}", e),
+        }
+
+        sleep(time::Duration::from_millis(500))
+    }
+
+    panic!("Failed to spawn child process for caves");
 }
