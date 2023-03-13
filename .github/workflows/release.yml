@@ -23,38 +23,35 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        build: [linux, aarch64-linux-gnu, macos, aarch64-macos, windows]
+        target: [x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu, x86_64-apple-darwin, aarch64-apple-darwin, x86_64-pc-windows-msvc]
         include:
-          - build: linux
+          - target: x86_64-unknown-linux-gnu
             os: ubuntu-22.04
-            rust: stable
-            builddir: debug
-          - build: aarch64-linux-gnu
+          - target: aarch64-unknown-linux-gnu
             os: ubuntu-22.04
-            rust: stable
-            builddir: aarch64-unknown-linux-gnu/debug
-          - build: aarch64-macos
+          - target: aarch64-apple-darwin
             os: macos-latest
-            rust: stable
-            builddir: aarch64-apple-darwin/debug
-          - build: macos
+          - target: x86_64-apple-darwin
             os: macos-latest
-            rust: stable
-          - build: windows
+          - target: x86_64-pc-windows-msvc
             os: windows-latest
-            rust: stable
     outputs:
       version: ${{ steps.version.outputs.value }}
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
-        override: true
-        
+    - name: Update Rust Toolchain Target
+      run: |
+        echo "targets = ['${{matrix.target}}']" >> rust-toolchain.toml
+
+    - name: Setup Rust toolchain and cache
+      uses: actions-rust-lang/setup-rust-toolchain@v1.4.3
+
+    - name: Install aarch64-linux gcc
+      run: sudo apt-get install gcc-aarch64-linux-gnu -y
+      if: matrix.target == 'aarch64-unknown-linux-gnu'
+
     - uses: SebRollen/toml-action@v1.0.1
       id: version
       with:
@@ -63,9 +60,11 @@ jobs:
 
     - name: Build
       uses: actions-rs/cargo@v1
+      env:
+        CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: 'aarch64-linux-gnu-gcc'
       with:
         command: build
-        args: --verbose --release
+        args: --verbose --release --target ${{ matrix.target }}
       if: matrix.os != 'windows-latest'
 
     - name: Build
@@ -87,7 +86,7 @@ jobs:
     - name: Create archive for Linux
       id: createarchivelinux
       run: |
-        7z a -ttar -so -an ./target/release/${{ env.RELEASE_BIN }} ${{ env.RELEASE_ADDS }} | 7z a -si ${{ env.RELEASE_BIN }}-${{ matrix.build }}.tar.gz
+        7z a -ttar -so -an ./target/release/${{ env.RELEASE_BIN }} ${{ env.RELEASE_ADDS }} | 7z a -si ${{ env.RELEASE_BIN }}-${{ matrix.target }}.tar.gz
       if: matrix.os == 'ubuntu-22.04'
 
     - name: Install p7zip
@@ -98,21 +97,21 @@ jobs:
     - name: Create archive for MacOS
       id: createarchivemacos
       run: |
-        7z a -tzip ${{ env.RELEASE_BIN }}-${{ matrix.build }}.zip ./target/release/${{ env.RELEASE_BIN }} ${{ env.RELEASE_ADDS }}
+        7z a -tzip ${{ env.RELEASE_BIN }}-${{ matrix.target }}.zip ./target/${{ matrix.target }}/release/${{ env.RELEASE_BIN }} ${{ env.RELEASE_ADDS }}
       if: matrix.os == 'macos-latest'
 
     - name: Create archive for Windows
       id: createarchivewindows
       run: |
         choco install 7zip
-        7z a -tzip ${{ env.RELEASE_BIN }}-${{ matrix.build }}.zip ./target/release/${{ env.RELEASE_BIN_WINDOWS }} ${{ env.RELEASE_ADDS }}
+        7z a -tzip ${{ env.RELEASE_BIN }}-${{ matrix.target }}.zip ./target/release/${{ env.RELEASE_BIN_WINDOWS }} ${{ env.RELEASE_ADDS }}
       if: matrix.os == 'windows-latest'
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ env.RELEASE_BIN }}-${{ matrix.build }}
-        path: ${{ env.RELEASE_BIN }}-${{ matrix.build }}*
+        name: ${{ env.RELEASE_BIN }}-${{ matrix.target }}
+        path: ${{ env.RELEASE_BIN }}-${{ matrix.target }}*
         if-no-files-found: error
 
   release:
