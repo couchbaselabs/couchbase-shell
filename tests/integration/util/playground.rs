@@ -175,28 +175,41 @@ default-collection = \"{}\"
             }
 
             let out = cbsh!(cwd, cmd);
-            if out.err != "" {
-                println!("Received content on stderr from command: {}", out.err);
-                sleep(interval);
-                continue;
-            }
 
-            if opts == RetryExpectations::AllowAnyOut {
-                println!("Any output allowed");
-                return;
-            } else if opts == RetryExpectations::ExpectOut {
-                if out.out.is_empty() {
-                    println!("Output from command was empty");
-                    sleep(interval);
-                    continue;
+            match opts {
+                RetryExpectations::ExpectOut => {
+                    if out.out.is_empty() {
+                        println!("Output from command was empty");
+                        sleep(interval);
+                        continue;
+                    }
                 }
-            } else if opts == RetryExpectations::ExpectNoOut {
-                if out.out.is_empty() {
-                    return;
-                } else {
-                    println!("Expected no out but was {}", out.out);
-                    sleep(interval);
-                    continue;
+                RetryExpectations::ExpectNoOut => {
+                    if out.out.is_empty() {
+                        return;
+                    } else {
+                        println!("Expected no out but was {}", out.out);
+                        sleep(interval);
+                        continue;
+                    }
+                }
+                RetryExpectations::AllowAny {
+                    allow_err,
+                    allow_out,
+                } => {
+                    if allow_out && allow_err {
+                        println!("Any output and err allowed");
+                        return;
+                    }
+
+                    if !allow_err && out.err != "" {
+                        println!(
+                            "Received unexpected content on stderr from command: {}",
+                            out.err
+                        );
+                        sleep(interval);
+                        continue;
+                    }
                 }
             }
 
@@ -228,5 +241,5 @@ default-collection = \"{}\"
 pub enum RetryExpectations {
     ExpectOut,
     ExpectNoOut,
-    AllowAnyOut,
+    AllowAny { allow_out: bool, allow_err: bool },
 }
