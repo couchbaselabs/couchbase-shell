@@ -18,9 +18,10 @@ use crate::config_files::{read_nu_config_file, CBSHELL_FOLDER};
 use crate::default_context::create_default_context;
 use crate::state::{RemoteCapellaOrganization, RemoteCluster};
 use crate::{cli::*, state::ClusterTimeouts};
+use chrono::Local;
 use config::ClusterTlsConfig;
 use env_logger::Env;
-use log::{debug, warn, LevelFilter};
+use log::{debug, warn};
 use log::{error, info};
 use nu_cli::{add_plugin_file, gather_parent_env_vars, read_plugin_file, report_error};
 use nu_engine::{get_full_help, CallExt};
@@ -46,17 +47,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut logger_builder = env_logger::Builder::from_env(
         Env::default().filter_or("CBSH_LOG", "info,isahc=error,surf=error,nu=warn"),
     );
-    logger_builder.format(|buf, record| {
-        let mut style = buf.style();
-        style.set_intense(true);
-        style.set_bold(true);
-        writeln!(
-            buf,
-            "{}: {}",
-            buf.default_styled_level(record.level()),
-            style.value(record.args())
-        )
-    });
 
     let init_cwd = match std::env::current_dir() {
         Ok(cwd) => cwd,
@@ -122,9 +112,30 @@ fn main() -> Result<(), Box<dyn Error>> {
         Err(_) => std::process::exit(1),
     };
 
-    if opt.silent {
-        logger_builder.filter_level(LevelFilter::Error);
-    }
+    let opt_clone = opt.clone();
+    logger_builder.format(move |buf, record| {
+        let mut style = buf.style();
+        style.set_intense(true);
+        style.set_bold(true);
+        if let Some(l) = &opt_clone.logger_prefix {
+            return writeln!(
+                buf,
+                "{} [{}] {} {}",
+                style.value(l),
+                buf.default_styled_level(record.level()),
+                style.value(Local::now().format("%Y-%m-%d %H:%M:%S%.3f")),
+                style.value(record.args())
+            );
+        }
+        writeln!(
+            buf,
+            "[{}] {} {}",
+            buf.default_styled_level(record.level()),
+            style.value(Local::now().format("%Y-%m-%d %H:%M:%S%.3f")),
+            style.value(record.args())
+        )
+    });
+
     logger_builder.init();
 
     debug!("Effective {:?}", opt);
@@ -322,7 +333,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         active_capella_org,
     )));
 
-    if !opt.silent && !opt.no_motd && opt.script.is_none() && opt.command.is_none() {
+    if !opt.no_motd && opt.script.is_none() && opt.command.is_none() {
         fetch_and_print_motd();
     }
 
@@ -525,8 +536,8 @@ struct CliOptions {
     no_motd: bool,
     disable_tls: bool,
     tls_cert_path: Option<String>,
-    silent: bool,
     config_path: Option<String>,
+    logger_prefix: Option<String>,
 }
 
 #[derive(Clone)]
@@ -602,12 +613,17 @@ impl Command for Cbsh {
                 "path to certificate to use for TLS",
                 None,
             )
-            .switch("silent", "run in silent mode", Some('s'))
             .switch("version", "print the version", Some('v'))
             .named(
                 "config-dir",
                 SyntaxShape::String,
                 "path to the directory containing the config/credentials files",
+                None,
+            )
+            .named(
+                "logger-prefix",
+                SyntaxShape::String,
+                "prefix to use for each log line",
                 None,
             )
             .category(Category::Custom("couchbase".to_string()))
@@ -706,8 +722,9 @@ fn parse_commandline_args(
             let disable_tls = call.has_flag("disable-tls");
             let tls_cert_path: Option<String> =
                 call.get_flag(context, &mut stack, "tls-cert-path")?;
-            let silent = call.has_flag("silent");
             let config_path: Option<String> = call.get_flag(context, &mut stack, "config-dir")?;
+            let logger_prefix: Option<String> =
+                call.get_flag(context, &mut stack, "logger-prefix")?;
 
             fn extract_contents(
                 expression: Option<Expression>,
@@ -774,8 +791,8 @@ fn parse_commandline_args(
                 no_motd,
                 disable_tls,
                 tls_cert_path,
-                silent,
                 config_path,
+                logger_prefix,
             });
         }
     }

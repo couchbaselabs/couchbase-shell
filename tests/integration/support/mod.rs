@@ -1,5 +1,7 @@
 use nu_test_support::pipeline;
 
+pub const LOGGER_PREFIX: &str = "[TEST]";
+
 pub mod fs;
 pub mod macros;
 
