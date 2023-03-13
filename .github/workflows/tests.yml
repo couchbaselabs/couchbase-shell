@@ -54,7 +54,7 @@ jobs:
         uses: actions-rs/cargo@v1
         env:
           CONN_STRING: http://127.0.0.1:8091
-          RUST_LOG: debug
+          CBSH_LOG: cbsh=trace
           DATA_TIMEOUT: "30s"
         with:
           command: test

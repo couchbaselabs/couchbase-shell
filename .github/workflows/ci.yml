@@ -79,6 +79,7 @@ jobs:
       uses: actions-rs/cargo@v1
       env:
         DATA_TIMEOUT: "15s"
+        CBSH_LOG: cbsh=trace
         RUST_LOG: debug
       with:
         command: test
