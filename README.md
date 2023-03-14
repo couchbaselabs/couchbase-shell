@@ -11,9 +11,11 @@ The documentation is available [here](https://couchbase.sh/docs/).
 
 First, download the archive for your operating system.
 
- - [Linux 0.75.0](https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.0/cbsh-0.75.0-linux.tar.gz)
- - [macOS 0.75.0](https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.0/cbsh-0.75.0-mac.zip)
- - [Windows 0.75.0](https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.0/cbsh-0.75.0-windows.zip)
+- Linux: [cbsh-x86_64-unknown-linux-gnu.tar.gz](https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.0/cbsh-x86_64-unknown-linux-gnu.tar.gz)
+- macOS: [cbsh-x86_64-apple-darwin.zip](https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.0/cbsh-x86_64-apple-darwin.zip)
+- Linux aarch64 [cbsh-aarch64-unknown-linux-gnu.tar.gz](https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.0/cbsh-aarch64-unknown-linux-gnu.tar.gz)
+- macOS aarch64: [cbsh-aarch64-apple-darwin.zip](https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.0/cbsh-aarch64-apple-darwin.zip)
+- Windows: [cbsh-x86_64-pc-windows-msvc.zip](https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.0/cbsh-x86_64-pc-windows-msvc.zip)
 
 You do not need any extra dependencies to run `cbsh`, it comes "batteries included".
 

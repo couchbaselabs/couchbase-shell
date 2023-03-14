@@ -6,16 +6,18 @@ The current latest version is *0.75*. The version of `cbsh` is kept in line with
 
 There are a couple ways you can get access to `cbsh`, the easiest one is to download our pre-built binaries for your platform of choice:
 
- - Linux: https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.0/cbsh-0.75.0-linux.tar.gz[cbsh-0.75.0-linux.tar.gz]
- - macOS: https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.0/cbsh-0.75.0-mac.zip[cbsh-0.75.0-mac.zip]
- - Windows: https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.0/cbsh-0.75.0-windows.zip[cbsh-0.75.0-windows.zip]
+ - Linux: https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.0/cbsh-x86_64-unknown-linux-gnu.tar.gz[cbsh-x86_64-unknown-linux-gnu.tar.gz]
+ - macOS: https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.0/cbsh-x86_64-apple-darwin.zip[cbsh-x86_64-apple-darwin.zip]
+ - Linux aarch64: https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.0/cbsh-aarch64-unknown-linux-gnu.tar.gz[cbsh-aarch64-unknown-linux-gnu.tar.gz]
+ - macOS aarch64: https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.0/cbsh-aarch64-apple-darwin.zip[cbsh-aarch64-apple-darwin.zip]
+ - Windows: https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.0/cbsh-x86_64-pc-windows-msvc.zip[cbsh-x86_64-pc-windows-msvc.zip]
 
 Once you've downloaded the `zip` file, extract it and switch into the just created directory. The following example shows it for mac, but it works very similar if you are on linux (just align the commands with the file you just downloaded):
 
 ```
-$ unzip cbsh-0.75.0-mac.zip
+$ cbsh-x86_64-apple-darwin.zip
 $ ls
-cbsh  examples  LICENSE  README.md
+cbsh LICENSE LICENSE_AGREEMENT  README.md
 ```
 
 You can now run the `cbsh` binary:
