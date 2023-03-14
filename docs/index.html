@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Asciidoctor 2.0.17">
+<meta name="generator" content="Asciidoctor 2.0.18">
 <meta name="author" content="(c) Copyright 2021, All Rights Reserved">
 <title>Couchbase Shell Documentation</title>
 <link rel="stylesheet" href="./couchbase.css">
@@ -141,7 +141,7 @@
 <div class="sect2">
 <h3 id="_installation">1.1. Installation</h3>
 <div class="paragraph">
-<p>The current latest version is <strong>1.0.0-beta.5</strong>.</p>
+<p>The current latest version is <strong>0.75</strong>. The version of <code>cbsh</code> is kept in line with the underlying version of nushell that is supported.</p>
 </div>
 <div class="paragraph">
 <p>There are a couple ways you can get access to <code>cbsh</code>, the easiest one is to download our pre-built binaries for your platform of choice:</p>
@@ -149,13 +149,13 @@
 <div class="ulist">
 <ul>
 <li>
-<p>Linux: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.5/cbsh-1.0.0-beta.5-linux.tar.gz">cbsh-1.0.0-beta.5-linux.tar.gz</a></p>
+<p>Linux: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.0/cbsh-0.75.0-linux.tar.gz">cbsh-0.75.0-linux.tar.gz</a></p>
 </li>
 <li>
-<p>macOS: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.5/cbsh-1.0.0-beta.5-mac.zip">cbsh-1.0.0-beta.5-mac.zip</a></p>
+<p>macOS: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.0/cbsh-0.75.0-mac.zip">cbsh-0.75.0-mac.zip</a></p>
 </li>
 <li>
-<p>Windows: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0-beta.5/cbsh-1.0.0-beta.5-windows.zip">cbsh-1.0.0-beta.5-windows.zip</a></p>
+<p>Windows: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.0/cbsh-0.75.0-windows.zip">cbsh-0.75.0-windows.zip</a></p>
 </li>
 </ul>
 </div>
@@ -164,7 +164,7 @@
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>$ unzip cbsh-1.0.0-beta.5-mac.zip
+<pre class="CodeRay highlight"><code>$ unzip cbsh-0.75.0-mac.zip
 $ ls
 cbsh  examples  LICENSE  README.md</code></pre>
 </div>
@@ -175,7 +175,7 @@ cbsh  examples  LICENSE  README.md</code></pre>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>❯ ./cbsh --version
-The Couchbase Shell 1.0.0-beta.5</code></pre>
+The Couchbase Shell 0.75.0</code></pre>
 </div>
 </div>
 <div class="admonitionblock tip">
@@ -743,7 +743,7 @@ So imagine you have three clusters setup with the following identifiers:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; clusters managed | get identifier
+<pre class="CodeRay highlight"><code>&gt; cb-env | get identifier
 ───┬────────
  0 │ prod-us-west
  1 │ prod-us-east
@@ -801,11 +801,11 @@ For example:</p>
 <div class="sect2">
 <h3 id="_working_with_clusters">4.1. Working with <code>clusters</code></h3>
 <div class="paragraph">
-<p>The <code>clusters managed</code> command lists all the clusters you have registered with the shell.</p>
+<p>The <code>cb-env managed</code> command lists all the clusters you have registered with the shell.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; clusters managed
+<pre class="CodeRay highlight"><code>&gt; cb-env managed
 ───┬────────┬─────┬────────────┬───────────────
  # │ active │ tls │ identifier │ username
 ───┼────────┼─────┼────────────┼───────────────
@@ -1222,14 +1222,13 @@ Flags:
 <div class="paragraph">
 <p>For general usage of the <code>cb-env</code> command see <a href="#_cb_env_and_the_environment"><code>cb-env</code> and the Environment</a>.
 When using <a href="#_management_commands">Management Commands</a> with Couchbase Capella and Couchbase Shell we need to be able to manage more active resources than the base <code>cb-env</code> command gives us.
-You can use the <code>cb-env --capella</code> command to see which cloud resources are current active:</p>
+You can use the <code>cb-env --capella</code> command to see which Capella resources are current active:</p>
 </div>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; cb-env--capella
 ──────────────────────┬──────────────────
  capella-organization │ mycapellaorg
- cloud                │
  project              │ mycapellaproject
 ──────────────────────┴──────────────────</code></pre>
 </div>
@@ -1247,7 +1246,6 @@ Usage:
 
 Subcommands:
   cb-env bucket - Sets the active bucket based on its name
-  cb-env cloud - Sets the active cloud based on its identifier
   cb-env capella-organization - Sets the active capella organization based on its identifier
   cb-env cluster - Sets the active cluster based on its identifier
   cb-env collection - Sets the active collection based on its name
@@ -1324,20 +1322,11 @@ capella-organisation = &quot;myhostedorg&quot;
 identifier = &quot;myhostedorg&quot;
 access-key = &quot;x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG&quot;
 secret-key = &quot;T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY&quot;
-default-project = &quot;mydefaultproject&quot;
-# The environment field defaults to &quot;hosted&quot; so we don't have to include it here.
-
-[[capella-organisation]]
-identifier = &quot;myinvpcorg&quot;
-access-key = &quot;x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG&quot;
-secret-key = &quot;T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY&quot;
-default-project = &quot;mydefaultproject&quot;
-default-cloud = &quot;mydefaultcloud&quot;
-environment = &quot;in-vpc&quot;</code></pre>
+default-project = &quot;mydefaultproject&quot;</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Note that the identifier of the cluster, and the default-cloud (if applicable) <strong>must</strong> match the corresponding names in Couchbase Capella for management operations to work.
+<p>Note that the identifier of the cluster <strong>must</strong> match the corresponding names in Couchbase Capella for management operations to succeed.
 Also note that some operations are not supported by Couchbase Capella.</p>
 </div>
 </div>
@@ -1889,7 +1878,7 @@ A good example here is migrating from an on-premise cluster to a Capella cluster
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2022-05-30 10:44:21 UTC
+Last updated 2023-03-14 09:31:21 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
