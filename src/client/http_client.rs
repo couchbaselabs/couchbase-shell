@@ -482,7 +482,6 @@ pub enum ManagementRequest {
     },
     IndexStatus,
     SettingsAutoFailover,
-    Whoami,
 }
 
 impl ManagementRequest {
@@ -490,7 +489,6 @@ impl ManagementRequest {
         match self {
             Self::GetBuckets => "/pools/default/buckets".to_string(),
             Self::GetBucket { name } => format!("/pools/default/buckets/{}", name),
-            Self::Whoami => "/whoami".to_string(),
             Self::IndexStatus => "/indexStatus".to_string(),
             Self::SettingsAutoFailover => "/settings/autoFailover".to_string(),
             Self::BucketStats { name } => format!("/pools/default/buckets/{}/stats", name),
@@ -539,7 +537,6 @@ impl ManagementRequest {
         match self {
             Self::GetBuckets => HttpVerb::Get,
             Self::GetBucket { .. } => HttpVerb::Get,
-            Self::Whoami => HttpVerb::Get,
             Self::IndexStatus => HttpVerb::Get,
             Self::SettingsAutoFailover => HttpVerb::Get,
             Self::BucketStats { .. } => HttpVerb::Get,

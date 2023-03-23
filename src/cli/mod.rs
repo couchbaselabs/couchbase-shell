@@ -71,7 +71,6 @@ mod users_roles;
 mod users_upsert;
 mod util;
 mod version;
-mod whoami;
 
 pub use analytics::Analytics;
 pub use analytics_buckets::AnalyticsBuckets;
@@ -142,4 +141,3 @@ pub use users_get::UsersGet;
 pub use users_roles::UsersRoles;
 pub use users_upsert::UsersUpsert;
 pub use version::Version;
-pub use whoami::Whoami;
