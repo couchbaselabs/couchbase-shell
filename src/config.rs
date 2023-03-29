@@ -333,7 +333,7 @@ impl ClusterConfigBuilder {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ClusterConfig {
     identifier: String,
-    #[serde(rename(deserialize = "conn-string", serialize = "conn-string"))]
+    #[serde(rename(deserialize = "connstr", serialize = "connstr"))]
     conn_string: String,
     #[serde(rename(deserialize = "default-bucket", serialize = "default-bucket"))]
     default_bucket: Option<String>,

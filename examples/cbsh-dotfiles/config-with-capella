@@ -3,7 +3,7 @@ version = 1
 
 [[database]]
 identifier = "test"
-conn-string = "d5637eaf-59a4-427e-aa8e-1aadd302728d.dp.cloud.couchbase.com"
+connstr = "d5637eaf-59a4-427e-aa8e-1aadd302728d.dp.cloud.couchbase.com"
 default-bucket = "couchbasecloudbucket"
 username = "dave"
 password = "Pa55word!"
