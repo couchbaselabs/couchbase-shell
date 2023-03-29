@@ -66,7 +66,7 @@ impl CBPlayground {
                 "version = 1
 [[database]]
 identifier = \"local\"
-conn-string = \"{}\"
+connstr = \"{}\"
 default-bucket = \"{}\"
 username = \"{}\"
 password = \"{}\"

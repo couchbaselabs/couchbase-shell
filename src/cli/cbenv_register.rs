@@ -36,7 +36,7 @@ impl Command for CbEnvRegister {
                 "the identifier to use for this database",
             )
             .required(
-                "conn-string",
+                "connstr",
                 SyntaxShape::String,
                 "the connection string to use for this database",
             )

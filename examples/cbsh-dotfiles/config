@@ -3,7 +3,7 @@ version = 1
 
 [[database]]
 identifier = "default"
-conn-string = "127.0.0.1"
+connstr = "127.0.0.1"
 default-bucket = "travel-sample"
 # The following can be part of the config or credentials
 username = "Administrator"

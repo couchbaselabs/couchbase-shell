@@ -41,7 +41,7 @@ impl Command for Cbsh {
         Signature::build("cbsh")
             .usage("The Couchbase Shell.")
             .named(
-                "conn-string",
+                "connstr",
                 SyntaxShape::String,
                 "connection string to use",
                 None,
@@ -203,7 +203,7 @@ pub fn parse_commandline_args(
             },
         )) = pipeline.elements.get(0)
         {
-            let conn_string: Option<String> = call.get_flag(context, &mut stack, "conn-string")?;
+            let conn_string: Option<String> = call.get_flag(context, &mut stack, "connstr")?;
             let username: Option<String> = call.get_flag(context, &mut stack, "username")?;
             let password = call.has_flag("password");
             let cluster: Option<String> = call.get_flag(context, &mut stack, "cluster")?;

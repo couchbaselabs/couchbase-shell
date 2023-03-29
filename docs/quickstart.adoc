@@ -38,7 +38,7 @@ If all you do is launch the shell through `./cbsh` it will try to connect to `lo
 Note: Unless you specify TLS settings then PLAIN authentication is used and your credentials are sent in plaintext.
 
 ```
-❯ ./cbsh --username Administrator --conn-string 127.0.0.1 -p
+❯ ./cbsh --username Administrator --connstr 127.0.0.1 -p
 Password: 
 👤 Administrator 🏠 my-local-cb-node in 🗄 travel-sample
 > 
@@ -80,14 +80,14 @@ version = 1
 
 [[database]]
 identifier = "local"
-conn-string = "127.0.0.1"
+connstr = "127.0.0.1"
 default-bucket = "travel-sample"
 username = "Administrator"
 password = "password"
 
 # [[database]]
 # identifier = "remote"
-# conn-string = "10.143.200.101"
+# connstr = "10.143.200.101"
 # default-bucket = "myapp"
 # username = "user"
 # password = "pass"
