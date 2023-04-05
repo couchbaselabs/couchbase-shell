@@ -597,7 +597,7 @@ fn maybe_write_config_file(opt: CliOptions, password: Option<String>) -> PathBuf
         println!("Using {} as connection string", c);
         c
     } else {
-        println!("Please enter connection string:");
+        println!("Please enter connection string");
         let mut answer = String::new();
         std::io::stdin()
             .read_line(&mut answer)
@@ -636,7 +636,7 @@ fn maybe_write_config_file(opt: CliOptions, password: Option<String>) -> PathBuf
     };
     let scope = opt.scope;
     let collection = opt.collection;
-    println!("Please enter directory for config file (.cbsh/):");
+    println!("Please enter directory for config file (~/.cbsh/):");
     let mut path_answer = String::new();
     std::io::stdin()
         .read_line(&mut path_answer)
@@ -644,11 +644,15 @@ fn maybe_write_config_file(opt: CliOptions, password: Option<String>) -> PathBuf
 
     let path = match path_answer.to_lowercase().trim() {
         "" => {
-            let mut buf = std::env::current_dir().unwrap();
+            let mut buf = dirs::home_dir().unwrap();
             buf.push(".cbsh");
             buf
         }
-        _ => PathBuf::from(path_answer.trim().to_string()),
+        _ => {
+            let path = path_answer.trim().to_string();
+            let path = shellexpand::full(path.as_str()).expect("Failed to read path");
+            PathBuf::from(path.to_string())
+        }
     };
 
     let config_builder = ClusterConfigBuilder::new(
