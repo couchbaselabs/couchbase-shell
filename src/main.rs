@@ -597,7 +597,7 @@ fn maybe_write_config_file(opt: CliOptions, password: Option<String>) -> PathBuf
         println!("Using {} as connection string", c);
         c
     } else {
-        println!("Please enter connection string");
+        println!("Please enter connection string (.e.g. couchbases://cb.<database-identifier>.sdk.cloud.couchbase.com)");
         let mut answer = String::new();
         std::io::stdin()
             .read_line(&mut answer)
