@@ -634,20 +634,8 @@ fn maybe_write_config_file(opt: CliOptions, password: Option<String>) -> PathBuf
         println!("Please enter default bucket:");
         read_input()
     };
-    let scope = if let Some(scope) = opt.scope {
-        println!("Using {} as scope", &scope);
-        Some(scope)
-    } else {
-        println!("Please enter default scope:");
-        read_input()
-    };
-    let collection = if let Some(collection) = opt.collection {
-        println!("Using {} as collection", &collection);
-        Some(collection)
-    } else {
-        println!("Please enter default collection:");
-        read_input()
-    };
+    let scope = opt.scope;
+    let collection = opt.collection;
     println!("Please enter directory for config file (.cbsh/):");
     let mut path_answer = String::new();
     std::io::stdin()
