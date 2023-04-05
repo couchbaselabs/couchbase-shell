@@ -624,7 +624,7 @@ fn maybe_write_config_file(opt: CliOptions, password: Option<String>) -> PathBuf
         Some(pass)
     } else {
         println!("Please enter password:");
-        read_input()
+        Some(rpassword::read_password().expect("Failed to read password"))
     };
 
     let bucket = if let Some(bucket) = opt.bucket {
