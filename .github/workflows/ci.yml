@@ -64,7 +64,8 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: build
-        args: --verbose --target ${{ matrix.target }}
+        # We build windows as a release build as debug builds are stack overflowing on startup.
+        args: --verbose --release --target ${{ matrix.target }}
       env:
         VCPKGRS_DYNAMIC: 1
         RUSTFLAGS: -Ctarget-feature=+crt-static

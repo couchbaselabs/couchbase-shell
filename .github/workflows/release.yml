@@ -126,6 +126,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           custom_tag: ${{ needs.build.outputs.version }}
           default_bump: false
+          create_annotated_tag: true
 
       - name: Download Artifacts
         uses: actions/download-artifact@v3
