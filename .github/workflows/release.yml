@@ -64,14 +64,21 @@ jobs:
         CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: 'aarch64-linux-gnu-gcc'
       with:
         command: build
-        args: --verbose --release --target ${{ matrix.target }}
-      if: matrix.os != 'windows-latest'
+        args: --verbose --release --target ${{ matrix.target }} --features static-link-openssl
+      if: matrix.os == 'ubuntu-22.04'
 
     - name: Build
       uses: actions-rs/cargo@v1
       with:
         command: build
-        args: --verbose --release
+        args: --verbose --target ${{ matrix.target }}
+      if: matrix.os == 'macos-latest'
+
+    - name: Build
+      uses: actions-rs/cargo@v1
+      with:
+        command: build
+        args: --verbose --release --features static-link-openssl
       env:
         VCPKGRS_DYNAMIC: 1
         RUSTFLAGS: -Ctarget-feature=+crt-static

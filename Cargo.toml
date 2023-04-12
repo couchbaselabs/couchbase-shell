@@ -35,7 +35,6 @@ nu-engine = { version = "0.75.0" }
 nu-plugin = { version = "0.75.0" }
 num-bigint = "0.4"
 num-traits = "0.2.14"
-openssl = { version = "0.10", features = ["vendored"] }
 pretty_env_logger = "0.4.0"
 rand = "0.8.3"
 regex = "1.5.5"
@@ -61,6 +60,10 @@ trust-dns-resolver = { version = "0.22.0", features = ["dns-over-rustls"] }
 url = "2.1"
 uuid = { version = "1.1.2", features = ["v4"] }
 
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+# Our dependencies don't use OpenSSL on Macos
+openssl = { version = "0.10.48", features = ["vendored"], optional=true }
+
 [dev-dependencies]
 dunce = "1.0.1"
 envconfig = "0.10.0"
@@ -69,6 +72,11 @@ lazy_static = "1.4.0"
 nu-test-support = { version = "0.75.0"}
 strum = "0.24.1"
 strum_macros = "0.24.3"
+
+[features]
+
+# Enable to statically link OpenSSL; otherwise the system version will be used. Not enabled by default because it takes a while to build
+static-link-openssl = ["dep:openssl"]
 
 [[bin]]
 name = "cbsh"
