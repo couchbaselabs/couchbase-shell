@@ -26,13 +26,7 @@ def build_collection_prompt [] {
        }
     }
     
-    let bucket_symbol = if $cluster_type == "provisioned" {
-        "️☁️"
-    } else {
-        "🗄"
-    }
-    
-    let prompt = $"((ansi ub) + ($user) + (ansi reset) + ' at ' + (ansi yb) + ($cluster) + (ansi reset) + ' in ' + ($bucket_symbol) + (ansi wb) + ($bucket_name) + ($collection_prompt) + (ansi reset))"
+    let prompt = $"(($user) + ' at ' + ($cluster) + ' in ' + ($bucket_name) + ($collection_prompt))"
     
     $prompt
 }
