@@ -1,6 +1,7 @@
 use crate::cli::CtrlcFuture;
 use crate::client::error::ClientError;
 use crate::client::http_handler::{HttpResponse, HttpVerb};
+use base64::{engine::general_purpose, Engine as _};
 use hmac::{Hmac, Mac};
 use log::debug;
 use reqwest::Client;
@@ -85,7 +86,7 @@ impl CapellaClient {
         let bearer = format!(
             "Bearer {}:{}",
             self.access_key.clone(),
-            base64::encode(mac_result.into_bytes())
+            general_purpose::STANDARD.encode(mac_result.into_bytes()),
         );
 
         res_builder = res_builder
