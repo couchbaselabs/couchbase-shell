@@ -1,0 +1,44 @@
+=== Faking data
+
+Couchbase Shell provides a `fake` command which can be used to generate realistic looking data.
+This can be very useful during development when you just need some data in your database.
+`fake` uses a templating engine called https://tera.netlify.app/docs/[`tera`] which can be used to structure your faked data.
+
+```
+> cat user.tera
+{
+    "id": "{{ uuid() }}",
+    "content": {
+        "name": "{{ name() }}",
+        "username": "{{ userName() }}",
+        "email": "{{ safeEmail() }}",
+        "last_access": {
+            "from": "{{ ipV4() }}"
+        }
+    }
+}
+
+> fake --template user.tera --num-rows 5
+───┬──────────────────────────────────────┬───────────────────────────────────────
+ # │                  id                  │                content
+───┼──────────────────────────────────────┼───────────────────────────────────────
+ 0 │ 0cabc14a-b9bc-4de9-9caa-6efe23ff350f │ [row email last_access name username]
+ 1 │ 27f44eef-e4f5-4216-b65a-897ef357753d │ [row email last_access name username]
+ 2 │ cc24c8cd-9dc6-4767-a627-e2b55c814c62 │ [row email last_access name username]
+ 3 │ 12ad3953-11cc-43f7-991f-d680d9268357 │ [row email last_access name username]
+ 4 │ 206194fa-7311-4a2f-a5eb-85d182199d8f │ [row email last_access name username]
+───┴──────────────────────────────────────┴───────────────────────────────────────
+
+> fake --template user.tera --num-rows 5 | doc upsert
+───┬───────────┬─────────┬────────
+ # │ processed │ success │ failed
+───┼───────────┼─────────┼────────
+ 0 │         5 │       5 │      0
+───┴───────────┴─────────┴────────
+```
+
+The available functions that can be used in templates can be found using:
+
+```
+> fake --list-functions
+```

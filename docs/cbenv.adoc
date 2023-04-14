@@ -9,32 +9,35 @@ You can run the `cb-env` command, which will tell you which resources are curren
 
 ```
 > cb-env
-────────────┬───────────────
- username   │ Susan
- database   │ dev.local
- bucket     │ travel-sample
- scope      │ inventory
- collection │ hotel
-────────────┴───────────────
+╭──────────────┬─────────────╮
+│ username     │ charlie     │
+│ display_name │ Charlie     │
+│ database     │ capella     │
+│ bucket       │ default     │
+│ scope        │ inventory   │
+│ collection   │ hotel       │
+│ cluster_type │ provisioned │
+╰──────────────┴─────────────╯
 ```
 
 If you were to now run a command then we would be running it:
 
-* As the user "Susan"
-* Against the "dev.local" database
-* Against the "travel-sample" bucket
+* As the user "charlie"
+* Against the "capella" database
+* Against the "default" bucket
 * Against the "inventory" scope
 * Against the "hotel" collection
 
+Npte that `display_name` is the name that appears in your shell prompt and is not used by commands.
+
 You can also change the active resources with the `cb-env` command.
-(Note there are extra resources listed here, see <<capella.adoc#_cb_env_and_the_environment>> for more information on these)
 
 ```
 > cb-env -h
 Modify the default execution environment of commands
 
 Usage:
-  > cb-env <subcommand> {flags}
+  > cb-env {flags}
 
 Subcommands:
   cb-env bucket - Sets the active bucket based on its name
@@ -47,26 +50,33 @@ Subcommands:
   cb-env scope - Sets the active scope based on its name
   cb-env timeouts - Sets the active timeouts for operations
   cb-env unregister - Registers a database for use with the shell
+
+Flags:
+  -h, --help - Display the help message for this command
+  --capella - show default execution environment of capella
+  --timeouts - show default execution environment for timeouts
 ```
 
 For example if you change the active bucket:
 
 ```
 > cb-env bucket beer-sample
-────────┬─────────────
- bucket │ beer-sample
-────────┴─────────────
+╭────────┬─────────────╮
+│ bucket │ beer-sample │
+╰────────┴─────────────╯
 ```
 
 ```
 > cb-env
-────────────┬─────────────
- username   │ Susan
- database   │ dev.local
- bucket     │ beer-sample
- scope      │ inventory
- collection │ hotel
-────────────┴─────────────
+╭──────────────┬─────────────╮
+│ username     │ charlie     │
+│ display_name │ Charlie     │
+│ database     │ capella     │
+│ bucket       │ beer-sample │
+│ scope        │ inventory   │
+│ collection   │ hotel       │
+│ cluster_type │ provisioned │
+╰──────────────┴─────────────╯
 ```
 
 Both the output of `cb-env` and the prompt will reflect the changes.
@@ -84,10 +94,10 @@ Different commands support different flags, depending on the command you can exp
 ==== The `--databases` flag
 
 The argument for this flag is an identifier combined with a regular expression.
-So imagine you have three databases setup with the following identifiers:
+So imagine you have three databases setup with the following names:
 
 ```
-> cb-env | get identifier
+> cb-env | get database
 ───┬────────
  0 │ prod-us-west
  1 │ prod-us-east
@@ -113,7 +123,7 @@ In the background this gets passed to a regex engine, so you can go a little cra
 
 ==== The `--bucket`, `--scope`, `--collection` flags
 
-These flags are a little different to the `--databases` flag, they are not regular expressions and can only be used to defined a single name each.
+These flags are a little different to the `--databases` flag, they are not regular expressions and can only be used to define a single name each.
 Unlike `--databases` the name provided to these flags does not have to be already known to Couchbase Shell, they can refer to any bucket, scope, and collection that exist within your active database or defined database(s).
 For example:
 

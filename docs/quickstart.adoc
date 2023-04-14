@@ -12,10 +12,11 @@ There are a couple ways you can get access to `cbsh`, the easiest one is to down
  - macOS aarch64: https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.1/cbsh-aarch64-apple-darwin.zip[cbsh-aarch64-apple-darwin.zip]
  - Windows: https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.1/cbsh-x86_64-pc-windows-msvc.zip[cbsh-x86_64-pc-windows-msvc.zip]
 
-Once you've downloaded the `zip` file, extract it and switch into the just created directory. The following example shows it for mac, but it works very similar if you are on linux (just align the commands with the file you just downloaded):
+Once you've downloaded the `zip` file, extract it and switch into the just created directory.
+The following example shows it for mac, but it works very similar if you are on linux (just align the commands with the file you just downloaded):
 
 ```
-$ cbsh-x86_64-apple-darwin.zip
+$ unzip cbsh-x86_64-apple-darwin.zip
 $ ls
 cbsh LICENSE LICENSE_AGREEMENT  README.md
 ```
@@ -27,35 +28,42 @@ You can now run the `cbsh` binary:
 The Couchbase Shell 0.75.1
 ```
 
-TIP: If you are running a recent macOS release (i.e. 10.15.x), you'll likely see an error similar to *"cbsh" was blocked from use because it is not from an identified developer*. This is because our binaries are not yet signed. To run it nonetheless you need to navigate to `System Preferences -> Security & Privacy` and click `Allow Anyway`. Next time you run the binary you'll get another prompt but then it should run fine. 
+TIP: If you are running a recent macOS release (i.e. 10.15.x), you'll likely see an error similar to *"cbsh" was blocked from use because it is not from an identified developer*.
+This is because our binaries are not yet signed.
+To run it nonetheless you need to either navigate to `System Preferences -> Security & Privacy` and click `Allow Anyway`, or  run `sudo xattr -r -d com.apple.quarantine $PWD/cbsh` inside your terminal.
+Next time you run the binary you'll get another prompt but then it should run fine. 
 
 image::mac-binary-unsigned.png[macOS Warning,600]
 
 === Connecting to a Database
 
-If all you do is launch the shell through `./cbsh` it will try to connect to `localhost` using the `Administrator` username and the `password` password. You can modify this through CLI arguments (see `./cbsh -h` for more information). If `-p` is passed in, you will be prompted to enter a password upon start:
+The first time that you run `./cbsh` you will receive a prompt asking if you'd like to create a config file.
+If you choose yes then the shell will provide you with a series of prompts to provide information about your default database.
+If you choose no then it will try to connect to `localhost` using the `Administrator` username and the `password` password.
+
+You can modify this through CLI arguments (see `./cbsh -h` for more information).
 
 Note: Unless you specify TLS settings then PLAIN authentication is used and your credentials are sent in plaintext.
 
 ```
 ❯ ./cbsh --username Administrator --connstr 127.0.0.1 -p
-Password: 
-👤 Administrator 🏠 my-local-cb-node in 🗄 travel-sample
-> 
+Password:
+[WARN] 2023-04-14 08:32:25.180 Using PLAIN authentication for cluster dev.local, credentials will sent in plaintext - configure tls to disable this warning
+[INFO] 2023-04-14 08:32:25.389 Thanks for trying CBSH!
+👤 Administrator 🏠 dev.local in 🗄 default
+>
 ```
 
-While passing in command line arguments is great for exploring, you likely want to look at dotfile configuration support further down in the documentation which allows you to configure multiple databases, TLS settings and more.
-
-Once in the shell, you can start to execute commands (see the introduction section for more information). As a quick sanity check, list the nodes in the database:
+Once in the shell, you can start to execute commands (see the introduction section for more information). 
+As a quick sanity check, list the nodes in the database:
 
 ```
 > nodes
-───┬──────────┬────────────────┬─────────┬─────────────────────────────────────┬───────────────────────┬───────────────────────────┬──────────────┬─────────────┬───────
- # │ database │    hostname    │ status  │              services               │        version        │            os             │ memory_total │ memory_free │ cloud 
-───┼──────────┼────────────────┼─────────┼─────────────────────────────────────┼───────────────────────┼───────────────────────────┼──────────────┼─────────────┼───────
- 0 │ default  │ 127.0.0.1:8091 │ healthy │ backup,analytics,eventing,search,in │ 7.0.1-6102-enterprise │ x86_64-apple-darwin18.7.0 │      34.4 GB │     17.6 GB │ false 
-   │          │                │         │ dexing,kv,query                     │                       │                           │              │             │       
-───┴──────────┴────────────────┴─────────┴─────────────────────────────────────┴───────────────────────┴───────────────────────────┴──────────────┴─────────────┴───────
+╭───┬───────────┬────────────────┬─────────┬──────────────────────────┬───────────────────────┬───────────────────────────┬──────────────┬─────────────┬─────────╮
+│ # │  cluster  │    hostname    │ status  │         services         │        version        │            os             │ memory_total │ memory_free │ capella │
+├───┼───────────┼────────────────┼─────────┼──────────────────────────┼───────────────────────┼───────────────────────────┼──────────────┼─────────────┼─────────┤
+│ 0 │ dev.local │ 127.0.0.1:8091 │ healthy │ search,indexing,kv,query │ 8.0.0-1246-enterprise │ x86_64-apple-darwin19.6.0 │  34359738368 │ 12026126336 │ false   │
+╰───┴───────────┴────────────────┴─────────┴──────────────────────────┴───────────────────────┴───────────────────────────┴──────────────┴─────────────┴─────────╯
 ```
 
 Or if you have the `travel-sample` bucket installed you can switch to it and then fetch a document:
@@ -85,14 +93,16 @@ default-bucket = "travel-sample"
 username = "Administrator"
 password = "password"
 
-# [[database]]
-# identifier = "remote"
-# connstr = "10.143.200.101"
-# default-bucket = "myapp"
-# username = "user"
-# password = "pass"
+[[database]]
+identifier = "remote"
+connstr = "10.143.200.101"
+default-bucket = "myapp"
+username = "user"
+password = "pass"
 ```
 
-This will register two databases, one called `local` and one called `remote` (commented out). The file format is `toml` in case you wonder. Now when you start the shell, it will connect to `local` automatically and you are all set.
+This will register two databases, one called `local` and one called `remote`.
+The file format is `toml` in case you wonder.
+Now when you start the shell, it will connect to `local` automatically and you are all set.
 
 Please check out the reference section on additional parameters you can set as well as how to move the credentials to a separate `credentials` file in case you want to share your config with other people and they do not use the same credentials.
