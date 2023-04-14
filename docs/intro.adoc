@@ -147,93 +147,144 @@ If you have an active scope or collection set then the prompt will also update t
 
 In the second line, your actual user prompt starts.
 
-=== Pivot mode
-
-Sometimes data is easier to see if the table is pivoted so that the columns become rows and rows become columns.
-For example the `nodes` command detailed below, by default the output will look like:
-
-```
-> nodes
-───┬──────────┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────
- # │ database │ hostnam │ status  │ service │ version │   os    │ memory_ │ memory_
-   │          │    e    │         │    s    │         │         │  total  │  free
-───┼──────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────
- 0 │ local    │ 127.0.0 │ healthy │ analyti │ 6.5.1-6 │ x86_64- │ 34.4 GB │  8.4 GB
-   │          │ .1:8091 │         │ cs,even │ 299-ent │ apple-d │         │
-   │          │         │         │ ting,se │ erprise │ arwin17 │         │
-   │          │         │         │ arch,in │         │ .7.0    │         │
-   │          │         │         │ dexing, │         │         │         │
-   │          │         │         │ kv,quer │         │         │         │
-   │          │         │         │ y       │         │         │         │
-───┴──────────┴─────────┴─────────┴─────────┴─────────┴─────────┴─────────┴─────────
-```
-
-This is easier to see if the table is pivoted to:
-
-```
-> nodes
-───────────────┬─────────────────────────────────────────────
- database      │ local
- hostname      │ 127.0.0.1:8091
- status        │ healthy
- services      │ analytics,eventing,search,indexing,kv,query
- version       │ 6.5.1-6299-enterprise
- os            │ x86_64-apple-darwin17.7.0
- memory_total  │ 34.4 GB
- memory_free   │ 8.4 GB
-───────────────┴─────────────────────────────────────────────
-```
-
-Nushell offers a couple of ways to set pivoting mode:
-
-* `config set pivot_mode off` this is the default setting where pivoting is turned off.
-* `config set pivot_mode auto` (*recommended*) will allow Nushell to determine when to apply pivoting (typically when there is only one row in the results).
-* `config set pivot_mode always` will cause tables to always be pivoted.
-
 === Loading Data into the Shell
 
-If you want to import data into Couchbase, or just load it into the shell for further processing, there are different commands available to help you. Once the data is loaded into the shell it can be sent to one of the couchbase save commands like `doc upsert`. Depending on the structure of the data, you may also need to tweak it a little bit so it can be properly stored.
+If you want to import data into Couchbase, or just load it into the shell for further processing, there are different commands available to help you.
+Once the data is loaded into the shell it can be sent to one of the couchbase save commands like `doc upsert` and `doc import`.
+Depending on the structure of the data, and the command used, you may also need to tweak it a little bit so it can be properly stored.
 
-The `open` command will look at file endings and try to decode it automatically. Imagine a file named `user.json` in your current directy with the following content: `{"name": "Michael", "age": 32}`.
+==== Doc import
+
+The `doc import` is the simplest way to import data through Couchbase Shell.
+The command expects a path to file containing data, the data can be any of the formats supported by the `from` command.
+In the following example we import a json file containing a single document.
+We also specify the `--id-column` flag because `doc import` will try to use an `id` field for the document key by default.
 
 ```
+> cat user.json
+{
+  "name": "Michael",
+  "age": 32,
+  "height": 180
+}
+
+> doc import user.json --id-column name
+╭───┬───────────┬─────────┬────────┬──────────┬───────────╮
+│ # │ processed │ success │ failed │ failures │  cluster  │
+├───┼───────────┼─────────┼────────┼──────────┼───────────┤
+│ 0 │         1 │       1 │      0 │          │ dev.local │
+╰───┴───────────┴─────────┴────────┴──────────┴───────────╯
+```
+
+```
+> doc import -h
+Import documents from a file through the data service
+
+Usage:
+  > doc import {flags} <filename>
+
+Flags:
+  -h, --help - Display the help message for this command
+  --id-column <String> - the name of the id column if used with an input stream
+  --bucket <String> - the name of the bucket
+  --expiry <Number> - the expiry for the documents in seconds, or absolute
+  --scope <String> - the name of the scope
+  --collection <String> - the name of the collection
+  --clusters <String> - the clusters which should be contacted
+  --batch-size <Number> - the maximum number of items to batch send at a time
+
+Parameters:
+  filename <string>: the path to the file containing data to import
+```
+
+==== Manual import
+
+The `open` command will look at file endings and try to decode it automatically.
+Imagine a file named `user.json` in your current directory.
+
+```
+> cat user.json
+{
+  "name": "Michael",
+  "age": 32,
+  "height": 180
+}
+
 > open user.json
-───┬─────────┬─────
- # │  name   │ age 
-───┼─────────┼─────
- 0 │ Michael │ 32  
-───┴─────────┴─────
+╭────────┬─────────╮
+│ name   │ Michael │
+│ age    │ 32      │
+│ height │ 180     │
+╰────────┴─────────╯
 ```
 
-As you can see, the `open` command already decoded the JSON document into the tabular format. If the filename would only be `user`, the import would look like this instead:
+As you can see, the `open` command automatically decoded the JSON document into the tabular format.
+If the filename would only be `user`, the import would look like this instead:
 
 ```
 > open user
-{"name": "Michael", "age": 32}
+{
+  "name": "Michael",
+  "age": 32,
+  "height": 180
+}
 ```
 
-If you are dealing with data that cannot be decoded automatically, you can use the various `from` subcommands to help with decoding. In our case we use `from json`:
+If you are dealing with data that cannot be decoded automatically, you can use the various `from` subcommands to help with decoding.
+In our case we use `from json`:
 
 ```
 > open user | from json
-───┬─────────┬─────
- # │  name   │ age 
-───┼─────────┼─────
- 0 │ Michael │ 32  
-───┴─────────┴─────
+╭────────┬─────────╮
+│ name   │ Michael │
+│ age    │ 32      │
+│ height │ 180     │
+╰────────┴─────────╯
 ```
 
 TIP: look at the many different import formats `from` supports, including csv, xml, yaml and even sqlite. With this simple tool at hand you are able to load many different data formats quickly and import them into couchbase!
 
+We cannot use this format directly with commands like `doc upsert` as the command expects two "columns" in the data - id and content.
+This means that we have to perform some translation from the above format to one that `doc upsert` understands.
+To do this we `wrap` the entire document into a content column and then extract the id that we want to use:
+
+```
+> open user.json | wrap content | insert id {|it| echo $it.content.name}
+╭─────────┬───────────────────╮
+│ content │ {record 3 fields} │
+│ id      │ Michael           │
+╰─────────┴───────────────────╯
+```
+
+There are many other approaches to achieving this same result.
+With our data in the correct format we can then upsert:
+
+```
+> open user.json | wrap content | insert id {|it| echo $it.content.name} | doc upsert
+╭───┬───────────┬─────────┬────────┬──────────┬───────────╮
+│ # │ processed │ success │ failed │ failures │  cluster  │
+├───┼───────────┼─────────┼────────┼──────────┼───────────┤
+│ 0 │         1 │       1 │      0 │          │ dev.local │
+╰───┴───────────┴─────────┴────────┴──────────┴───────────╯
+```
+
+See the xref:recipes/importing-data.adoc[Importing data recipes] for more information.
+
 === Exporting Data from the Shell
 
-The export counterparts to `open` and `from`, are `save` and `to`. You can use both command to take tabular data from the shell and store it in files of the needed target format.
+The export counterparts to `open` and `from`, are `save` and `to`.
+You can use both commands to take tabular data from the shell and store it in files of the needed target format.
 
-Like `open`, `save` will try to discern the format from the file ending. The following example will load a JSON file and save it as CSV:
+Like `open`, `save` will try to discern the format from the file ending.
+The following example will load a JSON file and then save it as CSV:
 
 ```
 > cat user.json
-{"name":"Michael","age":32}
+{
+  "name": "Michael",
+  "age": 32,
+  "height": 180
+}
 ```
 
 ```
@@ -242,8 +293,8 @@ Like `open`, `save` will try to discern the format from the file ending. The fol
 
 ```
 > cat user.csv
-name,age
-Michael,32
+name,age,height
+Michael,32,180
 ```
 
 This example is dealing with only one row for simplicity, but you can save as many rows as you need in one file. 
@@ -268,3 +319,5 @@ Glisy,Amiens,France
 La Garenne,Agen,France
 Cazaux,Cazaux,France
 ```
+
+See the xref:recipes/exporting-data.adoc[Exporting data recipes] for more information.

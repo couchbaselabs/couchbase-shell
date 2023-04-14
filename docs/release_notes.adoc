@@ -1,0 +1,53 @@
+== Release Notes
+
+=== 0.75.1 - 2023-04-13
+
+**This release contains a number of breaking changes, which are explicitly called out below.**
+As our versioning continues to track the underlying Nushell minor version this has required breaking changes in a patch version.
+
+* Updated config file to rename `[[cluster]]` to `[[database]]` (`[[cluster]]` will continue to work).
+* **Breaking** Updated config file to rename `hostnames` to `connstr` and changed the format to be a string.
+* Added support, and detection, for different "cluster types"; Capella and Other. This allows us to modify behaviour based on cluster type.
+* *Breaking* Renamed `clusters health` to `health`.
+* *Breaking* Renamed other `clusters ...` commands to `database ...`
+* Replaced references to cluster with database.
+* *Breaking* Removed support for whoami
+* Added support for username aliases - added `display_name` to config.
+* Trust the system store and Capella root CA when no certificate set.
+* Updated tutorial.
+* Added support for generating a config file when one does not exist.
+* Added support for connecting to kv nodes in parallel.
+* Added support for `doc import` command.
+* Added prompt indicator to help distinguish if a Capella or "other" cluster type is in use.
+* Fast fail `buckets` commands when used with Capella.
+* Updated where config files are automatically written to.
+* Fixed issue with config.nu file on Windows.
+
+- Pulled all beta and alpha release versions and updated version numbering
+- Couchbase Shell versions will now map to the Nushell version being used
+- Bundle Capella root CA to allow seamlessly connecting over TLS
+- Automatically detect when `query_context` should be sent
+- Update when SRV lookups are performed
+- Statically link OpenSSL
+- Various logging and error enhancements
+- Remove support for Capella InVpc
+- Renamed `clusters managed` to `cb-env managed`
+- Renamed `clusters register/unregister` to `cb-env register/unregister`
+- Expose CIDR in result of `clusters`
+- Fetch collection id over memcached rather than http
+
+=== 0.75.0 - 2023-02-09
+
+- Nushell pinned to 0.75
+- Pulled all beta and alpha release versions and updated version numbering
+- Couchbase Shell versions will now map to the Nushell version being used
+- Bundle Capella root CA to allow seamlessly connecting over TLS
+- Automatically detect when `query_context` should be sent
+- Update when SRV lookups are performed
+- Statically link OpenSSL
+- Various logging and error enhancements
+- Remove support for Capella InVpc
+- Renamed `clusters managed` to `cb-env managed`
+- Renamed `clusters register/unregister` to `cb-env register/unregister`
+- Expose CIDR in result of `clusters`
+- Fetch collection id over memcached rather than http

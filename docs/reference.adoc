@@ -18,11 +18,15 @@ default-collection = "my-collection"
 # The following can be part of the config or credentials
 username = "Administrator"
 password = "password"
-# TLS defaults to on, accepting all certs
-# tls-enabled = true
+# TLS defaults to on
+# tls-enabled = false
 # tls-cert-path = "/path/to/cert" # either accept all certs or provide a cert path
 # tls-accept-all-certs = true
 # tls-validate-hostnames = false
+
+# User display name is optional and is used to display a different name to the username in the prompt itself.
+# This can be useful if the username that you are provided is a long randomly generated string or similar.
+# user-display-name = "Charlie"
 
 # Timeouts broadly apply to the operations that you would expect them to.
 # That is:
@@ -36,12 +40,6 @@ query-timeout = "75s"
 analytics-timeout = "75s"
 search-timeout = "1m 15s"
 management-timeout = "75s"
-# capella-organisation= "org"
-
-# [[capella-organisation]]
-# identifier = "org"
-# access-key = "x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG"
-# secret-key = "T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY"
 ----
 
 === Credentials File Format
@@ -62,10 +60,4 @@ password = "password"
 # tls-cert-path = "/path/to/cert" # either accept all certs or provide a cert path
 # tls-accept-all-certs = true
 # tls-validate-hostnames = false
-
-
-# [[capella-organisation]]
-# identifier = "org"
-# access-key = "x8rLuZ3YBNEqPfb8whKHxt0v9wxf1pdG"
-# secret-key = "T26Rh3zRaUYFIzdRQfbdPxSQN7bxJatE2jgg1JDQqZ1yyqwGUZt7nx2E6w1yzosY"
 ----

@@ -8,12 +8,12 @@ The `cb-env managed` command lists all the databases you have registered with th
 
 ```
 > cb-env managed
-───┬────────┬─────┬────────────┬───────────────
- # │ active │ tls │ identifier │ username      
-───┼────────┼─────┼────────────┼───────────────
- 0 │ No     │ No  │ local      │ Administrator 
- 1 │ Yes    │ No  │ remote     │ Administrator
-───┴────────┴─────┴────────────┴───────────────
+╭───┬────────┬───────┬────────────┬───────────────┬──────────────────────╮
+│ # │ active │  tls  │ identifier │   username    │ capella_organization │
+├───┼────────┼───────┼────────────┼───────────────┼──────────────────────┤
+│ 0 │ true   │ false │ dev.local  │ Administrator │                      │
+│ 1 │ false  │ true  │ capella    │ charlie       │                      │
+╰───┴────────┴───────┴────────────┴───────────────┴──────────────────────╯
 ```
 
 === Working with `buckets`
@@ -22,52 +22,56 @@ The `buckets` command lists all the buckets from your active database:
 
 ```
 > buckets
-───┬──────────┬───────────────┬───────────┬──────────┬────────────────┬─────────────
- # │ database │     name      │   type    │ replicas │ quota_per_node │ quota_total
-───┼──────────┼───────────────┼───────────┼──────────┼────────────────┼─────────────
- 0 │ default  │ beer-sample   │ couchbase │        1 │       104.9 MB │    104.9 MB
- 1 │ default  │ default       │ couchbase │        1 │       104.9 MB │    104.9 MB
- 2 │ default  │ memd          │ memcached │        0 │       104.9 MB │    104.9 MB
- 3 │ default  │ travel-sample │ couchbase │        1 │       104.9 MB │    104.9 MB
-───┴──────────┴───────────────┴───────────┴──────────┴────────────────┴─────────────
+╭───┬───────────┬─────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────╮
+│ # │  cluster  │    name     │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud │
+├───┼───────────┼─────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────┤
+│ 0 │ dev.local │ beer-sample │ couchbase │        2 │ none                 │ 412.0 MiB │ false         │        │ false │
+│ 1 │ dev.local │ default     │ couchbase │        0 │ none                 │ 512.0 MiB │ false         │        │ false │
+│ 2 │ dev.local │ memd        │ memcached │        0 │ none                 │ 100.0 MiB │ false         │        │ false │
+╰───┴───────────┴─────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴────────┴───────╯
 ```
 
 As an advanced command, it is also possible to get the configuration for a bucket:
 
 ```
-> buckets config beer-sample
-────────────────────────┬──────────────────────────────────────────────────────────────────────────────────────────
- name                   │ beer-sample                                                                              
- uuid                   │ 0af4496fe0612c76885d5dcd3e010c0d                                                         
- bucketType             │ membase                                                                                  
- authType               │ sasl                                                                                     
- uri                    │ /pools/default/buckets/beer-sample?bucket_uuid=0af4496fe0612c76885d5dcd3e010c0d          
- streamingUri           │ /pools/default/bucketsStreaming/beer-sample?bucket_uuid=0af4496fe0612c76885d5dcd3e010c0d 
- localRandomKeyUri      │ /pools/default/buckets/beer-sample/localRandomKey                                        
- controllers            │ [row compactAll compactDB purgeDeletes startRecovery]                                    
- nodes                  │ [table 1 rows]                                                                           
- stats                  │ [row directoryURI nodeStatsListURI uri]                                                  
- nodeLocator            │ vbucket                                                                                  
- saslPassword           │ 7fd7338a6b8fb30dbfb80205834db634                                                         
- ddocs                  │ [row uri]                                                                                
- replicaIndex           │ Yes                                                                                      
- autoCompactionSettings │ No                                                                                       
- vBucketServerMap       │ [row hashAlgorithm numReplicas serverList vBucketMap]                                    
- maxTTL                 │ 0                                                                                        
- compressionMode        │ passive                                                                                  
- replicaNumber          │ 1                                                                                        
- threadsNumber          │ 3                                                                                        
- quota                  │ [row ram rawRAM]                                                                         
- basicStats             │ [row 8 columns]                                                                          
- evictionPolicy         │ valueOnly                                                                                
- conflictResolutionType │ seqno                                                                                    
- bucketCapabilitiesVer  │                                                                                          
- bucketCapabilities     │ [table 9 rows]                                                                           
-────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────
+> buckets config default
+╭────────────────────────┬──────────────────────────────────────────────────────────────────────────────────────╮
+│ authType               │ sasl                                                                                 │
+│ autoCompactionSettings │ false                                                                                │
+│ basicStats             │ {record 8 fields}                                                                    │
+│ bucketCapabilities     │ [list 17 items]                                                                      │
+│ bucketCapabilitiesVer  │                                                                                      │
+│ bucketType             │ membase                                                                              │
+│ collectionsManifestUid │ 21                                                                                   │
+│ compressionMode        │ passive                                                                              │
+│ conflictResolutionType │ seqno                                                                                │
+│ controllers            │ {record 4 fields}                                                                    │
+│ ddocs                  │ {record 1 field}                                                                     │
+│ durabilityMinLevel     │ none                                                                                 │
+│ evictionPolicy         │ valueOnly                                                                            │
+│ localRandomKeyUri      │ /pools/default/buckets/default/localRandomKey                                        │
+│ maxTTL                 │ 0                                                                                    │
+│ name                   │ default                                                                              │
+│ nodeLocator            │ vbucket                                                                              │
+│ nodes                  │ [table 1 row]                                                                        │
+│ numVBuckets            │ 64                                                                                   │
+│ pitrEnabled            │ false                                                                                │
+│ pitrGranularity        │ 600                                                                                  │
+│ pitrMaxHistoryAge      │ 86400                                                                                │
+│ quota                  │ {record 2 fields}                                                                    │
+│ replicaIndex           │ false                                                                                │
+│ replicaNumber          │ 0                                                                                    │
+│ stats                  │ {record 3 fields}                                                                    │
+│ storageBackend         │ couchstore                                                                           │
+│ streamingUri           │ /pools/default/bucketsStreaming/default?bucket_uuid=0ef162c33e14b163630f04639b347937 │
+│ threadsNumber          │ 3                                                                                    │
+│ uri                    │ /pools/default/buckets/default?bucket_uuid=0ef162c33e14b163630f04639b347937          │
+│ uuid                   │ 0ef162c33e14b163630f04639b347937                                                     │
+│ vBucketServerMap       │ {record 4 fields}                                                                    │
+╰────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
 If you are unsure what you would use this for, you probably don't need it.
-If you have pivot mode (detailed above) turned off then this command can produce results that are difficult to read.
 
 === Working with `scopes` and `collections`
 
@@ -96,17 +100,17 @@ To list all scopes in the bucket you would use:
 
 ```
 > scopes
-───┬─────────────────┬──────────────
- # │      scope      │   database
-───┼─────────────────┼──────────────
- 0 │ inventory       │ prod-us-west
- 1 │ tenant_agent_00 │ prod-us-west
- 2 │ tenant_agent_01 │ prod-us-west
- 3 │ tenant_agent_02 │ prod-us-west
- 4 │ tenant_agent_03 │ prod-us-west
- 5 │ tenant_agent_04 │ prod-us-west
- 6 │ _default        │ prod-us-west
-───┴─────────────────┴──────────────
+╭───┬─────────────────┬───────────╮
+│ # │      scope      │  cluster  │
+├───┼─────────────────┼───────────┤
+│ 0 │ inventory       │ dev.local │
+│ 1 │ tenant_agent_00 │ dev.local │
+│ 2 │ tenant_agent_01 │ dev.local │
+│ 3 │ tenant_agent_02 │ dev.local │
+│ 4 │ tenant_agent_03 │ dev.local │
+│ 5 │ tenant_agent_04 │ dev.local │
+│ 6 │ _default        │ dev.local │
+╰───┴─────────────────┴───────────╯
 ```
 
 You can also create and remove scopes:
@@ -114,34 +118,34 @@ You can also create and remove scopes:
 ```
 > scopes create tenant_agent_05
 > scopes
-───┬─────────────────┬──────────────
-#  │      scope      │   database
-───┼─────────────────┼──────────────
-0  │ tenant_agent_05 │ prod-us-west
-1  │ inventory       │ prod-us-west
-2  │ tenant_agent_00 │ prod-us-west
-3  │ tenant_agent_01 │ prod-us-west
-4  │ tenant_agent_02 │ prod-us-west
-5  │ tenant_agent_03 │ prod-us-west
-6  │ tenant_agent_04 │ prod-us-west
-7  │ _default        │ prod-us-west
-───┴─────────────────┴──────────────
+╭───┬─────────────────┬───────────╮
+│ # │      scope      │  cluster  │
+├───┼─────────────────┼───────────┤
+│ 0 │ tenant_agent_05 │ dev.local │
+│ 1 │ inventory       │ dev.local │
+│ 2 │ tenant_agent_00 │ dev.local │
+│ 3 │ tenant_agent_01 │ dev.local │
+│ 4 │ tenant_agent_02 │ dev.local │
+│ 5 │ tenant_agent_03 │ dev.local │
+│ 6 │ tenant_agent_04 │ dev.local │
+│ 7 │ _default        │ dev.local │
+╰───┴─────────────────┴───────────╯
 ```
 
 ```
 > scopes drop tenant_agent_05
 > scopes
-───┬─────────────────┬──────────────
- # │      scope      │   database
-───┼─────────────────┼──────────────
- 0 │ inventory       │ prod-us-west
- 1 │ tenant_agent_00 │ prod-us-west
- 2 │ tenant_agent_01 │ prod-us-west
- 3 │ tenant_agent_02 │ prod-us-west
- 4 │ tenant_agent_03 │ prod-us-west
- 5 │ tenant_agent_04 │ prod-us-west
- 6 │ _default        │ prod-us-west
-───┴─────────────────┴──────────────
+╭───┬─────────────────┬───────────╮
+│ # │      scope      │  cluster  │
+├───┼─────────────────┼───────────┤
+│ 0 │ inventory       │ dev.local │
+│ 1 │ tenant_agent_00 │ dev.local │
+│ 2 │ tenant_agent_01 │ dev.local │
+│ 3 │ tenant_agent_02 │ dev.local │
+│ 4 │ tenant_agent_03 │ dev.local │
+│ 5 │ tenant_agent_04 │ dev.local │
+│ 6 │ _default        │ dev.local │
+╰───┴─────────────────┴───────────╯
 ```
 
 ==== Collections
@@ -168,26 +172,26 @@ To list all collection in the bucket you would use:
 
 ```
 > collections
-────┬─────────────────┬────────────┬────────────┬──────────────
- #  │      scope      │ collection │ max_expiry │   database
-────┼─────────────────┼────────────┼────────────┼──────────────
-  0 │ inventory       │ hotel      │ 0sec       │ prod-us-west
-  1 │ inventory       │ airport    │ 0sec       │ prod-us-west
-  2 │ inventory       │ airline    │ 0sec       │ prod-us-west
-  3 │ inventory       │ route      │ 0sec       │ prod-us-west
-  4 │ inventory       │ landmark   │ 0sec       │ prod-us-west
-  5 │ tenant_agent_00 │ users      │ 0sec       │ prod-us-west
-  6 │ tenant_agent_00 │ bookings   │ 0sec       │ prod-us-west
-  7 │ tenant_agent_01 │ bookings   │ 0sec       │ prod-us-west
-  8 │ tenant_agent_01 │ users      │ 0sec       │ prod-us-west
-  9 │ tenant_agent_02 │ users      │ 0sec       │ prod-us-west
- 10 │ tenant_agent_02 │ bookings   │ 0sec       │ prod-us-west
- 11 │ tenant_agent_03 │ users      │ 0sec       │ prod-us-west
- 12 │ tenant_agent_03 │ bookings   │ 0sec       │ prod-us-west
- 13 │ tenant_agent_04 │ bookings   │ 0sec       │ prod-us-west
- 14 │ tenant_agent_04 │ users      │ 0sec       │ prod-us-west
- 15 │ _default        │ _default   │ 0sec       │ prod-us-west
-────┴─────────────────┴────────────┴────────────┴──────────────
+╭────┬─────────────────┬────────────┬────────────┬───────────╮
+│  # │      scope      │ collection │ max_expiry │  cluster  │
+├────┼─────────────────┼────────────┼────────────┼───────────┤
+│  0 │ inventory       │ landmark   │       0sec │ dev.local │
+│  1 │ inventory       │ hotel      │       0sec │ dev.local │
+│  2 │ inventory       │ airport    │       0sec │ dev.local │
+│  3 │ inventory       │ airline    │       0sec │ dev.local │
+│  4 │ inventory       │ route      │       0sec │ dev.local │
+│  5 │ tenant_agent_00 │ bookings   │       0sec │ dev.local │
+│  6 │ tenant_agent_00 │ users      │       0sec │ dev.local │
+│  7 │ tenant_agent_01 │ users      │       0sec │ dev.local │
+│  8 │ tenant_agent_01 │ bookings   │       0sec │ dev.local │
+│  9 │ tenant_agent_02 │ users      │       0sec │ dev.local │
+│ 10 │ tenant_agent_02 │ bookings   │       0sec │ dev.local │
+│ 11 │ tenant_agent_03 │ users      │       0sec │ dev.local │
+│ 12 │ tenant_agent_03 │ bookings   │       0sec │ dev.local │
+│ 13 │ tenant_agent_04 │ users      │       0sec │ dev.local │
+│ 14 │ tenant_agent_04 │ bookings   │       0sec │ dev.local │
+│ 15 │ _default        │ _default   │       0sec │ dev.local │
+╰────┴─────────────────┴────────────┴────────────┴───────────╯
 ```
 
 You can also create and remove collections:
@@ -195,24 +199,24 @@ You can also create and remove collections:
 ```
 > collections create staff --scope tenant_agent_00
 > collections --scope tenant_agent_00
-───┬─────────────────┬────────────┬────────────┬──────────────
- # │      scope      │ collection │ max_expiry │   database
-───┼─────────────────┼────────────┼────────────┼──────────────
- 0 │ tenant_agent_00 │ staff      │ 0sec       │ prod-us-west
- 1 │ tenant_agent_00 │ users      │ 0sec       │ prod-us-west
- 2 │ tenant_agent_00 │ bookings   │ 0sec       │ prod-us-west
-───┴─────────────────┴────────────┴────────────┴──────────────
+╭───┬─────────────────┬────────────┬────────────┬───────────╮
+│ # │      scope      │ collection │ max_expiry │  cluster  │
+├───┼─────────────────┼────────────┼────────────┼───────────┤
+│ 0 │ tenant_agent_00 │ staff      │       0sec │ dev.local │
+│ 1 │ tenant_agent_00 │ bookings   │       0sec │ dev.local │
+│ 2 │ tenant_agent_00 │ users      │       0sec │ dev.local │
+╰───┴─────────────────┴────────────┴────────────┴───────────╯
 ```
 
 ```
 > collections drop staff --scope tenant_agent_00
 > collections --scope tenant_agent_00
-───┬─────────────────┬────────────┬────────────┬──────────────
- # │      scope      │ collection │ max_expiry │   database
-───┼─────────────────┼────────────┼────────────┼──────────────
- 0 │ tenant_agent_00 │ users      │ 0sec       │ prod-us-west
- 1 │ tenant_agent_00 │ bookings   │ 0sec       │ prod-us-west
-───┴─────────────────┴────────────┴────────────┴──────────────
+╭───┬─────────────────┬────────────┬────────────┬───────────╮
+│ # │      scope      │ collection │ max_expiry │  cluster  │
+├───┼─────────────────┼────────────┼────────────┼───────────┤
+│ 0 │ tenant_agent_00 │ bookings   │       0sec │ dev.local │
+│ 1 │ tenant_agent_00 │ users      │       0sec │ dev.local │
+╰───┴─────────────────┴────────────┴────────────┴───────────╯
 ```
 
 === Listing `nodes`
@@ -231,7 +235,8 @@ The `nodes` command allows you to list all the nodes of the database you are cur
 
 === Reading and Writing `doc`uments
 
-The fastest way to interact with documents is through the key value service (as long as you know the document ID). All those commands are located as subcommands under the `doc` namespace.
+The fastest way to interact with documents is through the key value service (as long as you know the document ID). 
+All those commands are located as subcommands under the `doc` namespace.
 
 ==== Reading
 
@@ -239,29 +244,23 @@ You can retrieve a document with `doc get`:
 
 ```
 > doc get airline_10
-─────────┬─────────────────────
- id      │ airline_10
- cas     │ 1585811206390153216
- content │ [row 7 columns]
-─────────┴─────────────────────
+╭───┬────────────┬───────────────────┬─────────────────────┬───────┬───────────╮
+│ # │     id     │      content      │         cas         │ error │  cluster  │
+├───┼────────────┼───────────────────┼─────────────────────┼───────┼───────────┤
+│ 0 │ airline_10 │ {record 7 fields} │ 1681456999724089344 │       │ dev.local │
+╰───┴────────────┴───────────────────┴─────────────────────┴───────┴───────────╯
 ```
 
-To distinguish the actual content from the metadata, the content is nested in the `content` field. If you want to have everything at the toplevel, you can pipe to the `flatten` command:
+To distinguish the actual content from the metadata, the content is nested in the `content` field.
+If you want to have everything at the toplevel, you can pipe to the `flatten` command:
 
 ```
 > doc get airline_10 | flatten
-────────────┬─────────────────────
- id         │ airline_10
- cas        │ 1621356820428095488
- content_id │ 10
- type       │ airline
- name       │ 40-Mile Air
- iata       │ Q5
- icao       │ MLA
- callsign   │ MILE-AIR
- country    │ United States
- error      │
-────────────┴─────────────────────
+╭───┬────────────┬──────────┬───────────────┬──────┬──────┬────────────┬─────────────┬─────────┬─────────────────────┬───────┬───────────╮
+│ # │     id     │ callsign │    country    │ iata │ icao │ content_id │    name     │  type   │         cas         │ error │  cluster  │
+├───┼────────────┼──────────┼───────────────┼──────┼──────┼────────────┼─────────────┼─────────┼─────────────────────┼───────┼───────────┤
+│ 0 │ airline_10 │ MILE-AIR │ United States │ Q5   │ MLA  │         10 │ 40-Mile Air │ airline │ 1681456999724089344 │       │ dev.local │
+╰───┴────────────┴──────────┴───────────────┴──────┴──────┴────────────┴─────────────┴─────────┴─────────────────────┴───────┴───────────╯
 ```
 
 If the document is not found, an empty result is returned.
@@ -270,16 +269,17 @@ To perform a bulk get operation, the incoming stream can be utilized.
 
 ```
 > echo [airline_10 airline_10748 airline_137] | wrap id | doc get
-───┬───────────────┬─────────────────────┬─────────────────┬───────
- # │      id       │         cas         │     content     │ error
-───┼───────────────┼─────────────────────┼─────────────────┼───────
- 0 │ airline_10    │ 1621356820428095488 │ [row 7 columns] │
- 1 │ airline_10748 │ 1621356818190237696 │ [row 7 columns] │
- 2 │ airline_137   │ 1621356823346675712 │ [row 7 columns] │
-───┴───────────────┴─────────────────────┴─────────────────┴───────
+╭───┬───────────────┬───────────────────┬─────────────────────┬───────┬───────────╮
+│ # │      id       │      content      │         cas         │ error │  cluster  │
+├───┼───────────────┼───────────────────┼─────────────────────┼───────┼───────────┤
+│ 0 │ airline_10    │ {record 7 fields} │ 1681456999724089344 │       │ dev.local │
+│ 1 │ airline_10748 │ {record 7 fields} │ 1681456996753211392 │       │ dev.local │
+│ 2 │ airline_137   │ {record 7 fields} │ 1681457004278579200 │       │ dev.local │
+╰───┴───────────────┴───────────────────┴─────────────────────┴───────┴───────────╯
 ```
 
-If `doc get` operates on an incoming stream it will extract the document id from the `id` column. This behavior can be customized through the `--id-column` flag.
+If `doc get` operates on an incoming stream it will extract the document id from the `id` column.
+This behavior can be customized through the `--id-column` flag.
 
 ==== Mutating
 
@@ -289,11 +289,11 @@ All those three commands take similar arguments. If you only want to mutate a si
 
 ```
 > doc upsert my-doc {"hello": "world"}
-───────────┬───
- processed │ 1 
- success   │ 1 
- failed    │ 0 
-───────────┴───
+╭───┬───────────┬─────────┬────────┬──────────┬───────────╮
+│ # │ processed │ success │ failed │ failures │  cluster  │
+├───┼───────────┼─────────┼────────┼──────────┼───────────┤
+│ 0 │         1 │       1 │      0 │          │ dev.local │
+╰───┴───────────┴─────────┴────────┴──────────┴───────────╯
 ```
 
 Multiple documents can be mutated through an input stream as well, defaulting to the `id` and `content` columns:
@@ -304,31 +304,22 @@ Documents can be removed with `doc remove`.
 
 ```
 > doc remove airline_10
-───────────┬───
- processed │ 1 
- success   │ 1 
- failed    │ 0 
-───────────┴───
+╭───┬───────────┬─────────┬────────┬──────────┬───────────╮
+│ # │ processed │ success │ failed │ failures │  cluster  │
+├───┼───────────┼─────────┼────────┼──────────┼───────────┤
+│ 0 │         1 │       1 │      0 │          │ dev.local │
+╰───┴───────────┴─────────┴────────┴──────────┴───────────╯
 ```
 
 Similar to `doc get`, if you want to delete more than one document at the same time, provide a stream of ids with an `id` column:
 
 ```
 > echo [airline_10 airline_10748 airline_137] | wrap id | doc remove
-───────────┬───
- processed │ 3 
- success   │ 2 
- failed    │ 1 
-───────────┴───
-```
-
-Since a user can have many roles, if you want to look at them they need to be unnested:
-
-```
-> whoami | get roles
-──────┬───────
- role │ admin 
-──────┴───────
+╭───┬───────────┬─────────┬────────┬───────────────┬───────────╮
+│ # │ processed │ success │ failed │   failures    │  cluster  │
+├───┼───────────┼─────────┼────────┼───────────────┼───────────┤
+│ 0 │         3 │       2 │      1 │ Key not found │ dev.local │
+╰───┴───────────┴─────────┴────────┴───────────────┴───────────╯
 ```
 
 === `version`
@@ -337,7 +328,7 @@ The `version` command lists the version of the couchbase shell.
 
 ```
 > version
-─────────┬───────────
- version │ 1.0.0-dev 
-─────────┴───────────
+╭─────────┬────────╮
+│ version │ 0.75.1 │
+╰─────────┴────────╯
 ```

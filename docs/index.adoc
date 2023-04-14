@@ -18,8 +18,8 @@ include::cbenv.adoc[]
 
 include::commands.adoc[]
 
-include::capella.adoc[]
-
 include::reference.adoc[]
 
 include::recipes.adoc[]
+
+include::release_notes.adoc[]
