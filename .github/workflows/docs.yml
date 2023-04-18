@@ -4,7 +4,7 @@ on: workflow_dispatch
 
 jobs:
   adoc_build:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     name: build docs
     steps:
       - name: Checkout code
