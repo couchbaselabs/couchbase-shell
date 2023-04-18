@@ -86,7 +86,7 @@ jobs:
     - name: Create archive for Linux
       id: createarchivelinux
       run: |
-        7z a -ttar -so -an ./target/release/${{ env.RELEASE_BIN }} ${{ env.RELEASE_ADDS }} | 7z a -si ${{ env.RELEASE_BIN }}-${{ matrix.target }}.tar.gz
+        7z a -ttar -so -an ./target/${{ matrix.target }}/release/${{ env.RELEASE_BIN }} ${{ env.RELEASE_ADDS }} | 7z a -si ${{ env.RELEASE_BIN }}-${{ matrix.target }}.tar.gz
       if: matrix.os == 'ubuntu-22.04'
 
     - name: Install p7zip
