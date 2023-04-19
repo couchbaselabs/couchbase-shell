@@ -1,6 +1,6 @@
 [package]
 name = "couchbase-shell"
-version = "0.75.1"
+version = "0.75.2"
 authors = ["Charles Dixon <chvckd@gmail.com>"]
 edition = "2018"
 default-run = "cbsh"

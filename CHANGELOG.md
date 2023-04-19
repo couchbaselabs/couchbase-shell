@@ -2,6 +2,11 @@
 
 All user visible changes to this project will be documented in this file.
 
+## 0.75.2 - 2023-04-10
+
+* Updated macos build to not have any dependency on OpenSSL.
+* Fixed the release workflow so that Linux release tarballs contain the `cbsh` binary.
+
 ## 0.75.1 - 2023-04-13
 
 **This release contains a number of breaking changes, which are explicitly called out below.** 
