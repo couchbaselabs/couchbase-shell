@@ -71,7 +71,7 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: build
-        args: --verbose --target ${{ matrix.target }}
+        args: --verbose --release --target ${{ matrix.target }}
       if: matrix.os == 'macos-latest'
 
     - name: Build
