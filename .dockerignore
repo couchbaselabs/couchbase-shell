@@ -1,0 +1,10 @@
+.git/
+target/
+log/
+.vscode/
+tests/integration/testgenerator/linux/testgenerator
+tests/integration/testgenerator/macos/testgenerator
+tests/integration/testgenerator/windows/testgenerator.exe
+/examples
+/.github
+/jupyter
