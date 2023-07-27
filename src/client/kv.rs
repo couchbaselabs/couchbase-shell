@@ -6,7 +6,7 @@ use crate::config::ClusterTlsConfig;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use futures::lock::Mutex as AsyncMutex;
 use futures::{SinkExt, StreamExt};
-use log::{debug, trace, warn};
+use log::{debug, error, trace, warn};
 use rustls_pemfile::{read_all, Item};
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -49,36 +49,30 @@ pub struct KvTlsConfig {
 impl KvTlsConfig {
     pub fn new(tls_config: ClusterTlsConfig) -> Result<KvTlsConfig, ClientError> {
         let builder = ClientConfig::builder().with_safe_defaults();
-        let config = if tls_config.accept_all_certs() {
-            builder
+        if tls_config.accept_all_certs() {
+            let config = builder
                 .with_custom_certificate_verifier(Arc::new(InsecureCertVerifier {}))
-                .with_no_client_auth()
-        } else {
-            let mut root_cert_store = rustls::RootCertStore::empty();
-            let items = if let Some(path) = tls_config.cert_path() {
-                let cert = fs::read(path).map_err(ClientError::from)?;
-                let mut reader = BufReader::new(&cert[..]);
-                read_all(&mut reader).map_err(|e| ClientError::RequestFailed {
-                    reason: Some(format!("Failed to read cert file {}", e)),
-                    key: None,
-                })?
-            } else {
-                for cert in rustls_native_certs::load_native_certs()
-                    .expect("Could not load native platform certs")
-                {
-                    root_cert_store.add(&Certificate(cert.0)).unwrap();
-                }
+                .with_no_client_auth();
 
-                debug!("Adding Capella root CA to native trust store");
-                let mut reader = BufReader::new(CAPELLA_CERT.as_bytes());
-                read_all(&mut reader).expect("Failed to read capella certificate")
-            };
+            return Ok(KvTlsConfig { config });
+        }
+
+        let mut root_cert_store = rustls::RootCertStore::empty();
+        if let Some(path) = tls_config.cert_path() {
+            // If the user has provided a cert path then use it.
+            // If any errors occurs then consider this as fatal and return the error.
+            let cert = fs::read(path).map_err(ClientError::from)?;
+            let mut reader = BufReader::new(&cert[..]);
+            let items = read_all(&mut reader).map_err(|e| ClientError::RequestFailed {
+                reason: Some(format!("Failed to read cert file {}", e)),
+                key: None,
+            })?;
             for item in items {
                 match item {
                     Item::X509Certificate(c) => {
                         root_cert_store.add(&Certificate(c)).map_err(|e| {
                             ClientError::RequestFailed {
-                                reason: Some(format!("Failed to create cert store {}", e)),
+                                reason: Some(format!("Failed to add cert to root store {}", e)),
                                 key: None,
                             }
                         })?
@@ -91,10 +85,62 @@ impl KvTlsConfig {
                     }
                 }
             }
-            builder
-                .with_root_certificates(root_cert_store)
-                .with_no_client_auth()
+        } else {
+            // Try to load certs from the native store, and the capella cert.
+            // If any of these fails then log an error rather than consider it fatal.
+            // It's possible that we don't actually need the failing cert.
+            let mut rejected_certs = 0;
+            let mut total_certs = 0;
+            let native_certs = match rustls_native_certs::load_native_certs() {
+                Ok(certs) => certs.iter().map(|cert| cert.0.to_owned()).collect(),
+                Err(e) => {
+                    error!("Could not load native platform certs: {}", e);
+                    vec![]
+                }
+            };
+            for certs in native_certs {
+                total_certs += 1;
+                let (accepted, rejected) = root_cert_store.add_parsable_certificates(&[certs]);
+                total_certs += accepted + rejected;
+                rejected_certs += rejected;
+            }
+
+            if rejected_certs > 0 {
+                warn!(
+                    "Accepted {} certs from native store, but rejected {}",
+                    total_certs, rejected_certs
+                )
+            }
+
+            debug!("Adding Capella root CA to native trust store");
+            let mut reader = BufReader::new(CAPELLA_CERT.as_bytes());
+            match read_all(&mut reader) {
+                Ok(items) => {
+                    // There is only 1 item in the capella cert.
+                    match &items[0] {
+                        Item::X509Certificate(c) => {
+                            match root_cert_store.add(&Certificate(c.to_owned())) {
+                                Ok(()) => {}
+                                Err(e) => {
+                                    error!("Failed to add root capella cert to root store {}", e);
+                                }
+                            }
+                        }
+                        _ => {
+                            error!(
+                                "Failed to read capella certificate, unsupported certificate format"
+                            );
+                        }
+                    };
+                }
+                Err(e) => {
+                    error!("Failed to read capella certificate, {}", e);
+                }
+            };
         };
+        let config = builder
+            .with_root_certificates(root_cert_store)
+            .with_no_client_auth();
 
         Ok(KvTlsConfig { config })
     }
