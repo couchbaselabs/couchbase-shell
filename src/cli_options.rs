@@ -1,11 +1,10 @@
-use nu_cli::report_error;
 use nu_engine::{get_full_help, CallExt};
 use nu_parser::{escape_quote_string, parse};
 use nu_protocol::ast::{Call, Expr, Expression, PipelineElement};
 use nu_protocol::engine::{Command, EngineState, Stack, StateWorkingSet};
 use nu_protocol::{
-    Category, Example, IntoPipelineData, PipelineData, ShellError, Signature, Spanned, SyntaxShape,
-    Value,
+    report_error, Category, Example, IntoPipelineData, PipelineData, ShellError, Signature,
+    Spanned, SyntaxShape, Value,
 };
 use std::io::Write;
 
@@ -178,15 +177,9 @@ pub fn parse_commandline_args(
         let mut working_set = StateWorkingSet::new(context);
         working_set.add_decl(Box::new(Cbsh));
 
-        let (output, err) = parse(
-            &mut working_set,
-            None,
-            commandline_args.as_bytes(),
-            false,
-            &[],
-        );
-        if let Some(err) = err {
-            report_error(&working_set, &err);
+        let output = parse(&mut working_set, None, commandline_args.as_bytes(), false);
+        if let Some(err) = working_set.parse_errors.first() {
+            report_error(&working_set, err);
 
             std::process::exit(1);
         }
@@ -241,7 +234,10 @@ pub fn parse_commandline_args(
                             span: expr.span,
                         }))
                     } else {
-                        Err(ShellError::TypeMismatch("string".to_string(), expr.span))
+                        Err(ShellError::TypeMismatch {
+                            err_message: "string".to_string(),
+                            span: expr.span,
+                        })
                     }
                 } else {
                     Ok(None)

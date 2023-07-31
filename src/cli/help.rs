@@ -1,6 +1,4 @@
-use nu_command::help_aliases::help_aliases;
-use nu_command::help_commands::help_commands;
-use nu_command::help_modules::help_modules;
+use nu_command::{HelpAliases, HelpCommands, HelpModules};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -55,49 +53,51 @@ impl Command for Help {
 
         if rest.is_empty() && find.is_none() {
             let msg = r#"Welcome to Couchbase Shell, powered by Nushell. Shell Yeah!
-
-Here are some tips to help you get started.
-  * help commands - list all available commands
-  * help <command name> - display help about a particular command
-  * help commands | where category == "couchbase" - list all available Couchbase specific commands
-
-Nushell works on the idea of a "pipeline". Pipelines are commands connected with the '|' character.
-Each stage in the pipeline works together to load, parse, and display information to you.
-
-[Examples]
-
-List the files in the current directory, sorted by size:
-    ls | sort-by size
-
-Get all of the buckets of type couchbase in your active cluster:
-    buckets get | where type == couchbase
-
-Open a JSON file, transform the data, and upsert it into your active bucket:
-    open mydoc.json | wrap content | insert id {echo $it.content.airportname} | doc upsert
-
-You can also learn more at https://couchbase.sh/docs/ and https://www.nushell.sh/book/"#;
+        
+        Here are some tips to help you get started.
+          * help commands - list all available commands
+          * help <command name> - display help about a particular command
+          * help commands | where category == "couchbase" - list all available Couchbase specific commands
+        
+        Nushell works on the idea of a "pipeline". Pipelines are commands connected with the '|' character.
+        Each stage in the pipeline works together to load, parse, and display information to you.
+        
+        [Examples]
+        
+        List the files in the current directory, sorted by size:
+            ls | sort-by size
+        
+        Get all of the buckets of type couchbase in your active cluster:
+            buckets get | where type == couchbase
+        
+        Open a JSON file, transform the data, and upsert it into your active bucket:
+            open mydoc.json | wrap content | insert id {echo $it.content.airportname} | doc upsert
+        
+        You can also learn more at https://couchbase.sh/docs/ and https://www.nushell.sh/book/"#;
 
             Ok(Value::string(msg, head).into_pipeline_data())
         } else if find.is_some() {
-            help_commands(engine_state, stack, call)
+            HelpCommands {}.run(engine_state, stack, call, PipelineData::Empty)
         } else {
-            let result = help_aliases(engine_state, stack, call);
+            let result = HelpAliases {}.run(engine_state, stack, call, PipelineData::Empty);
 
-            let result = if let Err(ShellError::AliasNotFound(_)) = result {
-                help_commands(engine_state, stack, call)
+            let result = if let Err(ShellError::AliasNotFound { .. }) = result {
+                HelpCommands {}.run(engine_state, stack, call, PipelineData::Empty)
             } else {
                 result
             };
 
-            let result = if let Err(ShellError::CommandNotFound(_)) = result {
-                help_modules(engine_state, stack, call)
+            let result = if let Err(ShellError::CommandNotFound { .. }) = result {
+                HelpModules.run(engine_state, stack, call, PipelineData::Empty)
             } else {
                 result
             };
 
-            if let Err(ShellError::ModuleNotFoundAtRuntime(_, _)) = result {
+            if let Err(ShellError::ModuleNotFoundAtRuntime { .. }) = result {
                 let rest_spans: Vec<Span> = rest.iter().map(|arg| arg.span).collect();
-                Err(ShellError::NotFound(span(&rest_spans)))
+                Err(ShellError::NotFound {
+                    span: span(&rest_spans),
+                })
             } else {
                 result
             }

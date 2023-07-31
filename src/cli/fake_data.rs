@@ -124,7 +124,12 @@ fn run_fake(
     } else {
         let path: String = match call.get_flag(engine_state, stack, "template")? {
             Some(p) => p,
-            None => return Err(ShellError::MissingParameter("template".to_string(), span)),
+            None => {
+                return Err(ShellError::MissingParameter {
+                    param_name: "template".to_string(),
+                    span,
+                })
+            }
         };
 
         let num_rows: i64 = call.get_flag(engine_state, stack, "num-rows")?.unwrap_or(1);

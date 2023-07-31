@@ -31,13 +31,13 @@ def build_collection_prompt [] {
     $prompt
 }
 
-let-env PROMPT_COMMAND = {build_collection_prompt}
+$env.PROMPT_COMMAND = {build_collection_prompt}
 
-let-env PROMPT_INDICATOR = " 
+$env.PROMPT_INDICATOR = " 
 > "
 
-let-env PROMPT_COMMAND_RIGHT = ""
+$env.PROMPT_COMMAND_RIGHT = ""
 
-let-env config = {
+$env.config = {
     show_banner: false
 }

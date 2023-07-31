@@ -1,10 +1,24 @@
+use nu_cli::add_cli_context;
+use nu_cmd_dataframe::add_dataframe_context;
+use nu_cmd_extra::*;
+use nu_cmd_lang::*;
 use nu_command::*;
 use nu_protocol::engine::{EngineState, StateWorkingSet};
 
 // We maintain our own default context so that we can control the commands supported,
 // and prevent name clashes. This function should be very similar to the same one in nu_command.
 pub fn create_default_context() -> EngineState {
-    let mut engine_state = EngineState::new();
+    let engine_state = EngineState::new();
+
+    // If there are commands that have the same name as default declarations,
+    // they have to be registered before the main declarations. This helps to make
+    // them only accessible if the correct input value category is used with the
+    // declaration.
+    // These commands typically all start with dfr so we're safe to blindly add them all.
+    let engine_state = add_dataframe_context(engine_state);
+    let engine_state = add_extra_command_context(engine_state);
+    let engine_state = add_cli_context(engine_state);
+    let mut engine_state = nu_explore::add_explore_context(engine_state);
 
     let delta = {
         let mut working_set = StateWorkingSet::new(&engine_state);
@@ -15,21 +29,13 @@ pub fn create_default_context() -> EngineState {
             };
         }
 
-        // If there are commands that have the same name as default declarations,
-        // they have to be registered before the main declarations. This helps to make
-        // them only accessible if the correct input value category is used with the
-        // declaration.
-        // These commands typically all start with dfr so we're safe to blindly add them all.
-        add_dataframe_decls(&mut working_set);
-
-        // Core
+        // Core, from nu_cmd_lang
         bind_command! {
             Alias,
-            Ast,
             Break,
-            Commandline,
+            Collect,
+            Const,
             Continue,
-            Debug,
             Def,
             DefEnv,
             Describe,
@@ -42,14 +48,10 @@ pub fn create_default_context() -> EngineState {
             ExportDefEnv,
             ExportExtern,
             ExportUse,
+            ExportModule,
             Extern,
+            ExternWrapped,
             For,
-            // Help,
-            HelpAliases,
-            HelpCommands,
-            HelpModules,
-            HelpOperators,
-            HelpOperators,
             Hide,
             HideEnv,
             If,
@@ -59,29 +61,35 @@ pub fn create_default_context() -> EngineState {
             OverlayList,
             OverlayNew,
             OverlayHide,
+            LazyMake,
             Let,
             Loop,
-            Metadata,
+            Match,
             Module,
             Mut,
-            Return,
-            Try,
-            Use,
-            // Version,
+            Version,
             While,
         };
 
-        // Charts
+        // Charts, from nu_command
         bind_command! {
             Histogram
         }
 
-        // Filters
+        // Help, from nu_command
+        bind_command!(
+            HelpAliases,
+            HelpCommands,
+            HelpModules,
+            HelpExterns,
+            HelpOperators,
+        );
+
+        // Filters, from nu_command
         bind_command! {
             All,
             Any,
             Append,
-            Collect,
             Columns,
             Compact,
             Default,
@@ -89,8 +97,8 @@ pub fn create_default_context() -> EngineState {
             DropColumn,
             DropNth,
             Each,
-            EachWhile,
             Empty,
+            Enumerate,
             Every,
             Filter,
             Find,
@@ -101,6 +109,8 @@ pub fn create_default_context() -> EngineState {
             GroupBy,
             Headers,
             Insert,
+            Items,
+            Join,
             SplitBy,
             Take,
             Merge,
@@ -117,12 +127,6 @@ pub fn create_default_context() -> EngineState {
             Reject,
             Rename,
             Reverse,
-            Roll,
-            RollDown,
-            RollUp,
-            RollLeft,
-            RollRight,
-            Rotate,
             Select,
             Shuffle,
             Skip,
@@ -136,21 +140,20 @@ pub fn create_default_context() -> EngineState {
             UniqBy,
             Upsert,
             Update,
-            UpdateCells,
+            Values,
             Where,
             Window,
             Wrap,
             Zip,
         };
 
-        // Misc
+        // Misc, from nu_command
         bind_command! {
-            History,
+            Source,
             // Tutor, TODO(chvck): useful but we need to think about how this interacts with our tutorial
-            HistorySession,
         };
 
-        // Path
+        // Path, from nu_command
         bind_command! {
             Path,
             PathBasename,
@@ -164,9 +167,8 @@ pub fn create_default_context() -> EngineState {
             PathType,
         };
 
-        // System
+        // System, from nu_command
         bind_command! {
-            Benchmark,
             Complete,
             External,
             NuCheck,
@@ -189,7 +191,7 @@ pub fn create_default_context() -> EngineState {
 
         bind_command! { Which };
 
-        // Strings
+        // Strings, from nu_command
         bind_command! {
             Char,
             Decode,
@@ -197,8 +199,6 @@ pub fn create_default_context() -> EngineState {
             DecodeBase64,
             EncodeBase64,
             DetectColumns,
-            Format,
-            FileSize,
             Parse,
             Size,
             Split,
@@ -209,7 +209,6 @@ pub fn create_default_context() -> EngineState {
             Str,
             StrCamelCase,
             StrCapitalize,
-            StrCollect,
             StrContains,
             StrDistance,
             StrDowncase,
@@ -219,10 +218,8 @@ pub fn create_default_context() -> EngineState {
             StrIndexOf,
             StrKebabCase,
             StrLength,
-            StrLpad,
             StrPascalCase,
             StrReverse,
-            StrRpad,
             StrScreamingSnakeCase,
             StrSnakeCase,
             StrStartsWith,
@@ -232,36 +229,7 @@ pub fn create_default_context() -> EngineState {
             StrUpcase
         };
 
-        // Bits
-        bind_command! {
-            Bits,
-            BitsAnd,
-            BitsNot,
-            BitsOr,
-            BitsXor,
-            BitsRotateLeft,
-            BitsRotateRight,
-            BitsShiftLeft,
-            BitsShiftRight,
-        }
-
-        // Bytes
-        bind_command! {
-            Bytes,
-            BytesLen,
-            BytesStartsWith,
-            BytesEndsWith,
-            BytesReverse,
-            BytesReplace,
-            BytesAdd,
-            BytesAt,
-            BytesIndexOf,
-            BytesCollect,
-            BytesRemove,
-            BytesBuild,
-        }
-
-        // FileSystem
+        // FileSystem, from nu_command
         bind_command! {
             Cd,
             Cp,
@@ -276,24 +244,19 @@ pub fn create_default_context() -> EngineState {
             Watch,
         };
 
-        // Platform
+        // Platform, from nu_command
         bind_command! {
             Ansi,
-            AnsiGradient,
             AnsiStrip,
             Clear,
             Du,
-            KeybindingsDefault,
             Input,
-            KeybindingsListen,
-            Keybindings,
             Kill,
-            KeybindingsList,
             Sleep,
             TermSize,
         };
 
-        // Date
+        // Date, from nu_command
         bind_command! {
             Date,
             DateFormat,
@@ -305,38 +268,27 @@ pub fn create_default_context() -> EngineState {
             DateToTimezone,
         };
 
-        // Shells
+        // Shells, from nu_command
         bind_command! {
-            Enter,
             Exit,
-            GotoShell,
-            NextShell,
-            PrevShell,
-            Shells,
         };
 
-        // Formats
+        // Formats, from nu_command
         bind_command! {
             From,
             FromCsv,
-            FromEml,
-            FromIcs,
-            FromIni,
             FromJson,
             FromNuon,
             FromOds,
             FromSsv,
             FromToml,
             FromTsv,
-            FromUrl,
-            FromVcf,
             FromXlsx,
             FromXml,
             FromYaml,
             FromYml,
             To,
             ToCsv,
-            ToHtml,
             ToJson,
             ToMd,
             ToNuon,
@@ -351,16 +303,14 @@ pub fn create_default_context() -> EngineState {
             ToYaml,
         };
 
-        // Viewers
+        // Viewers, from nu_command
         bind_command! {
             Griddle,
             Table,
-            Explore,
         };
 
-        // Conversions
+        // Conversions, from nu_command
         bind_command! {
-            Fmt,
             Into,
             IntoBool,
             IntoBinary,
@@ -373,11 +323,9 @@ pub fn create_default_context() -> EngineState {
             IntoString,
         };
 
-        // Env
+        // Env, from nu_command
         bind_command! {
-            Env,
             ExportEnv,
-            LetEnv,
             LoadEnv,
             SourceEnv,
             WithEnv,
@@ -387,7 +335,7 @@ pub fn create_default_context() -> EngineState {
             ConfigReset,
         };
 
-        // Math
+        // Math, from nu_command
         bind_command! {
             Math,
             MathAbs,
@@ -404,30 +352,19 @@ pub fn create_default_context() -> EngineState {
             MathStddev,
             MathSum,
             MathVariance,
-            MathSin,
-            MathCos,
-            MathTan,
-            MathSinH,
-            MathCosH,
-            MathTanH,
-            MathArcSin,
-            MathArcCos,
-            MathArcTan,
-            MathArcSinH,
-            MathArcCosH,
-            MathArcTanH,
-            MathPi,
-            MathTau,
-            MathEuler,
-            MathLn,
             MathLog,
         };
 
-        // Network
+        // Network, from nu_command
         bind_command! {
             Http,
+            HttpDelete,
             HttpGet,
+            HttpHead,
+            HttpPatch,
             HttpPost,
+            HttpPut,
+            HttpOptions,
             Url,
             UrlBuildQuery,
             UrlEncode,
@@ -436,7 +373,7 @@ pub fn create_default_context() -> EngineState {
             Port,
         }
 
-        // Random
+        // Random, from nu_command
         bind_command! {
             Random,
             RandomBool,
@@ -447,7 +384,7 @@ pub fn create_default_context() -> EngineState {
             RandomUuid,
         };
 
-        // Generators
+        // Generators, from nu_command
         bind_command! {
             Cal,
             Seq,
@@ -455,7 +392,7 @@ pub fn create_default_context() -> EngineState {
             SeqChar,
         };
 
-        // Hash
+        // Hash, from nu_command
         bind_command! {
             Hash,
             HashMd5::default(),
@@ -464,16 +401,19 @@ pub fn create_default_context() -> EngineState {
 
         // Experimental
         bind_command! {
-            ViewSource,
             IsAdmin,
         };
-
-        bind_command!(Register);
 
         working_set.render()
     };
 
-    let _ = engine_state.merge_delta(delta);
+    if let Err(err) = engine_state.merge_delta(delta) {
+        eprintln!("Error creating default context: {err:?}");
+    }
+
+    // Cache the table decl id so we don't have to look it up later
+    let table_decl_id = engine_state.find_decl("table".as_bytes(), &[]);
+    engine_state.table_decl_id = table_decl_id;
 
     engine_state
 }

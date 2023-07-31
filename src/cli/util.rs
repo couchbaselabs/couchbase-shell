@@ -139,7 +139,7 @@ pub fn convert_nu_value_to_json_value(
                 .collect::<Result<Vec<serde_json::Value>, ShellError>>()?,
         ),
         Value::List { vals, .. } => serde_json::Value::Array(json_list(vals, span)?),
-        Value::Error { error } => return Err(error.clone()),
+        Value::Error { error } => return Err(*error.clone()),
         Value::Block { .. } => serde_json::Value::Null,
         Value::Binary { val, .. } => serde_json::Value::Array(
             val.iter()
@@ -164,6 +164,7 @@ pub fn convert_nu_value_to_json_value(
             let collected = val.collect()?;
             convert_nu_value_to_json_value(&collected, span)?
         }
+        Value::MatchPattern { .. } => serde_json::Value::Null,
     })
 }
 

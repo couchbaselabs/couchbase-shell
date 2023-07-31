@@ -30,7 +30,7 @@ impl Command for DocInsert {
     fn signature(&self) -> Signature {
         Signature::build("doc insert")
             .optional("id", SyntaxShape::String, "the document id")
-            .optional("content", SyntaxShape::String, "the document content")
+            .optional("content", SyntaxShape::Any, "the document content")
             .named(
                 "id-column",
                 SyntaxShape::String,

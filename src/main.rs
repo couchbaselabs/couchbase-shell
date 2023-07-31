@@ -25,17 +25,20 @@ use crate::remote_cluster::{
     ClusterTimeouts, RemoteCluster, RemoteClusterResources, RemoteClusterType,
 };
 use crate::state::RemoteCapellaOrganization;
+use state::State;
+
 use chrono::Local;
 use config::ClusterTlsConfig;
 use env_logger::Env;
 use log::{debug, warn};
 use log::{error, info};
-use nu_cli::{add_plugin_file, gather_parent_env_vars, read_plugin_file};
-
-use nu_protocol::engine::{Stack, StateWorkingSet};
-use nu_protocol::{BufferedReader, PipelineData, RawStream, Span};
 use serde::Deserialize;
-use state::State;
+
+use nu_cli::{add_plugin_file, gather_parent_env_vars, read_plugin_file};
+use nu_cmd_base::util::get_init_cwd;
+use nu_protocol::engine::{EngineState, Stack, StateWorkingSet};
+use nu_protocol::{report_error_new, BufferedReader, PipelineData, RawStream, Span};
+
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs::File;
@@ -47,18 +50,8 @@ use std::time::Duration;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let entire_start_time = std::time::Instant::now();
-    let mut logger_builder = create_logger_builder();
 
-    let init_cwd = match std::env::current_dir() {
-        Ok(cwd) => cwd,
-        Err(_) => match std::env::var("PWD") {
-            Ok(cwd) => PathBuf::from(cwd),
-            Err(_) => match nu_path::home_dir() {
-                Some(cwd) => cwd,
-                None => PathBuf::new(),
-            },
-        },
-    };
+    let init_cwd = get_init_cwd();
     let mut context = create_default_context();
 
     gather_parent_env_vars(&mut context, &init_cwd);
@@ -72,30 +65,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
 
     let opt_clone = opt.clone();
-    logger_builder.format(move |buf, record| {
-        let mut style = buf.style();
-        style.set_intense(true);
-        style.set_bold(true);
-        if let Some(l) = &opt_clone.logger_prefix {
-            return writeln!(
-                buf,
-                "{} [{}] {} {}",
-                style.value(l),
-                buf.default_styled_level(record.level()),
-                style.value(Local::now().format("%Y-%m-%d %H:%M:%S%.3f")),
-                style.value(record.args())
-            );
-        }
-        writeln!(
-            buf,
-            "[{}] {} {}",
-            buf.default_styled_level(record.level()),
-            style.value(Local::now().format("%Y-%m-%d %H:%M:%S%.3f")),
-            style.value(record.args())
-        )
-    });
-
-    logger_builder.init();
+    create_logger_builder(opt_clone.logger_prefix);
 
     debug!("Effective {:?}", opt);
 
@@ -105,191 +75,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
 
     let mut clusters = HashMap::new();
-    let config_path = if let Some(p) = opt.clone().config_path {
-        Some(PathBuf::from(p))
-    } else {
-        None
-    };
-    let config = match ShellConfig::new(config_path) {
-        Some(c) => Some(c),
-        None => {
-            if opt.command.is_some() || opt.script.is_some() || opt.clone().no_config_prompt {
-                let cluster = remote_cluster_from_opts(opt.clone(), password.clone());
-                clusters.insert("default".to_string(), cluster);
-                None
-            } else {
-                println!("No config file found");
-                println!("Would you like to create one now (Y/n)?");
-
-                let mut answer = String::new();
-                std::io::stdin()
-                    .read_line(&mut answer)
-                    .expect("Failed to read user input");
-
-                match answer.to_lowercase().trim() {
-                    "y" | "" => {
-                        let path = maybe_write_config_file(opt.clone(), password.clone());
-                        ShellConfig::new(Some(path))
-                    }
-                    _ => {
-                        let cluster = remote_cluster_from_opts(opt.clone(), password.clone());
-                        clusters.insert("default".to_string(), cluster);
-                        None
-                    }
-                }
-            }
-        }
-    };
+    let config = load_config(&opt, &password, &mut clusters);
 
     debug!("Config {:?}", config);
-
-    let mut capella_orgs = HashMap::new();
-    let mut active_capella_org = None;
-    let (active, config_location) = if let Some(c) = config {
-        let mut active = None;
-        for v in c.clusters() {
-            let name = v.identifier().to_string();
-
-            let mut username = v.username();
-            let mut cpassword = v.password();
-            let mut default_bucket = v.default_bucket();
-            let mut scope = v.default_scope();
-            let mut collection = v.default_collection();
-
-            if opt.cluster.as_ref().is_some() {
-                if &name == opt.cluster.as_ref().unwrap() {
-                    active = Some(name.clone());
-                    if let Some(user) = opt.username.clone() {
-                        username = user;
-                    }
-                    if let Some(pass) = password.clone() {
-                        cpassword = pass;
-                    }
-                    if let Some(bucket) = opt.bucket.clone() {
-                        default_bucket = Some(bucket);
-                    }
-                    if let Some(s) = opt.scope.clone() {
-                        scope = Some(s);
-                    }
-                    if let Some(c) = opt.collection.clone() {
-                        collection = Some(c);
-                    }
-                }
-            } else if active.is_none() {
-                active = Some(v.identifier().to_owned());
-                if let Some(user) = opt.username.clone() {
-                    username = user;
-                }
-                if let Some(pass) = password.clone() {
-                    cpassword = pass;
-                }
-                if let Some(bucket) = opt.bucket.clone() {
-                    default_bucket = Some(bucket);
-                }
-                if let Some(s) = opt.scope.clone() {
-                    scope = Some(s);
-                }
-                if let Some(c) = opt.collection.clone() {
-                    collection = Some(c);
-                }
-            }
-
-            let timeouts = v.timeouts();
-            let data_timeout = match timeouts.data_timeout() {
-                Some(t) => t.to_owned(),
-                None => DEFAULT_DATA_TIMEOUT,
-            };
-            let query_timeout = match timeouts.query_timeout() {
-                Some(t) => t.to_owned(),
-                None => DEFAULT_QUERY_TIMEOUT,
-            };
-            let analytics_timeout = match timeouts.analytics_timeout() {
-                Some(t) => t.to_owned(),
-                None => DEFAULT_ANALYTICS_TIMEOUT,
-            };
-            let search_timeout = match timeouts.search_timeout() {
-                Some(t) => t.to_owned(),
-                None => DEFAULT_SEARCH_TIMEOUT,
-            };
-            let management_timeout = match timeouts.management_timeout() {
-                Some(t) => t.to_owned(),
-                None => DEFAULT_MANAGEMENT_TIMEOUT,
-            };
-            let kv_batch_size = match v.kv_batch_size() {
-                Some(b) => b,
-                None => DEFAULT_KV_BATCH_SIZE,
-            };
-
-            let (cluster_type, hostnames) = validate_hostnames(
-                v.conn_string()
-                    .split(",")
-                    .map(|s| s.to_string())
-                    .collect::<Vec<String>>(),
-            );
-            let cluster = RemoteCluster::new(
-                RemoteClusterResources {
-                    hostnames,
-                    username,
-                    password: cpassword,
-                    active_bucket: default_bucket,
-                    active_scope: scope,
-                    active_collection: collection,
-                    display_name: v.display_name(),
-                },
-                v.tls().clone(),
-                ClusterTimeouts::new(
-                    data_timeout,
-                    query_timeout,
-                    analytics_timeout,
-                    search_timeout,
-                    management_timeout,
-                ),
-                v.cloud_org(),
-                kv_batch_size,
-                cluster_type,
-            );
-            if !v.tls().clone().enabled() {
-                warn!(
-                    "Using PLAIN authentication for cluster {}, credentials will sent in plaintext - configure tls to disable this warning",
-                    name.clone()
-                );
-            }
-            clusters.insert(name.clone(), cluster);
-        }
-        for c in c.capella_orgs() {
-            let management_timeout = match c.management_timeout() {
-                Some(t) => t.to_owned(),
-                None => DEFAULT_MANAGEMENT_TIMEOUT,
-            };
-            let name = c.identifier();
-            let default_project = c.default_project();
-
-            let plane = RemoteCapellaOrganization::new(
-                c.secret_key(),
-                c.access_key(),
-                management_timeout,
-                default_project,
-            );
-
-            if active_capella_org.is_none() {
-                active_capella_org = Some(name.clone());
-            }
-
-            capella_orgs.insert(name, plane);
-        }
-
-        (active.unwrap_or_default(), c.location().clone())
-    } else {
-        (String::from("default"), None)
-    };
-
-    let state = Arc::new(Mutex::new(State::new(
-        clusters,
-        active,
-        config_location,
-        capella_orgs,
-        active_capella_org,
-    )));
+    let state = make_state(&opt, config, password, clusters);
 
     if !opt.no_motd && opt.script.is_none() && opt.command.is_none() {
         fetch_and_print_motd();
@@ -306,79 +95,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     context.ctrlc = Some(context_ctrlc);
 
-    let delta = {
-        let mut working_set = StateWorkingSet::new(&context);
-        working_set.add_decl(Box::new(Analytics::new(state.clone())));
-        working_set.add_decl(Box::new(AnalyticsBuckets::new(state.clone())));
-        working_set.add_decl(Box::new(AnalyticsDatasets::new(state.clone())));
-        working_set.add_decl(Box::new(AnalyticsDataverses::new(state.clone())));
-        working_set.add_decl(Box::new(AnalyticsIndexes::new(state.clone())));
-        working_set.add_decl(Box::new(AnalyticsLinks::new(state.clone())));
-        working_set.add_decl(Box::new(AnalyticsPendingMutations::new(state.clone())));
-        working_set.add_decl(Box::new(Buckets::new(state.clone())));
-        working_set.add_decl(Box::new(BucketsConfig::new(state.clone())));
-        working_set.add_decl(Box::new(BucketsCreate::new(state.clone())));
-        working_set.add_decl(Box::new(BucketsDrop::new(state.clone())));
-        working_set.add_decl(Box::new(BucketsFlush::new(state.clone())));
-        working_set.add_decl(Box::new(BucketsGet::new(state.clone())));
-        working_set.add_decl(Box::new(BucketsSample::new(state.clone())));
-        working_set.add_decl(Box::new(BucketsUpdate::new(state.clone())));
-        working_set.add_decl(Box::new(Databases::new(state.clone())));
-        working_set.add_decl(Box::new(DatabasesCreate::new(state.clone())));
-        working_set.add_decl(Box::new(DatabasesDrop::new(state.clone())));
-        working_set.add_decl(Box::new(DatabasesGet::new(state.clone())));
-        working_set.add_decl(Box::new(HealthCheck::new(state.clone())));
-        working_set.add_decl(Box::new(CBEnvManaged::new(state.clone())));
-        working_set.add_decl(Box::new(CbEnvRegister::new(state.clone())));
-        working_set.add_decl(Box::new(CbEnvUnregister::new(state.clone())));
-        working_set.add_decl(Box::new(Collections::new(state.clone())));
-        working_set.add_decl(Box::new(CollectionsCreate::new(state.clone())));
-        working_set.add_decl(Box::new(CollectionsDrop::new(state.clone())));
-        working_set.add_decl(Box::new(Doc));
-        working_set.add_decl(Box::new(DocGet::new(state.clone())));
-        working_set.add_decl(Box::new(DocImport::new(state.clone())));
-        working_set.add_decl(Box::new(DocInsert::new(state.clone())));
-        working_set.add_decl(Box::new(DocReplace::new(state.clone())));
-        working_set.add_decl(Box::new(DocRemove::new(state.clone())));
-        working_set.add_decl(Box::new(DocUpsert::new(state.clone())));
-        working_set.add_decl(Box::new(Help));
-        working_set.add_decl(Box::new(FakeData::new(state.clone())));
-        working_set.add_decl(Box::new(Nodes::new(state.clone())));
-        working_set.add_decl(Box::new(Ping::new(state.clone())));
-        working_set.add_decl(Box::new(Projects::new(state.clone())));
-        working_set.add_decl(Box::new(ProjectsCreate::new(state.clone())));
-        working_set.add_decl(Box::new(ProjectsDrop::new(state.clone())));
-        working_set.add_decl(Box::new(Query::new(state.clone())));
-        working_set.add_decl(Box::new(QueryAdvise::new(state.clone())));
-        working_set.add_decl(Box::new(QueryIndexes::new(state.clone())));
-        working_set.add_decl(Box::new(Scopes::new(state.clone())));
-        working_set.add_decl(Box::new(ScopesCreate::new(state.clone())));
-        working_set.add_decl(Box::new(ScopesDrop::new(state.clone())));
-        working_set.add_decl(Box::new(Search::new(state.clone())));
-        working_set.add_decl(Box::new(Transactions));
-        working_set.add_decl(Box::new(TransactionsListAtrs::new(state.clone())));
-        working_set.add_decl(Box::new(Tutorial::new(state.clone())));
-        working_set.add_decl(Box::new(TutorialNext::new(state.clone())));
-        working_set.add_decl(Box::new(TutorialPage::new(state.clone())));
-        working_set.add_decl(Box::new(TutorialPrev::new(state.clone())));
-        working_set.add_decl(Box::new(UseBucket::new(state.clone())));
-        working_set.add_decl(Box::new(UseCapellaOrganization::new(state.clone())));
-        working_set.add_decl(Box::new(CbEnvDatabase::new(state.clone())));
-        working_set.add_decl(Box::new(UseCmd::new(state.clone())));
-        working_set.add_decl(Box::new(UseCollection::new(state.clone())));
-        working_set.add_decl(Box::new(UseProject::new(state.clone())));
-        working_set.add_decl(Box::new(UseScope::new(state.clone())));
-        working_set.add_decl(Box::new(UseTimeouts::new(state.clone())));
-        working_set.add_decl(Box::new(Users::new(state.clone())));
-        working_set.add_decl(Box::new(UsersGet::new(state.clone())));
-        working_set.add_decl(Box::new(UsersDrop::new(state.clone())));
-        working_set.add_decl(Box::new(UsersRoles::new(state.clone())));
-        working_set.add_decl(Box::new(UsersUpsert::new(state.clone())));
-        working_set.add_decl(Box::new(Version));
-
-        working_set.render()
-    };
-    let _ = context.merge_delta(delta);
+    merge_couchbase_delta(&mut context, state);
 
     let input = if opt.stdin {
         let stdin = std::io::stdin();
@@ -401,6 +118,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         PipelineData::new_with_metadata(None, Span::new(0, 0))
     };
 
+    // This is throwing errors at me, looks like it's something in nu stdlib itself.
+    // load_standard_library(&mut context).unwrap();
+
     if let Some(c) = opt.command {
         add_plugin_file(&mut context, None, CBSHELL_FOLDER);
         nu_cli::evaluate_commands(&c, &mut context, &mut stack, input, None)
@@ -416,6 +136,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
+    context.is_interactive = true;
+
     read_plugin_file(&mut context, &mut stack, None, CBSHELL_FOLDER);
     read_nu_config_file(&mut context, &mut stack);
 
@@ -423,6 +145,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         &mut context,
         &mut stack,
         "CouchbaseShell",
+        None,
         None,
         entire_start_time,
     )
@@ -520,12 +243,35 @@ fn validate_hostnames(hostnames: Vec<String>) -> (RemoteClusterType, Vec<String>
     (RemoteClusterType::from(hostnames), validated)
 }
 
-fn create_logger_builder() -> env_logger::Builder {
-    let logger_builder = env_logger::Builder::from_env(
+fn create_logger_builder(logger_prefix: Option<String>) {
+    let mut logger_builder = env_logger::Builder::from_env(
         Env::default().filter_or("CBSH_LOG", "info,isahc=error,surf=error,nu=warn"),
     );
 
-    logger_builder
+    logger_builder.format(move |buf, record| {
+        let mut style = buf.style();
+        style.set_intense(true);
+        style.set_bold(true);
+        if let Some(l) = logger_prefix.clone() {
+            return writeln!(
+                buf,
+                "{} [{}] {} {}",
+                style.value(l),
+                buf.default_styled_level(record.level()),
+                style.value(Local::now().format("%Y-%m-%d %H:%M:%S%.3f")),
+                style.value(record.args())
+            );
+        }
+        writeln!(
+            buf,
+            "[{}] {} {}",
+            buf.default_styled_level(record.level()),
+            style.value(Local::now().format("%Y-%m-%d %H:%M:%S%.3f")),
+            style.value(record.args())
+        )
+    });
+
+    logger_builder.init();
 }
 
 fn remote_cluster_from_opts(opt: CliOptions, password: Option<String>) -> RemoteCluster {
@@ -697,5 +443,284 @@ fn read_input() -> Option<String> {
         None
     } else {
         Some(answer)
+    }
+}
+
+fn load_config(
+    opt: &CliOptions,
+    password: &Option<String>,
+    clusters: &mut HashMap<String, RemoteCluster>,
+) -> Option<ShellConfig> {
+    let config_path = if let Some(p) = opt.clone().config_path {
+        Some(PathBuf::from(p))
+    } else {
+        None
+    };
+    match ShellConfig::new(config_path) {
+        Some(c) => Some(c),
+        None => {
+            if opt.command.is_some() || opt.script.is_some() || opt.clone().no_config_prompt {
+                let cluster = remote_cluster_from_opts(opt.clone(), password.clone());
+                clusters.insert("default".to_string(), cluster);
+                None
+            } else {
+                println!("No config file found");
+                println!("Would you like to create one now (Y/n)?");
+
+                let mut answer = String::new();
+                std::io::stdin()
+                    .read_line(&mut answer)
+                    .expect("Failed to read user input");
+
+                match answer.to_lowercase().trim() {
+                    "y" | "" => {
+                        let path = maybe_write_config_file(opt.clone(), password.clone());
+                        ShellConfig::new(Some(path))
+                    }
+                    _ => {
+                        let cluster = remote_cluster_from_opts(opt.clone(), password.clone());
+                        clusters.insert("default".to_string(), cluster);
+                        None
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn make_state(
+    opt: &CliOptions,
+    config: Option<ShellConfig>,
+    password: Option<String>,
+    mut clusters: HashMap<String, RemoteCluster>,
+) -> Arc<Mutex<State>> {
+    let mut capella_orgs = HashMap::new();
+    let mut active_capella_org = None;
+    let (active, config_location) = if let Some(c) = config {
+        let mut active = None;
+        for v in c.clusters() {
+            let name = v.identifier().to_string();
+
+            let mut username = v.username();
+            let mut cpassword = v.password();
+            let mut default_bucket = v.default_bucket();
+            let mut scope = v.default_scope();
+            let mut collection = v.default_collection();
+
+            if opt.cluster.as_ref().is_some() {
+                if &name == opt.cluster.as_ref().unwrap() {
+                    active = Some(name.clone());
+                    if let Some(user) = opt.username.clone() {
+                        username = user;
+                    }
+                    if let Some(pass) = password.clone() {
+                        cpassword = pass;
+                    }
+                    if let Some(bucket) = opt.bucket.clone() {
+                        default_bucket = Some(bucket);
+                    }
+                    if let Some(s) = opt.scope.clone() {
+                        scope = Some(s);
+                    }
+                    if let Some(c) = opt.collection.clone() {
+                        collection = Some(c);
+                    }
+                }
+            } else if active.is_none() {
+                active = Some(v.identifier().to_owned());
+                if let Some(user) = opt.username.clone() {
+                    username = user;
+                }
+                if let Some(pass) = password.clone() {
+                    cpassword = pass;
+                }
+                if let Some(bucket) = opt.bucket.clone() {
+                    default_bucket = Some(bucket);
+                }
+                if let Some(s) = opt.scope.clone() {
+                    scope = Some(s);
+                }
+                if let Some(c) = opt.collection.clone() {
+                    collection = Some(c);
+                }
+            }
+
+            let timeouts = v.timeouts();
+            let data_timeout = match timeouts.data_timeout() {
+                Some(t) => t.to_owned(),
+                None => DEFAULT_DATA_TIMEOUT,
+            };
+            let query_timeout = match timeouts.query_timeout() {
+                Some(t) => t.to_owned(),
+                None => DEFAULT_QUERY_TIMEOUT,
+            };
+            let analytics_timeout = match timeouts.analytics_timeout() {
+                Some(t) => t.to_owned(),
+                None => DEFAULT_ANALYTICS_TIMEOUT,
+            };
+            let search_timeout = match timeouts.search_timeout() {
+                Some(t) => t.to_owned(),
+                None => DEFAULT_SEARCH_TIMEOUT,
+            };
+            let management_timeout = match timeouts.management_timeout() {
+                Some(t) => t.to_owned(),
+                None => DEFAULT_MANAGEMENT_TIMEOUT,
+            };
+            let kv_batch_size = match v.kv_batch_size() {
+                Some(b) => b,
+                None => DEFAULT_KV_BATCH_SIZE,
+            };
+
+            let (cluster_type, hostnames) = validate_hostnames(
+                v.conn_string()
+                    .split(",")
+                    .map(|s| s.to_string())
+                    .collect::<Vec<String>>(),
+            );
+            let cluster = RemoteCluster::new(
+                RemoteClusterResources {
+                    hostnames,
+                    username,
+                    password: cpassword,
+                    active_bucket: default_bucket,
+                    active_scope: scope,
+                    active_collection: collection,
+                    display_name: v.display_name(),
+                },
+                v.tls().clone(),
+                ClusterTimeouts::new(
+                    data_timeout,
+                    query_timeout,
+                    analytics_timeout,
+                    search_timeout,
+                    management_timeout,
+                ),
+                v.cloud_org(),
+                kv_batch_size,
+                cluster_type,
+            );
+            if !v.tls().clone().enabled() {
+                warn!(
+                    "Using PLAIN authentication for cluster {}, credentials will sent in plaintext - configure tls to disable this warning",
+                    name.clone()
+                );
+            }
+            clusters.insert(name.clone(), cluster);
+        }
+        for c in c.capella_orgs() {
+            let management_timeout = match c.management_timeout() {
+                Some(t) => t.to_owned(),
+                None => DEFAULT_MANAGEMENT_TIMEOUT,
+            };
+            let name = c.identifier();
+            let default_project = c.default_project();
+
+            let plane = RemoteCapellaOrganization::new(
+                c.secret_key(),
+                c.access_key(),
+                management_timeout,
+                default_project,
+            );
+
+            if active_capella_org.is_none() {
+                active_capella_org = Some(name.clone());
+            }
+
+            capella_orgs.insert(name, plane);
+        }
+
+        (active.unwrap_or_default(), c.location().clone())
+    } else {
+        (String::from("default"), None)
+    };
+
+    Arc::new(Mutex::new(State::new(
+        clusters,
+        active,
+        config_location,
+        capella_orgs,
+        active_capella_org,
+    )))
+}
+
+fn merge_couchbase_delta(context: &mut EngineState, state: Arc<Mutex<State>>) {
+    let delta = {
+        let mut working_set = StateWorkingSet::new(&context);
+        working_set.add_decl(Box::new(Analytics::new(state.clone())));
+        working_set.add_decl(Box::new(AnalyticsBuckets::new(state.clone())));
+        working_set.add_decl(Box::new(AnalyticsDatasets::new(state.clone())));
+        working_set.add_decl(Box::new(AnalyticsDataverses::new(state.clone())));
+        working_set.add_decl(Box::new(AnalyticsIndexes::new(state.clone())));
+        working_set.add_decl(Box::new(AnalyticsLinks::new(state.clone())));
+        working_set.add_decl(Box::new(AnalyticsPendingMutations::new(state.clone())));
+        working_set.add_decl(Box::new(Buckets::new(state.clone())));
+        working_set.add_decl(Box::new(BucketsConfig::new(state.clone())));
+        working_set.add_decl(Box::new(BucketsCreate::new(state.clone())));
+        working_set.add_decl(Box::new(BucketsDrop::new(state.clone())));
+        working_set.add_decl(Box::new(BucketsFlush::new(state.clone())));
+        working_set.add_decl(Box::new(BucketsGet::new(state.clone())));
+        working_set.add_decl(Box::new(BucketsSample::new(state.clone())));
+        working_set.add_decl(Box::new(BucketsUpdate::new(state.clone())));
+        working_set.add_decl(Box::new(Databases::new(state.clone())));
+        working_set.add_decl(Box::new(DatabasesCreate::new(state.clone())));
+        working_set.add_decl(Box::new(DatabasesDrop::new(state.clone())));
+        working_set.add_decl(Box::new(DatabasesGet::new(state.clone())));
+        working_set.add_decl(Box::new(HealthCheck::new(state.clone())));
+        working_set.add_decl(Box::new(CBEnvManaged::new(state.clone())));
+        working_set.add_decl(Box::new(CbEnvRegister::new(state.clone())));
+        working_set.add_decl(Box::new(CbEnvUnregister::new(state.clone())));
+        working_set.add_decl(Box::new(Collections::new(state.clone())));
+        working_set.add_decl(Box::new(CollectionsCreate::new(state.clone())));
+        working_set.add_decl(Box::new(CollectionsDrop::new(state.clone())));
+        working_set.add_decl(Box::new(Doc));
+        working_set.add_decl(Box::new(DocGet::new(state.clone())));
+        working_set.add_decl(Box::new(DocImport::new(state.clone())));
+        working_set.add_decl(Box::new(DocInsert::new(state.clone())));
+        working_set.add_decl(Box::new(DocReplace::new(state.clone())));
+        working_set.add_decl(Box::new(DocRemove::new(state.clone())));
+        working_set.add_decl(Box::new(DocUpsert::new(state.clone())));
+        working_set.add_decl(Box::new(Help));
+        working_set.add_decl(Box::new(FakeData::new(state.clone())));
+        working_set.add_decl(Box::new(Nodes::new(state.clone())));
+        working_set.add_decl(Box::new(Ping::new(state.clone())));
+        working_set.add_decl(Box::new(Projects::new(state.clone())));
+        working_set.add_decl(Box::new(ProjectsCreate::new(state.clone())));
+        working_set.add_decl(Box::new(ProjectsDrop::new(state.clone())));
+        working_set.add_decl(Box::new(Query::new(state.clone())));
+        working_set.add_decl(Box::new(QueryAdvise::new(state.clone())));
+        working_set.add_decl(Box::new(QueryIndexes::new(state.clone())));
+        working_set.add_decl(Box::new(Scopes::new(state.clone())));
+        working_set.add_decl(Box::new(ScopesCreate::new(state.clone())));
+        working_set.add_decl(Box::new(ScopesDrop::new(state.clone())));
+        working_set.add_decl(Box::new(Search::new(state.clone())));
+        working_set.add_decl(Box::new(Transactions));
+        working_set.add_decl(Box::new(TransactionsListAtrs::new(state.clone())));
+        working_set.add_decl(Box::new(Tutorial::new(state.clone())));
+        working_set.add_decl(Box::new(TutorialNext::new(state.clone())));
+        working_set.add_decl(Box::new(TutorialPage::new(state.clone())));
+        working_set.add_decl(Box::new(TutorialPrev::new(state.clone())));
+        working_set.add_decl(Box::new(UseBucket::new(state.clone())));
+        working_set.add_decl(Box::new(UseCapellaOrganization::new(state.clone())));
+        working_set.add_decl(Box::new(CbEnvDatabase::new(state.clone())));
+        working_set.add_decl(Box::new(UseCmd::new(state.clone())));
+        working_set.add_decl(Box::new(UseCollection::new(state.clone())));
+        working_set.add_decl(Box::new(UseProject::new(state.clone())));
+        working_set.add_decl(Box::new(UseScope::new(state.clone())));
+        working_set.add_decl(Box::new(UseTimeouts::new(state.clone())));
+        working_set.add_decl(Box::new(Users::new(state.clone())));
+        working_set.add_decl(Box::new(UsersGet::new(state.clone())));
+        working_set.add_decl(Box::new(UsersDrop::new(state.clone())));
+        working_set.add_decl(Box::new(UsersRoles::new(state.clone())));
+        working_set.add_decl(Box::new(UsersUpsert::new(state.clone())));
+        working_set.add_decl(Box::new(Version));
+
+        working_set.add_decl(Box::new(nu_cli::NuHighlight));
+        working_set.add_decl(Box::new(nu_cli::Print));
+
+        working_set.render()
+    };
+
+    if let Err(err) = context.merge_delta(delta) {
+        report_error_new(&context, &err);
     }
 }
