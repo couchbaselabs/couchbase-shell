@@ -69,9 +69,14 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     debug!("Effective {:?}", opt);
 
-    let password = match opt.password {
-        true => Some(rpassword::prompt_password("Password: ").unwrap()),
-        false => None,
+    let password = if let Some(p) = &opt.password {
+        if p == "-" {
+            Some(rpassword::prompt_password("Password: ").unwrap())
+        } else {
+            Some(p.clone())
+        }
+    } else {
+        None
     };
 
     let mut clusters = HashMap::new();
