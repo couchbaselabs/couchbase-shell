@@ -12,7 +12,7 @@ use std::io::Write;
 pub struct CliOptions {
     pub conn_string: Option<String>,
     pub username: Option<String>,
-    pub password: bool,
+    pub password: Option<String>,
     pub cluster: Option<String>,
     pub bucket: Option<String>,
     pub scope: Option<String>,
@@ -58,9 +58,10 @@ impl Command for Cbsh {
                 "name to show in the shell",
                 None,
             )
-            .switch(
+            .named(
                 "password",
-                "use to specify a password to use for authentication",
+                SyntaxShape::String,
+                "password to use for authentication, use - to trigger a masked prompt, e.g. -p -",
                 Some('p'),
             )
             .named(
@@ -204,7 +205,7 @@ pub fn parse_commandline_args(
         {
             let conn_string: Option<String> = call.get_flag(context, &mut stack, "connstr")?;
             let username: Option<String> = call.get_flag(context, &mut stack, "username")?;
-            let password = call.has_flag("password");
+            let password: Option<String> = call.get_flag(context, &mut stack, "password")?;
             let cluster: Option<String> = call.get_flag(context, &mut stack, "cluster")?;
             let bucket: Option<String> = call.get_flag(context, &mut stack, "bucket")?;
             let scope: Option<String> = call.get_flag(context, &mut stack, "scope")?;
