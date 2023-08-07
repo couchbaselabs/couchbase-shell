@@ -39,7 +39,9 @@ use nu_cmd_base::util::get_init_cwd;
 use nu_protocol::engine::{EngineState, Stack, StateWorkingSet};
 use nu_protocol::{report_error_new, BufferedReader, PipelineData, RawStream, Span};
 
+use crate::client::RustTlsConfig;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::error::Error;
 use std::fs::File;
 use std::io::{BufReader, Write};
@@ -302,16 +304,14 @@ fn remote_cluster_from_opts(opt: CliOptions, password: Option<String>) -> Remote
         DEFAULT_PASSWORD.to_string()
     };
 
-    let tls_config = ClusterTlsConfig::new(
-        !opt.disable_tls,
-        opt.tls_cert_path.clone(),
-        opt.tls_cert_path.is_none(),
-    );
-    if !tls_config.enabled() {
+    let tls_config = if opt.disable_tls {
         warn!(
                 "Using PLAIN authentication for cluster default, credentials will sent in plaintext - configure tls to disable this warning"
             );
-    }
+        None
+    } else {
+        Some(RustTlsConfig::new(opt.tls_accept_all_certs, opt.tls_cert_path).unwrap())
+    };
     let (cluster_type, hostnames) =
         validate_hostnames(conn_string.split(',').map(|v| v.to_owned()).collect());
     RemoteCluster::new(
@@ -586,6 +586,12 @@ fn make_state(
                     .map(|s| s.to_string())
                     .collect::<Vec<String>>(),
             );
+            let cluster_tls_config = v.tls().clone();
+            let tls_config = if cluster_tls_config.enabled() {
+                Some(RustTlsConfig::try_from(cluster_tls_config).unwrap())
+            } else {
+                None
+            };
             let cluster = RemoteCluster::new(
                 RemoteClusterResources {
                     hostnames,
@@ -596,7 +602,7 @@ fn make_state(
                     active_collection: collection,
                     display_name: v.display_name(),
                 },
-                v.tls().clone(),
+                tls_config,
                 ClusterTimeouts::new(
                     data_timeout,
                     query_timeout,

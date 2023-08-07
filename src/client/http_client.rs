@@ -1,7 +1,7 @@
 use crate::client::error::{ClientError, ConfigurationLoadFailedReason};
 use crate::client::http_handler::{HTTPHandler, HttpResponse, HttpVerb};
 use crate::client::kv_client::NodeExtConfig;
-use crate::config::ClusterTlsConfig;
+use crate::RustTlsConfig;
 use log::{debug, trace};
 use rand::Rng;
 use serde::de::DeserializeOwned;
@@ -19,7 +19,7 @@ const CLUSTER_CONFIG_URI: &str = "/pools/default/nodeServices";
 
 pub struct HTTPClient {
     seeds: Vec<String>,
-    tls_config: ClusterTlsConfig,
+    tls_enabled: bool,
     http_client: HTTPHandler,
 }
 
@@ -28,18 +28,19 @@ impl HTTPClient {
         seeds: Vec<String>,
         username: String,
         password: String,
-        tls_config: ClusterTlsConfig,
+        tls_config: Option<RustTlsConfig>,
     ) -> Self {
+        let tls_enabled = tls_config.is_some();
         Self {
             seeds,
-            http_client: HTTPHandler::new(username, password, tls_config.clone()),
-            tls_config,
+            http_client: HTTPHandler::new(username, password, tls_config),
+            tls_enabled,
         }
     }
 
     pub(crate) async fn get_config<T>(
         seeds: &Vec<String>,
-        tls_config: &ClusterTlsConfig,
+        tls_enabled: bool,
         http_agent: &HTTPHandler,
         bucket: impl Into<Option<String>>,
         deadline: Instant,
@@ -62,7 +63,7 @@ impl HTTPClient {
             let port: i32;
             if host_split.len() == 1 {
                 host = seed.clone();
-                port = if tls_config.enabled() { 18091 } else { 8091 };
+                port = if tls_enabled { 18091 } else { 8091 };
             } else {
                 host = host_split[0].clone();
                 port = match host_split[1].parse::<i32>() {
@@ -180,7 +181,7 @@ impl HTTPClient {
         rt.block_on(async {
             let config: ClusterConfig = HTTPClient::get_config(
                 &self.seeds,
-                &self.tls_config,
+                self.tls_enabled,
                 &self.http_client,
                 None,
                 deadline,
@@ -189,7 +190,7 @@ impl HTTPClient {
             .await?;
 
             let mut results: Vec<PingResponse> = Vec::new();
-            for seed in config.search_seeds(self.tls_config.enabled()) {
+            for seed in config.search_seeds(self.tls_enabled) {
                 let uri = format!("{}:{}/api/ping", seed.hostname(), seed.port());
                 let address = format!("{}:{}", seed.hostname(), seed.port());
                 results.push(
@@ -197,7 +198,7 @@ impl HTTPClient {
                         .await?,
                 );
             }
-            for seed in config.query_seeds(self.tls_config.enabled()) {
+            for seed in config.query_seeds(self.tls_enabled) {
                 let uri = format!("{}:{}/admin/ping", seed.hostname(), seed.port());
                 let address = format!("{}:{}", seed.hostname(), seed.port());
                 results.push(
@@ -205,7 +206,7 @@ impl HTTPClient {
                         .await?,
                 );
             }
-            for seed in config.analytics_seeds(self.tls_config.enabled()) {
+            for seed in config.analytics_seeds(self.tls_enabled) {
                 let uri = format!("{}:{}/admin/ping", seed.hostname(), seed.port());
                 let address = format!("{}:{}", seed.hostname(), seed.port());
                 results.push(
@@ -219,7 +220,7 @@ impl HTTPClient {
                     .await?,
                 );
             }
-            for seed in config.view_seeds(self.tls_config.enabled()) {
+            for seed in config.view_seeds(self.tls_enabled) {
                 let uri = format!("{}:{}/", seed.hostname(), seed.port());
                 let address = format!("{}:{}", seed.hostname(), seed.port());
                 results.push(
@@ -242,7 +243,7 @@ impl HTTPClient {
         rt.block_on(async {
             let config: ClusterConfig = HTTPClient::get_config(
                 &self.seeds,
-                &self.tls_config,
+                self.tls_enabled,
                 &self.http_client,
                 None,
                 deadline,
@@ -251,7 +252,7 @@ impl HTTPClient {
             .await?;
 
             let path = request.path();
-            if let Some(seed) = config.random_management_seed(self.tls_config.enabled()) {
+            if let Some(seed) = config.random_management_seed(self.tls_enabled) {
                 let uri = format!("{}:{}{}", seed.hostname(), seed.port(), &path);
                 let (content, status) = match request.verb() {
                     HttpVerb::Get => self.http_client.http_get(&uri, deadline, ctrl_c).await?,
@@ -289,7 +290,7 @@ impl HTTPClient {
         rt.block_on(async {
             let config: ClusterConfig = HTTPClient::get_config(
                 &self.seeds,
-                &self.tls_config,
+                self.tls_enabled,
                 &self.http_client,
                 None,
                 deadline,
@@ -298,14 +299,14 @@ impl HTTPClient {
             .await?;
 
             let seed = if let Some(e) = request.endpoint() {
-                if !config.has_query_seed(&e, self.tls_config.enabled()) {
+                if !config.has_query_seed(&e, self.tls_enabled) {
                     return Err(ClientError::RequestFailed {
                         reason: Some(format!("Endpoint {} not known", e)),
                         key: None,
                     });
                 }
                 e
-            } else if let Some(s) = config.random_query_seed(self.tls_config.enabled()) {
+            } else if let Some(s) = config.random_query_seed(self.tls_enabled) {
                 s
             } else {
                 return Err(ClientError::RequestFailed {
@@ -345,7 +346,7 @@ impl HTTPClient {
         rt.block_on(async {
             let config: ClusterConfig = HTTPClient::get_config(
                 &self.seeds,
-                &self.tls_config,
+                self.tls_enabled,
                 &self.http_client,
                 None,
                 deadline,
@@ -354,7 +355,7 @@ impl HTTPClient {
             .await?;
 
             let path = request.path();
-            if let Some(seed) = config.random_analytics_seed(self.tls_config.enabled()) {
+            if let Some(seed) = config.random_analytics_seed(self.tls_enabled) {
                 let uri = format!("{}:{}{}", seed.hostname(), seed.port(), &path);
                 let (content, status) = match request.verb() {
                     HttpVerb::Get => self.http_client.http_get(&uri, deadline, ctrl_c).await?,
@@ -391,7 +392,7 @@ impl HTTPClient {
         rt.block_on(async {
             let config: ClusterConfig = HTTPClient::get_config(
                 &self.seeds,
-                &self.tls_config,
+                self.tls_enabled,
                 &self.http_client,
                 None,
                 deadline,
@@ -400,7 +401,7 @@ impl HTTPClient {
             .await?;
 
             let path = request.path();
-            if let Some(seed) = config.random_search_seed(self.tls_config.enabled()) {
+            if let Some(seed) = config.random_search_seed(self.tls_enabled) {
                 let uri = format!("{}:{}{}", seed.hostname(), seed.port(), &path);
                 let (content, status) = match request.verb() {
                     HttpVerb::Post => {

@@ -3,9 +3,9 @@ use crate::client::crc::cb_vb_map;
 use crate::client::error::ClientError;
 use crate::client::http_client::{Config, PingResponse, ServiceType};
 use crate::client::http_handler::HTTPHandler;
-use crate::client::kv::{KvEndpoint, KvTlsConfig};
+use crate::client::kv::KvEndpoint;
 use crate::client::{protocol, HTTPClient};
-use crate::config::ClusterTlsConfig;
+use crate::RustTlsConfig;
 use bytes::{Buf, Bytes};
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
@@ -56,7 +56,7 @@ impl KvClient {
         seeds: Vec<String>,
         username: String,
         password: String,
-        tls_config: ClusterTlsConfig,
+        tls_config: Option<RustTlsConfig>,
         bucket: String,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
@@ -74,7 +74,7 @@ impl KvClient {
         let http_agent = HTTPHandler::new(username.clone(), password.clone(), tls_config.clone());
         let config: BucketConfig = HTTPClient::get_config(
             &seeds,
-            &tls_config.clone(),
+            tls_config.is_some(),
             &http_agent,
             bucket.clone(),
             deadline,
@@ -82,21 +82,14 @@ impl KvClient {
         )
         .await?;
 
-        let tls_enabled = tls_config.enabled();
-        let kv_tls_config = if tls_enabled {
-            Some(KvTlsConfig::new(tls_config)?)
-        } else {
-            None
-        };
-
         let mut workers = FuturesUnordered::new();
-        for addr in config.key_value_seeds(tls_enabled) {
+        for addr in config.key_value_seeds(tls_config.is_some()) {
             let hostname = addr.0.clone();
             let port = addr.1;
             let u = username.clone();
             let p = password.clone();
             let b = bucket.clone();
-            let tls = kv_tls_config.clone();
+            let tls = tls_config.clone();
 
             workers.push(tokio::spawn(async move {
                 KvEndpoint::connect(hostname, port, u, p, b, tls).await
@@ -129,7 +122,7 @@ impl KvClient {
         Ok(Self {
             config,
             endpoints,
-            tls_enabled: kv_tls_config.is_some(),
+            tls_enabled: tls_config.is_some(),
         })
     }
 

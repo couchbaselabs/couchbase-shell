@@ -58,7 +58,7 @@ fn clusters(
         .map(|(k, v)| {
             let mut collected = NuValueMap::default();
             collected.add_bool("active", k == &active, span);
-            collected.add_bool("tls", v.tls_config().enabled(), span);
+            collected.add_bool("tls", v.tls_config().is_some(), span);
             collected.add_string("identifier", k.clone(), span);
             collected.add_string("username", String::from(v.username()), span);
             collected.add_string(

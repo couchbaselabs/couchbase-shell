@@ -1,6 +1,6 @@
-use crate::client::{Client, CAPELLA_SRV_SUFFIX};
+use crate::client::{Client, RustTlsConfig, CAPELLA_SRV_SUFFIX};
 use crate::{
-    ClusterTlsConfig, DEFAULT_ANALYTICS_TIMEOUT, DEFAULT_DATA_TIMEOUT, DEFAULT_MANAGEMENT_TIMEOUT,
+    DEFAULT_ANALYTICS_TIMEOUT, DEFAULT_DATA_TIMEOUT, DEFAULT_MANAGEMENT_TIMEOUT,
     DEFAULT_QUERY_TIMEOUT, DEFAULT_SEARCH_TIMEOUT, DEFAULT_TRANSACTION_TIMEOUT,
 };
 use std::sync::{Arc, Mutex};
@@ -61,7 +61,7 @@ pub struct RemoteCluster {
     active_bucket: Mutex<Option<String>>,
     active_scope: Mutex<Option<String>>,
     active_collection: Mutex<Option<String>>,
-    tls_config: ClusterTlsConfig,
+    tls_config: Option<RustTlsConfig>,
     timeouts: Mutex<ClusterTimeouts>,
     capella_org: Option<String>,
     kv_batch_size: u32,
@@ -73,7 +73,7 @@ impl RemoteCluster {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         resources: RemoteClusterResources,
-        tls_config: ClusterTlsConfig,
+        tls_config: Option<RustTlsConfig>,
         timeouts: ClusterTimeouts,
         capella_org: Option<String>,
         kv_batch_size: u32,
@@ -155,7 +155,7 @@ impl RemoteCluster {
         self.password.as_str()
     }
 
-    pub fn tls_config(&self) -> &ClusterTlsConfig {
+    pub fn tls_config(&self) -> &Option<RustTlsConfig> {
         &self.tls_config
     }
 

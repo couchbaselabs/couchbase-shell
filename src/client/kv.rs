@@ -1,154 +1,23 @@
-use crate::client::capella_ca::CAPELLA_CERT;
 use crate::client::codec::KeyValueCodec;
 use crate::client::protocol::{request, KvRequest, KvResponse, Status};
 use crate::client::{protocol, ClientError};
-use crate::config::ClusterTlsConfig;
+use crate::RustTlsConfig;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use futures::lock::Mutex as AsyncMutex;
 use futures::{SinkExt, StreamExt};
-use log::{debug, error, trace, warn};
-use rustls_pemfile::{read_all, Item};
+use log::{debug, trace, warn};
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::fs;
-use std::io::BufReader;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
-use std::time::SystemTime;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
 use tokio::sync::oneshot::Receiver;
 use tokio::sync::{mpsc, oneshot};
-use tokio_rustls::rustls::client::{ServerCertVerified, ServerCertVerifier};
-use tokio_rustls::rustls::{Certificate, ClientConfig, Error, ServerName};
-use tokio_rustls::{rustls, TlsConnector};
+use tokio_rustls::rustls::ServerName;
+use tokio_rustls::TlsConnector;
 use tokio_util::codec::{FramedRead, FramedWrite};
 use uuid::Uuid;
-
-struct InsecureCertVerifier {}
-
-impl ServerCertVerifier for InsecureCertVerifier {
-    fn verify_server_cert(
-        &self,
-        _end_entity: &Certificate,
-        _intermediates: &[Certificate],
-        _server_name: &ServerName,
-        _scts: &mut dyn Iterator<Item = &[u8]>,
-        _ocsp_response: &[u8],
-        _now: SystemTime,
-    ) -> Result<ServerCertVerified, Error> {
-        Ok(ServerCertVerified::assertion())
-    }
-}
-
-#[derive(Clone)]
-pub struct KvTlsConfig {
-    config: ClientConfig,
-}
-
-impl KvTlsConfig {
-    pub fn new(tls_config: ClusterTlsConfig) -> Result<KvTlsConfig, ClientError> {
-        let builder = ClientConfig::builder().with_safe_defaults();
-        if tls_config.accept_all_certs() {
-            let config = builder
-                .with_custom_certificate_verifier(Arc::new(InsecureCertVerifier {}))
-                .with_no_client_auth();
-
-            return Ok(KvTlsConfig { config });
-        }
-
-        let mut root_cert_store = rustls::RootCertStore::empty();
-        if let Some(path) = tls_config.cert_path() {
-            // If the user has provided a cert path then use it.
-            // If any errors occurs then consider this as fatal and return the error.
-            let cert = fs::read(path).map_err(ClientError::from)?;
-            let mut reader = BufReader::new(&cert[..]);
-            let items = read_all(&mut reader).map_err(|e| ClientError::RequestFailed {
-                reason: Some(format!("Failed to read cert file {}", e)),
-                key: None,
-            })?;
-            for item in items {
-                match item {
-                    Item::X509Certificate(c) => {
-                        root_cert_store.add(&Certificate(c)).map_err(|e| {
-                            ClientError::RequestFailed {
-                                reason: Some(format!("Failed to add cert to root store {}", e)),
-                                key: None,
-                            }
-                        })?
-                    }
-                    _ => {
-                        return Err(ClientError::RequestFailed {
-                            reason: Some("Unsupported certificate format".to_string()),
-                            key: None,
-                        })
-                    }
-                }
-            }
-        } else {
-            // Try to load certs from the native store, and the capella cert.
-            // If any of these fails then log an error rather than consider it fatal.
-            // It's possible that we don't actually need the failing cert.
-            let mut rejected_certs = 0;
-            let mut total_certs = 0;
-            let native_certs = match rustls_native_certs::load_native_certs() {
-                Ok(certs) => certs.iter().map(|cert| cert.0.to_owned()).collect(),
-                Err(e) => {
-                    error!("Could not load native platform certs: {}", e);
-                    vec![]
-                }
-            };
-            for certs in native_certs {
-                total_certs += 1;
-                let (accepted, rejected) = root_cert_store.add_parsable_certificates(&[certs]);
-                total_certs += accepted + rejected;
-                rejected_certs += rejected;
-            }
-
-            if rejected_certs > 0 {
-                warn!(
-                    "Accepted {} certs from native store, but rejected {}",
-                    total_certs, rejected_certs
-                )
-            }
-
-            debug!("Adding Capella root CA to native trust store");
-            let mut reader = BufReader::new(CAPELLA_CERT.as_bytes());
-            match read_all(&mut reader) {
-                Ok(items) => {
-                    // There is only 1 item in the capella cert.
-                    match &items[0] {
-                        Item::X509Certificate(c) => {
-                            match root_cert_store.add(&Certificate(c.to_owned())) {
-                                Ok(()) => {}
-                                Err(e) => {
-                                    error!("Failed to add root capella cert to root store {}", e);
-                                }
-                            }
-                        }
-                        _ => {
-                            error!(
-                                "Failed to read capella certificate, unsupported certificate format"
-                            );
-                        }
-                    };
-                }
-                Err(e) => {
-                    error!("Failed to read capella certificate, {}", e);
-                }
-            };
-        };
-        let config = builder
-            .with_root_certificates(root_cert_store)
-            .with_no_client_auth();
-
-        Ok(KvTlsConfig { config })
-    }
-
-    pub fn config(&self) -> ClientConfig {
-        self.config.clone()
-    }
-}
 
 pub struct KvEndpoint {
     tx: mpsc::Sender<Bytes>,
@@ -168,17 +37,17 @@ impl KvEndpoint {
         username: String,
         password: String,
         bucket: String,
-        kv_tls_config: Option<KvTlsConfig>,
+        tls_config: Option<RustTlsConfig>,
     ) -> Result<KvEndpoint, ClientError> {
         let remote_addr = format!("{}:{}", hostname, port);
 
         debug!(
             "Connecting to {}, TLS enabled: {}",
             &remote_addr,
-            kv_tls_config.is_some()
+            tls_config.is_some()
         );
 
-        if let Some(tls_config) = kv_tls_config {
+        if let Some(tls_config) = tls_config {
             let tcp_socket = TcpStream::connect(&remote_addr).await.map_err(|e| {
                 ClientError::KVCouldNotConnect {
                     reason: e.to_string(),

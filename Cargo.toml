@@ -48,7 +48,6 @@ reqwest = { version = "0.11", features = ["json", "rustls-tls", "blocking"] }
 rpassword = "7.0.0"
 rust-embed = "6.3"
 rustls-pemfile = "1.0.0"
-rustls-native-certs = "0.6.2"
 serde = "1.0"
 serde_json = "1.0"
 serde_derive = "1.0"
@@ -65,8 +64,9 @@ toml = "0.7.3"
 trust-dns-resolver = { version = "0.22.0", features = ["dns-over-rustls"] }
 url = "2.1"
 uuid = { version = "1.1.2", features = ["v4"] }
+webpki-roots = "0.25.1"
 
-[target.'cfg(not(target_os = "macos"))'.dependencies]
+[target.'cfg(not(any(target_os = "macos", target_os = "windows")))'.dependencies]
 # Our dependencies don't use OpenSSL on Macos
 openssl = { version = "0.10.48", features = ["vendored"], optional=true }
 
@@ -79,8 +79,8 @@ nu-test-support = { version = "0.83.1"}
 strum = "0.24.1"
 strum_macros = "0.24.3"
 
-[features]
 
+[features]
 # Enable to statically link OpenSSL; otherwise the system version will be used. Not enabled by default because it takes a while to build
 static-link-openssl = ["dep:openssl"]
 

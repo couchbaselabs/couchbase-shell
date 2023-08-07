@@ -1,12 +1,12 @@
-use crate::config::{
-    CapellaOrganizationConfig, ClusterConfig, ClusterTlsConfig, ShellConfig, DEFAULT_KV_BATCH_SIZE,
-};
+use crate::config::{CapellaOrganizationConfig, ClusterConfig, ShellConfig, DEFAULT_KV_BATCH_SIZE};
 use crate::state::State;
 use std::fs;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use crate::cli::error::generic_error;
-use crate::{ClusterTimeouts, RemoteCluster, RemoteClusterResources, RemoteClusterType};
+use crate::{
+    ClusterTimeouts, RemoteCluster, RemoteClusterResources, RemoteClusterType, RustTlsConfig,
+};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -151,6 +151,21 @@ fn clusters_register(
         .split(",")
         .map(|s| s.to_string())
         .collect::<Vec<String>>();
+    let tls_config = if tls_enabled {
+        Some(
+            RustTlsConfig::new(tls_accept_all_certs, cert_path).map_err(|e| {
+                ShellError::GenericError(
+                    e.message(),
+                    "".to_string(),
+                    call.head.into(),
+                    Some(e.expanded_message()),
+                    Vec::new(),
+                )
+            })?,
+        )
+    } else {
+        None
+    };
     let cluster = RemoteCluster::new(
         RemoteClusterResources {
             hostnames: hostnames.clone(),
@@ -161,7 +176,7 @@ fn clusters_register(
             active_collection: collection,
             display_name,
         },
-        ClusterTlsConfig::new(tls_enabled, cert_path, tls_accept_all_certs),
+        tls_config,
         ClusterTimeouts::default(),
         capella,
         DEFAULT_KV_BATCH_SIZE,
