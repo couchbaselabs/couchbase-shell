@@ -1,13 +1,10 @@
 use crate::cli::CtrlcFuture;
-use crate::client::capella_ca::CAPELLA_CERT;
 use crate::client::error::ClientError;
 use crate::client::Endpoint;
-use crate::config::ClusterTlsConfig;
+use crate::RustTlsConfig;
 use log::debug;
 use reqwest::ClientBuilder;
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::Read;
 use std::ops::Sub;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
@@ -63,11 +60,15 @@ impl HttpResponse {
 pub(crate) struct HTTPHandler {
     username: String,
     password: String,
-    tls_config: ClusterTlsConfig,
+    tls_config: Option<RustTlsConfig>,
 }
 
 impl HTTPHandler {
-    pub(crate) fn new(username: String, password: String, tls_config: ClusterTlsConfig) -> Self {
+    pub(crate) fn new(
+        username: String,
+        password: String,
+        tls_config: Option<RustTlsConfig>,
+    ) -> Self {
         Self {
             username,
             password,
@@ -76,7 +77,7 @@ impl HTTPHandler {
     }
 
     fn http_prefix(&self) -> &'static str {
-        match self.tls_config.enabled() {
+        match self.tls_config.is_some() {
             true => "https",
             false => "http",
         }
@@ -102,23 +103,8 @@ impl HTTPHandler {
 
         let mut client_builder = ClientBuilder::new();
 
-        if self.tls_config.enabled() {
-            client_builder = if let Some(cert) = self.tls_config.cert_path() {
-                let mut buf = Vec::new();
-                File::open(cert)
-                    .map_err(ClientError::from)?
-                    .read_to_end(&mut buf)?;
-
-                client_builder.add_root_certificate(reqwest::Certificate::from_pem(&buf)?)
-            } else {
-                debug!("Adding Capella root CA to native trust store");
-                client_builder
-                    .add_root_certificate(reqwest::Certificate::from_pem(CAPELLA_CERT.as_bytes())?)
-            };
-
-            if self.tls_config.accept_all_certs() {
-                client_builder = client_builder.danger_accept_invalid_certs(true);
-            }
+        if let Some(tls_config) = &self.tls_config {
+            client_builder = client_builder.use_preconfigured_tls(tls_config.config());
         }
 
         let client = client_builder.build().map_err(ClientError::from)?;

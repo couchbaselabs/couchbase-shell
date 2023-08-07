@@ -7,13 +7,13 @@ pub use crate::client::http_client::{
 };
 pub use crate::client::http_handler::HttpResponse;
 pub use crate::client::kv_client::{KeyValueRequest, KvClient, KvResponse};
+pub use crate::client::tls::RustTlsConfig;
 use log::debug;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tokio::time::Instant;
 
-use crate::config::ClusterTlsConfig;
 use trust_dns_resolver::config::{ResolverConfig, ResolverOpts};
 use trust_dns_resolver::Resolver;
 
@@ -27,12 +27,13 @@ mod http_handler;
 mod kv;
 mod kv_client;
 mod protocol;
+mod tls;
 
 pub struct Client {
     seeds: Vec<String>,
     username: String,
     password: String,
-    tls_config: ClusterTlsConfig,
+    tls_config: Option<RustTlsConfig>,
 }
 
 impl Client {
@@ -40,7 +41,7 @@ impl Client {
         seeds: Vec<String>,
         username: String,
         password: String,
-        tls_config: ClusterTlsConfig,
+        tls_config: Option<RustTlsConfig>,
     ) -> Self {
         let seeds = if Client::might_be_srv(&seeds) {
             Client::try_lookup_srv(seeds[0].clone()).unwrap_or(seeds)

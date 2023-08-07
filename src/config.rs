@@ -424,6 +424,20 @@ impl From<(String, &RemoteCluster)> for ClusterConfig {
     fn from(cluster: (String, &RemoteCluster)) -> Self {
         let cloud = cluster.1.capella_org();
 
+        let tls_config = if let Some(tls_config) = cluster.1.tls_config() {
+            ClusterTlsConfig {
+                enabled: true,
+                cert_path: tls_config.cert_path(),
+                accept_all_certs: tls_config.accept_all_certs(),
+            }
+        } else {
+            ClusterTlsConfig {
+                enabled: false,
+                cert_path: None,
+                accept_all_certs: false,
+            }
+        };
+
         Self {
             identifier: cluster.0,
             conn_string: cluster.1.hostnames().join(","),
@@ -438,7 +452,7 @@ impl From<(String, &RemoteCluster)> for ClusterConfig {
                 management_timeout: Some(cluster.1.timeouts().management_timeout()),
                 transaction_timeout: Some(cluster.1.timeouts().transaction_timeout()),
             },
-            tls: cluster.1.tls_config().clone(),
+            tls: tls_config,
             credentials: ClusterCredentials {
                 username: Some(cluster.1.username().to_string()),
                 password: Some(cluster.1.password().to_string()),

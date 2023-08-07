@@ -23,6 +23,7 @@ pub struct CliOptions {
     pub no_motd: bool,
     pub disable_tls: bool,
     pub tls_cert_path: Option<String>,
+    pub tls_accept_all_certs: bool,
     pub config_path: Option<String>,
     pub logger_prefix: Option<String>,
     pub display_name: Option<String>,
@@ -223,6 +224,7 @@ pub fn parse_commandline_args(
             let display_name: Option<String> =
                 call.get_flag(context, &mut stack, "display-name")?;
             let no_config_prompt = call.has_flag("disable-config-prompt");
+            let tls_accept_all_certs = call.has_flag("tls-accept-all-certs");
 
             fn extract_contents(
                 expression: Option<Expression>,
@@ -296,6 +298,7 @@ pub fn parse_commandline_args(
                 logger_prefix,
                 display_name,
                 no_config_prompt,
+                tls_accept_all_certs,
             });
         }
     }

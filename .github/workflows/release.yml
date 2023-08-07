@@ -78,7 +78,7 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: build
-        args: --verbose --release --features static-link-openssl
+        args: --verbose --release
       env:
         VCPKGRS_DYNAMIC: 1
         RUSTFLAGS: -Ctarget-feature=+crt-static
