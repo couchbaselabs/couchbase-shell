@@ -1,4 +1,4 @@
-use crate::client::CapellaClient;
+use crate::client::{CapellaClient, Endpoint};
 
 use crate::tutorial::Tutorial;
 use crate::RemoteCluster;
@@ -10,6 +10,22 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::{collections::HashMap, time::Duration};
 
+#[derive(Debug, Clone)]
+pub struct TransactionState {
+    id: String,
+    endpoint: Endpoint,
+}
+
+impl TransactionState {
+    pub fn id(&self) -> String {
+        self.id.clone()
+    }
+
+    pub fn endpoint(&self) -> Endpoint {
+        self.endpoint.clone()
+    }
+}
+
 pub struct State {
     active: Mutex<String>,
     clusters: HashMap<String, RemoteCluster>,
@@ -17,6 +33,7 @@ pub struct State {
     config_path: Option<PathBuf>,
     capella_orgs: HashMap<String, RemoteCapellaOrganization>,
     active_capella_org: Mutex<Option<String>>,
+    active_transaction: Mutex<Option<TransactionState>>,
 }
 
 impl State {
@@ -34,6 +51,7 @@ impl State {
             config_path,
             capella_orgs,
             active_capella_org: Mutex::new(active_capella_org),
+            active_transaction: Mutex::new(None),
         };
         if !active.is_empty() {
             state.set_active(active).unwrap();
@@ -191,6 +209,26 @@ impl State {
                 None,
                 Vec::new(),
             ))
+        }
+    }
+
+    pub fn active_transaction(&self) -> Option<TransactionState> {
+        self.active_transaction.lock().unwrap().clone()
+    }
+
+    pub fn start_transaction(&mut self, id: String, endpoint: Endpoint) -> Result<(), ShellError> {
+        {
+            let mut guard = self.active_transaction.lock().unwrap();
+            *guard = Some(TransactionState { id, endpoint });
+        }
+
+        Ok(())
+    }
+
+    pub fn end_transaction(&mut self) {
+        {
+            let mut guard = self.active_transaction.lock().unwrap();
+            *guard = None;
         }
     }
 }

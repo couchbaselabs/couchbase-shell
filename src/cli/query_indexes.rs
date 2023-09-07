@@ -107,7 +107,9 @@ fn query(
             statement.clone(),
             maybe_scope,
             ctrl_c.clone(),
+            None,
             span,
+            None,
         )?;
         drop(guard);
 
