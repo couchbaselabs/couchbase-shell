@@ -1,6 +1,7 @@
 use crate::cli::CtrlcFuture;
 use crate::client::capella_ca::CAPELLA_CERT;
 use crate::client::error::ClientError;
+use crate::client::Endpoint;
 use crate::config::ClusterTlsConfig;
 use log::debug;
 use reqwest::ClientBuilder;
@@ -34,11 +35,16 @@ impl HttpVerb {
 pub struct HttpResponse {
     content: String,
     status: u16,
+    endpoint: Endpoint,
 }
 
 impl HttpResponse {
-    pub fn new(content: String, status: u16) -> Self {
-        Self { content, status }
+    pub fn new(content: String, status: u16, endpoint: Endpoint) -> Self {
+        Self {
+            content,
+            status,
+            endpoint,
+        }
     }
 
     pub fn content(&self) -> &str {
@@ -47,6 +53,10 @@ impl HttpResponse {
 
     pub fn status(&self) -> u16 {
         self.status
+    }
+
+    pub fn endpoint(&self) -> Endpoint {
+        self.endpoint.clone()
     }
 }
 

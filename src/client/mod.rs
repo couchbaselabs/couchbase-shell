@@ -2,8 +2,8 @@ pub use crate::client::cloud::CAPELLA_SRV_SUFFIX;
 pub use crate::client::cloud::{CapellaClient, CapellaRequest};
 pub use crate::client::error::ClientError;
 pub use crate::client::http_client::{
-    AnalyticsQueryRequest, HTTPClient, ManagementRequest, QueryRequest, SearchQueryRequest,
-    ServiceType,
+    AnalyticsQueryRequest, Endpoint, HTTPClient, ManagementRequest, QueryRequest,
+    QueryTransactionRequest, SearchQueryRequest, ServiceType,
 };
 pub use crate::client::http_handler::HttpResponse;
 pub use crate::client::kv_client::{KeyValueRequest, KvClient, KvResponse};

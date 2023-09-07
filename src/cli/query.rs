@@ -1,19 +1,20 @@
 use crate::cli::util::{
     cluster_identifiers_from, convert_row_to_nu_value, duration_to_golang_string,
-    get_active_cluster,
+    get_active_cluster, is_http_status,
 };
-use crate::client::{HttpResponse, QueryRequest};
+use crate::client::{HttpResponse, QueryRequest, QueryTransactionRequest};
 use crate::state::State;
 use log::debug;
 use std::collections::HashMap;
 use std::ops::Add;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tokio::time::Instant;
 
 use crate::cli::error::{
     client_error_to_shell_error, deserialize_error, malformed_response_error, query_error,
-    unexpected_status_code_error, QueryErrorReason,
+    QueryErrorReason,
 };
 use crate::RemoteCluster;
 use nu_engine::CallExt;
@@ -108,7 +109,9 @@ fn query(
             statement.clone(),
             maybe_scope,
             ctrl_c.clone(),
+            None,
             span,
+            None,
         )?;
         drop(guard);
 
@@ -120,30 +123,38 @@ fn query(
         )?);
     }
 
-    Ok(Value::List {
-        vals: results,
-        span: call.head,
+    if results.len() > 0 {
+        return Ok(Value::List {
+            vals: results,
+            span: call.head,
+        }
+        .into_pipeline_data());
     }
-    .into_pipeline_data())
+
+    Ok(PipelineData::new_with_metadata(None, span))
 }
 
 pub fn send_query(
     cluster: &RemoteCluster,
-    statement: String,
+    statement: impl Into<String>,
     scope: Option<(String, String)>,
     ctrl_c: Arc<AtomicBool>,
+    timeout: impl Into<Option<Duration>>,
     span: Span,
+    transaction: impl Into<Option<QueryTransactionRequest>>,
 ) -> Result<HttpResponse, ShellError> {
+    let timeout = timeout.into().unwrap_or(cluster.timeouts().query_timeout());
     let response = cluster
         .cluster()
         .http_client()
         .query_request(
             QueryRequest::Execute {
-                statement,
+                statement: statement.into(),
                 scope,
-                timeout: duration_to_golang_string(cluster.timeouts().query_timeout()),
+                timeout: duration_to_golang_string(timeout),
+                transaction: transaction.into(),
             },
-            Instant::now().add(cluster.timeouts().query_timeout()),
+            Instant::now().add(timeout),
             ctrl_c,
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
@@ -157,13 +168,7 @@ pub fn handle_query_response(
     response: HttpResponse,
     span: Span,
 ) -> Result<Vec<Value>, ShellError> {
-    if response.status() != 200 {
-        return Err(unexpected_status_code_error(
-            response.status(),
-            response.content(),
-            span,
-        ));
-    }
+    is_http_status(&response, 200, span)?;
 
     let mut results: Vec<Value> = vec![];
     if with_meta {

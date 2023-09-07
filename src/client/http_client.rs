@@ -7,7 +7,7 @@ use rand::Rng;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde_json::json;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display, Formatter};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::time::Duration;
@@ -190,24 +190,24 @@ impl HTTPClient {
 
             let mut results: Vec<PingResponse> = Vec::new();
             for seed in config.search_seeds(self.tls_config.enabled()) {
-                let uri = format!("{}:{}/api/ping", seed.0, seed.1);
-                let address = format!("{}:{}", seed.0, seed.1);
+                let uri = format!("{}:{}/api/ping", seed.hostname(), seed.port());
+                let address = format!("{}:{}", seed.hostname(), seed.port());
                 results.push(
                     self.ping_endpoint(uri, address, ServiceType::Search, deadline, ctrl_c.clone())
                         .await?,
                 );
             }
             for seed in config.query_seeds(self.tls_config.enabled()) {
-                let uri = format!("{}:{}/admin/ping", seed.0, seed.1);
-                let address = format!("{}:{}", seed.0, seed.1);
+                let uri = format!("{}:{}/admin/ping", seed.hostname(), seed.port());
+                let address = format!("{}:{}", seed.hostname(), seed.port());
                 results.push(
                     self.ping_endpoint(uri, address, ServiceType::Query, deadline, ctrl_c.clone())
                         .await?,
                 );
             }
             for seed in config.analytics_seeds(self.tls_config.enabled()) {
-                let uri = format!("{}:{}/admin/ping", seed.0, seed.1);
-                let address = format!("{}:{}", seed.0, seed.1);
+                let uri = format!("{}:{}/admin/ping", seed.hostname(), seed.port());
+                let address = format!("{}:{}", seed.hostname(), seed.port());
                 results.push(
                     self.ping_endpoint(
                         uri,
@@ -220,8 +220,8 @@ impl HTTPClient {
                 );
             }
             for seed in config.view_seeds(self.tls_config.enabled()) {
-                let uri = format!("{}:{}/", seed.0, seed.1);
-                let address = format!("{}:{}", seed.0, seed.1);
+                let uri = format!("{}:{}/", seed.hostname(), seed.port());
+                let address = format!("{}:{}", seed.hostname(), seed.port());
                 results.push(
                     self.ping_endpoint(uri, address, ServiceType::Views, deadline, ctrl_c.clone())
                         .await?,
@@ -252,7 +252,7 @@ impl HTTPClient {
 
             let path = request.path();
             if let Some(seed) = config.random_management_seed(self.tls_config.enabled()) {
-                let uri = format!("{}:{}{}", seed.0, seed.1, &path);
+                let uri = format!("{}:{}{}", seed.hostname(), seed.port(), &path);
                 let (content, status) = match request.verb() {
                     HttpVerb::Get => self.http_client.http_get(&uri, deadline, ctrl_c).await?,
                     HttpVerb::Post => {
@@ -269,7 +269,7 @@ impl HTTPClient {
                             .await?
                     }
                 };
-                return Ok(HttpResponse::new(content, status));
+                return Ok(HttpResponse::new(content, status, seed));
             }
 
             Err(ClientError::RequestFailed {
@@ -297,31 +297,41 @@ impl HTTPClient {
             )
             .await?;
 
+            let seed = if let Some(e) = request.endpoint() {
+                if !config.has_query_seed(&e, self.tls_config.enabled()) {
+                    return Err(ClientError::RequestFailed {
+                        reason: Some(format!("Endpoint {} not known", e)),
+                        key: None,
+                    });
+                }
+                e
+            } else if let Some(s) = config.random_query_seed(self.tls_config.enabled()) {
+                s
+            } else {
+                return Err(ClientError::RequestFailed {
+                    reason: Some("No nodes found for service".to_string()),
+                    key: None,
+                });
+            };
+
             let path = request.path();
-            if let Some(seed) = config.random_query_seed(self.tls_config.enabled()) {
-                let uri = format!("{}:{}{}", seed.0, seed.1, &path);
-                let (content, status) = match request.verb() {
-                    HttpVerb::Get => self.http_client.http_get(&uri, deadline, ctrl_c).await?,
-                    HttpVerb::Post => {
-                        self.http_client
-                            .http_post(&uri, request.payload(), request.headers(), deadline, ctrl_c)
-                            .await?
-                    }
-                    _ => {
-                        return Err(ClientError::RequestFailed {
-                            reason: Some("Method not allowed for queries".to_string()),
-                            key: None,
-                        });
-                    }
-                };
+            let uri = format!("{}:{}{}", seed.hostname(), seed.port(), &path);
+            let (content, status) = match request.verb() {
+                HttpVerb::Get => self.http_client.http_get(&uri, deadline, ctrl_c).await?,
+                HttpVerb::Post => {
+                    self.http_client
+                        .http_post(&uri, request.payload(), request.headers(), deadline, ctrl_c)
+                        .await?
+                }
+                _ => {
+                    return Err(ClientError::RequestFailed {
+                        reason: Some("Method not allowed for queries".to_string()),
+                        key: None,
+                    });
+                }
+            };
 
-                return Ok(HttpResponse::new(content, status));
-            }
-
-            Err(ClientError::RequestFailed {
-                reason: Some("No nodes found for service".to_string()),
-                key: None,
-            })
+            Ok(HttpResponse::new(content, status, seed))
         })
     }
 
@@ -345,7 +355,7 @@ impl HTTPClient {
 
             let path = request.path();
             if let Some(seed) = config.random_analytics_seed(self.tls_config.enabled()) {
-                let uri = format!("{}:{}{}", seed.0, seed.1, &path);
+                let uri = format!("{}:{}{}", seed.hostname(), seed.port(), &path);
                 let (content, status) = match request.verb() {
                     HttpVerb::Get => self.http_client.http_get(&uri, deadline, ctrl_c).await?,
                     HttpVerb::Post => {
@@ -361,7 +371,7 @@ impl HTTPClient {
                     }
                 };
 
-                return Ok(HttpResponse::new(content, status));
+                return Ok(HttpResponse::new(content, status, seed));
             }
 
             Err(ClientError::RequestFailed {
@@ -391,7 +401,7 @@ impl HTTPClient {
 
             let path = request.path();
             if let Some(seed) = config.random_search_seed(self.tls_config.enabled()) {
-                let uri = format!("{}:{}{}", seed.0, seed.1, &path);
+                let uri = format!("{}:{}{}", seed.hostname(), seed.port(), &path);
                 let (content, status) = match request.verb() {
                     HttpVerb::Post => {
                         self.http_client
@@ -406,7 +416,7 @@ impl HTTPClient {
                     }
                 };
 
-                return Ok(HttpResponse::new(content, status));
+                return Ok(HttpResponse::new(content, status, seed));
             }
 
             Err(ClientError::RequestFailed {
@@ -604,11 +614,32 @@ impl ManagementRequest {
     }
 }
 
+pub struct QueryTransactionRequest {
+    tx_timeout: Option<Duration>,
+    tx_id: Option<String>,
+    endpoint: Option<Endpoint>,
+}
+
+impl QueryTransactionRequest {
+    pub fn new(
+        tx_timeout: impl Into<Option<Duration>>,
+        tx_id: impl Into<Option<String>>,
+        endpoint: impl Into<Option<Endpoint>>,
+    ) -> Self {
+        Self {
+            tx_timeout: tx_timeout.into(),
+            tx_id: tx_id.into(),
+            endpoint: endpoint.into(),
+        }
+    }
+}
+
 pub enum QueryRequest {
     Execute {
         statement: String,
         scope: Option<(String, String)>,
         timeout: String,
+        transaction: Option<QueryTransactionRequest>,
     },
 }
 
@@ -631,16 +662,25 @@ impl QueryRequest {
                 statement,
                 scope,
                 timeout,
+                transaction,
             } => {
+                let mut json = HashMap::new();
                 if let Some(scope) = scope {
                     let ctx = format!("`default`:`{}`.`{}`", scope.0, scope.1);
-                    let json =
-                        json!({ "statement": statement, "query_context": ctx, "timeout": timeout });
-                    Some(serde_json::to_vec(&json).unwrap())
-                } else {
-                    let json = json!({ "statement": statement });
-                    Some(serde_json::to_vec(&json).unwrap())
+                    json.insert("query_context", ctx);
                 }
+
+                json.insert("statement", statement.to_string());
+                json.insert("timeout", timeout.to_string());
+                if let Some(txn) = transaction {
+                    if let Some(t) = txn.tx_timeout.clone() {
+                        json.insert("txtimeout", format!("{}ms", t.as_millis()));
+                    }
+                    if let Some(id) = txn.tx_id.clone() {
+                        json.insert("txid", id);
+                    }
+                }
+                Some(serde_json::to_vec(&json).unwrap())
             }
         }
     }
@@ -651,6 +691,19 @@ impl QueryRequest {
                 let mut h = HashMap::new();
                 h.insert("Content-Type", "application/json");
                 h
+            }
+        }
+    }
+
+    pub fn endpoint(&self) -> Option<Endpoint> {
+        match self {
+            Self::Execute { transaction, .. } => {
+                if let Some(txn) = transaction {
+                    if let Some(endpoint) = txn.endpoint.clone() {
+                        return Some(endpoint);
+                    }
+                }
+                None
             }
         }
     }
@@ -825,6 +878,32 @@ pub(crate) trait Config {
     fn set_loaded_from(&mut self, loaded_from: String);
 }
 
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq)]
+pub struct Endpoint {
+    hostname: String,
+    port: u32,
+}
+
+impl Display for Endpoint {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}:{}", self.hostname, self.port)
+    }
+}
+
+impl Endpoint {
+    pub fn new(hostname: String, port: u32) -> Self {
+        Self { hostname, port }
+    }
+
+    pub fn hostname(&self) -> &str {
+        &self.hostname
+    }
+
+    pub fn port(&self) -> u32 {
+        self.port
+    }
+}
+
 #[derive(Deserialize, Debug)]
 struct ClusterConfig {
     // rev: u64,
@@ -840,38 +919,38 @@ impl Config for ClusterConfig {
 }
 
 impl ClusterConfig {
-    pub fn management_seeds(&self, tls: bool) -> Vec<(String, u32)> {
+    pub fn management_seeds(&self, tls: bool) -> Vec<Endpoint> {
         let key = if tls { "mgmtSSL" } else { "mgmt" };
 
         self.seeds(key)
     }
 
-    pub fn query_seeds(&self, tls: bool) -> Vec<(String, u32)> {
+    pub fn query_seeds(&self, tls: bool) -> Vec<Endpoint> {
         let key = if tls { "n1qlSSL" } else { "n1ql" };
 
         self.seeds(key)
     }
 
-    pub fn analytics_seeds(&self, tls: bool) -> Vec<(String, u32)> {
+    pub fn analytics_seeds(&self, tls: bool) -> Vec<Endpoint> {
         let key = if tls { "cbasSSL" } else { "cbas" };
 
         self.seeds(key)
     }
 
-    pub fn search_seeds(&self, tls: bool) -> Vec<(String, u32)> {
+    pub fn search_seeds(&self, tls: bool) -> Vec<Endpoint> {
         let key = if tls { "ftsSSL" } else { "fts" };
 
         self.seeds(key)
     }
 
-    pub fn view_seeds(&self, tls: bool) -> Vec<(String, u32)> {
+    pub fn view_seeds(&self, tls: bool) -> Vec<Endpoint> {
         let key = if tls { "capiSSL" } else { "capi" };
 
         self.seeds(key)
     }
 
-    fn seeds(&self, key: &str) -> Vec<(String, u32)> {
-        let default: Vec<(String, u32)> = self
+    fn seeds(&self, key: &str) -> Vec<Endpoint> {
+        let default: Vec<Endpoint> = self
             .nodes_ext
             .iter()
             .filter(|node| node.services.contains_key(key))
@@ -881,17 +960,17 @@ impl ClusterConfig {
                 } else {
                     self.loaded_from.as_ref().unwrap().clone()
                 };
-                (hostname, *node.services.get(key).unwrap())
+                Endpoint::new(hostname, *node.services.get(key).unwrap())
             })
             .collect();
 
         for seed in &default {
-            if seed.0 == self.loaded_from.as_ref().unwrap().clone() {
+            if seed.hostname() == self.loaded_from.as_ref().unwrap().clone() {
                 return default;
             }
         }
 
-        let external: Vec<(String, u32)> = self
+        let external: Vec<Endpoint> = self
             .nodes_ext
             .iter()
             .filter(|node| {
@@ -908,12 +987,12 @@ impl ClusterConfig {
                 } else {
                     self.loaded_from.as_ref().unwrap().clone()
                 };
-                (hostname, *address.ports.get(key).unwrap())
+                Endpoint::new(hostname, *address.ports.get(key).unwrap())
             })
             .collect();
 
         for seed in &external {
-            if seed.0 == self.loaded_from.as_ref().unwrap().clone() {
+            if seed.hostname() == self.loaded_from.as_ref().unwrap().clone() {
                 return external;
             }
         }
@@ -921,23 +1000,28 @@ impl ClusterConfig {
         default
     }
 
-    fn random_management_seed(&self, tls: bool) -> Option<(String, u32)> {
+    pub fn has_query_seed(&self, endpoint: &Endpoint, tls: bool) -> bool {
+        let seeds = self.query_seeds(tls);
+        seeds.contains(endpoint)
+    }
+
+    fn random_management_seed(&self, tls: bool) -> Option<Endpoint> {
         self.random_seed(self.management_seeds(tls))
     }
 
-    fn random_query_seed(&self, tls: bool) -> Option<(String, u32)> {
+    fn random_query_seed(&self, tls: bool) -> Option<Endpoint> {
         self.random_seed(self.query_seeds(tls))
     }
 
-    fn random_analytics_seed(&self, tls: bool) -> Option<(String, u32)> {
+    fn random_analytics_seed(&self, tls: bool) -> Option<Endpoint> {
         self.random_seed(self.analytics_seeds(tls))
     }
 
-    fn random_search_seed(&self, tls: bool) -> Option<(String, u32)> {
+    fn random_search_seed(&self, tls: bool) -> Option<Endpoint> {
         self.random_seed(self.search_seeds(tls))
     }
 
-    fn random_seed(&self, seeds: Vec<(String, u32)>) -> Option<(String, u32)> {
+    fn random_seed(&self, seeds: Vec<Endpoint>) -> Option<Endpoint> {
         let mut rng = rand::thread_rng();
 
         if seeds.is_empty() {
@@ -948,7 +1032,7 @@ impl ClusterConfig {
         let seed = seeds.get(seed_idx);
 
         if let Some(s) = seed {
-            return Some((s.0.clone(), s.1));
+            return Some(s.clone());
         }
 
         None

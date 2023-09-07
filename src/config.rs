@@ -12,6 +12,7 @@ pub(crate) const DEFAULT_QUERY_TIMEOUT: Duration = Duration::from_millis(75000);
 pub(crate) const DEFAULT_ANALYTICS_TIMEOUT: Duration = Duration::from_millis(75000);
 pub(crate) const DEFAULT_SEARCH_TIMEOUT: Duration = Duration::from_millis(75000);
 pub(crate) const DEFAULT_MANAGEMENT_TIMEOUT: Duration = Duration::from_millis(75000);
+pub(crate) const DEFAULT_TRANSACTION_TIMEOUT: Duration = Duration::from_secs(120);
 pub(crate) const DEFAULT_KV_BATCH_SIZE: u32 = 500;
 
 /// Holds the complete config in an aggregated manner.
@@ -435,6 +436,7 @@ impl From<(String, &RemoteCluster)> for ClusterConfig {
                 analytics_timeout: Some(cluster.1.timeouts().analytics_timeout()),
                 search_timeout: Some(cluster.1.timeouts().search_timeout()),
                 management_timeout: Some(cluster.1.timeouts().management_timeout()),
+                transaction_timeout: Some(cluster.1.timeouts().transaction_timeout()),
             },
             tls: cluster.1.tls_config().clone(),
             credentials: ClusterCredentials {
@@ -504,6 +506,12 @@ pub struct ClusterConfigTimeouts {
         with = "humantime_serde"
     )]
     management_timeout: Option<Duration>,
+    #[serde(default)]
+    #[serde(
+        rename(deserialize = "transaction-timeout", serialize = "transaction-timeout"),
+        with = "humantime_serde"
+    )]
+    transaction_timeout: Option<Duration>,
 }
 
 impl Default for ClusterConfigTimeouts {
@@ -514,6 +522,7 @@ impl Default for ClusterConfigTimeouts {
             analytics_timeout: Some(DEFAULT_ANALYTICS_TIMEOUT),
             search_timeout: Some(DEFAULT_SEARCH_TIMEOUT),
             management_timeout: Some(DEFAULT_MANAGEMENT_TIMEOUT),
+            transaction_timeout: Some(DEFAULT_MANAGEMENT_TIMEOUT),
         }
     }
 }
@@ -537,6 +546,10 @@ impl ClusterConfigTimeouts {
 
     pub fn management_timeout(&self) -> Option<&Duration> {
         self.management_timeout.as_ref()
+    }
+
+    pub fn transaction_timeout(&self) -> Option<&Duration> {
+        self.transaction_timeout.as_ref()
     }
 }
 

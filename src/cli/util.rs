@@ -4,9 +4,9 @@ use crate::cli::error::CBShellError::{
 };
 use crate::cli::error::{
     client_error_to_shell_error, cluster_not_found_error, deserialize_error,
-    malformed_response_error, no_active_bucket_error,
+    malformed_response_error, no_active_bucket_error, unexpected_status_code_error,
 };
-use crate::client::{CapellaClient, CapellaRequest};
+use crate::client::{CapellaClient, CapellaRequest, HttpResponse};
 use crate::state::State;
 use crate::{RemoteCluster, RemoteClusterType};
 use nu_engine::CallExt;
@@ -19,6 +19,18 @@ use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 use tokio::time::Instant;
+
+pub fn is_http_status(response: &HttpResponse, status: u16, span: Span) -> Result<(), ShellError> {
+    if response.status() != status {
+        return Err(unexpected_status_code_error(
+            response.status(),
+            response.content(),
+            span,
+        ));
+    }
+
+    Ok(())
+}
 
 pub fn convert_row_to_nu_value(
     v: &serde_json::Value,
@@ -297,7 +309,7 @@ pub(crate) fn find_project_id(
 }
 
 // duration_to_golang_string creates a golang formatted string to use with timeouts. Unlike Golang
-// strings it does not deal with fracational seconds, we do not need that accuracy.
+// strings it does not deal with fractional seconds, we do not need that accuracy.
 pub fn duration_to_golang_string(duration: Duration) -> String {
     let mut total_secs = duration.as_secs();
     let secs = total_secs % 60;

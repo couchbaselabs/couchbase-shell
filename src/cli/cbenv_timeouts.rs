@@ -56,6 +56,12 @@ impl Command for UseTimeouts {
                 "the new timeout for management operations (in ms)",
                 None,
             )
+            .named(
+                "transaction-timeout",
+                SyntaxShape::Int,
+                "the new timeout for transactions operations (in ms)",
+                None,
+            )
             .category(Category::Custom("couchbase".to_string()))
     }
 
@@ -83,6 +89,7 @@ impl Command for UseTimeouts {
         let query: Option<i64> = call.get_flag(engine_state, stack, "query-timeout")?;
         let data: Option<i64> = call.get_flag(engine_state, stack, "data-timeout")?;
         let management: Option<i64> = call.get_flag(engine_state, stack, "management-timeout")?;
+        let transaction: Option<i64> = call.get_flag(engine_state, stack, "transaction-timeout")?;
 
         let mut timeouts = active.timeouts();
 
@@ -100,6 +107,9 @@ impl Command for UseTimeouts {
         };
         if let Some(t) = management {
             timeouts.set_management_timeout(Duration::from_millis(t as u64));
+        };
+        if let Some(t) = transaction {
+            timeouts.set_transaction_timeout(Duration::from_millis(t as u64));
         };
 
         active.set_timeouts(timeouts);
@@ -130,6 +140,11 @@ impl Command for UseTimeouts {
         using_now.add_i64(
             "search_timeout (ms)",
             new_timeouts.search_timeout().as_millis() as i64,
+            call.head,
+        );
+        using_now.add_i64(
+            "transaction_timeout (ms)",
+            new_timeouts.transaction_timeout().as_millis() as i64,
             call.head,
         );
 

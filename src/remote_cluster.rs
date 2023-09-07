@@ -1,5 +1,8 @@
 use crate::client::{Client, CAPELLA_SRV_SUFFIX};
-use crate::ClusterTlsConfig;
+use crate::{
+    ClusterTlsConfig, DEFAULT_ANALYTICS_TIMEOUT, DEFAULT_DATA_TIMEOUT, DEFAULT_MANAGEMENT_TIMEOUT,
+    DEFAULT_QUERY_TIMEOUT, DEFAULT_SEARCH_TIMEOUT, DEFAULT_TRANSACTION_TIMEOUT,
+};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -191,16 +194,18 @@ pub struct ClusterTimeouts {
     analytics_timeout: Duration,
     search_timeout: Duration,
     management_timeout: Duration,
+    transaction_timeout: Duration,
 }
 
 impl Default for ClusterTimeouts {
     fn default() -> Self {
         ClusterTimeouts {
-            data_timeout: Duration::from_millis(30000),
-            query_timeout: Duration::from_millis(75000),
-            analytics_timeout: Duration::from_millis(75000),
-            search_timeout: Duration::from_millis(75000),
-            management_timeout: Duration::from_millis(75000),
+            data_timeout: DEFAULT_DATA_TIMEOUT,
+            query_timeout: DEFAULT_QUERY_TIMEOUT,
+            analytics_timeout: DEFAULT_ANALYTICS_TIMEOUT,
+            search_timeout: DEFAULT_SEARCH_TIMEOUT,
+            management_timeout: DEFAULT_MANAGEMENT_TIMEOUT,
+            transaction_timeout: DEFAULT_TRANSACTION_TIMEOUT,
         }
     }
 }
@@ -212,6 +217,7 @@ impl ClusterTimeouts {
         analytics_timeout: Duration,
         search_timeout: Duration,
         management_timeout: Duration,
+        transaction_timeout: Duration,
     ) -> Self {
         ClusterTimeouts {
             data_timeout,
@@ -219,6 +225,7 @@ impl ClusterTimeouts {
             analytics_timeout,
             search_timeout,
             management_timeout,
+            transaction_timeout,
         }
     }
 
@@ -242,6 +249,10 @@ impl ClusterTimeouts {
         self.management_timeout
     }
 
+    pub fn transaction_timeout(&self) -> Duration {
+        self.transaction_timeout
+    }
+
     pub fn set_analytics_timeout(&mut self, duration: Duration) {
         self.analytics_timeout = duration
     }
@@ -260,5 +271,9 @@ impl ClusterTimeouts {
 
     pub fn set_management_timeout(&mut self, duration: Duration) {
         self.management_timeout = duration
+    }
+
+    pub fn set_transaction_timeout(&mut self, duration: Duration) {
+        self.transaction_timeout = duration
     }
 }

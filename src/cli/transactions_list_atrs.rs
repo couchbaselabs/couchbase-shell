@@ -110,8 +110,9 @@ impl Command for TransactionsListAtrs {
                     statement,
                     scope: None,
                     timeout: duration_to_golang_string(active_cluster.timeouts().query_timeout()),
+                    transaction: None,
                 },
-                Instant::now().add(active_cluster.timeouts().management_timeout()),
+                Instant::now().add(active_cluster.timeouts().query_timeout()),
                 ctrl_c,
             )
             .map_err(|e| client_error_to_shell_error(e, span))?;

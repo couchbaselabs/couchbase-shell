@@ -1,6 +1,7 @@
 use crate::cli::CtrlcFuture;
 use crate::client::error::ClientError;
 use crate::client::http_handler::{HttpResponse, HttpVerb};
+use crate::client::Endpoint;
 use base64::{engine::general_purpose, Engine as _};
 use hmac::{Hmac, Mac};
 use log::debug;
@@ -222,7 +223,12 @@ impl CapellaClient {
                 self.http_put(request.path().as_str(), request.payload(), deadline, ctrl_c)?
             }
         };
-        Ok(HttpResponse::new(content, status))
+        // This endpoint is pretty undenyably a hack, but doesn't really matter for now.
+        Ok(HttpResponse::new(
+            content,
+            status,
+            Endpoint::new(CLOUD_URL.to_string(), 443),
+        ))
     }
 }
 

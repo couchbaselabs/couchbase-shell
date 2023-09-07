@@ -17,7 +17,7 @@ use crate::cli_options::{parse_commandline_args, parse_shell_args, CliOptions};
 use crate::config::{
     ClusterConfigBuilder, ClusterCredentials, ShellConfig, DEFAULT_ANALYTICS_TIMEOUT,
     DEFAULT_DATA_TIMEOUT, DEFAULT_KV_BATCH_SIZE, DEFAULT_MANAGEMENT_TIMEOUT, DEFAULT_QUERY_TIMEOUT,
-    DEFAULT_SEARCH_TIMEOUT,
+    DEFAULT_SEARCH_TIMEOUT, DEFAULT_TRANSACTION_TIMEOUT,
 };
 use crate::config_files::{read_nu_config_file, CBSHELL_FOLDER};
 use crate::default_context::create_default_context;
@@ -566,6 +566,10 @@ fn make_state(
                 Some(t) => t.to_owned(),
                 None => DEFAULT_MANAGEMENT_TIMEOUT,
             };
+            let transaction_timeout = match timeouts.transaction_timeout() {
+                Some(t) => t.to_owned(),
+                None => DEFAULT_TRANSACTION_TIMEOUT,
+            };
             let kv_batch_size = match v.kv_batch_size() {
                 Some(b) => b,
                 None => DEFAULT_KV_BATCH_SIZE,
@@ -594,6 +598,7 @@ fn make_state(
                     analytics_timeout,
                     search_timeout,
                     management_timeout,
+                    transaction_timeout,
                 ),
                 v.cloud_org(),
                 kv_batch_size,
@@ -689,6 +694,7 @@ fn merge_couchbase_delta(context: &mut EngineState, state: Arc<Mutex<State>>) {
         working_set.add_decl(Box::new(Query::new(state.clone())));
         working_set.add_decl(Box::new(QueryAdvise::new(state.clone())));
         working_set.add_decl(Box::new(QueryIndexes::new(state.clone())));
+        working_set.add_decl(Box::new(QueryTransactions::new(state.clone())));
         working_set.add_decl(Box::new(Scopes::new(state.clone())));
         working_set.add_decl(Box::new(ScopesCreate::new(state.clone())));
         working_set.add_decl(Box::new(ScopesDrop::new(state.clone())));
