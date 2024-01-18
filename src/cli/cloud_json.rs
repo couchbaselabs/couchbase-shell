@@ -44,6 +44,32 @@ impl JSONCloudClustersSummariesV3 {
 }
 
 #[derive(Debug, Deserialize)]
+pub(crate) struct JSONCloudsOrganizationsResponse {
+    data: Vec<JSONCloudsOrganizationsResponseItem>,
+}
+
+impl JSONCloudsOrganizationsResponse {
+    pub fn items(&self) -> &Vec<JSONCloudsOrganizationsResponseItem> {
+        self.data.as_ref()
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct JSONCloudsOrganizationsResponseItem {
+    id: String,
+    name: String,
+}
+
+impl JSONCloudsOrganizationsResponseItem {
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+
+#[derive(Debug, Deserialize)]
 pub(crate) struct JSONCloudsProjectsResponseItem {
     id: String,
     name: String,

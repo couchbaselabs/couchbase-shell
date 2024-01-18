@@ -84,11 +84,15 @@ impl CapellaClient {
         mac.update(bearer_payload.as_bytes());
         let mac_result = mac.finalize();
 
-        let bearer = format!(
+        let mut bearer = format!(
             "Bearer {}:{}",
             self.access_key.clone(),
             general_purpose::STANDARD.encode(mac_result.into_bytes()),
         );
+
+        if path.contains("/v4/") {
+            bearer = format!("Bearer {}", &self.secret_key);
+        }
 
         res_builder = res_builder
             .timeout(timeout)
@@ -304,6 +308,7 @@ pub enum CapellaRequest {
     // GetProject {
     //     project_id: String,
     // },
+    GetOrganizations,
     GetProjects,
     GetUsers {
         cluster_id: String,
@@ -389,6 +394,7 @@ impl CapellaRequest {
             // Self::GetProject { project_id } => {
             //     format!("/v2/projects/{}", project_id)
             // }
+            Self::GetOrganizations => "/v4/organizations".into(),
             Self::GetProjects => "/v2/projects".into(),
             Self::GetUsers { cluster_id } => {
                 format!("/v2/clusters/{}/users", cluster_id)
@@ -436,6 +442,7 @@ impl CapellaRequest {
             // Self::GetClusterStatus { .. } => HttpVerb::Get,
             // Self::GetOrgUsers => HttpVerb::Get,
             // Self::GetProject { .. } => HttpVerb::Get,
+            Self::GetOrganizations => HttpVerb::Get,
             Self::GetProjects => HttpVerb::Get,
             Self::GetUsers { .. } => HttpVerb::Get,
             // Self::UpdateAllowList { .. } => HttpVerb::Put,
