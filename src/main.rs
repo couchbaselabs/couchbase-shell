@@ -698,6 +698,7 @@ fn merge_couchbase_delta(context: &mut EngineState, state: Arc<Mutex<State>>) {
         working_set.add_decl(Box::new(Help));
         working_set.add_decl(Box::new(FakeData::new(state.clone())));
         working_set.add_decl(Box::new(Nodes::new(state.clone())));
+        working_set.add_decl(Box::new(Organizations::new(state.clone())));
         working_set.add_decl(Box::new(Ping::new(state.clone())));
         working_set.add_decl(Box::new(Projects::new(state.clone())));
         working_set.add_decl(Box::new(ProjectsCreate::new(state.clone())));
