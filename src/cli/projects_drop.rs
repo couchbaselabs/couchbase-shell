@@ -1,3 +1,4 @@
+use crate::cli::util::find_org_id;
 use crate::cli::util::find_project_id;
 use crate::client::CapellaRequest;
 use crate::state::State;
@@ -63,15 +64,32 @@ fn projects_drop(
 
     debug!("Running projects drop for {}", &name);
 
-    let guard = state.lock().unwrap();
+    let guard = &mut state.lock().unwrap();
     let control = guard.active_capella_org()?;
     let client = control.client();
     let deadline = Instant::now().add(control.timeout());
-    let project_id = find_project_id(ctrl_c.clone(), name, &client, deadline, span)?;
+
+    let org_id = match control.id() {
+        Some(id) => id,
+        None => {
+            let id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
+            guard.set_active_capella_org_id(id.clone())?;
+            id
+        }
+    };
+
+    let project_id = find_project_id(
+        ctrl_c.clone(),
+        name,
+        &client,
+        deadline,
+        span,
+        org_id.clone(),
+    )?;
 
     let response = client
         .capella_request(
-            CapellaRequest::DeleteProject { project_id },
+            CapellaRequest::DeleteProject { org_id, project_id },
             deadline,
             ctrl_c,
         )

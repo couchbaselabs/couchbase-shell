@@ -253,6 +253,7 @@ pub enum CapellaRequest {
         payload: String,
     },
     CreateProject {
+        org_id: String,
         payload: String,
     },
     CreateUser {
@@ -271,6 +272,7 @@ pub enum CapellaRequest {
         cluster_id: String,
     },
     DeleteProject {
+        org_id: String,
         project_id: String,
     },
     DeleteUser {
@@ -309,7 +311,9 @@ pub enum CapellaRequest {
     //     project_id: String,
     // },
     GetOrganizations,
-    GetProjects,
+    GetProjects {
+        org_id: String,
+    },
     GetUsers {
         cluster_id: String,
     },
@@ -340,7 +344,9 @@ impl CapellaRequest {
             }
             Self::CreateCluster { .. } => "/v2/clusters".into(),
             Self::CreateClusterV3 { .. } => "/v3/clusters".into(),
-            Self::CreateProject { .. } => "/v2/projects".into(),
+            Self::CreateProject { org_id, .. } => {
+                format!("/v4/organizations/{}/projects", org_id).into()
+            }
             Self::CreateUser { cluster_id, .. } => {
                 format!("/v2/clusters/{}/users", cluster_id)
             }
@@ -353,8 +359,8 @@ impl CapellaRequest {
             Self::DeleteClusterV3 { cluster_id, .. } => {
                 format!("/v3/clusters/{}", cluster_id)
             }
-            Self::DeleteProject { project_id } => {
-                format!("/v2/projects/{}", project_id)
+            Self::DeleteProject { org_id, project_id } => {
+                format!("/v4/organizations/{}/projects/{}", org_id, project_id).into()
             }
             Self::DeleteUser {
                 cluster_id,
@@ -395,7 +401,9 @@ impl CapellaRequest {
             //     format!("/v2/projects/{}", project_id)
             // }
             Self::GetOrganizations => "/v4/organizations".into(),
-            Self::GetProjects => "/v2/projects".into(),
+            Self::GetProjects { org_id } => {
+                format!("/v4/organizations/{}/projects?perPage=100", org_id)
+            }
             Self::GetUsers { cluster_id } => {
                 format!("/v2/clusters/{}/users", cluster_id)
             }
@@ -443,7 +451,7 @@ impl CapellaRequest {
             // Self::GetOrgUsers => HttpVerb::Get,
             // Self::GetProject { .. } => HttpVerb::Get,
             Self::GetOrganizations => HttpVerb::Get,
-            Self::GetProjects => HttpVerb::Get,
+            Self::GetProjects { .. } => HttpVerb::Get,
             Self::GetUsers { .. } => HttpVerb::Get,
             // Self::UpdateAllowList { .. } => HttpVerb::Put,
             Self::UpdateBucket { .. } => HttpVerb::Put,

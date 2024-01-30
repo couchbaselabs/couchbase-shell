@@ -20,6 +20,8 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 use tokio::time::Instant;
 
+use super::cloud_json::JSONCloudsOrganizationsResponse;
+
 pub fn is_http_status(response: &HttpResponse, status: u16, span: Span) -> Result<(), ShellError> {
     if response.status() != status {
         return Err(unexpected_status_code_error(
@@ -284,9 +286,10 @@ pub(crate) fn find_project_id(
     client: &Arc<CapellaClient>,
     deadline: Instant,
     span: Span,
+    org_id: String,
 ) -> Result<String, ShellError> {
     let response = client
-        .capella_request(CapellaRequest::GetProjects {}, deadline, ctrl_c)
+        .capella_request(CapellaRequest::GetProjects { org_id }, deadline, ctrl_c)
         .map_err(|e| client_error_to_shell_error(e, span))?;
     if response.status() != 200 {
         return Err(UnexpectedResponseStatus {
@@ -306,6 +309,30 @@ pub(crate) fn find_project_id(
     }
 
     Err(ShellError::from(ProjectNotFound { name, span }))
+}
+
+pub(crate) fn find_org_id(
+    ctrl_c: Arc<AtomicBool>,
+    client: &Arc<CapellaClient>,
+    deadline: Instant,
+    span: Span,
+) -> Result<String, ShellError> {
+    let response = client
+        .capella_request(CapellaRequest::GetOrganizations {}, deadline, ctrl_c)
+        .map_err(|e| client_error_to_shell_error(e, span))?;
+    if response.status() != 200 {
+        return Err(UnexpectedResponseStatus {
+            status_code: response.status(),
+            message: response.content().to_string(),
+            span,
+        }
+        .into());
+    }
+    let content: JSONCloudsOrganizationsResponse = serde_json::from_str(response.content())
+        .map_err(|e| deserialize_error(e.to_string(), span))?;
+
+    let org = content.items().first().unwrap().id();
+    Ok(org.to_string())
 }
 
 // duration_to_golang_string creates a golang formatted string to use with timeouts. Unlike Golang

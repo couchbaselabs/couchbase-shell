@@ -4,7 +4,6 @@ use crate::tutorial::Tutorial;
 use crate::RemoteCluster;
 use nu_plugin::LabeledError;
 use nu_protocol::ShellError;
-use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -142,9 +141,7 @@ impl State {
     }
 
     pub fn active_capella_org(&self) -> Result<&RemoteCapellaOrganization, ShellError> {
-        let guard = self.active_capella_org.lock().unwrap();
-
-        let active = match guard.deref() {
+        let active = match self.active_capella_org_name() {
             Some(a) => a,
             None => {
                 return Err(ShellError::GenericError(
@@ -157,7 +154,7 @@ impl State {
             }
         };
 
-        self.capella_orgs.get(active).ok_or_else(|| {
+        self.capella_orgs.get(&active).ok_or_else(|| {
             ShellError::GenericError(
                 "Active Capella organization not known".to_string(),
                 "".to_string(),
@@ -188,6 +185,37 @@ impl State {
             *guard = Some(active);
         }
 
+        Ok(())
+    }
+
+    pub fn set_active_capella_org_id(&mut self, id: String) -> Result<(), ShellError> {
+        let active = match self.active_capella_org_name() {
+            Some(a) => a,
+            None => {
+                return Err(ShellError::GenericError(
+                    "No active Capella organization set".to_string(),
+                    "".to_string(),
+                    None,
+                    None,
+                    Vec::new(),
+                ))
+            }
+        };
+
+        let orgs = &mut self.capella_orgs;
+        let org = match orgs.get_mut(&active) {
+            Some(org) => org,
+            None => {
+                return Err(ShellError::GenericError(
+                    "Capella organization not known".to_string(),
+                    format!("Capella organization {} has not been registered", active),
+                    None,
+                    None,
+                    Vec::new(),
+                ))
+            }
+        };
+        org.set_id(id);
         Ok(())
     }
 
@@ -234,6 +262,7 @@ impl State {
 }
 
 pub struct RemoteCapellaOrganization {
+    id: Option<String>,
     secret_key: String,
     access_key: String,
     client: Mutex<Option<Arc<CapellaClient>>>,
@@ -249,6 +278,7 @@ impl RemoteCapellaOrganization {
         active_project: Option<String>,
     ) -> Self {
         Self {
+            id: None,
             secret_key,
             access_key,
             client: Mutex::new(None),
@@ -287,5 +317,13 @@ impl RemoteCapellaOrganization {
     pub fn set_active_project(&self, name: String) {
         let mut active = self.active_project.lock().unwrap();
         *active = Some(name);
+    }
+
+    pub fn id(&self) -> Option<String> {
+        self.id.clone()
+    }
+
+    pub fn set_id(&mut self, id: String) {
+        self.id = Some(id);
     }
 }
