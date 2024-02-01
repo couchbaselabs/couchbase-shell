@@ -19,7 +19,7 @@ First, download the archive for your operating system.
 
 You do not need any extra dependencies to run `cbsh`, it comes "batteries included".
 
-**macOS Users**: You will need to grant the binary permissions through `Security & Privacy` settings the first time you run it. 
+**macOS Users**: You will need to grant the binary permissions through `Security & Privacy` settings the first time you run it.
 
 After extracting the archive, run the `cbsh` binary in your terminal.
 
@@ -33,17 +33,17 @@ The Couchbase Shell 0.75.1
 Once the binary is available, you can connect to a cluster on the fly and run a simple command to list the (user-visible) buckets.
 
 ```
-❯ ./cbsh --hostnames 127.0.0.1 -u username -p                       
-Password: 
+❯ ./cbsh --connstr 127.0.0.1 -u username -p
+Password:
 👤 username 🏠 default in 🗄 <not set>
 > buckets
 ───┬─────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────
- # │ cluster │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud 
+ # │ cluster │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud
 ───┼─────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────
- 0 │ default │ beer-sample   │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false 
- 1 │ default │ default       │ couchbase │        1 │ none                 │  104.9 MB │ true          │        │ false 
- 2 │ default │ targetBucket  │ couchbase │        0 │ none                 │  104.9 MB │ true          │        │ false 
- 3 │ default │ travel-sample │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false 
+ 0 │ default │ beer-sample   │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false
+ 1 │ default │ default       │ couchbase │        1 │ none                 │  104.9 MB │ true          │        │ false
+ 2 │ default │ targetBucket  │ couchbase │        0 │ none                 │  104.9 MB │ true          │        │ false
+ 3 │ default │ travel-sample │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false
 ───┴─────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴────────┴───────
 ```
 
@@ -60,7 +60,7 @@ username = "Administrator"
 password = "password"
 ```
 
-After the config is in place, you can run `./cbsh` without any arguments and it will connect to that cluster after start automatically. 
+After the config is in place, you can run `./cbsh` without any arguments and it will connect to that cluster after start automatically.
 
 The downloaded archive contains an `example` directory which also contains sample configuration files for more information. Also, please see the [docs](https://couchbase.sh/docs/) for full guidance, including information about how to work with multiple clusters at the same time.
 
@@ -94,7 +94,7 @@ On top of [nushell](https://www.nushell.sh/) built-in commands, the following co
  - `cb-env scope` - Sets the active scope based on its name
  - `cb-env timeouts` - Sets the default timeouts
  - `clouds` - Lists all clusters on the active Capella organisation
- - `clusters`- Lists all clusters on the active Capella organisation 
+ - `clusters`- Lists all clusters on the active Capella organisation
  - `clusters create` - Creates a new cluster against the active Capella organization
  - `clusters drop` - Deletes a cluster from the active Capella organization
  - `clusters get` - Gets a cluster from the active Capella organization
@@ -106,7 +106,7 @@ On top of [nushell](https://www.nushell.sh/) built-in commands, the following co
  - `collections drop` - Removes a collection
  - `doc get` - Perform a KV get operation
  - `doc insert` - Perform a KV insert operation
- - `doc remove` - Removes a KV document 
+ - `doc remove` - Removes a KV document
  - `doc replace` - Perform a KV replace operation
  - `doc upsert` - Perform a KV upsert operation
  - `fake` - Generate fake/mock data
@@ -124,7 +124,7 @@ On top of [nushell](https://www.nushell.sh/) built-in commands, the following co
  - `scopes create` - Creates scopes through the HTTP API
  - `scopes drop` - Removes a scope
  - `search` - Runs a query against a search index
- - `transations list-atrs` - List all active transaction records (requires an index - create index id3 on `travel-sample`(meta().id, meta().xattrs.attempts)) 
+ - `transations list-atrs` - List all active transaction records (requires an index - create index id3 on `travel-sample`(meta().id, meta().xattrs.attempts))
  - `tutorial` - Runs you through a tutorial of both nushell and cbshell
  - `users` - List all users
  - `users roles` - List roles available on the cluster

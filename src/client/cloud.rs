@@ -84,15 +84,15 @@ impl CapellaClient {
         mac.update(bearer_payload.as_bytes());
         let mac_result = mac.finalize();
 
-        let mut bearer = format!(
-            "Bearer {}:{}",
-            self.access_key.clone(),
-            general_purpose::STANDARD.encode(mac_result.into_bytes()),
-        );
-
-        if path.contains("/v4/") {
-            bearer = format!("Bearer {}", &self.secret_key);
-        }
+        let bearer = if path.contains("/v4/") {
+            format!("Bearer {}", &self.secret_key)
+        } else {
+            format!(
+                "Bearer {}:{}",
+                self.access_key.clone(),
+                general_purpose::STANDARD.encode(mac_result.into_bytes())
+            )
+        };
 
         res_builder = res_builder
             .timeout(timeout)

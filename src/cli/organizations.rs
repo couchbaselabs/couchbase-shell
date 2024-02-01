@@ -64,7 +64,7 @@ fn organizations(
 
     let guard = state.lock().unwrap();
     let control = guard.active_capella_org()?;
-    let client: Arc<crate::client::CapellaClient> = control.client();
+    let client = control.client();
     let response = client
         .capella_request(
             CapellaRequest::GetOrganizations {},
@@ -72,7 +72,6 @@ fn organizations(
             ctrl_c,
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
-
     if response.status() != 200 {
         return Err(unexpected_status_code_error(
             response.status(),
