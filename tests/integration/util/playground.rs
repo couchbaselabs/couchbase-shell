@@ -1,4 +1,3 @@
-use crate::features::TestFeature;
 use crate::util::TestConfig;
 use crate::{cbsh, TestResult};
 use log::debug;
@@ -19,11 +18,16 @@ pub struct CBPlayground {
 #[derive(Default)]
 pub struct PerTestOptions {
     no_default_collection: bool,
+    capella_test: bool,
 }
 
 impl PerTestOptions {
     pub fn set_no_default_collection(mut self, no_default_collection: bool) -> PerTestOptions {
         self.no_default_collection = no_default_collection;
+        self
+    }
+    pub fn set_capella_test(mut self, capella_test: bool) -> PerTestOptions {
+        self.capella_test = capella_test;
         self
     }
 }
@@ -36,10 +40,10 @@ impl CBPlayground {
         block: impl FnOnce(Dirs, &mut CBPlayground),
     ) {
         Playground::setup(topic, |dirs, _sandbox| {
-            let add_collection = if let Some(o) = opts.into() {
-                !o.no_default_collection
+            let (add_collection, capella_test) = if let Some(o) = opts.into() {
+                (!o.no_default_collection, o.capella_test)
             } else {
-                true
+                (true, false)
             };
             let mut playground = if add_collection {
                 CBPlayground {
@@ -85,8 +89,7 @@ data-timeout = \"{}\"",
                     contents = format!(
                         "
 {}
-default-scope = \"{}\"
-                ",
+default-scope = \"{}\"",
                         contents, s
                     );
                 }
@@ -101,35 +104,27 @@ default-collection = \"{}\"
                 }
             }
 
-            if config.supports_feature(TestFeature::Capella) {
+            if capella_test {
                 contents = format!(
-                    "
-{}
+                    "version = 1
+[[database]]
+identifier = \"capella\"
+connstr = \"{}\"
+username = \"{}\"
+password = \"{}\"
+tls-enabled = true
 capella-organization = \"test-org\"
 
 [[capella-organization]]
-identifier = \"test-org\"",
-                    contents,
-                );
-
-                if let Some(a) = config.capella_access_key() {
-                    contents = format!(
-                        "
-{}
-access-key = \"{}\"",
-                        contents, a
-                    );
-                } else {
-                };
-
-                if let Some(s) = config.capella_secret_key() {
-                    contents = format!(
-                        "
-{}
+identifier = \"test-org\"
+access-key = \"{}\"
 secret-key = \"{}\"",
-                        contents, s
-                    );
-                };
+                    config.capella_connstr().unwrap(),
+                    config.capella_username().unwrap(),
+                    config.capella_password().unwrap(),
+                    config.capella_access_key().unwrap(),
+                    config.capella_secret_key().unwrap(),
+                );
             }
 
             config_dir.push("config");

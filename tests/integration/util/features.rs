@@ -8,7 +8,6 @@ pub enum TestFeature {
     QueryIndex,
     QueryIndexDefinitions,
     QueryIndexAdvise,
-    Capella,
 }
 
 impl From<&str> for TestFeature {
@@ -20,7 +19,6 @@ impl From<&str> for TestFeature {
             "queryindex" => TestFeature::QueryIndex,
             "queryindexdefs" => TestFeature::QueryIndexDefinitions,
             "queryindexadvise" => TestFeature::QueryIndexAdvise,
-            "capella" => TestFeature::Capella,
             _ => panic!("Unrecognized feature : {}", feature),
         }
     }

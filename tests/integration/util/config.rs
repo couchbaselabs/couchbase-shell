@@ -17,6 +17,9 @@ pub struct Config {
     bucket: Option<String>,
     enabled_features: Vec<TestFeature>,
     data_timeout: String,
+    capella_conn_string: Option<String>,
+    capella_username: Option<String>,
+    capella_password: Option<String>,
     capella_access_key: Option<String>,
     capella_secret_key: Option<String>,
 }
@@ -46,6 +49,15 @@ impl Config {
     pub fn data_timeout(&self) -> String {
         self.data_timeout.clone()
     }
+    pub fn capella_conn_string(&self) -> Option<String> {
+        self.capella_conn_string.clone()
+    }
+    pub fn capella_username(&self) -> Option<String> {
+        self.capella_username.clone()
+    }
+    pub fn capella_password(&self) -> Option<String> {
+        self.capella_password.clone()
+    }
     pub fn capella_access_key(&self) -> Option<String> {
         self.capella_access_key.clone()
     }
@@ -54,9 +66,9 @@ impl Config {
     }
 
     pub fn parse() -> Config {
-        let config = CLIConfig::init_from_env().unwrap();
+        let cli_config = CLIConfig::init_from_env().unwrap();
 
-        let str_features = config.features();
+        let str_features = cli_config.features();
         let features = if str_features.is_empty() {
             vec![]
         } else {
@@ -67,37 +79,40 @@ impl Config {
             features
         };
 
-        if let Some(conn_str) = config.conn_string() {
-            let username = config.username();
-            let password = config.password();
-            let bucket = config.default_bucket();
-
-            return Config {
-                cluster_type: ClusterType::Standalone,
-                username: Some(username),
-                password: Some(password),
-                conn_string: Some(conn_str),
-                caves_version: None,
-                bucket: Some(bucket),
-                enabled_features: features,
-                data_timeout: config.data_timeout().unwrap_or_else(|| "5s".into()),
-                capella_access_key: config.capella_access_key(),
-                capella_secret_key: config.capella_secret_key(),
-            };
-        }
-
-        Config {
+        let mut config = Config {
             cluster_type: ClusterType::Mock,
             username: None,
             password: None,
             conn_string: None,
-            caves_version: config.caves_version(),
+            caves_version: cli_config.caves_version(),
             bucket: None,
             enabled_features: features,
-            data_timeout: config.data_timeout().unwrap_or_else(|| "5s".into()),
-            capella_access_key: config.capella_access_key(),
-            capella_secret_key: config.capella_secret_key(),
+            data_timeout: cli_config.data_timeout().unwrap_or_else(|| "5s".into()),
+            capella_conn_string: None,
+            capella_username: None,
+            capella_password: None,
+            capella_access_key: None,
+            capella_secret_key: None,
+        };
+
+        if let Some(conn_str) = cli_config.conn_string() {
+            config.cluster_type = ClusterType::Standalone;
+            config.username = Some(cli_config.username());
+            config.password = Some(cli_config.password());
+            config.conn_string = Some(conn_str);
+            config.bucket = Some(cli_config.default_bucket());
+        };
+
+        if let Some(capella_conn_str) = cli_config.capella_conn_string() {
+            config.cluster_type = ClusterType::Standalone;
+            config.capella_username = Some(cli_config.capella_username().unwrap());
+            config.capella_password = Some(cli_config.capella_password().unwrap());
+            config.capella_conn_string = Some(capella_conn_str);
+            config.capella_access_key = Some(cli_config.capella_access_key().unwrap());
+            config.capella_secret_key = Some(cli_config.capella_secret_key().unwrap());
         }
+
+        config
     }
 }
 
@@ -117,6 +132,12 @@ pub struct CLIConfig {
     features: String,
     #[envconfig(from = "DATA_TIMEOUT")]
     data_timeout: Option<String>,
+    #[envconfig(from = "CAPELLA_CONN_STRING")]
+    capella_conn_string: Option<String>,
+    #[envconfig(from = "CAPELLA_USERNAME")]
+    capella_username: Option<String>,
+    #[envconfig(from = "CAPELLA_PASSWORD")]
+    capella_password: Option<String>,
     #[envconfig(from = "CAPELLA_ACCESS_KEY")]
     capella_access_key: Option<String>,
     #[envconfig(from = "CAPELLA_SECRET_KEY")]
@@ -144,6 +165,15 @@ impl CLIConfig {
     }
     pub fn data_timeout(&self) -> Option<String> {
         self.data_timeout.clone()
+    }
+    pub fn capella_conn_string(&self) -> Option<String> {
+        self.capella_conn_string.clone()
+    }
+    pub fn capella_username(&self) -> Option<String> {
+        self.capella_username.clone()
+    }
+    pub fn capella_password(&self) -> Option<String> {
+        self.capella_password.clone()
     }
     pub fn capella_access_key(&self) -> Option<String> {
         self.capella_access_key.clone()
