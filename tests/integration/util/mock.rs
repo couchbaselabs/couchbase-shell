@@ -173,6 +173,8 @@ impl MockCluster {
                 password,
                 support_matrix: enabled_features,
                 data_timeout: c.data_timeout(),
+                capella_access_key: c.capella_access_key(),
+                capella_secret_key: c.capella_secret_key(),
             }),
             _stream: stream,
         }

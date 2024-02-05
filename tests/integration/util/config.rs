@@ -17,6 +17,8 @@ pub struct Config {
     bucket: Option<String>,
     enabled_features: Vec<TestFeature>,
     data_timeout: String,
+    capella_access_key: Option<String>,
+    capella_secret_key: Option<String>,
 }
 
 impl Config {
@@ -43,6 +45,12 @@ impl Config {
     }
     pub fn data_timeout(&self) -> String {
         self.data_timeout.clone()
+    }
+    pub fn capella_access_key(&self) -> Option<String> {
+        self.capella_access_key.clone()
+    }
+    pub fn capella_secret_key(&self) -> Option<String> {
+        self.capella_secret_key.clone()
     }
 
     pub fn parse() -> Config {
@@ -73,6 +81,8 @@ impl Config {
                 bucket: Some(bucket),
                 enabled_features: features,
                 data_timeout: config.data_timeout().unwrap_or_else(|| "5s".into()),
+                capella_access_key: config.capella_access_key(),
+                capella_secret_key: config.capella_secret_key(),
             };
         }
 
@@ -85,6 +95,8 @@ impl Config {
             bucket: None,
             enabled_features: features,
             data_timeout: config.data_timeout().unwrap_or_else(|| "5s".into()),
+            capella_access_key: config.capella_access_key(),
+            capella_secret_key: config.capella_secret_key(),
         }
     }
 }
@@ -105,6 +117,10 @@ pub struct CLIConfig {
     features: String,
     #[envconfig(from = "DATA_TIMEOUT")]
     data_timeout: Option<String>,
+    #[envconfig(from = "CAPELLA_ACCESS_KEY")]
+    capella_access_key: Option<String>,
+    #[envconfig(from = "CAPELLA_SECRET_KEY")]
+    capella_secret_key: Option<String>,
 }
 
 impl CLIConfig {
@@ -128,5 +144,11 @@ impl CLIConfig {
     }
     pub fn data_timeout(&self) -> Option<String> {
         self.data_timeout.clone()
+    }
+    pub fn capella_access_key(&self) -> Option<String> {
+        self.capella_access_key.clone()
+    }
+    pub fn capella_secret_key(&self) -> Option<String> {
+        self.capella_secret_key.clone()
     }
 }

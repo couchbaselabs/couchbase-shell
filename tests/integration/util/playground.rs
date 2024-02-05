@@ -1,3 +1,4 @@
+use crate::features::TestFeature;
 use crate::util::TestConfig;
 use crate::{cbsh, TestResult};
 use log::debug;
@@ -98,6 +99,37 @@ default-collection = \"{}\"
                         contents, c
                     );
                 }
+            }
+
+            if config.supports_feature(TestFeature::Capella) {
+                contents = format!(
+                    "
+{}
+capella-organization = \"test-org\"
+
+[[capella-organization]]
+identifier = \"test-org\"",
+                    contents,
+                );
+
+                if let Some(a) = config.capella_access_key() {
+                    contents = format!(
+                        "
+{}
+access-key = \"{}\"",
+                        contents, a
+                    );
+                } else {
+                };
+
+                if let Some(s) = config.capella_secret_key() {
+                    contents = format!(
+                        "
+{}
+secret-key = \"{}\"",
+                        contents, s
+                    );
+                };
             }
 
             config_dir.push("config");

@@ -33,13 +33,18 @@ impl StandaloneCluster {
         let conn_str = c.conn_string().unwrap();
         let username = c.username().unwrap();
         let password = c.password().unwrap();
-        let features = StandaloneCluster::get_supported_features(
-            conn_str.clone(),
-            bucket.clone(),
-            username.clone(),
-            password.clone(),
-        )
-        .await;
+        let features = if conn_str.contains("couchbases") {
+            vec![TestFeature::Capella]
+        } else {
+            StandaloneCluster::get_supported_features(
+                conn_str.clone(),
+                bucket.clone(),
+                username.clone(),
+                password.clone(),
+            )
+            .await
+        };
+
         let (scope, collection) = if features.contains(&TestFeature::Collections) {
             let scope = StandaloneCluster::create_scope(
                 conn_str.clone(),
@@ -84,10 +89,15 @@ impl StandaloneCluster {
             password,
             support_matrix: enabled_features,
             data_timeout: c.data_timeout(),
+            capella_access_key: c.capella_access_key(),
+            capella_secret_key: c.capella_secret_key(),
         });
         StandaloneCluster::wait_for_scope(config.clone()).await;
         StandaloneCluster::wait_for_collection(config.clone()).await;
-        StandaloneCluster::wait_for_kv(config.clone()).await;
+
+        if !config.supports_feature(TestFeature::Capella) {
+            StandaloneCluster::wait_for_kv(config.clone()).await;
+        }
 
         Self { config }
     }
