@@ -1,4 +1,5 @@
 use crate::cli::cloud_json::JSONCloudsProjectsResponse;
+use crate::cli::util::find_org_id;
 use crate::cli::util::NuValueMap;
 use crate::client::CapellaRequest;
 use crate::state::State;
@@ -61,15 +62,22 @@ fn projects(
 
     debug!("Running projects");
 
-    let guard = state.lock().unwrap();
+    let guard = &mut state.lock().unwrap();
     let control = guard.active_capella_org()?;
     let client = control.client();
+    let deadline = Instant::now().add(control.timeout());
+
+    let org_id = match control.id() {
+        Some(id) => id,
+        None => {
+            let id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
+            guard.set_active_capella_org_id(id.clone())?;
+            id
+        }
+    };
+
     let response = client
-        .capella_request(
-            CapellaRequest::GetProjects {},
-            Instant::now().add(control.timeout()),
-            ctrl_c,
-        )
+        .capella_request(CapellaRequest::GetProjects { org_id }, deadline, ctrl_c)
         .map_err(|e| client_error_to_shell_error(e, span))?;
     if response.status() != 200 {
         return Err(unexpected_status_code_error(

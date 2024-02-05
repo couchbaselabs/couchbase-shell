@@ -1,4 +1,5 @@
 use crate::cli::cloud_json::JSONCloudCreateClusterRequestV3;
+use crate::cli::util::find_org_id;
 use crate::cli::util::find_project_id;
 use crate::client::CapellaRequest;
 use crate::state::State;
@@ -93,7 +94,20 @@ fn clusters_create(
             return Err(no_active_project_error(span));
         }
     };
-    let project_id = find_project_id(ctrl_c.clone(), project_name, &client, deadline, span)?;
+
+    let org_id = match control.id() {
+        Some(id) => id,
+        None => find_org_id(ctrl_c.clone(), &client, deadline, span)?,
+    };
+
+    let project_id = find_project_id(
+        ctrl_c.clone(),
+        project_name,
+        &client,
+        deadline,
+        span,
+        org_id,
+    )?;
 
     let mut json: JSONCloudCreateClusterRequestV3 = serde_json::from_str(definition.as_str())
         .map_err(|e| serialize_error(e.to_string(), span))?;
@@ -105,7 +119,7 @@ fn clusters_create(
                 payload: serde_json::to_string(&json)
                     .map_err(|e| serialize_error(e.to_string(), span))?,
             },
-            Instant::now().add(control.timeout()),
+            deadline,
             ctrl_c,
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
