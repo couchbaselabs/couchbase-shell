@@ -1,7 +1,5 @@
 use crate::cli::error::{client_error_to_shell_error, unexpected_status_code_error};
-use crate::cli::util::{
-    cluster_identifiers_from, duration_to_golang_string, get_active_cluster, NuValueMap,
-};
+use crate::cli::util::{cluster_identifiers_from, get_active_cluster, NuValueMap};
 use crate::client::SearchQueryRequest;
 use crate::state::State;
 use log::debug;
@@ -92,7 +90,7 @@ fn run(
                 SearchQueryRequest::Execute {
                     query: query.clone(),
                     index: index.clone(),
-                    timeout: duration_to_golang_string(active_cluster.timeouts().search_timeout()),
+                    timeout: active_cluster.timeouts().search_timeout().as_millis(),
                 },
                 Instant::now().add(active_cluster.timeouts().search_timeout()),
                 ctrl_c.clone(),
