@@ -771,7 +771,7 @@ pub enum SearchQueryRequest {
     Execute {
         index: String,
         query: String,
-        timeout: String,
+        timeout: u128,
     },
 }
 
