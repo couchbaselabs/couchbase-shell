@@ -1,9 +1,6 @@
-use crate::cli::util::convert_nu_value_to_json_value;
 use crate::state::State;
 
 use async_openai::{types::CreateEmbeddingRequestArgs, Client};
-use nu_command::Table;
-use serde_json::Map;
 use std::str;
 use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
@@ -12,9 +9,8 @@ use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::Command;
 use nu_protocol::engine::{EngineState, Stack};
-use nu_protocol::Value::Record;
 use nu_protocol::{
-    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Type, Value,
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
 };
 
 #[derive(Clone)]
