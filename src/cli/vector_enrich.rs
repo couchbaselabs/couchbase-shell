@@ -74,30 +74,18 @@ fn vector_enrich(
     let input: Vec<Value> = call.req(engine_state, stack, 0)?;
     let field: String = call.req(engine_state, stack, 1)?;
 
-    println!("INPUT");
-    println!("{:?}", input.len());
+    // println!("INPUT");
+    // println!("{:?}", input.len());
 
     let mut source: Vec<String> = vec![];
     for i in &input {
-        println!("{:?}", i);
+        // println!("{:?}", i);
 
         // Access second tuple of the record, the first is ["bucket_name", "database"]
         let record = i.as_record().unwrap().1[0].as_record().unwrap();
-        println!("bucket record");
-        println!("{:?}", record);
-
-        //TESTING - echo the ID
-        let index = record.0.iter().position(|r: &String| *r == "id").unwrap();
-        println!("{:?}", field);
-        println!("{:?}", record.1[index].as_string());
-        println!("");
 
         // Find the index of the named field, handle the field missing here
         let index = record.0.iter().position(|r| *r == field).unwrap();
-        println!("{:?}", field);
-        println!("{:?}", record.1[index].as_string());
-        println!("");
-
         source.push(record.1[index].as_string().unwrap())
     }
 
@@ -133,48 +121,105 @@ fn vector_enrich(
     let client =
         Client::with_config(async_openai::config::OpenAIConfig::default().with_api_key(key));
 
-    let request = CreateEmbeddingRequestArgs::default()
-        .model("text-embedding-3-small")
-        .dimensions(128 as u32)
-        .input(source.clone())
-        .build()
-        .unwrap();
+    // Split up the source slice to be sent in various requests
 
-    let response = match rt.block_on(async { client.embeddings().create(request).await }) {
-        Ok(r) => r,
-        Err(e) => {
-            println!("");
-            return Err(ShellError::GenericError(
-                format!("failed to execute request: {}", e),
-                "".to_string(),
-                None,
-                None,
-                Vec::new(),
-            ));
+    // TO DO - have the user supply this
+    let batch_size = 1000;
+
+    println!("Strings to embed: {:?}", source.len());
+
+    // Split chunks into batches
+    let mut batches: Vec<Vec<String>> = Vec::with_capacity(source.len() / batch_size);
+    let mut lower = 0;
+    let mut upper = batch_size;
+    while lower < source.len() {
+        batches.push(source.clone()[lower..=upper].to_vec());
+        lower = upper + 1;
+        upper += batch_size;
+
+        if upper > source.len() {
+            upper = source.len() - 1;
         }
-    };
+    }
 
-    let mut count = 0;
+    println!("Batches: {:?}", batches.len());
+    println!("Length of batches: ");
+
     let mut records = vec![];
-    for i in &input {
-        let record = i.as_record().unwrap().1[0].as_record().unwrap();
+    let mut count = 0;
+    for batch in batches {
+        println!("Getting results for batch with length {:?}", batch.len());
 
-        let mut res_string: Vec<String> = record.0.to_vec();
-        res_string.push(format!("{}Vector", field));
+        let request = CreateEmbeddingRequestArgs::default()
+            .model("text-embedding-3-small")
+            .dimensions(128 as u32)
+            .input(batch.clone())
+            .build()
+            .unwrap();
 
-        let mut res_vals: Vec<Value> = record.1.to_vec();
-        res_vals.push(Value::String {
-            span,
-            val: format!("{:?}", response.data[count].embedding.clone()),
-        });
+        let response = match rt.block_on(async { client.embeddings().create(request).await }) {
+            Ok(r) => r,
+            Err(e) => {
+                println!("");
+                return Err(ShellError::GenericError(
+                    format!("failed to execute request: {}", e),
+                    "".to_string(),
+                    None,
+                    None,
+                    Vec::new(),
+                ));
+            }
+        };
 
-        records.push(Value::Record {
-            span,
-            cols: res_string,
-            vals: res_vals,
-        });
+        let mut sub_count = 0;
+        while sub_count < batch.len() {
+            let record = input[count].as_record().unwrap().1[0].as_record().unwrap();
 
-        count += 1;
+            let mut res_string: Vec<String> = record.0.to_vec();
+            res_string.push(format!("{}Vector", field));
+
+            let mut res_vals: Vec<Value> = record.1.to_vec();
+            let mut temp: Vec<Value> = response.data[sub_count]
+                .embedding
+                .clone()
+                .iter()
+                .map(|&e| Value::Float {
+                    val: e as f64,
+                    span,
+                })
+                .collect();
+
+            res_vals.push(Value::List { span, vals: temp });
+
+            records.push(Value::Record {
+                span,
+                cols: res_string,
+                vals: res_vals,
+            });
+
+            count += 1;
+            sub_count += 1;
+        }
+        // for i in &input {
+        //     let record = i.as_record().unwrap().1[0].as_record().unwrap();
+
+        //     let mut res_string: Vec<String> = record.0.to_vec();
+        //     res_string.push(format!("{}Vector", field));
+
+        //     let mut res_vals: Vec<Value> = record.1.to_vec();
+        //     res_vals.push(Value::String {
+        //         span,
+        //         val: format!("{:?}", response.data[count].embedding.clone()),
+        //     });
+
+        //     records.push(Value::Record {
+        //         span,
+        //         cols: res_string,
+        //         vals: res_vals,
+        //     });
+
+        //     count += 1;
+        // }
     }
 
     Ok(Value::List {
