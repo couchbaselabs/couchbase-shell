@@ -12,6 +12,8 @@ use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
 };
+use serde::Deserialize;
+use serde_derive::Serialize;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
@@ -63,6 +65,19 @@ impl Command for BucketsSample {
     }
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+struct SampleLoadTask {
+    #[serde(rename = "taskId", default)]
+    task_id: String,
+    sample: String,
+    bucket: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct SampleLoadTasks {
+    tasks: Vec<SampleLoadTask>,
+}
+
 fn load_sample_bucket(
     state: Arc<Mutex<State>>,
     engine_state: &EngineState,
@@ -106,12 +121,12 @@ fn load_sample_bucket(
             }
         }
 
-        let resp: Vec<String> = serde_json::from_str(response.content())
+        let resp: SampleLoadTasks = serde_json::from_str(response.content())
             .map_err(|e| deserialize_error(e.to_string(), span))?;
-        for r in resp {
+        for r in resp.tasks {
             let mut collected = NuValueMap::default();
             collected.add_string("cluster", identifier.clone(), span);
-            collected.add_string("results", r, span);
+            collected.add_string("results", serde_json::to_string(&r).unwrap(), span);
             results.push(collected.into_value(span));
         }
     }
