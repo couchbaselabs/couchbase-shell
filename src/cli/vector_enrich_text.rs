@@ -1,0 +1,320 @@
+use crate::cli::util::read_openai_api_key;
+use crate::state::State;
+use crate::CtrlcFuture;
+use log::{debug, info};
+use std::convert::TryFrom;
+use std::fs;
+use std::str;
+use std::sync::{Arc, Mutex};
+use std::time::SystemTime;
+use tiktoken_rs::p50k_base;
+use tokio::runtime::Runtime;
+use tokio::select;
+use uuid::Uuid;
+
+use async_openai::{types::CreateEmbeddingRequestArgs, Client};
+use nu_engine::CallExt;
+use nu_protocol::ast::Call;
+use nu_protocol::engine::Command;
+use nu_protocol::engine::{EngineState, Stack};
+use nu_protocol::{
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+};
+
+const MAX_FREE_TIER_TOKENS: usize = 150000;
+
+#[derive(Clone)]
+pub struct VectorEnrichText {
+    state: Arc<Mutex<State>>,
+}
+
+impl VectorEnrichText {
+    pub fn new(state: Arc<Mutex<State>>) -> Self {
+        Self { state }
+    }
+}
+
+impl Command for VectorEnrichText {
+    fn name(&self) -> &str {
+        "vector enrich-text"
+    }
+
+    fn signature(&self) -> Signature {
+        Signature::build("vector enrich-text")
+            .named(
+                "chunk",
+                SyntaxShape::Int,
+                "length of the data chunks to embed (default 1024)",
+                None,
+            )
+            .named(
+                "dimension",
+                SyntaxShape::Int,
+                "dimension of the resulting embeddings (default 128)",
+                None,
+            )
+            .named(
+                "maxTokens",
+                SyntaxShape::Int,
+                "the token per minute limit with 'text-embedding-3-small' for your API key",
+                None,
+            )
+            .category(Category::Custom("couchbase".to_string()))
+    }
+
+    fn usage(&self) -> &str {
+        "Chunks text and generates vector indexable json documents on the chunks"
+    }
+
+    fn run(
+        &self,
+        engine_state: &EngineState,
+        stack: &mut Stack,
+        call: &Call,
+        input: PipelineData,
+    ) -> Result<PipelineData, ShellError> {
+        vector_enrich_text(self.state.clone(), engine_state, stack, call, input)
+    }
+}
+
+fn vector_enrich_text(
+    _state: Arc<Mutex<State>>,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+    call: &Call,
+    input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    let span = call.head;
+
+    let chunk_len = match call.get_flag::<usize>(engine_state, stack, "chunk")? {
+        Some(l) => l,
+        None => 1024,
+    };
+
+    let dim = match call.get_flag::<i64>(engine_state, stack, "dimension")? {
+        Some(d) => u32::try_from(d).ok().unwrap(),
+        None => 128,
+    };
+
+    let max_tokens: usize = match call.get_flag::<usize>(engine_state, stack, "maxTokens")? {
+        Some(t) => t,
+        None => MAX_FREE_TIER_TOKENS,
+    };
+
+    let mut chunks: Vec<String> = Vec::new();
+    match input.into_value(span) {
+        Value::List { vals, span: _span } => {
+            for v in vals {
+                let rec = match v.as_record() {
+                    Ok(r) => r,
+                    Err(e) => {
+                        return Err(ShellError::GenericError(
+                            "Could not parse list of files".to_string(),
+                            "".to_string(),
+                            None,
+                            None,
+                            vec![e],
+                        ));
+                    }
+                };
+
+                let index = match rec.0.iter().position(|r: &String| *r == "name") {
+                    Some(i) => i,
+                    None => {
+                        return Err(ShellError::GenericError(
+                            "Could not parse list of files".to_string(),
+                            "".to_string(),
+                            None,
+                            None,
+                            Vec::new(),
+                        ));
+                    }
+                };
+
+                let file = rec.1[index].as_string().unwrap();
+                let contents = match fs::read_to_string(file.clone()) {
+                    Ok(c) => c,
+                    Err(e) => {
+                        return Err(ShellError::GenericError(
+                            format!("Error parsing file {}: {}", file, e),
+                            "".to_string(),
+                            None,
+                            None,
+                            Vec::new(),
+                        ))
+                    }
+                };
+
+                let file_chunks = &mut chunk_text(contents, chunk_len);
+                chunks.append(file_chunks);
+            }
+        }
+        Value::String { val, span: _ } => {
+            chunks = chunk_text(val, chunk_len);
+        }
+        _ => {
+            return Err(ShellError::GenericError(
+                "Piped input must be a string or list of files from ls".to_string(),
+                "".to_string(),
+                None,
+                None,
+                Vec::new(),
+            ));
+        }
+    };
+
+    let key = match read_openai_api_key(engine_state) {
+        Ok(k) => k,
+        Err(e) => {
+            return Err(e);
+        }
+    };
+
+    let mut batches: Vec<Vec<String>> = Vec::new();
+    let mut results: Vec<Value> = Vec::new();
+
+    let bpe = p50k_base().unwrap();
+    let tokens = bpe.encode_with_special_tokens(&chunks.join(" "));
+
+    debug!("Total tokens: {:?}\n", tokens.len());
+
+    let num_batches = (tokens.len() / max_tokens) + 1;
+    let batch_size = chunks.len() / num_batches;
+    if num_batches == 1 {
+        batches.push(chunks.to_vec());
+    } else {
+        let mut lower = 0;
+        let mut upper = batch_size;
+        while lower < chunks.len() {
+            batches.push(chunks[lower..=upper].to_vec());
+            lower = upper + 1;
+            upper += batch_size;
+
+            if upper >= chunks.len() {
+                upper = chunks.len() - 1;
+            }
+        }
+    };
+
+    let client =
+        Client::with_config(async_openai::config::OpenAIConfig::default().with_api_key(key));
+
+    let start = SystemTime::now();
+    let rt = Runtime::new().unwrap();
+    for (i, batch) in batches.iter().enumerate() {
+        let batch_start = SystemTime::now();
+        info!("Embedding batch {:?}/{} ", i + 1, batches.len());
+
+        if log::log_enabled!(log::Level::Debug) {
+            let bpe = p50k_base().unwrap();
+            let tokens = bpe.encode_with_special_tokens(&batch.join(" "));
+            debug!("- Tokens: {:?}", tokens.len());
+        }
+
+        let request = CreateEmbeddingRequestArgs::default()
+            .model("text-embedding-3-small")
+            .dimensions(dim)
+            .input(batch.clone())
+            .build()
+            .unwrap();
+
+        let embeddings = client.embeddings();
+        let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+        let ctrl_c_fut = CtrlcFuture::new(ctrl_c);
+        let response = match rt.block_on(async {
+            select! {
+                result = embeddings.create(request) => {
+                    match result {
+                        Ok(r) => Ok(r),
+                        Err(e) => Err(ShellError::GenericError(
+                            format!("failed to execute request: {}", e),
+                            "".to_string(),
+                            None,
+                            None,
+                            Vec::new(),
+                        ))
+                    }
+                },
+                () = ctrl_c_fut =>
+                     Err(ShellError::GenericError(
+                   "Request cancelled".to_string(),
+                    "".to_string(),
+                    None,
+                    None,
+                    Vec::new(),
+                )),
+            }
+        }) {
+            Ok(r) => r,
+            Err(e) => {
+                return Err(e);
+            }
+        };
+
+        for (i, chunk) in batch.iter().enumerate() {
+            let vector = response.data[i]
+                .embedding
+                .iter()
+                .map(|x| Value::Float {
+                    val: *x as f64,
+                    span,
+                })
+                .collect::<Vec<Value>>();
+
+            let mut uuid = Uuid::new_v4().to_string();
+            uuid.truncate(6);
+            let vector_doc = Value::Record {
+                cols: vec!["id".to_string(), "content".to_string()],
+                vals: vec![
+                    Value::String {
+                        val: format!("vector-{}", uuid),
+                        span,
+                    },
+                    Value::Record {
+                        cols: vec!["text".to_string(), "vector".to_string()],
+                        vals: vec![
+                            Value::String {
+                                val: chunk.to_string(),
+                                span,
+                            },
+                            Value::List { vals: vector, span },
+                        ],
+                        span,
+                    },
+                ],
+                span,
+            };
+
+            results.push(vector_doc);
+        }
+
+        let now = SystemTime::now();
+        let difference = now.duration_since(batch_start);
+        debug!("- Duration: {:?}", difference.unwrap());
+    }
+
+    let total_time = SystemTime::now().duration_since(start);
+    debug!("\nTotal Duration: {:?}", total_time.unwrap());
+
+    Ok(Value::List {
+        span,
+        vals: results,
+    }
+    .into_pipeline_data())
+}
+
+fn chunk_text(text: String, chunk_len: usize) -> Vec<String> {
+    let mut chunks = Vec::new();
+    let mut iter = text.chars();
+    let mut pos = 0;
+    while pos < text.len() {
+        let mut len = 0;
+        for ch in iter.by_ref().take(chunk_len) {
+            len += ch.len_utf8();
+        }
+        let chunk = &text[pos..pos + len];
+        chunks.push(chunk.to_string());
+        pos += len;
+    }
+    chunks
+}
