@@ -3,7 +3,7 @@ pub use crate::client::cloud::{CapellaClient, CapellaRequest};
 pub use crate::client::error::ClientError;
 pub use crate::client::http_client::{
     AnalyticsQueryRequest, Endpoint, HTTPClient, ManagementRequest, QueryRequest,
-    QueryTransactionRequest, SearchQueryRequest, ServiceType,
+    QueryTransactionRequest, ServiceType, TextSearchQueryRequest, VectorSearchQueryRequest,
 };
 pub use crate::client::http_handler::HttpResponse;
 pub use crate::client::kv_client::{KeyValueRequest, KvClient, KvResponse};
