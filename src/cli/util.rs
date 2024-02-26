@@ -354,6 +354,34 @@ pub fn duration_to_golang_string(duration: Duration) -> String {
     golang_string
 }
 
+pub fn read_openai_api_key(engine_state: &EngineState) -> Result<String, ShellError> {
+    let key = match engine_state.get_env_var("OPENAI_API_KEY") {
+        Some(k) => match k.as_string() {
+            Ok(k) => k,
+            Err(e) => {
+                return Err(ShellError::GenericError(
+                    format!("could not read OPENAI_API_KEY env var as a string: {}", e),
+                    "".to_string(),
+                    None,
+                    None,
+                    Vec::new(),
+                ));
+            }
+        },
+        None => {
+            return Err(ShellError::GenericError(
+                "Please specify API key using: \"$env.OPENAI_API_KEY = <YOUR API KEY>\""
+                    .to_string(),
+                "".to_string(),
+                None,
+                None,
+                Vec::new(),
+            ));
+        }
+    };
+    Ok(key)
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct NuValueMap {
     cols: Vec<String>,

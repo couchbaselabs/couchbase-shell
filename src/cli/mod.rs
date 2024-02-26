@@ -74,6 +74,7 @@ mod users_roles;
 mod users_upsert;
 mod util;
 mod vector_enrich;
+mod vector_generate;
 mod vector_search;
 mod version;
 
@@ -149,5 +150,6 @@ pub use users_get::UsersGet;
 pub use users_roles::UsersRoles;
 pub use users_upsert::UsersUpsert;
 pub use vector_enrich::VectorEnrich;
+pub use vector_generate::VectorGenerate;
 pub use vector_search::VectorSearch;
 pub use version::Version;
