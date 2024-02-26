@@ -731,6 +731,7 @@ fn merge_couchbase_delta(context: &mut EngineState, state: Arc<Mutex<State>>) {
         working_set.add_decl(Box::new(UsersRoles::new(state.clone())));
         working_set.add_decl(Box::new(UsersUpsert::new(state.clone())));
         working_set.add_decl(Box::new(Version));
+        working_set.add_decl(Box::new(VectorSearch::new(state.clone())));
 
         working_set.add_decl(Box::new(nu_cli::NuHighlight));
         working_set.add_decl(Box::new(nu_cli::Print));
