@@ -49,7 +49,7 @@ jobs:
       uses: actions-rust-lang/setup-rust-toolchain@v1.4.3
 
     - name: Install aarch64-linux gcc
-      run: sudo apt-get install gcc-aarch64-linux-gnu -y
+      run: sudo apt-get update &&  sudo apt-get install gcc-aarch64-linux-gnu -y
       if: matrix.target == 'aarch64-unknown-linux-gnu'
 
     - uses: SebRollen/toml-action@v1.0.1
