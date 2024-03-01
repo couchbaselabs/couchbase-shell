@@ -778,9 +778,6 @@ pub enum TextSearchQueryRequest {
     Execute {
         index: String,
         query: String,
-        vector: Vec<f32>,
-        field: String,
-        neighbours: i64,
         timeout: u128,
     },
 }
@@ -800,21 +797,8 @@ impl SearchQueryRequest for TextSearchQueryRequest {
 
     fn payload(&self) -> Option<Vec<u8>> {
         match self {
-            Self::Execute {
-                query,
-                timeout,
-                vector,
-                field,
-                neighbours,
-                ..
-            } => {
-                let json = if vector.len() == 0 {
-                    json!({ "query": { "query": query }, "ctl": { "timeout": timeout }})
-                } else if query.len() == 0 {
-                    json!({ "query": {"match_none": {}}, "knn" :[{"field": field, "k": neighbours, "vector":vector}], "ctl": { "timeout": timeout }})
-                } else {
-                    json!({ "query": {"query": query}, "knn" :[{"field": field, "k": neighbours, "vector":vector}], "ctl": { "timeout": timeout }})
-                };
+            Self::Execute { query, timeout, .. } => {
+                let json = json!({ "query": { "query": query }, "ctl": { "timeout": timeout }});
                 Some(serde_json::to_vec(&json).unwrap())
             }
         }

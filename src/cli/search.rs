@@ -33,27 +33,15 @@ impl Command for Search {
     fn signature(&self) -> Signature {
         Signature::build("search")
             .required("index", SyntaxShape::String, "the index name")
-            .optional(
+            .required(
                 "query",
                 SyntaxShape::String,
                 "the text to query for using a query string query",
             )
             .named(
-                "vector",
+                "databases",
                 SyntaxShape::String,
-                "search vector to be queried for",
-                None,
-            )
-            .named(
-                "neighbours",
-                SyntaxShape::Int,
-                "number of neighbours returned by vector search (default = 3)",
-                None,
-            )
-            .named(
-                "field",
-                SyntaxShape::String,
-                "name of the vector field the index was built on",
+                "the databases which should be contacted",
                 None,
             )
             .category(Category::Custom("couchbase".to_string()))
@@ -85,54 +73,7 @@ fn run(
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
     let index: String = call.req(engine_state, stack, 0)?;
-    let query: String = match call.opt(engine_state, stack, 1)? {
-        Some(q) => q,
-        None => "".to_string(),
-    };
-
-    let vector: Option<String> = call.get_flag(engine_state, stack, "vector")?;
-    let real_vector: Vec<f32> = match vector {
-        Some(mut v) => {
-            v.retain(|c| !c.is_whitespace());
-            v = v.replace(&['[', ']'], "");
-
-            v.split(",")
-                .map(|s| s.parse::<f32>().ok().unwrap())
-                .collect::<Vec<_>>()
-        }
-        None => vec![],
-    };
-
-    if real_vector.len() == 0 && query.len() == 0 {
-        return Err(ShellError::GenericError(
-            "Please provide query text and/or vector.".to_string(),
-            "".to_string(),
-            None,
-            None,
-            Vec::new(),
-        ));
-    }
-
-    let neighbours: i64 = match call.get_flag(engine_state, stack, "neighbours")? {
-        Some(n) => n,
-        None => 3,
-    };
-
-    let field = match call.get_flag(engine_state, stack, "field")? {
-        Some(f) => f,
-        None => {
-            if real_vector.len() != 0 {
-                return Err(ShellError::GenericError(
-                    "A field must be specified when using vector search.".to_string(),
-                    "".to_string(),
-                    None,
-                    None,
-                    Vec::new(),
-                ));
-            }
-            "".to_string()
-        }
-    };
+    let query: String = call.req(engine_state, stack, 1)?;
 
     debug!("Running search query {} against {}", &query, &index);
 
@@ -149,9 +90,6 @@ fn run(
                 TextSearchQueryRequest::Execute {
                     query: query.clone(),
                     index: index.clone(),
-                    vector: real_vector.clone(),
-                    field: field.clone(),
-                    neighbours: neighbours.clone(),
                     timeout: active_cluster.timeouts().search_timeout().as_millis(),
                 },
                 Instant::now().add(active_cluster.timeouts().search_timeout()),
