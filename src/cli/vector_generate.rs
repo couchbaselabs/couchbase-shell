@@ -1,4 +1,4 @@
-use crate::cli::util::{convert_json_value_to_nu_value, read_openai_api_key};
+use crate::cli::util::{convert_json_value_to_nu_value, read_openai_api_key, MAX_FREE_TIER_TOKENS};
 use crate::state::State;
 use log::{debug, info};
 use serde::{Deserialize, Serialize};
@@ -22,8 +22,6 @@ use nu_protocol::engine::{EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
 };
-
-const MAX_FREE_TIER_TOKENS: usize = 150000;
 
 #[derive(Clone)]
 pub struct VectorGenerate {

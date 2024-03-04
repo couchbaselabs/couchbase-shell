@@ -354,6 +354,8 @@ pub fn duration_to_golang_string(duration: Duration) -> String {
     golang_string
 }
 
+pub const MAX_FREE_TIER_TOKENS: usize = 150000;
+
 pub fn read_openai_api_key(engine_state: &EngineState) -> Result<String, ShellError> {
     let key = match engine_state.get_env_var("OPENAI_API_KEY") {
         Some(k) => match k.as_string() {
