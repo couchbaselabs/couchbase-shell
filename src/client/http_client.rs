@@ -384,7 +384,7 @@ impl HTTPClient {
 
     pub fn search_query_request(
         &self,
-        request: SearchQueryRequest,
+        request: impl SearchQueryRequest,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<HttpResponse, ClientError> {
@@ -767,7 +767,14 @@ impl AnalyticsQueryRequest {
     }
 }
 
-pub enum SearchQueryRequest {
+pub trait SearchQueryRequest {
+    fn path(&self) -> String;
+    fn verb(&self) -> HttpVerb;
+    fn payload(&self) -> Option<Vec<u8>>;
+    fn headers(&self) -> HashMap<&str, &str>;
+}
+
+pub enum TextSearchQueryRequest {
     Execute {
         index: String,
         query: String,
@@ -775,20 +782,20 @@ pub enum SearchQueryRequest {
     },
 }
 
-impl SearchQueryRequest {
-    pub fn path(&self) -> String {
+impl SearchQueryRequest for TextSearchQueryRequest {
+    fn path(&self) -> String {
         match self {
             Self::Execute { index, .. } => format!("/api/index/{}/query", index),
         }
     }
 
-    pub fn verb(&self) -> HttpVerb {
+    fn verb(&self) -> HttpVerb {
         match self {
             Self::Execute { .. } => HttpVerb::Post,
         }
     }
 
-    pub fn payload(&self) -> Option<Vec<u8>> {
+    fn payload(&self) -> Option<Vec<u8>> {
         match self {
             Self::Execute { query, timeout, .. } => {
                 let json = json!({ "query": { "query": query }, "ctl": { "timeout": timeout }});
@@ -797,7 +804,58 @@ impl SearchQueryRequest {
         }
     }
 
-    pub fn headers(&self) -> HashMap<&str, &str> {
+    fn headers(&self) -> HashMap<&str, &str> {
+        match self {
+            Self::Execute { .. } => {
+                let mut h = HashMap::new();
+                h.insert("Content-Type", "application/json");
+                h
+            }
+        }
+    }
+}
+
+pub enum VectorSearchQueryRequest {
+    Execute {
+        index: String,
+        query: serde_json::Value,
+        vector: Vec<f32>,
+        field: String,
+        neighbours: i64,
+        timeout: u128,
+    },
+}
+
+impl SearchQueryRequest for VectorSearchQueryRequest {
+    fn path(&self) -> String {
+        match self {
+            Self::Execute { index, .. } => format!("/api/index/{}/query", index),
+        }
+    }
+
+    fn verb(&self) -> HttpVerb {
+        match self {
+            Self::Execute { .. } => HttpVerb::Post,
+        }
+    }
+
+    fn payload(&self) -> Option<Vec<u8>> {
+        match self {
+            Self::Execute {
+                query,
+                timeout,
+                vector,
+                field,
+                neighbours,
+                ..
+            } => {
+                let json = json!({ "query":  query, "knn" :[{"field": field, "k": neighbours, "vector":vector}], "ctl": { "timeout": timeout }});
+                Some(serde_json::to_vec(&json).unwrap())
+            }
+        }
+    }
+
+    fn headers(&self) -> HashMap<&str, &str> {
         match self {
             Self::Execute { .. } => {
                 let mut h = HashMap::new();

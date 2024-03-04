@@ -1,6 +1,6 @@
 use crate::cli::error::{client_error_to_shell_error, unexpected_status_code_error};
 use crate::cli::util::{cluster_identifiers_from, get_active_cluster, NuValueMap};
-use crate::client::TextSearchQueryRequest;
+use crate::client::VectorSearchQueryRequest;
 use crate::state::State;
 use log::debug;
 use nu_engine::CallExt;
@@ -10,38 +10,56 @@ use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
 };
 use serde_derive::Deserialize;
+use serde_json::json;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 #[derive(Clone)]
-pub struct Search {
+pub struct VectorSearch {
     state: Arc<Mutex<State>>,
 }
 
-impl Search {
+impl VectorSearch {
     pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
 
-impl Command for Search {
+impl Command for VectorSearch {
     fn name(&self) -> &str {
-        "search"
+        "vector search"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("search")
+        Signature::build("vector search")
             .required("index", SyntaxShape::String, "the index name")
             .required(
+                "vector",
+                SyntaxShape::Any,
+                "search vector to be queried for",
+            )
+            .required(
+                "field",
+                SyntaxShape::String,
+                "name of the vector field the index was built on",
+            )
+            .named(
                 "query",
                 SyntaxShape::String,
                 "the text to query for using a query string query",
+                None,
             )
             .named(
                 "databases",
                 SyntaxShape::String,
                 "the databases which should be contacted",
+                None,
+            )
+            .named(
+                "neighbours",
+                SyntaxShape::Int,
+                "number of neighbours returned by vector search (default = 3)",
                 None,
             )
             .category(Category::Custom("couchbase".to_string()))
@@ -73,9 +91,27 @@ fn run(
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
     let index: String = call.req(engine_state, stack, 0)?;
-    let query: String = call.req(engine_state, stack, 1)?;
+    let vector: Vec<f32> = call
+        .req::<Vec<Value>>(engine_state, stack, 1)?
+        .clone()
+        .iter()
+        .map(|e| e.as_float().unwrap() as f32)
+        .collect();
+    let field: String = call.req(engine_state, stack, 2)?;
 
-    debug!("Running search query {} against {}", &query, &index);
+    let query: serde_json::Value = match call.get_flag::<String>(engine_state, stack, "query")? {
+        Some(q) => json!({ "query": q }),
+        None => {
+            json!({"match_none": {}})
+        }
+    };
+
+    let neighbours: i64 = match call.get_flag(engine_state, stack, "neighbours")? {
+        Some(n) => n,
+        None => 3,
+    };
+
+    debug!("Running vector search query {} against {}", &query, &index);
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let guard = state.lock().unwrap();
@@ -87,9 +123,12 @@ fn run(
             .cluster()
             .http_client()
             .search_query_request(
-                TextSearchQueryRequest::Execute {
+                VectorSearchQueryRequest::Execute {
                     query: query.clone(),
                     index: index.clone(),
+                    vector: vector.clone(),
+                    field: field.clone(),
+                    neighbours: neighbours.clone(),
                     timeout: active_cluster.timeouts().search_timeout().as_millis(),
                 },
                 Instant::now().add(active_cluster.timeouts().search_timeout()),
