@@ -53,26 +53,26 @@ impl Command for Help {
 
         if rest.is_empty() && find.is_none() {
             let msg = r#"Welcome to Couchbase Shell, powered by Nushell. Shell Yeah!
-        
+
         Here are some tips to help you get started.
           * help commands - list all available commands
           * help <command name> - display help about a particular command
           * help commands | where category == "couchbase" - list all available Couchbase specific commands
-        
+
         Nushell works on the idea of a "pipeline". Pipelines are commands connected with the '|' character.
         Each stage in the pipeline works together to load, parse, and display information to you.
-        
+
         [Examples]
-        
+
         List the files in the current directory, sorted by size:
             ls | sort-by size
-        
+
         Get all of the buckets of type couchbase in your active cluster:
-            buckets get | where type == couchbase
-        
+            buckets | where type == couchbase
+
         Open a JSON file, transform the data, and upsert it into your active bucket:
             open mydoc.json | wrap content | insert id {echo $it.content.airportname} | doc upsert
-        
+
         You can also learn more at https://couchbase.sh/docs/ and https://www.nushell.sh/book/"#;
 
             Ok(Value::string(msg, head).into_pipeline_data())
