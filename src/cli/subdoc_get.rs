@@ -1,14 +1,14 @@
-//! The `doc get` command performs a KV get operation.
-
 use super::util::convert_json_value_to_nu_value;
 use crate::state::State;
 
+use crate::cli::doc_get::GetResult;
 use crate::cli::doc_upsert::{build_batched_kv_items, get_active_cluster_client_cid};
-use crate::cli::util::{cluster_identifiers_from, NuValueMap};
+use crate::cli::util::cluster_identifiers_from;
 use crate::client::KeyValueRequest;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use log::debug;
+use nu_protocol::Example;
 use std::ops::Add;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
@@ -20,28 +20,32 @@ use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
-    Category, Example, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape,
-    Value,
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
 };
 
 #[derive(Clone)]
-pub struct DocGet {
+pub struct SubDocGet {
     state: Arc<Mutex<State>>,
 }
 
-impl DocGet {
+impl SubDocGet {
     pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
 
-impl Command for DocGet {
+impl Command for SubDocGet {
     fn name(&self) -> &str {
-        "doc get"
+        "subdoc get"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("doc get")
+        Signature::build("subdoc get")
+            .required(
+                "path",
+                SyntaxShape::Any,
+                "the path(s) to be fetched from the documents",
+            )
             .optional("id", SyntaxShape::String, "the document id")
             .named(
                 "id-column",
@@ -79,7 +83,7 @@ impl Command for DocGet {
     }
 
     fn usage(&self) -> &str {
-        "Fetches a document through the data service"
+        "Fetches the value of the provided path in the specified document through the data service"
     }
 
     fn run(
@@ -89,26 +93,26 @@ impl Command for DocGet {
         call: &Call,
         input: PipelineData,
     ) -> Result<PipelineData, ShellError> {
-        run_get(self.state.clone(), engine_state, stack, call, input)
+        run_subdoc_lookup(self.state.clone(), engine_state, stack, call, input)
     }
 
     fn examples(&self) -> Vec<Example> {
         vec![
-            Example {
-                description: "Fetches a single document with the ID as an argument",
-                example: "doc get my_doc_id",
-                result: None,
+            Example{
+                description: "Fetches the address and content fields from the document with the ID landmark_10019",
+                example: "subdoc get [address content] landmark_10019",
+                result: None
             },
-            Example {
-                description: "Fetches multiple documents with IDs from the previous command",
-                example: "echo [[id]; [airline_10] [airline_11]] | doc get",
-                result: None,
+            Example{
+                description: "Fetches address field from multiple documents with IDs from the previous command",
+                example: "[landmark_10019, landmark_10020] | subdoc get address",
+                result: None
             },
         ]
     }
 }
 
-fn run_get(
+fn run_subdoc_lookup(
     state: Arc<Mutex<State>>,
     engine_state: &EngineState,
     stack: &mut Stack,
@@ -119,7 +123,23 @@ fn run_get(
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
-    let batch_size: Option<i64> = call.get_flag(engine_state, stack, "batch-size")?;
+
+    let paths: Vec<String> = match call.req::<Value>(engine_state, stack, 0)? {
+        Value::String { val, .. } => {
+            vec![val]
+        }
+        Value::List { vals, .. } => vals.iter().map(|s| s.as_string().unwrap()).collect(),
+        _ => {
+            return Err(ShellError::GenericError(
+                "Please supply field(s) as shown in the examples".to_string(),
+                "".to_string(),
+                None,
+                None,
+                Vec::new(),
+            ));
+        }
+    };
+
     let id_column: String = call
         .get_flag(engine_state, stack, "id-column")?
         .unwrap_or_else(|| "id".to_string());
@@ -129,14 +149,11 @@ fn run_get(
     let guard = state.lock().unwrap();
 
     let mut all_ids: Vec<Vec<String>> = vec![];
-    if let Some(size) = batch_size {
-        all_ids = build_batched_kv_items(size as u32, ids.clone());
-    }
 
     let bucket_flag = call.get_flag(engine_state, stack, "bucket")?;
     let scope_flag = call.get_flag(engine_state, stack, "scope")?;
     let collection_flag = call.get_flag(engine_state, stack, "collection")?;
-    let halt_on_error = call.has_flag(engine_state, stack, "halt-on-error")?;
+    let halt_on_error = call.has_flag("halt-on-error");
 
     let mut results = vec![];
     for identifier in cluster_identifiers {
@@ -170,7 +187,10 @@ fn run_get(
             all_ids = build_batched_kv_items(active_cluster.kv_batch_size(), ids.clone());
         }
 
-        debug!("Running kv get for docs {:?}", &ids);
+        debug!(
+            "Running kv subdoc multi lookup for docs {:?} on field ",
+            &ids
+        );
 
         for ids in all_ids.clone() {
             for id in ids {
@@ -180,12 +200,21 @@ fn run_get(
                 let id = id.clone();
 
                 let client = client.clone();
+                let copy = paths.clone();
 
-                workers.push(async move {
-                    client
-                        .request(KeyValueRequest::Get { key: id }, cid, deadline, ctrl_c)
-                        .await
-                });
+                let request = if paths.len() > 1 {
+                    KeyValueRequest::SubdocMultiLookup {
+                        key: id,
+                        paths: copy,
+                    }
+                } else {
+                    KeyValueRequest::SubDocGet {
+                        key: id.clone(),
+                        path: paths[0].clone(),
+                    }
+                };
+
+                workers.push(async move { client.request(request, cid, deadline, ctrl_c).await });
             }
             rt.block_on(async {
                 while let Some(response) = workers.next().await {
@@ -197,9 +226,21 @@ fn run_get(
                                 .cas(res.cas() as i64);
 
                             let content = res.content().unwrap_or_default();
+
+                            // Create a record where cols =  field and
                             match convert_json_value_to_nu_value(&content, call.head) {
                                 Ok(c) => {
-                                    collected = collected.content(c);
+                                    if paths.len() == 1 {
+                                        collected = collected.content(c);
+                                    } else {
+                                        let list = c.as_list().unwrap().to_vec();
+                                        let record = Value::Record {
+                                            cols: paths.clone(),
+                                            vals: list,
+                                            span: span,
+                                        };
+                                        collected = collected.content(record);
+                                    }
                                 }
                                 Err(e) => {
                                     if halt_on_error {
@@ -208,6 +249,7 @@ fn run_get(
                                     collected = collected.error(e.to_string());
                                 }
                             }
+
                             results.push(collected.into_value(call.head));
                         }
                         Err(e) => {
@@ -235,7 +277,7 @@ fn run_get(
 
     Ok(Value::List {
         vals: results,
-        internal_span: call.head,
+        span: call.head,
     }
     .into_pipeline_data())
 }
@@ -250,11 +292,15 @@ pub(crate) fn ids_from_input(
         .into_interruptible_iter(Some(ctrl_c))
         .filter_map(move |v| match v {
             Value::String { val, .. } => Some(val),
-            Value::Record { val, .. } => {
-                if let Some(d) = val.get(id_column.clone()) {
-                    match d {
-                        Value::String { val, .. } => Some(val.clone()),
-                        _ => None,
+            Value::Record { cols, vals, .. } => {
+                if let Some(idx) = cols.iter().position(|x| x.clone() == id_column) {
+                    if let Some(d) = vals.get(idx) {
+                        match d {
+                            Value::String { val, .. } => Some(val.clone()),
+                            _ => None,
+                        }
+                    } else {
+                        None
                     }
                 } else {
                     None
@@ -264,73 +310,11 @@ pub(crate) fn ids_from_input(
         })
         .collect();
 
-    if let Some(id) = args.positional_nth(0) {
+    if let Some(id) = args.positional_nth(1) {
         if let Some(i) = id.as_string() {
             ids.push(i);
         }
     }
 
     Ok(ids)
-}
-
-#[derive(Debug)]
-pub struct GetResult {
-    error: Option<String>,
-    content: Option<Value>,
-    key: Option<String>,
-    cluster: String,
-    cas: Option<i64>,
-    id_column: Option<String>,
-}
-
-impl GetResult {
-    pub fn new(cluster: impl Into<String>) -> GetResult {
-        Self {
-            error: None,
-            content: None,
-            key: None,
-            cluster: cluster.into(),
-            cas: None,
-            id_column: None,
-        }
-    }
-
-    pub fn id_column(mut self, id_column: impl Into<String>) -> Self {
-        self.id_column = Some(id_column.into());
-        self
-    }
-
-    pub fn content(mut self, content: Value) -> GetResult {
-        self.content = Some(content);
-        self
-    }
-
-    pub fn key(mut self, key: String) -> GetResult {
-        self.key = Some(key);
-        self
-    }
-
-    pub fn cas(mut self, cas: i64) -> GetResult {
-        self.cas = Some(cas);
-        self
-    }
-
-    pub fn error(mut self, err: String) -> GetResult {
-        self.error = Some(err);
-        self
-    }
-
-    pub fn into_value(self, span: Span) -> Value {
-        let mut collected = NuValueMap::default();
-        collected.add_string(
-            self.id_column.unwrap_or_else(|| "id".to_string()),
-            self.key.unwrap_or_default(),
-            span,
-        );
-        collected.add("content", self.content.unwrap_or_default());
-        collected.add_i64("cas", self.cas.unwrap_or_default(), span);
-        collected.add_string("error", self.error.unwrap_or_default(), span);
-        collected.add_string("cluster", self.cluster, span);
-        collected.into_value(span)
-    }
 }
