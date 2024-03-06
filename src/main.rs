@@ -733,6 +733,7 @@ fn merge_couchbase_delta(context: &mut EngineState, state: Arc<Mutex<State>>) {
         working_set.add_decl(Box::new(ScopesCreate::new(state.clone())));
         working_set.add_decl(Box::new(ScopesDrop::new(state.clone())));
         working_set.add_decl(Box::new(Search::new(state.clone())));
+        working_set.add_decl(Box::new(SubDocGet::new(state.clone())));
         working_set.add_decl(Box::new(Transactions));
         working_set.add_decl(Box::new(TransactionsListAtrs::new(state.clone())));
         working_set.add_decl(Box::new(Tutorial::new(state.clone())));
