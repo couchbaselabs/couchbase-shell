@@ -405,6 +405,8 @@ pub enum Opcode {
     Auth,
     SelectBucket,
     GetCollectionID,
+    SubdocGet,
+    SubdocMultiLookup,
 }
 
 impl Opcode {
@@ -421,6 +423,8 @@ impl Opcode {
             Self::SelectBucket => 0x89,
             Self::ErrorMap => 0xFE,
             Self::GetCollectionID => 0xBB,
+            Self::SubdocGet => 0xc5,
+            Self::SubdocMultiLookup => 0xd0,
         }
     }
 }
@@ -447,6 +451,8 @@ impl TryFrom<u8> for Opcode {
             0x89 => Opcode::SelectBucket,
             0xFE => Opcode::ErrorMap,
             0xBB => Opcode::GetCollectionID,
+            0xc5 => Opcode::SubdocGet,
+            0xd0 => Opcode::SubdocMultiLookup,
             _ => return Err(input),
         })
     }

@@ -347,6 +347,84 @@ impl KvEndpoint {
             .await
     }
 
+    pub async fn sub_doc_get(
+        &self,
+        key: String,
+        partition: u16,
+        collection_id: u32,
+        path: String,
+    ) -> Result<KvResponse, ClientError> {
+        let mut extras = BytesMut::with_capacity(4);
+        // Extras contain path length and flag
+        extras.put_u16(path.len() as u16);
+        // 0x0 flag value indicates normal sub doc get
+        extras.put_u8(0);
+
+        let req = KvRequest::new(
+            protocol::Opcode::SubdocGet,
+            0,
+            partition,
+            0,
+            Some(Bytes::from(key.clone())),
+            Some(extras.freeze()),
+            Some(Bytes::from(path.clone())),
+            collection_id,
+        );
+
+        let (tx, rx) = oneshot::channel::<KvResponse>();
+        self.send(req, tx).await?;
+
+        self.await_and_handle_doc_response(rx, key, collection_id)
+            .await
+    }
+
+    pub async fn sub_doc_multi_lookup(
+        &self,
+        key: String,
+        partition: u16,
+        collection_id: u32,
+        paths: Vec<String>,
+    ) -> Result<KvResponse, ClientError> {
+        let mut path_bytes_list: Vec<Vec<u8>> = vec![];
+        let mut path_bytes_total = 0;
+
+        for p in paths {
+            let path_bytes = Bytes::from(p.clone());
+            path_bytes_list.push(path_bytes.to_vec());
+            path_bytes_total += path_bytes.len();
+        }
+
+        let mut value_buf = BytesMut::with_capacity(path_bytes_total * 4);
+        for path_bytes in path_bytes_list {
+            value_buf.put_u8(protocol::Opcode::SubdocGet.encoded());
+            value_buf.put_u8(0);
+            value_buf.put_u16(path_bytes.len() as u16);
+            for pb in path_bytes {
+                value_buf.put_u8(pb);
+            }
+        }
+
+        let mut extras = BytesMut::with_capacity(1);
+        extras.put_u8(0);
+
+        let req = KvRequest::new(
+            protocol::Opcode::SubdocMultiLookup,
+            0,
+            partition,
+            0,
+            Some(Bytes::from(key.clone())),
+            Some(extras.freeze()),
+            Some(value_buf.freeze()),
+            collection_id,
+        );
+
+        let (tx, rx) = oneshot::channel::<KvResponse>();
+        self.send(req, tx).await?;
+
+        self.await_and_handle_doc_response(rx, key, collection_id)
+            .await
+    }
+
     pub async fn set(
         &self,
         key: String,

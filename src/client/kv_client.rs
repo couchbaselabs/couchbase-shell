@@ -11,6 +11,7 @@ use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use log::{debug, trace};
 use serde::Deserialize;
+use serde_json::json;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::AtomicBool;
@@ -231,6 +232,8 @@ impl KvClient {
             KeyValueRequest::Insert { ref key, .. } => key.clone(),
             KeyValueRequest::Replace { ref key, .. } => key.clone(),
             KeyValueRequest::Remove { ref key, .. } => key.clone(),
+            KeyValueRequest::SubDocGet { ref key, .. } => key.clone(),
+            KeyValueRequest::SubdocMultiLookup { ref key, .. } => key.clone(),
         };
 
         let partition = self.partition_for_key(key.clone());
@@ -272,6 +275,18 @@ impl KvClient {
                 self.handle_op_future(key, op, deadline_sleep, ctrl_c_fut)
                     .await
             }
+            KeyValueRequest::SubDocGet { key, path } => {
+                let op = ep.sub_doc_get(key.clone(), partition as u16, cid, path);
+
+                self.handle_op_future(key, op, deadline_sleep, ctrl_c_fut)
+                    .await
+            }
+            KeyValueRequest::SubdocMultiLookup { key, paths } => {
+                let op = ep.sub_doc_multi_lookup(key.clone(), partition as u16, cid, paths);
+
+                self.handle_op_future(key, op, deadline_sleep, ctrl_c_fut)
+                    .await
+            }
         };
 
         self.handle_op_result(result)
@@ -284,14 +299,41 @@ impl KvClient {
         match result {
             Ok(mut r) => {
                 let content = if let Some(body) = r.0.body() {
-                    match serde_json::from_slice(body.as_ref()) {
-                        Ok(v) => Some(v),
-                        Err(e) => {
-                            return Err(ClientError::RequestFailed {
-                                reason: Some(e.to_string()),
-                                key: r.1,
-                            });
+                    match r.0.opcode() {
+                        protocol::Opcode::SubdocMultiLookup => {
+                            let mut results: Vec<serde_json::Value> = vec![];
+                            let mut bytes = body.clone();
+
+                            while bytes.len() > 0 {
+                                //Drop leading empty bytes
+                                bytes.get_u32();
+                                let len: usize = bytes.get_u16().into();
+                                let temp = bytes.split_off(len);
+
+                                let value = match serde_json::from_slice(bytes.as_ref()) {
+                                    Ok(v) => v,
+                                    Err(e) => {
+                                        return Err(ClientError::RequestFailed {
+                                            reason: Some(e.to_string()),
+                                            key: r.1,
+                                        });
+                                    }
+                                };
+
+                                results.push(value);
+                                bytes = temp;
+                            }
+                            Some(json!(results))
                         }
+                        _ => match serde_json::from_slice(body.as_ref()) {
+                            Ok(v) => Some(v),
+                            Err(e) => {
+                                return Err(ClientError::RequestFailed {
+                                    reason: Some(e.to_string()),
+                                    key: r.1,
+                                });
+                            }
+                        },
                     }
                 } else {
                     None
@@ -540,6 +582,14 @@ pub enum KeyValueRequest {
     Remove {
         key: String,
     },
+    SubDocGet {
+        key: String,
+        path: String,
+    },
+    SubdocMultiLookup {
+        key: String,
+        paths: Vec<String>,
+    },
 }
 
 impl KeyValueRequest {
@@ -550,6 +600,8 @@ impl KeyValueRequest {
             KeyValueRequest::Insert { key, .. } => key.clone(),
             KeyValueRequest::Replace { key, .. } => key.clone(),
             KeyValueRequest::Remove { key } => key.clone(),
+            KeyValueRequest::SubDocGet { key, .. } => key.clone(),
+            KeyValueRequest::SubdocMultiLookup { key, .. } => key.clone(),
         }
     }
 }
