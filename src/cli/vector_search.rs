@@ -1,4 +1,5 @@
 use crate::cli::error::{client_error_to_shell_error, unexpected_status_code_error};
+use crate::cli::util::namespace_from_args;
 use crate::cli::util::{cluster_identifiers_from, get_active_cluster, NuValueMap};
 use crate::client::VectorSearchQueryRequest;
 use crate::state::State;
@@ -33,12 +34,12 @@ impl Command for VectorSearch {
 
     fn signature(&self) -> Signature {
         Signature::build("vector search")
-            .required("index", SyntaxShape::String, "the index name")
-            .required(
+            .optional(
                 "vector",
-                SyntaxShape::Any,
-                "search vector to be queried for",
+                SyntaxShape::List(Box::new(SyntaxShape::Decimal)),
+                "the vector used for searching",
             )
+            .required("index", SyntaxShape::String, "the index name")
             .required(
                 "field",
                 SyntaxShape::String,
@@ -62,6 +63,13 @@ impl Command for VectorSearch {
                 "number of neighbours returned by vector search (default = 3)",
                 None,
             )
+            .named(
+                "bucket",
+                SyntaxShape::String,
+                "the name of the bucket",
+                None,
+            )
+            .named("scope", SyntaxShape::String, "the name of the scope", None)
             .category(Category::Custom("couchbase".to_string()))
     }
 
@@ -85,19 +93,88 @@ fn run(
     engine_state: &EngineState,
     stack: &mut Stack,
     call: &Call,
-    _input: PipelineData,
+    input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
+    let mut vector: Vec<f32> = vec![];
+    match input.into_value(span) {
+        Value::List { vals, span: _ } => {
+            let rec = match vals[0].as_record() {
+                Ok(r) => r,
+                Err(e) => {
+                    return Err(ShellError::GenericError(
+                        "Please supply vector or output from `vector enrich-text`".to_string(),
+                        "".to_string(),
+                        None,
+                        None,
+                        vec![e],
+                    ));
+                }
+            };
+
+            if rec.0 == vec!["id", "content"] {
+                // Input is from vector enrich-text
+                let id = rec.1[0].as_string().unwrap();
+                if id.len() > 6 && id[..6] == "vector".to_string() {
+                    let content = rec.1[1].as_record().unwrap();
+                    vector = content.1[1]
+                        .as_list()
+                        .unwrap()
+                        .iter()
+                        .map(|e| e.as_float().unwrap() as f32)
+                        .collect();
+                }
+            } else {
+                // Input is vector from doc get or query
+                let list = match rec.1[0].as_list() {
+                    Ok(l) => l,
+                    Err(e) => {
+                        return Err(ShellError::GenericError(
+                            "Please supply vector or output from `vector enrich-text`".to_string(),
+                            "".to_string(),
+                            None,
+                            None,
+                            vec![e],
+                        ));
+                    }
+                };
+                vector = list.iter().map(|e| e.as_float().unwrap() as f32).collect();
+            }
+        }
+        Value::Nothing { span: _ } => {
+            let vec: Option<Value> = call.opt(engine_state, stack, 2)?;
+            if let Some(v) = vec {
+                vector = v
+                    .as_list()
+                    .unwrap()
+                    .iter()
+                    .map(|e| e.as_float().unwrap() as f32)
+                    .collect();
+            } else {
+                return Err(ShellError::GenericError(
+                    "Please supply vector or output from `vector enrich-text`".to_string(),
+                    "".to_string(),
+                    None,
+                    None,
+                    Vec::new(),
+                ));
+            }
+        }
+        _ => {
+            return Err(ShellError::GenericError(
+                "Please supply vector or output from `vector enrich-text`".to_string(),
+                "".to_string(),
+                None,
+                None,
+                Vec::new(),
+            ));
+        }
+    }
+
     let index: String = call.req(engine_state, stack, 0)?;
-    let vector: Vec<f32> = call
-        .req::<Vec<Value>>(engine_state, stack, 1)?
-        .clone()
-        .iter()
-        .map(|e| e.as_float().unwrap() as f32)
-        .collect();
-    let field: String = call.req(engine_state, stack, 2)?;
+    let field: String = call.req(engine_state, stack, 1)?;
 
     let query: serde_json::Value = match call.get_flag::<String>(engine_state, stack, "query")? {
         Some(q) => json!({ "query": q }),
@@ -111,6 +188,9 @@ fn run(
         None => 3,
     };
 
+    let bucket_flag: Option<String> = call.get_flag(engine_state, stack, "bucket")?;
+    let scope_flag: Option<String> = call.get_flag(engine_state, stack, "scope")?;
+
     debug!("Running vector search query {} against {}", &query, &index);
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
@@ -119,13 +199,23 @@ fn run(
     let mut results = vec![];
     for identifier in cluster_identifiers {
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
+
+        let namespace = namespace_from_args(
+            bucket_flag.clone(),
+            scope_flag.clone(),
+            None,
+            active_cluster,
+            span,
+        )?;
+
+        let qualified_index = index_name_from_namespace(index.clone(), namespace);
         let response = active_cluster
             .cluster()
             .http_client()
             .search_query_request(
                 VectorSearchQueryRequest::Execute {
                     query: query.clone(),
-                    index: index.clone(),
+                    index: qualified_index.clone(),
                     vector: vector.clone(),
                     field: field.clone(),
                     neighbours: neighbours.clone(),
@@ -165,6 +255,15 @@ fn run(
         span: call.head,
     }
     .into_pipeline_data())
+}
+
+fn index_name_from_namespace(index: String, namespace: (String, String, String)) -> String {
+    let scope = if namespace.1 == "" {
+        "_default".to_string()
+    } else {
+        namespace.1
+    };
+    format!("{}.{}.{}", namespace.0, scope, index)
 }
 
 #[derive(Debug, Deserialize)]
