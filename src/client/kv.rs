@@ -347,6 +347,37 @@ impl KvEndpoint {
             .await
     }
 
+    pub async fn sub_doc_get(
+        &self,
+        key: String,
+        partition: u16,
+        collection_id: u32,
+        path: String,
+    ) -> Result<KvResponse, ClientError> {
+        let mut extras = BytesMut::with_capacity(4);
+        // Extras contain path length and flag
+        extras.put_u16(path.len() as u16);
+        // 0x0 flag value indicates normal sub doc get
+        extras.put_u8(0);
+
+        let req = KvRequest::new(
+            protocol::Opcode::SubdocGet,
+            0,
+            partition,
+            0,
+            Some(Bytes::from(key.clone())),
+            Some(extras.freeze()),
+            Some(Bytes::from(path.clone())),
+            collection_id,
+        );
+
+        let (tx, rx) = oneshot::channel::<KvResponse>();
+        self.send(req, tx).await?;
+
+        self.await_and_handle_doc_response(rx, key, collection_id)
+            .await
+    }
+
     pub async fn set(
         &self,
         key: String,

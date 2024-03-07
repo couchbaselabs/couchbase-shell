@@ -231,6 +231,7 @@ impl KvClient {
             KeyValueRequest::Insert { ref key, .. } => key.clone(),
             KeyValueRequest::Replace { ref key, .. } => key.clone(),
             KeyValueRequest::Remove { ref key, .. } => key.clone(),
+            KeyValueRequest::SubDocGet { ref key, .. } => key.clone(),
         };
 
         let partition = self.partition_for_key(key.clone());
@@ -268,6 +269,12 @@ impl KvClient {
             }
             KeyValueRequest::Remove { key } => {
                 let op = ep.remove(key.clone(), partition as u16, cid);
+
+                self.handle_op_future(key, op, deadline_sleep, ctrl_c_fut)
+                    .await
+            }
+            KeyValueRequest::SubDocGet { key, path } => {
+                let op = ep.sub_doc_get(key.clone(), partition as u16, cid, path);
 
                 self.handle_op_future(key, op, deadline_sleep, ctrl_c_fut)
                     .await
@@ -540,6 +547,10 @@ pub enum KeyValueRequest {
     Remove {
         key: String,
     },
+    SubDocGet {
+        key: String,
+        path: String,
+    },
 }
 
 impl KeyValueRequest {
@@ -550,6 +561,7 @@ impl KeyValueRequest {
             KeyValueRequest::Insert { key, .. } => key.clone(),
             KeyValueRequest::Replace { key, .. } => key.clone(),
             KeyValueRequest::Remove { key } => key.clone(),
+            KeyValueRequest::SubDocGet { key, .. } => key.clone(),
         }
     }
 }
