@@ -49,7 +49,7 @@ impl Command for BucketsUpdate {
             )
             .named(
                 "flush",
-                SyntaxShape::String,
+                SyntaxShape::Boolean,
                 "whether to enable flush",
                 None,
             )
@@ -102,9 +102,7 @@ fn buckets_update(
     let name: String = call.req(engine_state, stack, 0)?;
     let ram: Option<i64> = call.get_flag(engine_state, stack, "ram")?;
     let replicas: Option<i64> = call.get_flag(engine_state, stack, "replicas")?;
-    let flush = call
-        .get_flag(engine_state, stack, "flush")?
-        .unwrap_or(false);
+    let flush = call.get_flag(engine_state, stack, "flush")?;
     let durability = call.get_flag(engine_state, stack, "durability")?;
     let expiry: Option<i64> = call.get_flag(engine_state, stack, "expiry")?;
 
@@ -201,7 +199,7 @@ fn update_bucket_settings(
     settings: &mut BucketSettings,
     ram: Option<u64>,
     replicas: Option<u64>,
-    flush: bool,
+    flush: Option<bool>,
     durability: Option<String>,
     expiry: Option<u64>,
     span: Span,
@@ -221,8 +219,8 @@ fn update_bucket_settings(
             }
         });
     }
-    if flush {
-        settings.set_flush_enabled(flush);
+    if let Some(f) = flush {
+        settings.set_flush_enabled(f);
     }
     if let Some(d) = durability {
         settings.set_minimum_durability_level(match DurabilityLevel::try_from(d.as_str()) {
