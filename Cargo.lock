@@ -1005,6 +1005,7 @@ dependencies = [
  "nu-test-support",
  "num-bigint 0.4.3",
  "num-traits",
+ "ollama-rs",
  "openssl",
  "pretty_env_logger",
  "rand 0.8.5",
@@ -3745,6 +3746,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8bda667d9f2b5051b8833f59f3bf748b28ef54f850f4fcb389a252aa383866d1"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "ollama-rs"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ee48e21359d1a897e180d612319de5e348a9247629aefc1f73147d78b4b859c"
+dependencies = [
+ "reqwest",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

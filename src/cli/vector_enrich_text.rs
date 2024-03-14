@@ -1,3 +1,4 @@
+use crate::cli::llm_client::LLMClient;
 use crate::cli::util::read_openai_api_key;
 use crate::state::State;
 use crate::CtrlcFuture;
