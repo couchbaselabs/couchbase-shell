@@ -1,17 +1,23 @@
+use crate::cli::llm_client::LLMClient;
+use crate::cli::llm_client::LlamaClient;
 use crate::cli::util::read_openai_api_key;
 use crate::state::State;
 use crate::CtrlcFuture;
+use crate::OpenAIClient;
+use async_openai::config::OpenAIConfig;
 use log::{debug, info};
 use std::convert::TryFrom;
 use std::fs;
 use std::str;
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
+use structopt::clap::Shell;
 use tiktoken_rs::p50k_base;
 use tokio::runtime::Runtime;
 use tokio::select;
 use uuid::Uuid;
 
+use crate::cli::llm_client::LLMClients;
 use async_openai::{types::CreateEmbeddingRequestArgs, Client};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
@@ -165,65 +171,30 @@ fn vector_enrich_text(
 
     let key = match read_openai_api_key(engine_state) {
         Ok(k) => k,
-        Err(e) => {
-            return Err(e);
-        }
+        Err(_) => "".to_string(),
     };
 
-    let mut batches: Vec<Vec<String>> = Vec::new();
-    let mut results: Vec<Value> = Vec::new();
-
-    let bpe = p50k_base().unwrap();
-    let tokens = bpe.encode_with_special_tokens(&chunks.join(" "));
-
-    debug!("Total tokens: {:?}\n", tokens.len());
-
-    let num_batches = (tokens.len() / max_tokens) + 1;
-    let batch_size = chunks.len() / num_batches;
-    if num_batches == 1 {
-        batches.push(chunks.to_vec());
+    let client = if key != "" {
+        LLMClients::OpenAI(OpenAIClient::new(max_tokens, key))
     } else {
-        let mut lower = 0;
-        let mut upper = batch_size;
-        while lower < chunks.len() {
-            batches.push(chunks[lower..=upper].to_vec());
-            lower = upper + 1;
-            upper += batch_size;
-
-            if upper >= chunks.len() {
-                upper = chunks.len() - 1;
-            }
-        }
+        LLMClients::Llama(LlamaClient::new("".to_string()))
     };
 
-    let client =
-        Client::with_config(async_openai::config::OpenAIConfig::default().with_api_key(key));
+    let mut results: Vec<Value> = Vec::new();
+    let batches = client.batch_chunks(chunks);
+    println!("{:?}", batches[0].len());
 
     let start = SystemTime::now();
-    let rt = Runtime::new().unwrap();
     for (i, batch) in batches.iter().enumerate() {
         let batch_start = SystemTime::now();
         info!("Embedding batch {:?}/{} ", i + 1, batches.len());
 
-        if log::log_enabled!(log::Level::Debug) {
-            let bpe = p50k_base().unwrap();
-            let tokens = bpe.encode_with_special_tokens(&batch.join(" "));
-            debug!("- Tokens: {:?}", tokens.len());
-        }
-
-        let request = CreateEmbeddingRequestArgs::default()
-            .model("text-embedding-3-small")
-            .dimensions(dim)
-            .input(batch.clone())
-            .build()
-            .unwrap();
-
-        let embeddings = client.embeddings();
         let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
         let ctrl_c_fut = CtrlcFuture::new(ctrl_c);
-        let response = match rt.block_on(async {
+        let rt = Runtime::new().unwrap();
+        let embeddings = match rt.block_on(async {
             select! {
-                result = embeddings.create(request) => {
+                result = client.embed(batch, dim) => {
                     match result {
                         Ok(r) => Ok(r),
                         Err(e) => Err(ShellError::GenericError(
@@ -252,8 +223,7 @@ fn vector_enrich_text(
         };
 
         for (i, chunk) in batch.iter().enumerate() {
-            let vector = response.data[i]
-                .embedding
+            let vector = embeddings[i]
                 .iter()
                 .map(|x| Value::Float {
                     val: *x as f64,
