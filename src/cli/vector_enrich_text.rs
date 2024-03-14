@@ -1,3 +1,5 @@
+use crate::cli::llm_client::LLMClient;
+use crate::cli::llm_client::LlamaClient;
 use crate::cli::util::read_openai_api_key;
 use crate::state::State;
 use crate::CtrlcFuture;
@@ -163,8 +165,16 @@ fn vector_enrich_text(
         }
     };
 
-    let key = read_openai_api_key(engine_state)?;
-    let client = LLMClients::OpenAI(OpenAIClient::new(max_tokens, key));
+    let key = match read_openai_api_key(engine_state) {
+        Ok(k) => k,
+        Err(_) => "".to_string(),
+    };
+
+    let client = if key != "" {
+        LLMClients::OpenAI(OpenAIClient::new(max_tokens, key))
+    } else {
+        LLMClients::Llama(LlamaClient::new("".to_string()))
+    };
 
     let mut results: Vec<Value> = Vec::new();
     let batches = client.batch_chunks(chunks);
