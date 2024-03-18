@@ -65,6 +65,8 @@ trust-dns-resolver = { version = "0.22.0", features = ["dns-over-rustls"] }
 url = "2.1"
 uuid = { version = "1.1.2", features = ["v4"] }
 webpki-roots = "0.25.1"
+async-openai = "0.18.3"
+tiktoken-rs = "0.5.8"
 
 [target.'cfg(not(any(target_os = "macos", target_os = "windows")))'.dependencies]
 # Our dependencies don't use OpenSSL on Macos
