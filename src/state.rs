@@ -58,6 +58,7 @@ impl State {
         config_path: Option<PathBuf>,
         capella_orgs: HashMap<String, RemoteCapellaOrganization>,
         active_capella_org: Option<String>,
+
         llm: Option<LLM>,
     ) -> Self {
         let state = Self {
