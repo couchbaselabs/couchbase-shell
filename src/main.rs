@@ -25,6 +25,7 @@ use crate::remote_cluster::{
     ClusterTimeouts, RemoteCluster, RemoteClusterResources, RemoteClusterType,
 };
 use crate::state::RemoteCapellaOrganization;
+use crate::state::LLM;
 use state::State;
 
 use chrono::Local;
@@ -501,6 +502,7 @@ fn make_state(
 ) -> Arc<Mutex<State>> {
     let mut capella_orgs = HashMap::new();
     let mut active_capella_org = None;
+    let mut llm: Option<LLM> = None;
     let (active, config_location) = if let Some(c) = config {
         let mut active = None;
         for v in c.clusters() {
@@ -645,6 +647,10 @@ fn make_state(
             capella_orgs.insert(name, plane);
         }
 
+        if let Some(llm_conf) = c.llm() {
+            llm = Some(LLM::new(llm_conf.api_key()))
+        }
+
         (active.unwrap_or_default(), c.location().clone())
     } else {
         (String::from("default"), None)
@@ -656,6 +662,7 @@ fn make_state(
         config_location,
         capella_orgs,
         active_capella_org,
+        llm,
     )))
 }
 
