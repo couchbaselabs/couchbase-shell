@@ -79,7 +79,7 @@ impl Command for VectorEnrichText {
 }
 
 fn vector_enrich_text(
-    _state: Arc<Mutex<State>>,
+    state: Arc<Mutex<State>>,
     engine_state: &EngineState,
     stack: &mut Stack,
     call: &Call,
@@ -164,9 +164,13 @@ fn vector_enrich_text(
         }
     };
 
-    let key = match read_openai_api_key(engine_state) {
-        Ok(k) => k,
-        Err(_) => "".to_string(),
+    let guard = state.lock().unwrap();
+    let llm = guard.llm();
+    println!("LLM: {:?}", llm);
+
+    let key = match llm.unwrap().api_key() {
+        Some(k) => k,
+        None => "".to_string(),
     };
 
     let client = if key != "" {

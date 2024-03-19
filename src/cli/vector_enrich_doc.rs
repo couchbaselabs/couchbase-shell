@@ -3,8 +3,10 @@ use log::{debug, info};
 use std::cmp;
 use std::time::SystemTime;
 
-use crate::cli::util::read_openai_api_key;
+use crate::cli::llm_client::LLMClients;
+use crate::cli::llm_client::LlamaClient;
 use crate::CtrlcFuture;
+use crate::OpenAIClient;
 use async_openai::{types::CreateEmbeddingRequestArgs, Client};
 use std::str;
 use std::sync::{Arc, Mutex};
@@ -83,7 +85,7 @@ impl Command for VectorEnrichDoc {
 }
 
 fn vector_enrich_doc(
-    _state: Arc<Mutex<State>>,
+    state: Arc<Mutex<State>>,
     engine_state: &EngineState,
     stack: &mut Stack,
     call: &Call,
@@ -182,15 +184,20 @@ fn vector_enrich_doc(
         }
     };
 
-    let key = match read_openai_api_key(engine_state) {
-        Ok(k) => k,
-        Err(e) => {
-            return Err(e);
-        }
+    let guard = state.lock().unwrap();
+    let llm = guard.llm();
+    println!("LLM: {:?}", llm);
+
+    let key = match llm.unwrap().api_key() {
+        Some(k) => k,
+        None => "".to_string(),
     };
 
-    let client =
-        Client::with_config(async_openai::config::OpenAIConfig::default().with_api_key(key));
+    let client = if key != "" {
+        LLMClients::OpenAI(OpenAIClient::new(max_tokens, key))
+    } else {
+        LLMClients::Llama(LlamaClient::new("".to_string()))
+    };
 
     let bpe = p50k_base().unwrap();
     let tokens = bpe.encode_with_special_tokens(&field_contents.join(" "));
@@ -233,26 +240,12 @@ fn vector_enrich_doc(
         let batch_start = SystemTime::now();
         info!("\rEmbedding batch {:?}/{} ", i + 1, batches.len());
 
-        if log::log_enabled!(log::Level::Debug) {
-            let bpe = p50k_base().unwrap();
-            let tokens = bpe.encode_with_special_tokens(&batch.join(" "));
-            debug!("- Tokens: {:?}", tokens.len());
-        }
-
-        let request = CreateEmbeddingRequestArgs::default()
-            .model("text-embedding-3-small")
-            .dimensions(128 as u32)
-            .input(batch.clone())
-            .build()
-            .unwrap();
-
         let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
         let ctrl_c_fut = CtrlcFuture::new(ctrl_c);
-        let embd = client.embeddings();
         let rt = Runtime::new().unwrap();
         let embeddings = match rt.block_on(async {
             select! {
-                result = embd.create(request)  => {
+                result = client.embed(batch, 128) => {
                     match result {
                         Ok(r) => Ok(r),
                         Err(e) => Err(ShellError::GenericError(
@@ -287,9 +280,7 @@ fn vector_enrich_doc(
             let mut res_vals: Vec<Value> = input_records[count].1.to_vec();
             res_vals.push(Value::List {
                 span,
-                vals: embeddings.data[i]
-                    .embedding
-                    .clone()
+                vals: embeddings[i]
                     .iter()
                     .map(|&e| Value::Float {
                         val: e as f64,
