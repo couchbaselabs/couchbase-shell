@@ -12,6 +12,7 @@ use nu_protocol::{
 };
 use serde_derive::Deserialize;
 use serde_json::json;
+use std::env::args;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
