@@ -43,6 +43,7 @@ impl LLMClients {
         }
     }
 }
+
 pub struct OpenAIClient {
     api_key: String,
     max_tokens: usize,
