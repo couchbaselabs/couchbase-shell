@@ -4,8 +4,9 @@ use async_openai::types::{
 };
 use async_openai::{types::CreateEmbeddingRequestArgs, Client};
 use async_trait::async_trait;
-use log::{debug, info};
+use log::debug;
 use nu_protocol::ShellError;
+use nu_protocol::Span;
 use std::cmp;
 use tiktoken_rs::p50k_base;
 
