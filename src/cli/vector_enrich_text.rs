@@ -1,24 +1,19 @@
-use crate::cli::llm_client::LLMClient;
 use crate::cli::llm_client::LlamaClient;
 use crate::cli::util::read_openai_api_key;
 use crate::state::State;
 use crate::CtrlcFuture;
 use crate::OpenAIClient;
-use async_openai::config::OpenAIConfig;
 use log::{debug, info};
 use std::convert::TryFrom;
 use std::fs;
 use std::str;
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
-use structopt::clap::Shell;
-use tiktoken_rs::p50k_base;
 use tokio::runtime::Runtime;
 use tokio::select;
 use uuid::Uuid;
 
 use crate::cli::llm_client::LLMClients;
-use async_openai::{types::CreateEmbeddingRequestArgs, Client};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::Command;
@@ -182,7 +177,6 @@ fn vector_enrich_text(
 
     let mut results: Vec<Value> = Vec::new();
     let batches = client.batch_chunks(chunks);
-    println!("{:?}", batches[0].len());
 
     let start = SystemTime::now();
     for (i, batch) in batches.iter().enumerate() {

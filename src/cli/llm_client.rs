@@ -2,6 +2,7 @@ use async_openai::{types::CreateEmbeddingRequestArgs, Client};
 use async_trait::async_trait;
 use log::{debug, info};
 use nu_protocol::ShellError;
+use ollama_rs::Ollama;
 use tiktoken_rs::p50k_base;
 
 #[async_trait]
@@ -12,21 +13,25 @@ pub trait LLMClient {
 
 pub enum LLMClients {
     OpenAI(OpenAIClient),
+    Llama(LlamaClient),
 }
 
 impl LLMClients {
     pub fn batch_chunks(&self, chunks: Vec<String>) -> Vec<Vec<String>> {
         match self {
             Self::OpenAI(c) => c.batch_chunks(chunks),
+            Self::Llama(c) => c.batch_chunks(chunks),
         }
     }
 
     pub async fn embed(&self, batch: &Vec<String>, dim: u32) -> Result<Vec<Vec<f32>>, ShellError> {
         match self {
             Self::OpenAI(c) => c.embed(batch, dim).await,
+            Self::Llama(c) => c.embed(batch, dim).await,
         }
     }
 }
+
 pub struct OpenAIClient {
     max_tokens: usize,
     api_key: String,
@@ -105,6 +110,45 @@ impl OpenAIClient {
             rec.push(embd.embedding);
         }
 
+        Ok(rec)
+    }
+}
+
+pub struct LlamaClient {
+    conn_str: String,
+}
+
+impl LlamaClient {
+    pub fn new(conn_str: String) -> Self {
+        Self { conn_str }
+    }
+    fn batch_chunks(&self, chunks: Vec<String>) -> Vec<Vec<String>> {
+        // Ollama api does not allow batching, so we must emebd the chunks one by one
+        vec![chunks]
+    }
+
+    async fn embed(&self, batch: &Vec<String>, dim: u32) -> Result<Vec<Vec<f32>>, ShellError> {
+        // TODO connect to client using conn_str
+        // By default it will connect to localhost:11434
+        let model = "qwen:1.8b";
+        if self.conn_str == "" {
+            let ollama = Ollama::default();
+        }
+        let ollama = Ollama::default();
+        let res = ollama.list_local_models().await.unwrap();
+        println!("MODELS : {:?}", res);
+
+        let mut rec: Vec<Vec<f32>> = vec![];
+        for (i, prompt) in batch.iter().enumerate() {
+            info!("Embedding batch {:?}/{} ", i + 1, batch.len());
+
+            let res = ollama
+                .generate_embeddings(model.to_string(), prompt.clone(), None)
+                .await
+                .unwrap();
+
+            rec.push(res.embeddings.iter().map(|e| *e as f32).collect());
+        }
         Ok(rec)
     }
 }
