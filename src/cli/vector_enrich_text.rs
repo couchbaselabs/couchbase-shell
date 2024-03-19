@@ -76,7 +76,7 @@ impl Command for VectorEnrichText {
 }
 
 fn vector_enrich_text(
-    _state: Arc<Mutex<State>>,
+    state: Arc<Mutex<State>>,
     engine_state: &EngineState,
     stack: &mut Stack,
     call: &Call,
@@ -158,7 +158,7 @@ fn vector_enrich_text(
         }
     };
 
-    let key = read_openai_api_key(engine_state)?;
+    let key = read_openai_api_key(state)?;
     let client = LLMClients::OpenAI(OpenAIClient::new(key, max_tokens));
 
     let mut results: Vec<Value> = Vec::new();

@@ -25,6 +25,21 @@ impl TransactionState {
     }
 }
 
+#[derive(Debug)]
+pub struct LLM {
+    api_key: String,
+}
+
+impl LLM {
+    pub fn new(api_key: String) -> Self {
+        Self { api_key }
+    }
+
+    pub fn api_key(&self) -> String {
+        self.api_key.clone()
+    }
+}
+
 pub struct State {
     active: Mutex<String>,
     clusters: HashMap<String, RemoteCluster>,
@@ -33,6 +48,7 @@ pub struct State {
     capella_orgs: HashMap<String, RemoteCapellaOrganization>,
     active_capella_org: Mutex<Option<String>>,
     active_transaction: Mutex<Option<TransactionState>>,
+    llm: Option<LLM>,
 }
 
 impl State {
@@ -42,6 +58,7 @@ impl State {
         config_path: Option<PathBuf>,
         capella_orgs: HashMap<String, RemoteCapellaOrganization>,
         active_capella_org: Option<String>,
+        llm: Option<LLM>,
     ) -> Self {
         let state = Self {
             active: Mutex::new(active.clone()),
@@ -51,6 +68,7 @@ impl State {
             capella_orgs,
             active_capella_org: Mutex::new(active_capella_org),
             active_transaction: Mutex::new(None),
+            llm,
         };
         if !active.is_empty() {
             state.set_active(active).unwrap();
@@ -258,6 +276,10 @@ impl State {
             let mut guard = self.active_transaction.lock().unwrap();
             *guard = None;
         }
+    }
+
+    pub fn llm(&self) -> &Option<LLM> {
+        &self.llm
     }
 }
 
