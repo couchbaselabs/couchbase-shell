@@ -2,6 +2,7 @@ use async_openai::{types::CreateEmbeddingRequestArgs, Client};
 use async_trait::async_trait;
 use log::debug;
 use nu_protocol::ShellError;
+use std::cmp;
 use tiktoken_rs::p50k_base;
 
 #[async_trait]
@@ -53,8 +54,9 @@ impl OpenAIClient {
 
         debug!("Total tokens: {:?}\n", tokens.len());
 
+        //Regardless of token limit OpenAI's API can only accept batches up to 2048 in length
         let num_batches = (tokens.len() / self.max_tokens) + 1;
-        let batch_size = chunks.len() / num_batches;
+        let batch_size = cmp::min(2047, chunks.len() / num_batches);
         let mut batches: Vec<Vec<String>> = Vec::new();
         if num_batches == 1 {
             batches.push(chunks.to_vec());
@@ -62,6 +64,14 @@ impl OpenAIClient {
             let mut lower = 0;
             let mut upper = batch_size;
             while lower < chunks.len() {
+                let bpe = p50k_base().unwrap();
+                let tokens =
+                    bpe.encode_with_special_tokens(&chunks[lower..=upper].to_vec().join(" "));
+
+                if tokens.len() > self.max_tokens {
+                    upper = upper - batch_size / 2;
+                }
+
                 batches.push(chunks[lower..=upper].to_vec());
                 lower = upper + 1;
                 upper += batch_size;
