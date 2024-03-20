@@ -1,18 +1,19 @@
 use crate::state::State;
-use log::{debug, info};
-use std::cmp;
+use log::debug;
 use std::time::SystemTime;
 
+use crate::cli::llm_client::LLMClients;
 use crate::cli::util::read_openai_api_key;
 use crate::CtrlcFuture;
-use async_openai::{types::CreateEmbeddingRequestArgs, Client};
+use crate::OpenAIClient;
+use nu_protocol::Example;
+use std::convert::TryFrom;
 use std::str;
 use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 use tokio::select;
 
 use nu_engine::CallExt;
-use tiktoken_rs::p50k_base;
 
 use nu_protocol::ast::Call;
 use nu_protocol::engine::Command;
@@ -20,8 +21,6 @@ use nu_protocol::engine::{EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
 };
-
-const MAX_FREE_TIER_TOKENS: usize = 150000;
 
 #[derive(Clone)]
 pub struct VectorEnrichDoc {
@@ -80,10 +79,31 @@ impl Command for VectorEnrichDoc {
     ) -> Result<PipelineData, ShellError> {
         vector_enrich_doc(self.state.clone(), engine_state, stack, call, input)
     }
+
+    fn examples(&self) -> Vec<Example> {
+        vec![
+            Example {
+                description: "Open local json doc and enrich the field named 'description'",
+                example: "open ./local.json | vector enrich-doc",
+                result: None,
+            },
+            Example {
+                description:
+                    "Fetch a single doc with id '12345' and enrich the field named 'description'",
+                example: "doc get 12345 | select content | vector enrich-doc description",
+                result: None,
+            },
+            Example {
+                description: "Fetch and enrich all landmark documents from travel sample and upload the results to couchabase",
+                example: "query  'SELECT * FROM `travel-sample` WHERE type = \"landmark\"' | select content | vector enrich-doc content | doc upsert",
+                result: None,
+            },
+        ]
+    }
 }
 
 fn vector_enrich_doc(
-    _state: Arc<Mutex<State>>,
+    state: Arc<Mutex<State>>,
     engine_state: &EngineState,
     stack: &mut Stack,
     call: &Call,
@@ -96,21 +116,23 @@ fn vector_enrich_doc(
     let mut field_contents: Vec<String> = vec![];
     let mut input_records: Vec<(Vec<String>, Vec<Value>)> = vec![];
 
-    let max_tokens: usize = match call.get_flag::<usize>(engine_state, stack, "maxTokens")? {
-        Some(t) => t,
-        None => MAX_FREE_TIER_TOKENS,
-    };
+    let max_tokens: Option<usize> = call.get_flag::<usize>(engine_state, stack, "maxTokens")?;
 
     let id_column: String = call
         .get_flag(engine_state, stack, "id-column")?
         .unwrap_or_else(|| "id".to_string());
 
+    let dim = match call.get_flag::<i64>(engine_state, stack, "dimension")? {
+        Some(d) => u32::try_from(d).ok().unwrap(),
+        None => 128,
+    };
+
     match input.into_value(span) {
         Value::List { vals, span: _span } => {
-            // Have a list of records of the form:
-            // cols = (bucket-name, database)
-            // vals = (Record<doc contents>, string)
+            // This is able to parse a list of records, where the first value in each record is the contents
+            // of a json document. This allows it to work with the output of query and 'doc commands | select content'
             for v in vals {
+                // Read each record from the list of records
                 let rec = match v.as_record() {
                     Ok(r) => r,
                     Err(e) => {
@@ -124,6 +146,7 @@ fn vector_enrich_doc(
                     }
                 };
 
+                // rec.1 are the values of the record, then the first value is the json of the document
                 let doc_json = match rec.1[0].as_record() {
                     Ok(r) => r,
                     Err(e) => {
@@ -164,16 +187,49 @@ fn vector_enrich_doc(
                 };
 
                 //The API will return an error on empty strings
-                let new = (doc_json.0.to_vec(), doc_json.1.to_vec());
                 if content != "" {
                     field_contents.push(content);
-                    input_records.push(new);
+                    input_records.push((doc_json.0.to_vec(), doc_json.1.to_vec()));
                 }
             }
         }
+        Value::Record {
+            cols,
+            vals,
+            span: _,
+        } => {
+            let index = match cols.iter().position(|r: &String| *r == field) {
+                Some(i) => i,
+                None => {
+                    return Err(ShellError::GenericError(
+                        format!("The field '{}' must be present in input record", field),
+                        "".to_string(),
+                        None,
+                        None,
+                        Vec::new(),
+                    ));
+                }
+            };
+
+            let content = match vals[index].as_string() {
+                Ok(c) => c,
+                Err(e) => {
+                    return Err(ShellError::GenericError(
+                        "".to_string(),
+                        "".to_string(),
+                        None,
+                        None,
+                        vec![e],
+                    ));
+                }
+            };
+
+            field_contents.push(content);
+            input_records.push((cols.to_vec(), vals.to_vec()));
+        }
         _ => {
             return Err(ShellError::GenericError(
-                "Piped input must be a list of json docs".to_string(),
+                "Piped input must a json doc or a list of json docs".to_string(),
                 "".to_string(),
                 None,
                 None,
@@ -182,77 +238,24 @@ fn vector_enrich_doc(
         }
     };
 
-    let key = match read_openai_api_key(engine_state) {
-        Ok(k) => k,
-        Err(e) => {
-            return Err(e);
-        }
-    };
+    let key = read_openai_api_key(state)?;
+    let client = LLMClients::OpenAI(OpenAIClient::new(key, max_tokens));
 
-    let client =
-        Client::with_config(async_openai::config::OpenAIConfig::default().with_api_key(key));
-
-    let bpe = p50k_base().unwrap();
-    let tokens = bpe.encode_with_special_tokens(&field_contents.join(" "));
-
-    debug!("Total tokens: {:?}\n", tokens.len());
-
-    //Regardless of token limit OpenAI's API can only accept arrays of strings up to 2048 in length
-    let num_batches = (tokens.len() / max_tokens) + 1;
-    let batch_size = cmp::min(2047, field_contents.len() / num_batches);
-
-    let mut batches: Vec<Vec<String>> = Vec::new();
-    if num_batches == 1 {
-        batches.push(field_contents.to_vec());
-    } else {
-        let mut lower = 0;
-        let mut upper = batch_size;
-        while lower < field_contents.len() {
-            let bpe = p50k_base().unwrap();
-            let tokens =
-                bpe.encode_with_special_tokens(&field_contents[lower..=upper].to_vec().join(" "));
-
-            if tokens.len() > max_tokens {
-                upper = upper - batch_size / 2;
-            }
-
-            batches.push(field_contents[lower..=upper].to_vec());
-            lower = upper + 1;
-            upper += batch_size;
-
-            if upper >= field_contents.len() {
-                upper = field_contents.len() - 1;
-            }
-        }
-    };
+    let batches = client.batch_chunks(field_contents);
 
     let mut records = vec![];
     let start = SystemTime::now();
     let mut count = 0;
     for (i, batch) in batches.iter().enumerate() {
         let batch_start = SystemTime::now();
-        info!("\rEmbedding batch {:?}/{} ", i + 1, batches.len());
-
-        if log::log_enabled!(log::Level::Debug) {
-            let bpe = p50k_base().unwrap();
-            let tokens = bpe.encode_with_special_tokens(&batch.join(" "));
-            debug!("- Tokens: {:?}", tokens.len());
-        }
-
-        let request = CreateEmbeddingRequestArgs::default()
-            .model("text-embedding-3-small")
-            .dimensions(128 as u32)
-            .input(batch.clone())
-            .build()
-            .unwrap();
+        println!("\rEmbedding batch {:?}/{} ", i + 1, batches.len());
 
         let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
         let ctrl_c_fut = CtrlcFuture::new(ctrl_c);
-        let embd = client.embeddings();
         let rt = Runtime::new().unwrap();
         let embeddings = match rt.block_on(async {
             select! {
-                result = embd.create(request)  => {
+                result = client.embed(batch, dim) => {
                     match result {
                         Ok(r) => Ok(r),
                         Err(e) => Err(ShellError::GenericError(
@@ -287,9 +290,7 @@ fn vector_enrich_doc(
             let mut res_vals: Vec<Value> = input_records[count].1.to_vec();
             res_vals.push(Value::List {
                 span,
-                vals: embeddings.data[i]
-                    .embedding
-                    .clone()
+                vals: embeddings[i]
                     .iter()
                     .map(|&e| Value::Float {
                         val: e as f64,
@@ -298,7 +299,6 @@ fn vector_enrich_doc(
                     .collect(),
             });
 
-            // TODO -handle this error
             let index = match res_keys.iter().position(|r: &String| *r == id_column) {
                 Some(i) => i,
                 None => {
@@ -313,6 +313,7 @@ fn vector_enrich_doc(
             };
             let id = res_vals[index].clone();
 
+            // So that we can pipe the output of this straight into doc upsert the ouput needs to be records formatted like this
             let vector_doc = Value::Record {
                 cols: vec!["id".to_string(), "content".to_string()],
                 vals: vec![
