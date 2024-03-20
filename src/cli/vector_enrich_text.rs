@@ -2,7 +2,7 @@ use crate::cli::util::read_openai_api_key;
 use crate::state::State;
 use crate::CtrlcFuture;
 use crate::OpenAIClient;
-use log::{debug, info};
+use log::debug;
 use nu_protocol::Example;
 use nu_protocol::Record;
 use std::convert::TryFrom;
@@ -131,7 +131,7 @@ fn vector_enrich_text(
     let start = SystemTime::now();
     for (i, batch) in batches.iter().enumerate() {
         let batch_start = SystemTime::now();
-        info!("Embedding batch {:?}/{} ", i + 1, batches.len());
+        println!("Embedding batch {:?}/{} ", i + 1, batches.len());
 
         let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
         let ctrl_c_fut = CtrlcFuture::new(ctrl_c);
