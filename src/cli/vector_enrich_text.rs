@@ -21,8 +21,6 @@ use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
 };
 
-const MAX_FREE_TIER_TOKENS: usize = 150000;
-
 #[derive(Clone)]
 pub struct VectorEnrichText {
     state: Arc<Mutex<State>>,
@@ -96,10 +94,7 @@ fn vector_enrich_text(
         None => 128,
     };
 
-    let max_tokens: usize = match call.get_flag::<usize>(engine_state, stack, "maxTokens")? {
-        Some(t) => t,
-        None => MAX_FREE_TIER_TOKENS,
-    };
+    let max_tokens: Option<usize> = call.get_flag::<usize>(engine_state, stack, "maxTokens")?;
 
     let mut chunks: Vec<String> = Vec::new();
     match input.into_value(span) {
@@ -164,7 +159,7 @@ fn vector_enrich_text(
     };
 
     let key = read_openai_api_key(engine_state)?;
-    let client = LLMClients::OpenAI(OpenAIClient::new(max_tokens, key));
+    let client = LLMClients::OpenAI(OpenAIClient::new(key, max_tokens));
 
     let mut results: Vec<Value> = Vec::new();
     let batches = client.batch_chunks(chunks);

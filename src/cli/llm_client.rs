@@ -28,15 +28,22 @@ impl LLMClients {
     }
 }
 pub struct OpenAIClient {
-    max_tokens: usize,
     api_key: String,
+    max_tokens: usize,
 }
 
+const OPENAI_MAX_FREE_TIER_TOKENS: usize = 150000;
+
 impl OpenAIClient {
-    pub fn new(max_tokens: usize, api_key: String) -> Self {
+    pub fn new(api_key: String, max_tokens: Option<usize>) -> Self {
+        let max_tokens = match max_tokens {
+            Some(mt) => mt,
+            None => OPENAI_MAX_FREE_TIER_TOKENS,
+        };
+
         Self {
-            max_tokens,
             api_key,
+            max_tokens,
         }
     }
 
