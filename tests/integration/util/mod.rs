@@ -24,6 +24,11 @@ pub struct TestConfig {
     password: String,
     support_matrix: Vec<TestFeature>,
     data_timeout: String,
+    capella_connstr: Option<String>,
+    capella_username: Option<String>,
+    capella_password: Option<String>,
+    capella_access_key: Option<String>,
+    capella_secret_key: Option<String>,
 }
 
 impl TestConfig {
@@ -59,6 +64,21 @@ impl TestConfig {
     }
     pub fn data_timeout(&self) -> String {
         self.data_timeout.clone()
+    }
+    pub fn capella_connstr(&self) -> Option<String> {
+        self.capella_connstr.clone()
+    }
+    pub fn capella_username(&self) -> Option<String> {
+        self.capella_username.clone()
+    }
+    pub fn capella_password(&self) -> Option<String> {
+        self.capella_password.clone()
+    }
+    pub fn capella_access_key(&self) -> Option<String> {
+        self.capella_access_key.clone()
+    }
+    pub fn capella_secret_key(&self) -> Option<String> {
+        self.capella_secret_key.clone()
     }
 }
 

@@ -40,6 +40,7 @@ impl StandaloneCluster {
             password.clone(),
         )
         .await;
+
         let (scope, collection) = if features.contains(&TestFeature::Collections) {
             let scope = StandaloneCluster::create_scope(
                 conn_str.clone(),
@@ -61,6 +62,13 @@ impl StandaloneCluster {
         } else {
             (None, None)
         };
+
+        if !c.capella_conn_string().is_none() {
+            c.capella_username().unwrap();
+            c.capella_password().unwrap();
+            c.capella_access_key().unwrap();
+            c.capella_secret_key().unwrap();
+        }
 
         let enabled_features = if c.enabled_features().is_empty() {
             features
@@ -84,6 +92,11 @@ impl StandaloneCluster {
             password,
             support_matrix: enabled_features,
             data_timeout: c.data_timeout(),
+            capella_connstr: c.capella_conn_string(),
+            capella_username: c.capella_username(),
+            capella_password: c.capella_password(),
+            capella_access_key: c.capella_access_key(),
+            capella_secret_key: c.capella_secret_key(),
         });
         StandaloneCluster::wait_for_scope(config.clone()).await;
         StandaloneCluster::wait_for_collection(config.clone()).await;
