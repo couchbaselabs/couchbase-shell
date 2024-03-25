@@ -3,6 +3,7 @@ use crate::state::State;
 use crate::CtrlcFuture;
 use crate::OpenAIClient;
 use log::{debug, info};
+use nu_protocol::Example;
 use std::convert::TryFrom;
 use std::fs;
 use std::str;
@@ -72,6 +73,28 @@ impl Command for VectorEnrichText {
         input: PipelineData,
     ) -> Result<PipelineData, ShellError> {
         vector_enrich_text(self.state.clone(), engine_state, stack, call, input)
+    }
+
+    fn examples(&self) -> Vec<Example> {
+        vec![
+            Example {
+                description: "Retrieves an embedding for a plain text string",
+                example: "\"embed this for me\" | vector enrich-text",
+                result: None,
+            },
+            Example {
+                description:
+                    "Chunks longer text from file and retrieves the embedding for the chunks",
+                example: "open ./some-text.txt | vector enrich-text",
+                result: None,
+            },
+            Example {
+                description:
+                    "Chunks text from all files in the current directory, retrieves embeddings \n  and uploads the vector docs to couchbase",
+                example: "ls | vector enrich-text | doc upsert",
+                result: None,
+            },
+        ]
     }
 }
 
