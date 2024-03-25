@@ -40,6 +40,7 @@ impl Command for VectorEnrichText {
 
     fn signature(&self) -> Signature {
         Signature::build("vector enrich-text")
+            .optional("text", SyntaxShape::String, "the text to be embedded")
             .named(
                 "chunk",
                 SyntaxShape::Int,
@@ -78,7 +79,12 @@ impl Command for VectorEnrichText {
     fn examples(&self) -> Vec<Example> {
         vec![
             Example {
-                description: "Retrieves an embedding for a plain text string",
+                description: "Retrieves an embedding from a plain text string",
+                example: "vector enrich-text \"embed this for me\"",
+                result: None
+            },
+            Example {
+                description: "Retrieves an embedding for a plain text string from pipeline data",
                 example: "\"embed this for me\" | vector enrich-text",
                 result: None,
             },
@@ -107,11 +113,6 @@ fn vector_enrich_text(
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
 
-    let chunk_len = match call.get_flag::<usize>(engine_state, stack, "chunk")? {
-        Some(l) => l,
-        None => 1024,
-    };
-
     let dim = match call.get_flag::<i64>(engine_state, stack, "dimension")? {
         Some(d) => u32::try_from(d).ok().unwrap(),
         None => 128,
@@ -119,72 +120,11 @@ fn vector_enrich_text(
 
     let max_tokens: Option<usize> = call.get_flag::<usize>(engine_state, stack, "maxTokens")?;
 
-    let mut chunks: Vec<String> = Vec::new();
-    match input.into_value(span) {
-        Value::List { vals, span: _span } => {
-            for v in vals {
-                let rec = match v.as_record() {
-                    Ok(r) => r,
-                    Err(e) => {
-                        return Err(ShellError::GenericError(
-                            "Could not parse list of files".to_string(),
-                            "".to_string(),
-                            None,
-                            None,
-                            vec![e],
-                        ));
-                    }
-                };
-
-                let index = match rec.0.iter().position(|r: &String| *r == "name") {
-                    Some(i) => i,
-                    None => {
-                        return Err(ShellError::GenericError(
-                            "Could not parse list of files".to_string(),
-                            "".to_string(),
-                            None,
-                            None,
-                            Vec::new(),
-                        ));
-                    }
-                };
-
-                let file = rec.1[index].as_string().unwrap();
-                let contents = match fs::read_to_string(file.clone()) {
-                    Ok(c) => c,
-                    Err(e) => {
-                        return Err(ShellError::GenericError(
-                            format!("Error parsing file {}: {}", file, e),
-                            "".to_string(),
-                            None,
-                            None,
-                            Vec::new(),
-                        ))
-                    }
-                };
-
-                let file_chunks = &mut chunk_text(contents, chunk_len);
-                chunks.append(file_chunks);
-            }
-        }
-        Value::String { val, span: _ } => {
-            chunks = chunk_text(val, chunk_len);
-        }
-        _ => {
-            return Err(ShellError::GenericError(
-                "Piped input must be a string or list of files from ls".to_string(),
-                "".to_string(),
-                None,
-                None,
-                Vec::new(),
-            ));
-        }
-    };
-
     let key = read_openai_api_key(state)?;
     let client = LLMClients::OpenAI(OpenAIClient::new(key, max_tokens));
 
     let mut results: Vec<Value> = Vec::new();
+    let chunks = chunks_from_input(input, call, engine_state, stack)?;
     let batches = client.batch_chunks(chunks);
 
     let start = SystemTime::now();
@@ -274,6 +214,99 @@ fn vector_enrich_text(
         vals: results,
     }
     .into_pipeline_data())
+}
+
+fn chunks_from_input(
+    input: PipelineData,
+    call: &Call,
+    engine_state: &EngineState,
+    stack: &mut Stack,
+) -> Result<Vec<String>, ShellError> {
+    let span = call.head;
+    let mut chunks: Vec<String> = Vec::new();
+
+    let chunk_len = match call.get_flag::<usize>(engine_state, stack, "chunk")? {
+        Some(l) => l,
+        None => 1024,
+    };
+
+    match input.into_value(span) {
+        Value::List { vals, span: _span } => {
+            for v in vals {
+                let rec = match v.as_record() {
+                    Ok(r) => r,
+                    Err(e) => {
+                        return Err(ShellError::GenericError(
+                            "Could not parse list of files".to_string(),
+                            "".to_string(),
+                            None,
+                            None,
+                            vec![e],
+                        ));
+                    }
+                };
+
+                let name_column = match rec.0.iter().position(|r: &String| *r == "name") {
+                    Some(i) => i,
+                    None => {
+                        return Err(ShellError::GenericError(
+                            "Could not parse list of files".to_string(),
+                            "".to_string(),
+                            None,
+                            None,
+                            Vec::new(),
+                        ));
+                    }
+                };
+
+                let file = rec.1[name_column].as_string().unwrap();
+                let contents = match fs::read_to_string(file.clone()) {
+                    Ok(c) => c,
+                    Err(e) => {
+                        return Err(ShellError::GenericError(
+                            format!("Error parsing file {}: {}", file, e),
+                            "".to_string(),
+                            None,
+                            None,
+                            Vec::new(),
+                        ))
+                    }
+                };
+
+                let file_chunks = &mut chunk_text(contents, chunk_len);
+                chunks.append(file_chunks);
+            }
+        }
+        Value::String { val, span: _ } => {
+            chunks = chunk_text(val, chunk_len);
+        }
+        Value::Nothing { span: _ } => {
+            let text: String = match call.opt(engine_state, stack, 0)? {
+                Some(t) => t,
+                None => {
+                    return Err(ShellError::GenericError(
+                        "Please supply source text as shown in examples`".to_string(),
+                        "".to_string(),
+                        None,
+                        None,
+                        Vec::new(),
+                    ));
+                }
+            };
+            chunks = chunk_text(text, chunk_len);
+        }
+        _ => {
+            return Err(ShellError::GenericError(
+                "Please supply source text as shown in examples`".to_string(),
+                "".to_string(),
+                None,
+                None,
+                Vec::new(),
+            ));
+        }
+    };
+
+    Ok(chunks)
 }
 
 fn chunk_text(text: String, chunk_len: usize) -> Vec<String> {
