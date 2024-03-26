@@ -115,18 +115,18 @@ fn run_import(
         .filter_map(move |i| {
             let id_column = id_column.clone();
 
-            if let Value::Record { cols, vals, .. } = i {
+            if let Value::Record { val, .. } = i {
                 let mut id = None;
                 let mut content = vec![];
-                for (k, v) in cols.iter().zip(vals) {
+                for (k, v) in val.iter() {
                     if k.clone() == id_column {
-                        id = v.as_string().ok();
+                        id = v.as_str().ok();
                     }
 
                     content.push(convert_nu_value_to_json_value(&v, span).ok()?);
                 }
                 if let Some(i) = id {
-                    return Some((i, content));
+                    return Some((i.to_string(), content));
                 }
             }
             None
@@ -145,7 +145,7 @@ fn run_import(
 
     Ok(Value::List {
         vals: results,
-        span: call.head,
+        internal_span: call.head,
     }
     .into_pipeline_data())
 }

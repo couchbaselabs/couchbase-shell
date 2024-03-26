@@ -143,7 +143,7 @@ fn buckets_get(
 
     Ok(Value::List {
         vals: results,
-        span: call.head,
+        internal_span: call.head,
     }
     .into_pipeline_data())
 }
@@ -168,7 +168,7 @@ pub(crate) fn bucket_to_nu_value(
         "ram_quota",
         Value::Filesize {
             val: (bucket.ram_quota_mb() * 1024 * 1024) as i64,
-            span,
+            internal_span: span,
         },
     );
     collected.add_bool("flush_enabled", bucket.flush_enabled(), span);

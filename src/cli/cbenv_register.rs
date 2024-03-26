@@ -154,13 +154,13 @@ fn clusters_register(
     let tls_config = if tls_enabled {
         Some(
             RustTlsConfig::new(tls_accept_all_certs, cert_path).map_err(|e| {
-                ShellError::GenericError(
-                    e.message(),
-                    "".to_string(),
-                    call.head.into(),
-                    Some(e.expanded_message()),
-                    Vec::new(),
-                )
+                ShellError::GenericError {
+                    error: e.message(),
+                    msg: "".to_string(),
+                    span: call.head.into(),
+                    help: Some(e.expanded_message()),
+                    inner: Vec::new(),
+                }
             })?,
         )
     } else {

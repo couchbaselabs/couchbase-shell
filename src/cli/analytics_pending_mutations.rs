@@ -104,7 +104,7 @@ fn pending_mutations(
 
     Ok(Value::List {
         vals: results,
-        span,
+        internal_span: span,
     }
     .into_pipeline_data())
 }

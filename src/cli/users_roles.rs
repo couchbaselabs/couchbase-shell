@@ -128,7 +128,7 @@ fn run_async(
 
     Ok(Value::List {
         vals: entries,
-        span,
+        internal_span: span,
     }
     .into_pipeline_data())
 }

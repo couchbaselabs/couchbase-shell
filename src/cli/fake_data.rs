@@ -90,7 +90,7 @@ fn run_fake(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let list_functions = call.has_flag("list-functions");
+    let list_functions = call.has_flag(engine_state, stack, "list-functions")?;
 
     let ctx = Context::new();
     let mut tera = Tera::default();
@@ -115,7 +115,7 @@ fn run_fake(
 
                 Ok(Value::List {
                     vals: converted,
-                    span: call.head,
+                    internal_span: call.head,
                 }
                 .into_pipeline_data())
             }
@@ -167,7 +167,7 @@ fn run_fake(
 
         Ok(Value::List {
             vals: converted,
-            span: call.head,
+            internal_span: call.head,
         }
         .into_pipeline_data())
     }

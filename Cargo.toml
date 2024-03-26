@@ -1,7 +1,7 @@
 [package]
 name = "couchbase-shell"
-version = "0.80.0"
-authors = ["Charles Dixon <chvckd@gmail.com>"]
+version = "0.92.0"
+authors = ["Charles Dixon <chvckd@gmail.com>", "Jack Westwood <jack.westwood@couchbase.com>"]
 edition = "2018"
 default-run = "cbsh"
 
@@ -24,21 +24,22 @@ humantime-serde = "1.0"
 lazy_static = "1.4.0"
 log = "0.4"
 mime_guess = "2.0"
-nu = { version = "0.83.1", features = ["dataframe"] }
-nu-protocol = { version = "0.83.1" }
-nu-color-config = { version = "0.83.1" }
-nu-cmd-base = { version = "0.83.1" }
-nu-cmd-dataframe = { version = "0.83.1" }
-nu-cmd-extra = {  version = "0.83.1" }
-nu-cmd-lang = {  version = "0.83.1" }
-nu-command = { version = "0.83.1" }
-nu-explore = { version = "0.83.1" }
-nu-parser = { version = "0.83.1" }
-nu-path = { version = "0.83.1" }
-nu-cli = { version = "0.83.1" }
-nu-engine = { version = "0.83.1" }
-nu-plugin = { version = "0.83.1" }
-nu-std = { version = "0.83.1" }
+nu = { version = "0.92.0", features = ["dataframe"] }
+nu-protocol = { version = "0.92.0" }
+nu-color-config = { version = "0.92.0" }
+nu-cmd-base = { version = "0.92.0" }
+nu-cmd-dataframe = { version = "0.92.0" }
+nu-cmd-extra = {  version = "0.92.0" }
+nu-cmd-lang = {  version = "0.92.0" }
+nu-command = { version = "0.92.0" }
+nu-explore = { version = "0.92.0" }
+nu-parser = { version = "0.92.0" }
+nu-path = { version = "0.92.0" }
+nu-cli = { version = "0.92.0" }
+nu-engine = { version = "0.92.0" }
+nu-plugin = { version = "0.92.0" }
+nu-std = { version = "0.92.0" }
+nu-system = { version = "0.92.0" }
 num-bigint = "0.4"
 num-traits = "0.2.14"
 pretty_env_logger = "0.4.0"
@@ -67,6 +68,7 @@ uuid = { version = "1.1.2", features = ["v4"] }
 webpki-roots = "0.25.1"
 async-openai = "0.18.3"
 tiktoken-rs = "0.5.8"
+nix = "0.28.0"
 
 [target.'cfg(not(any(target_os = "macos", target_os = "windows")))'.dependencies]
 # Our dependencies don't use OpenSSL on Macos

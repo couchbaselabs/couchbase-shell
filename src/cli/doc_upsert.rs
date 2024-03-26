@@ -121,7 +121,7 @@ fn run_upsert(
 
     Ok(Value::List {
         vals: results,
-        span: call.head,
+        internal_span: call.head,
     }
     .into_pipeline_data())
 }
@@ -159,12 +159,12 @@ pub(crate) fn run_kv_store_ops(
         let id_column = id_column.clone();
         let content_column = content_column.clone();
 
-        if let Value::Record { cols, vals, .. } = i {
+        if let Value::Record { val, .. } = i {
             let mut id = None;
             let mut content = None;
-            for (k, v) in cols.iter().zip(vals) {
+            for (k, v) in val.iter() {
                 if k.clone() == id_column {
-                    id = v.as_string().ok();
+                    id = v.as_str().ok();
                 }
                 if k.clone() == content_column {
                     content = convert_nu_value_to_json_value(&v, span).ok();
@@ -172,7 +172,7 @@ pub(crate) fn run_kv_store_ops(
             }
             if let Some(i) = id {
                 if let Some(c) = content {
-                    return Some((i, c));
+                    return Some((i.to_string(), c));
                 }
             }
         }
@@ -216,7 +216,7 @@ pub fn run_kv_mutations(
     let scope_flag = call.get_flag(engine_state, stack, "scope")?;
     let collection_flag = call.get_flag(engine_state, stack, "collection")?;
 
-    let halt_on_error = call.has_flag("halt-on-error");
+    let halt_on_error = call.has_flag(engine_state, stack, "halt-on-error")?;
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
 

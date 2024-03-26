@@ -12,6 +12,7 @@ use crate::{RemoteCluster, RemoteClusterType};
 use nu_engine::CallExt;
 use nu_protocol::ast::{Call, PathMember};
 use nu_protocol::engine::{EngineState, Stack};
+use nu_protocol::Record;
 use nu_protocol::{IntoPipelineData, PipelineData, ShellError, Span, Value};
 use num_traits::cast::ToPrimitive;
 use regex::Regex;
@@ -50,10 +51,13 @@ pub fn convert_row_to_nu_value(
             cols.push("database".to_string());
             vals.push(Value::String {
                 val: cluster_identifier,
-                span,
+                internal_span: span,
             });
 
-            Ok(Value::Record { vals, cols, span })
+            Ok(Value::Record {
+                val: Box::new(Record::from_raw_cols_vals(cols, vals, span, span).unwrap()),
+                internal_span: span,
+            })
         }
         _ => Err(malformed_response_error(
             "row was not an object",
@@ -68,13 +72,24 @@ pub fn convert_json_value_to_nu_value(
     span: Span,
 ) -> Result<Value, ShellError> {
     let result = match v {
-        serde_json::Value::Null => Value::Nothing { span },
-        serde_json::Value::Bool(b) => Value::Bool { val: *b, span },
+        serde_json::Value::Null => Value::Nothing {
+            internal_span: span,
+        },
+        serde_json::Value::Bool(b) => Value::Bool {
+            val: *b,
+            internal_span: span,
+        },
         serde_json::Value::Number(n) => {
             if let Some(val) = n.as_i64() {
-                Value::Int { val, span }
+                Value::Int {
+                    val,
+                    internal_span: span,
+                }
             } else if let Some(val) = n.as_f64() {
-                Value::Float { val, span }
+                Value::Float {
+                    val,
+                    internal_span: span,
+                }
             } else {
                 return Err(GenericError {
                     message: format!(
@@ -89,14 +104,17 @@ pub fn convert_json_value_to_nu_value(
         }
         serde_json::Value::String(val) => Value::String {
             val: val.clone(),
-            span,
+            internal_span: span,
         },
         serde_json::Value::Array(a) => {
             let t = a
                 .iter()
                 .map(|x| convert_json_value_to_nu_value(x, span))
                 .collect::<Result<Vec<Value>, ShellError>>()?;
-            Value::List { vals: t, span }
+            Value::List {
+                vals: t,
+                internal_span: span,
+            }
         }
         serde_json::Value::Object(o) => {
             let mut cols = vec![];
@@ -107,7 +125,10 @@ pub fn convert_json_value_to_nu_value(
                 vals.push(convert_json_value_to_nu_value(v, span)?);
             }
 
-            Value::Record { cols, vals, span }
+            Value::Record {
+                val: Box::new(Record::from_raw_cols_vals(cols, vals, span, span).unwrap()),
+                internal_span: span,
+            }
         }
     };
 
@@ -153,7 +174,7 @@ pub fn convert_nu_value_to_json_value(
                 .collect::<Result<Vec<serde_json::Value>, ShellError>>()?,
         ),
         Value::List { vals, .. } => serde_json::Value::Array(json_list(vals, span)?),
-        Value::Error { error } => return Err(*error.clone()),
+        Value::Error { error, .. } => return Err(*error.clone()),
         Value::Block { .. } => serde_json::Value::Null,
         Value::Binary { val, .. } => serde_json::Value::Array(
             val.iter()
@@ -164,21 +185,21 @@ pub fn convert_nu_value_to_json_value(
                 })
                 .collect::<Result<Vec<serde_json::Value>, ShellError>>()?,
         ),
-        Value::Record { cols, vals, .. } => {
+        Value::Record { val, .. } => {
             let mut m = serde_json::Map::new();
-            for (k, v) in cols.iter().zip(vals) {
+            for (k, v) in val.iter() {
                 m.insert(k.clone(), convert_nu_value_to_json_value(v, span)?);
             }
             serde_json::Value::Object(m)
         }
-        Value::CustomValue { .. } => serde_json::Value::Null,
+        Value::Custom { .. } => serde_json::Value::Null,
         Value::Range { .. } => serde_json::Value::Null,
         Value::Closure { .. } => serde_json::Value::Null,
         Value::LazyRecord { val, .. } => {
             let collected = val.collect()?;
             convert_nu_value_to_json_value(&collected, span)?
         }
-        Value::MatchPattern { .. } => serde_json::Value::Null,
+        Value::Glob { val, .. } => serde_json::Value::String(val.clone()),
     })
 }
 
@@ -359,13 +380,13 @@ pub fn read_openai_api_key(state: Arc<Mutex<State>>) -> Result<String, ShellErro
     let key = match guard.llm() {
         Some(llm) => llm.api_key(),
         None => {
-            return Err(ShellError::GenericError(
-                "please specify llm api_key in config file".to_string(),
-                "".to_string(),
-                None,
-                None,
-                Vec::new(),
-            ));
+            return Err(ShellError::GenericError {
+                error: "please specify llm api_key in config file".to_string(),
+                msg: "".to_string(),
+                span: None,
+                help: None,
+                inner: Vec::new(),
+            });
         }
     };
     Ok(key)
@@ -385,35 +406,39 @@ impl NuValueMap {
 
     pub fn add_i64(&mut self, name: impl Into<String>, val: i64, span: Span) {
         self.cols.push(name.into());
-        self.vals.push(Value::Int { val, span });
+        self.vals.push(Value::Int {
+            val,
+            internal_span: span,
+        });
     }
 
     pub fn add_string(&mut self, name: impl Into<String>, val: impl Into<String>, span: Span) {
         self.cols.push(name.into());
         self.vals.push(Value::String {
             val: val.into(),
-            span,
+            internal_span: span,
         });
     }
 
     pub fn add_bool(&mut self, name: impl Into<String>, val: bool, span: Span) {
         self.cols.push(name.into());
-        self.vals.push(Value::Bool { val, span });
+        self.vals.push(Value::Bool {
+            val,
+            internal_span: span,
+        });
     }
 
     pub fn into_value(self, span: Span) -> Value {
         Value::Record {
-            cols: self.cols,
-            vals: self.vals,
-            span,
+            val: Box::new(Record::from_raw_cols_vals(self.cols, self.vals, span, span).unwrap()),
+            internal_span: span,
         }
     }
 
     pub fn into_pipeline_data(self, span: Span) -> PipelineData {
         Value::Record {
-            cols: self.cols,
-            vals: self.vals,
-            span,
+            val: Box::new(Record::from_raw_cols_vals(self.cols, self.vals, span, span).unwrap()),
+            internal_span: span,
         }
         .into_pipeline_data()
     }

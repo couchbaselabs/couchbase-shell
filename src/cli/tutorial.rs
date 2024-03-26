@@ -52,7 +52,7 @@ fn run_tutorial(
 
     Ok(Value::String {
         val: tutorial.current_step(),
-        span: call.head,
+        internal_span: call.head,
     }
     .into_pipeline_data())
 }
