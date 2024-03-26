@@ -46,7 +46,7 @@ fn run_tutorial_next(state: Arc<Mutex<State>>, call: &Call) -> Result<PipelineDa
 
     Ok(Value::String {
         val: tutorial.next_tutorial_step(),
-        span: call.head,
+        internal_span: call.head,
     }
     .into_pipeline_data())
 }

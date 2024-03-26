@@ -144,6 +144,10 @@ impl Command for TransactionsListAtrs {
             .map(|a| convert_json_value_to_nu_value(a, span).unwrap())
             .collect::<Vec<_>>();
 
-        Ok(Value::List { vals: values, span }.into_pipeline_data())
+        Ok(Value::List {
+            vals: values,
+            internal_span: span,
+        }
+        .into_pipeline_data())
     }
 }

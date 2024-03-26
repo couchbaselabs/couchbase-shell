@@ -92,7 +92,7 @@ fn run(
         drop(guard);
 
         results.extend(handle_query_response(
-            call.has_flag("with-meta"),
+            call.has_flag(engine_state, stack, "with-meta")?,
             identifier.clone(),
             response,
             span,
@@ -101,7 +101,7 @@ fn run(
 
     Ok(Value::List {
         vals: results,
-        span: call.head,
+        internal_span: call.head,
     }
     .into_pipeline_data())
 }

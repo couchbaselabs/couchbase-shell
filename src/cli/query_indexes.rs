@@ -7,6 +7,7 @@ use crate::client::ManagementRequest;
 use crate::state::State;
 use crate::RemoteCluster;
 use log::debug;
+use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
@@ -79,7 +80,7 @@ fn query(
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
 
-    let fetch_defs = call.has_flag("definitions");
+    let fetch_defs = call.has_flag(engine_state, stack, "definitions")?;
 
     let statement = "select bucket_id as `bucket`, scope_id as `scope`, keyspace_id as `keyspace`, name, state, `using` as `type`, \
     ifmissing(condition, null) as condition, ifmissing(is_primary, false) as `primary`, \
@@ -114,7 +115,7 @@ fn query(
         drop(guard);
 
         results.extend(handle_query_response(
-            call.has_flag("with-meta"),
+            call.has_flag(engine_state, stack, "with-meta")?,
             identifier.clone(),
             response,
             span,
@@ -123,7 +124,7 @@ fn query(
 
     Ok(Value::List {
         vals: results,
-        span: call.head,
+        internal_span: call.head,
     }
     .into_pipeline_data())
 }

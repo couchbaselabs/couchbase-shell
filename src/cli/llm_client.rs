@@ -96,13 +96,13 @@ impl OpenAIClient {
         let response = match embeddings.create(request).await {
             Ok(r) => r,
             Err(e) => {
-                return Err(ShellError::GenericError(
-                    format!("failed to execute request: {}", e),
-                    "".to_string(),
-                    None,
-                    None,
-                    Vec::new(),
-                ))
+                return Err(ShellError::GenericError {
+                    error: format!("failed to execute request: {}", e),
+                    msg: "".to_string(),
+                    span: None,
+                    help: None,
+                    inner: Vec::new(),
+                })
             }
         };
 
