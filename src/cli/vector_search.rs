@@ -36,7 +36,7 @@ impl Command for VectorSearch {
         Signature::build("vector search")
             .optional(
                 "vector",
-                SyntaxShape::List(Box::new(SyntaxShape::Decimal)),
+                SyntaxShape::List(Box::new(SyntaxShape::Float)),
                 "the vector used for searching",
             )
             .required("index", SyntaxShape::String, "the index name")
@@ -100,26 +100,29 @@ fn run(
 
     let mut vector: Vec<f32> = vec![];
     match input.into_value(span) {
-        Value::List { vals, span: _ } => {
+        Value::List { vals, .. } => {
             let rec = match vals[0].as_record() {
                 Ok(r) => r,
                 Err(e) => {
-                    return Err(ShellError::GenericError(
-                        "Please supply vector or output from `vector enrich-text`".to_string(),
-                        "".to_string(),
-                        None,
-                        None,
-                        vec![e],
-                    ));
+                    return Err(ShellError::GenericError {
+                        error: "Please supply vector or output from `vector enrich-text`"
+                            .to_string(),
+                        msg: "".to_string(),
+                        span: None,
+                        help: None,
+                        inner: vec![e],
+                    });
                 }
             };
 
-            if rec.0 == vec!["id", "content"] {
+            if rec.contains("id") && rec.contains("content") {
                 // Input is from vector enrich-text
-                let id = rec.1[0].as_string().unwrap();
+                let id = rec.get("id").unwrap().as_str().unwrap();
                 if id.len() > 6 && id[..6] == "vector".to_string() {
-                    let content = rec.1[1].as_record().unwrap();
-                    vector = content.1[1]
+                    let content = rec.get("content").unwrap().as_record().unwrap();
+                    vector = content
+                        .get("vector")
+                        .unwrap()
                         .as_list()
                         .unwrap()
                         .iter()
@@ -128,22 +131,23 @@ fn run(
                 }
             } else {
                 // Input is vector from doc get or query
-                let list = match rec.1[0].as_list() {
+                let list = match rec.get_index(0).unwrap().1.as_list() {
                     Ok(l) => l,
                     Err(e) => {
-                        return Err(ShellError::GenericError(
-                            "Please supply vector or output from `vector enrich-text`".to_string(),
-                            "".to_string(),
-                            None,
-                            None,
-                            vec![e],
-                        ));
+                        return Err(ShellError::GenericError {
+                            error: "Please supply vector or output from `vector enrich-text`"
+                                .to_string(),
+                            msg: "".to_string(),
+                            span: None,
+                            help: None,
+                            inner: vec![e],
+                        });
                     }
                 };
                 vector = list.iter().map(|e| e.as_float().unwrap() as f32).collect();
             }
         }
-        Value::Nothing { span: _ } => {
+        Value::Nothing { internal_span: _ } => {
             let vec: Option<Value> = call.opt(engine_state, stack, 2)?;
             if let Some(v) = vec {
                 vector = v
@@ -153,23 +157,23 @@ fn run(
                     .map(|e| e.as_float().unwrap() as f32)
                     .collect();
             } else {
-                return Err(ShellError::GenericError(
-                    "Please supply vector or output from `vector enrich-text`".to_string(),
-                    "".to_string(),
-                    None,
-                    None,
-                    Vec::new(),
-                ));
+                return Err(ShellError::GenericError {
+                    error: "Please supply vector or output from `vector enrich-text`".to_string(),
+                    msg: "".to_string(),
+                    span: None,
+                    help: None,
+                    inner: Vec::new(),
+                });
             }
         }
         _ => {
-            return Err(ShellError::GenericError(
-                "Please supply vector or output from `vector enrich-text`".to_string(),
-                "".to_string(),
-                None,
-                None,
-                Vec::new(),
-            ));
+            return Err(ShellError::GenericError {
+                error: "Please supply vector or output from `vector enrich-text`".to_string(),
+                msg: "".to_string(),
+                span: None,
+                help: None,
+                inner: Vec::new(),
+            });
         }
     }
 
@@ -252,7 +256,7 @@ fn run(
 
     Ok(Value::List {
         vals: results,
-        span: call.head,
+        internal_span: call.head,
     }
     .into_pipeline_data())
 }

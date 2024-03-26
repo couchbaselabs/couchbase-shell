@@ -46,13 +46,13 @@ impl Tutorial {
         let index = match STEPS_ORDER.iter().position(|&s| s == name) {
             Some(i) => i,
             None => {
-                return Err(ShellError::GenericError(
-                    "invalid tutorial step".to_string(),
-                    format!("{} is not a valid tutorial step", name),
-                    None,
-                    None,
-                    Vec::new(),
-                ))
+                return Err(ShellError::GenericError {
+                    error: "invalid tutorial step".to_string(),
+                    msg: format!("{} is not a valid tutorial step", name),
+                    span: None,
+                    help: None,
+                    inner: Vec::new(),
+                });
             }
         };
         let mut current_step = self.current_step.lock().unwrap();

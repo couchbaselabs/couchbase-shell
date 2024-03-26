@@ -2,6 +2,7 @@ use crate::cli::analytics::do_analytics_query;
 
 use crate::cli::util::{cluster_identifiers_from, get_active_cluster};
 use crate::state::State;
+use nu_engine::CallExt;
 
 use log::debug;
 use nu_protocol::ast::Call;
@@ -66,7 +67,7 @@ fn dataverses(
     let statement = "SELECT `Bucket`.* FROM `Metadata`.`Bucket`";
     let span = call.head;
 
-    let with_meta = call.has_flag("with-meta");
+    let with_meta = call.has_flag(engine_state, stack, "with-meta")?;
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
 
@@ -91,7 +92,7 @@ fn dataverses(
 
     Ok(Value::List {
         vals: results,
-        span,
+        internal_span: span,
     }
     .into_pipeline_data())
 }

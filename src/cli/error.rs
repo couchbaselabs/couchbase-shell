@@ -247,13 +247,13 @@ fn spanned_shell_error(
     help: impl Into<Option<String>>,
     span: impl Into<Option<Span>>,
 ) -> ShellError {
-    ShellError::GenericError(
-        msg.into(),
-        "".to_string(),
-        span.into(),
-        help.into(),
-        Vec::new(),
-    )
+    ShellError::GenericError {
+        error: msg.into(),
+        msg: "".to_string(),
+        span: span.into(),
+        help: help.into(),
+        inner: Vec::new(),
+    }
 }
 
 pub fn unexpected_status_code_error(

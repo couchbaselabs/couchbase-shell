@@ -140,7 +140,7 @@ fn users_get(
 
     Ok(Value::List {
         vals: results,
-        span,
+        internal_span: span,
     }
     .into_pipeline_data())
 }

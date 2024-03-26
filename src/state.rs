@@ -2,7 +2,7 @@ use crate::client::{CapellaClient, Endpoint};
 
 use crate::tutorial::Tutorial;
 use crate::RemoteCluster;
-use nu_plugin::LabeledError;
+use nu_protocol::LabeledError;
 use nu_protocol::ShellError;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -78,13 +78,13 @@ impl State {
 
     pub fn add_cluster(&mut self, alias: String, cluster: RemoteCluster) -> Result<(), ShellError> {
         if self.clusters.contains_key(alias.as_str()) {
-            return Err(ShellError::GenericError(
-                format!("Identifier {} is already registered to a cluster", alias),
-                "".to_string(),
-                None,
-                None,
-                Vec::new(),
-            ));
+            return Err(ShellError::GenericError {
+                error: format!("Identifier {} is already registered to a cluster", alias),
+                msg: "".to_string(),
+                span: None,
+                help: None,
+                inner: Vec::new(),
+            });
         }
         self.clusters.insert(alias, cluster);
         Ok(())
@@ -104,12 +104,9 @@ impl State {
 
     pub fn set_active(&self, active: String) -> Result<(), ShellError> {
         if !self.clusters.contains_key(&active) {
-            return Err(LabeledError {
-                label: "Cluster not found".to_string(),
-                msg: format!("The cluster named {} is not known", active),
-                span: None,
-            }
-            .into());
+            return Err(
+                LabeledError::new(format!("The cluster named {} is not known", active)).into(),
+            );
         }
 
         {
@@ -162,25 +159,25 @@ impl State {
         let active = match self.active_capella_org_name() {
             Some(a) => a,
             None => {
-                return Err(ShellError::GenericError(
-                    "No active Capella organization set".to_string(),
-                    "".to_string(),
-                    None,
-                    None,
-                    Vec::new(),
-                ))
+                return Err(ShellError::GenericError {
+                    error: "No active Capella organization set".to_string(),
+                    msg: "".to_string(),
+                    span: None,
+                    help: None,
+                    inner: Vec::new(),
+                })
             }
         };
 
-        self.capella_orgs.get(&active).ok_or_else(|| {
-            ShellError::GenericError(
-                "Active Capella organization not known".to_string(),
-                "".to_string(),
-                None,
-                None,
-                Vec::new(),
-            )
-        })
+        self.capella_orgs
+            .get(&active)
+            .ok_or_else(|| ShellError::GenericError {
+                error: "Active Capella organization not known".to_string(),
+                msg: "".to_string(),
+                span: None,
+                help: None,
+                inner: Vec::new(),
+            })
     }
 
     pub fn active_capella_org_name(&self) -> Option<String> {
@@ -189,13 +186,13 @@ impl State {
 
     pub fn set_active_capella_org(&self, active: String) -> Result<(), ShellError> {
         if !self.capella_orgs.contains_key(&active) {
-            return Err(ShellError::GenericError(
-                "Capella organization not known".to_string(),
-                format!("Capella organization {} has not been registered", active),
-                None,
-                None,
-                Vec::new(),
-            ));
+            return Err(ShellError::GenericError {
+                error: "Capella organization not known".to_string(),
+                msg: format!("Capella organization {} has not been registered", active),
+                span: None,
+                help: None,
+                inner: Vec::new(),
+            });
         }
 
         {
@@ -210,13 +207,13 @@ impl State {
         let active = match self.active_capella_org_name() {
             Some(a) => a,
             None => {
-                return Err(ShellError::GenericError(
-                    "No active Capella organization set".to_string(),
-                    "".to_string(),
-                    None,
-                    None,
-                    Vec::new(),
-                ))
+                return Err(ShellError::GenericError {
+                    error: "No active Capella organization set".to_string(),
+                    msg: "".to_string(),
+                    span: None,
+                    help: None,
+                    inner: Vec::new(),
+                })
             }
         };
 
@@ -224,13 +221,13 @@ impl State {
         let org = match orgs.get_mut(&active) {
             Some(org) => org,
             None => {
-                return Err(ShellError::GenericError(
-                    "Capella organization not known".to_string(),
-                    format!("Capella organization {} has not been registered", active),
-                    None,
-                    None,
-                    Vec::new(),
-                ))
+                return Err(ShellError::GenericError {
+                    error: "Capella organization not known".to_string(),
+                    msg: format!("Capella organization {} has not been registered", active),
+                    span: None,
+                    help: None,
+                    inner: Vec::new(),
+                })
             }
         };
         org.set_id(id);
@@ -245,16 +242,16 @@ impl State {
         if let Some(c) = org {
             Ok(c)
         } else {
-            Err(ShellError::GenericError(
-                format!(
+            Err(ShellError::GenericError {
+                error: format!(
                     "No cloud organization registered for cluster name {}",
                     identifier,
                 ),
-                "".to_string(),
-                None,
-                None,
-                Vec::new(),
-            ))
+                msg: "".to_string(),
+                span: None,
+                help: None,
+                inner: Vec::new(),
+            })
         }
     }
 

@@ -103,7 +103,7 @@ fn run_ping(
                         "latency",
                         Value::Duration {
                             val: ping.latency().as_nanos() as i64,
-                            span,
+                            internal_span: span,
                         },
                     );
                     collected.add_string("state", ping.state().to_string(), span);
@@ -151,7 +151,7 @@ fn run_ping(
                         "latency",
                         Value::Duration {
                             val: ping.latency().as_nanos() as i64,
-                            span,
+                            internal_span: span,
                         },
                     );
                     collected.add_string("state", ping.state().to_string(), span);
@@ -171,7 +171,7 @@ fn run_ping(
 
     Ok(Value::List {
         vals: results,
-        span: call.head,
+        internal_span: call.head,
     }
     .into_pipeline_data())
 }

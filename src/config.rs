@@ -73,7 +73,7 @@ impl ShellConfig {
         if let Some(standalone) = standalone_credentials {
             for value in config.clusters_mut() {
                 let identifier = value.identifier().to_owned();
-                let mut config_credentials = value.credentials_mut();
+                let config_credentials = value.credentials_mut();
 
                 for cred in &standalone.clusters {
                     if cred.identifier() == identifier {

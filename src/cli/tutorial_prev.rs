@@ -46,7 +46,7 @@ fn run_tutorial_prev(state: Arc<Mutex<State>>, call: &Call) -> Result<PipelineDa
 
     Ok(Value::String {
         val: tutorial.prev_tutorial_step(),
-        span: call.head,
+        internal_span: call.head,
     }
     .into_pipeline_data())
 }

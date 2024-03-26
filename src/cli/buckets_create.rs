@@ -98,7 +98,7 @@ fn buckets_create(
 
     let bucket_type: Option<String> = call.get_flag(engine_state, stack, "type")?;
     let replicas: Option<i64> = call.get_flag(engine_state, stack, "replicas")?;
-    let flush = call.has_flag("flush");
+    let flush = call.has_flag(engine_state, stack, "flush")?;
     let durability: Option<String> = call.get_flag(engine_state, stack, "durability")?;
     let expiry: Option<i64> = call.get_flag(engine_state, stack, "expiry")?;
     debug!("Running buckets create for bucket {}", &name);

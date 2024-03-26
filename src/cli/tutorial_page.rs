@@ -59,7 +59,7 @@ fn run_tutorial_page(
     if let Some(n) = name {
         Ok(Value::String {
             val: tutorial.goto_step(n)?,
-            span: call.head,
+            internal_span: call.head,
         }
         .into_pipeline_data())
     } else {
@@ -77,7 +77,7 @@ fn run_tutorial_page(
 
         Ok(Value::List {
             vals: results,
-            span: call.head,
+            internal_span: call.head,
         }
         .into_pipeline_data())
     }

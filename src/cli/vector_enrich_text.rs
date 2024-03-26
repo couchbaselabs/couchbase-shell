@@ -4,6 +4,7 @@ use crate::CtrlcFuture;
 use crate::OpenAIClient;
 use log::{debug, info};
 use nu_protocol::Example;
+use nu_protocol::Record;
 use std::convert::TryFrom;
 use std::fs;
 use std::str;
@@ -140,23 +141,23 @@ fn vector_enrich_text(
                 result = client.embed(batch, dim) => {
                     match result {
                         Ok(r) => Ok(r),
-                        Err(e) => Err(ShellError::GenericError(
-                            format!("failed to execute request: {}", e),
-                            "".to_string(),
-                            None,
-                            None,
-                            Vec::new(),
-                        ))
+                        Err(e) => Err(ShellError::GenericError{
+                             error: format!("failed to execute request: {}", e),
+                            msg: "".to_string(),
+                            span: None,
+                            help: None,
+                            inner: Vec::new(),
+                    })
                     }
                 },
                 () = ctrl_c_fut =>
-                     Err(ShellError::GenericError(
-                   "Request cancelled".to_string(),
-                    "".to_string(),
-                    None,
-                    None,
-                    Vec::new(),
-                )),
+                     Err(ShellError::GenericError{
+                   error: "Request cancelled".to_string(),
+                    msg: "".to_string(),
+                    span: None,
+                    help: None,
+                    inner: Vec::new(),
+            }),
             }
         }) {
             Ok(r) => r,
@@ -170,32 +171,40 @@ fn vector_enrich_text(
                 .iter()
                 .map(|x| Value::Float {
                     val: *x as f64,
-                    span,
+                    internal_span: span,
                 })
                 .collect::<Vec<Value>>();
 
             let mut uuid = Uuid::new_v4().to_string();
             uuid.truncate(6);
+
+            let cols = vec!["text".to_string(), "vector".to_string()];
+            let vals = vec![
+                Value::String {
+                    val: chunk.to_string(),
+                    internal_span: span,
+                },
+                Value::List {
+                    vals: vector,
+                    internal_span: span,
+                },
+            ];
+            let content = Value::Record {
+                val: Box::new(Record::from_raw_cols_vals(cols, vals, span, span).unwrap()),
+                internal_span: span,
+            };
+
+            let cols = vec!["id".to_string(), "content".to_string()];
+            let vals = vec![
+                Value::String {
+                    val: format!("vector-{}", uuid),
+                    internal_span: span,
+                },
+                content,
+            ];
             let vector_doc = Value::Record {
-                cols: vec!["id".to_string(), "content".to_string()],
-                vals: vec![
-                    Value::String {
-                        val: format!("vector-{}", uuid),
-                        span,
-                    },
-                    Value::Record {
-                        cols: vec!["text".to_string(), "vector".to_string()],
-                        vals: vec![
-                            Value::String {
-                                val: chunk.to_string(),
-                                span,
-                            },
-                            Value::List { vals: vector, span },
-                        ],
-                        span,
-                    },
-                ],
-                span,
+                val: Box::new(Record::from_raw_cols_vals(cols, vals, span, span).unwrap()),
+                internal_span: span,
             };
 
             results.push(vector_doc);
@@ -210,7 +219,7 @@ fn vector_enrich_text(
     debug!("\nTotal Duration: {:?}", total_time.unwrap());
 
     Ok(Value::List {
-        span,
+        internal_span: span,
         vals: results,
     }
     .into_pipeline_data())
@@ -231,45 +240,44 @@ fn chunks_from_input(
     };
 
     match input.into_value(span) {
-        Value::List { vals, span: _span } => {
+        Value::List { vals, .. } => {
             for v in vals {
                 let rec = match v.as_record() {
                     Ok(r) => r,
                     Err(e) => {
-                        return Err(ShellError::GenericError(
-                            "Could not parse list of files".to_string(),
-                            "".to_string(),
-                            None,
-                            None,
-                            vec![e],
-                        ));
+                        return Err(ShellError::GenericError {
+                            error: "Could not parse list of files".to_string(),
+                            msg: "".to_string(),
+                            span: None,
+                            help: None,
+                            inner: vec![e],
+                        });
                     }
                 };
 
-                let name_column = match rec.0.iter().position(|r: &String| *r == "name") {
-                    Some(i) => i,
+                let file = match rec.get("name") {
+                    Some(f) => f.as_str().unwrap(),
                     None => {
-                        return Err(ShellError::GenericError(
-                            "Could not parse list of files".to_string(),
-                            "".to_string(),
-                            None,
-                            None,
-                            Vec::new(),
-                        ));
+                        return Err(ShellError::GenericError {
+                            error: "Could not parse list of files".to_string(),
+                            msg: "".to_string(),
+                            span: None,
+                            help: None,
+                            inner: Vec::new(),
+                        });
                     }
                 };
 
-                let file = rec.1[name_column].as_string().unwrap();
-                let contents = match fs::read_to_string(file.clone()) {
+                let contents = match fs::read_to_string(file) {
                     Ok(c) => c,
                     Err(e) => {
-                        return Err(ShellError::GenericError(
-                            format!("Error parsing file {}: {}", file, e),
-                            "".to_string(),
-                            None,
-                            None,
-                            Vec::new(),
-                        ))
+                        return Err(ShellError::GenericError {
+                            error: format!("Error parsing fimsg: le {}: {}", file, e),
+                            msg: "".to_string(),
+                            span: None,
+                            help: None,
+                            inner: Vec::new(),
+                        })
                     }
                 };
 
@@ -277,32 +285,32 @@ fn chunks_from_input(
                 chunks.append(file_chunks);
             }
         }
-        Value::String { val, span: _ } => {
+        Value::String { val, .. } => {
             chunks = chunk_text(val, chunk_len);
         }
-        Value::Nothing { span: _ } => {
+        Value::Nothing { .. } => {
             let text: String = match call.opt(engine_state, stack, 0)? {
                 Some(t) => t,
                 None => {
-                    return Err(ShellError::GenericError(
-                        "Please supply source text as shown in examples`".to_string(),
-                        "".to_string(),
-                        None,
-                        None,
-                        Vec::new(),
-                    ));
+                    return Err(ShellError::GenericError {
+                        error: "Please supply source text as shown in examples`".to_string(),
+                        msg: "".to_string(),
+                        span: None,
+                        help: None,
+                        inner: Vec::new(),
+                    });
                 }
             };
             chunks = chunk_text(text, chunk_len);
         }
         _ => {
-            return Err(ShellError::GenericError(
-                "Please supply source text as shown in examples`".to_string(),
-                "".to_string(),
-                None,
-                None,
-                Vec::new(),
-            ));
+            return Err(ShellError::GenericError {
+                error: "Please supply source text as shown in examples`".to_string(),
+                msg: "".to_string(),
+                span: None,
+                help: None,
+                inner: Vec::new(),
+            });
         }
     };
 

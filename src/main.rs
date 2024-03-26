@@ -10,6 +10,8 @@ mod config_files;
 mod default_context;
 mod remote_cluster;
 mod state;
+#[cfg(unix)]
+mod terminal;
 mod tutorial;
 
 use crate::cli::*;
@@ -146,12 +148,16 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     context.is_interactive = true;
 
+    // This is required else we encounter a bug where a shell hangs on a missing command
+    #[cfg(unix)]
+    terminal::acquire();
+
     read_plugin_file(&mut context, &mut stack, None, CBSHELL_FOLDER);
     read_nu_config_file(&mut context, &mut stack);
 
     nu_cli::evaluate_repl(
         &mut context,
-        &mut stack,
+        stack,
         "CouchbaseShell",
         None,
         None,

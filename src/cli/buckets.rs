@@ -123,7 +123,7 @@ fn buckets_get_all(
 
     Ok(Value::List {
         vals: results,
-        span,
+        internal_span: span,
     }
     .into_pipeline_data())
 }

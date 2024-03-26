@@ -116,7 +116,7 @@ fn query(
         drop(guard);
 
         results.extend(handle_query_response(
-            call.has_flag("with-meta"),
+            call.has_flag(engine_state, stack, "with-meta")?,
             identifier.clone(),
             response,
             span,
@@ -126,7 +126,7 @@ fn query(
     if results.len() > 0 {
         return Ok(Value::List {
             vals: results,
-            span: call.head,
+            internal_span: call.head,
         }
         .into_pipeline_data());
     }
@@ -257,7 +257,7 @@ pub fn query_context_from_args(
         .get_flag(engine_state, stack, "scope")?
         .or_else(|| cluster.active_scope());
 
-    let disable_context = call.has_flag("disable-context");
+    let disable_context = call.has_flag(engine_state, stack, "disable-context")?;
 
     Ok(if disable_context {
         None

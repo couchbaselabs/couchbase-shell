@@ -100,7 +100,7 @@ fn health(
 
     Ok(Value::List {
         vals: converted,
-        span,
+        internal_span: span,
     }
     .into_pipeline_data())
 }
