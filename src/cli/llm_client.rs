@@ -1,3 +1,7 @@
+use async_openai::types::{
+    ChatCompletionRequestMessage, ChatCompletionRequestSystemMessageArgs,
+    ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequestArgs,
+};
 use async_openai::{types::CreateEmbeddingRequestArgs, Client};
 use async_trait::async_trait;
 use log::debug;
@@ -8,6 +12,11 @@ use tiktoken_rs::p50k_base;
 pub trait LLMClient {
     fn batch_chunks(&self, chunks: Vec<String>) -> Vec<Vec<String>>;
     async fn embed(&self, batch: &Vec<String>, dim: u32) -> Result<Vec<Vec<f32>>, ShellError>;
+    async fn ask(
+        &self,
+        question: String,
+        context: Vec<String>,
+    ) -> Result<nu_protocol::Value, ShellError>;
 }
 
 pub enum LLMClients {
@@ -24,6 +33,12 @@ impl LLMClients {
     pub async fn embed(&self, batch: &Vec<String>, dim: u32) -> Result<Vec<Vec<f32>>, ShellError> {
         match self {
             Self::OpenAI(c) => c.embed(batch, dim).await,
+        }
+    }
+
+    pub async fn ask(&self, question: String, context: Vec<String>) -> Result<String, ShellError> {
+        match self {
+            Self::OpenAI(c) => c.ask(question, context).await,
         }
     }
 }
@@ -127,5 +142,64 @@ impl OpenAIClient {
         }
 
         Ok(rec)
+    }
+
+    async fn ask(&self, question: String, context: Vec<String>) -> Result<String, ShellError> {
+        let mut messages: Vec<ChatCompletionRequestMessage> = vec![];
+
+        // Primes the model to respond appropriately
+        messages.push(
+            ChatCompletionRequestSystemMessageArgs::default()
+                .content("You are a helpful assistant.")
+                .build()
+                .unwrap()
+                .into(),
+        );
+
+        for ctx in context {
+            messages.push(
+                ChatCompletionRequestSystemMessageArgs::default()
+                    .content(ctx)
+                    .build()
+                    .unwrap()
+                    .into(),
+            )
+        }
+
+        messages.push(
+            ChatCompletionRequestUserMessageArgs::default()
+                .content(question)
+                .build()
+                .unwrap()
+                .into(),
+        );
+
+        let client = Client::with_config(
+            async_openai::config::OpenAIConfig::default().with_api_key(self.api_key.clone()),
+        );
+
+        let request = CreateChatCompletionRequestArgs::default()
+            .max_tokens(512u16)
+            .model("gpt-3.5-turbo")
+            .messages(messages)
+            .build()
+            .unwrap();
+
+        let response = client.chat().create(request).await;
+
+        let answer = match response {
+            Ok(r) => r.choices[0].message.content.as_ref().unwrap().to_string(),
+            Err(e) => {
+                return Err(ShellError::GenericError {
+                    error: format!("failed to execute request: {}", e),
+                    msg: "".to_string(),
+                    span: None,
+                    help: None,
+                    inner: Vec::new(),
+                })
+            }
+        };
+
+        Ok(answer)
     }
 }
