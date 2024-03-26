@@ -36,7 +36,7 @@ impl Command for Transactions {
                 stack,
                 self.is_parser_keyword(),
             ),
-            span: call.head,
+            internal_span: call.head,
         }
         .into_pipeline_data())
     }

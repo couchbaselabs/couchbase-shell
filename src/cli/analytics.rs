@@ -93,7 +93,7 @@ fn run(
     let guard = state.lock().unwrap();
 
     let scope: Option<String> = call.get_flag(engine_state, stack, "scope")?;
-    let with_meta = call.has_flag("with-meta");
+    let with_meta = call.has_flag(engine_state, stack, "with-meta")?;
 
     debug!("Running analytics query {}", &statement);
 
@@ -119,7 +119,7 @@ fn run(
 
     Ok(Value::List {
         vals: results,
-        span,
+        internal_span: span,
     }
     .into_pipeline_data())
 }

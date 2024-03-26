@@ -16,7 +16,6 @@ macro_rules! cbsh {
 
     ($cwd:expr, $path:expr) => {{
         pub use itertools::Itertools;
-        pub use std::error::Error;
         pub use std::io::prelude::*;
         pub use std::process::{Command, Stdio};
         pub use $crate::support::NATIVE_PATH_ENV_VAR;

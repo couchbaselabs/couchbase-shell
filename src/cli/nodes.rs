@@ -135,7 +135,7 @@ fn nodes(
 
     Ok(Value::List {
         vals: nodes,
-        span: call.head,
+        internal_span: call.head,
     }
     .into_pipeline_data())
 }
