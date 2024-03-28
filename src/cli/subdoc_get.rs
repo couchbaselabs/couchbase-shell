@@ -9,6 +9,7 @@ use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use log::debug;
 use nu_protocol::Example;
+use nu_protocol::Record;
 use std::ops::Add;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
@@ -128,15 +129,18 @@ fn run_subdoc_lookup(
         Value::String { val, .. } => {
             vec![val]
         }
-        Value::List { vals, .. } => vals.iter().map(|s| s.as_string().unwrap()).collect(),
+        Value::List { vals, .. } => vals
+            .iter()
+            .map(|s| s.as_str().unwrap().to_string())
+            .collect(),
         _ => {
-            return Err(ShellError::GenericError(
-                "Please supply field(s) as shown in the examples".to_string(),
-                "".to_string(),
-                None,
-                None,
-                Vec::new(),
-            ));
+            return Err(ShellError::GenericError {
+                error: "Please supply field(s) as shown in the examples".to_string(),
+                msg: "".to_string(),
+                span: None,
+                help: None,
+                inner: Vec::new(),
+            });
         }
     };
 
@@ -153,7 +157,7 @@ fn run_subdoc_lookup(
     let bucket_flag = call.get_flag(engine_state, stack, "bucket")?;
     let scope_flag = call.get_flag(engine_state, stack, "scope")?;
     let collection_flag = call.get_flag(engine_state, stack, "collection")?;
-    let halt_on_error = call.has_flag("halt-on-error");
+    let halt_on_error = call.has_flag(engine_state, stack, "halt-on-error")?;
 
     let mut results = vec![];
     for identifier in cluster_identifiers {
@@ -234,10 +238,16 @@ fn run_subdoc_lookup(
                                         collected = collected.content(c);
                                     } else {
                                         let list = c.as_list().unwrap().to_vec();
+
                                         let record = Value::Record {
-                                            cols: paths.clone(),
-                                            vals: list,
-                                            span: span,
+                                            val: Record::from_raw_cols_vals(
+                                                paths.clone(),
+                                                list,
+                                                span,
+                                                span,
+                                            )
+                                            .unwrap(),
+                                            internal_span: span,
                                         };
                                         collected = collected.content(record);
                                     }
@@ -277,7 +287,7 @@ fn run_subdoc_lookup(
 
     Ok(Value::List {
         vals: results,
-        span: call.head,
+        internal_span: call.head,
     }
     .into_pipeline_data())
 }
@@ -292,15 +302,11 @@ pub(crate) fn ids_from_input(
         .into_interruptible_iter(Some(ctrl_c))
         .filter_map(move |v| match v {
             Value::String { val, .. } => Some(val),
-            Value::Record { cols, vals, .. } => {
-                if let Some(idx) = cols.iter().position(|x| x.clone() == id_column) {
-                    if let Some(d) = vals.get(idx) {
-                        match d {
-                            Value::String { val, .. } => Some(val.clone()),
-                            _ => None,
-                        }
-                    } else {
-                        None
+            Value::Record { val, .. } => {
+                if let Some(d) = val.get(id_column.clone()) {
+                    match d {
+                        Value::String { val, .. } => Some(val.clone()),
+                        _ => None,
                     }
                 } else {
                     None
