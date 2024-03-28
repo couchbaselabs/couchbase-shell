@@ -123,7 +123,12 @@ fn run_get(
     let id_column: String = call
         .get_flag(engine_state, stack, "id-column")?
         .unwrap_or_else(|| "id".to_string());
-    let ids = ids_from_input(call, input, id_column.clone(), ctrl_c.clone())?;
+    let ids = ids_from_input(
+        input,
+        id_column.clone(),
+        ctrl_c.clone(),
+        call.positional_nth(0),
+    )?;
 
     let mut workers = FuturesUnordered::new();
     let guard = state.lock().unwrap();
@@ -241,10 +246,10 @@ fn run_get(
 }
 
 pub(crate) fn ids_from_input(
-    args: &Call,
     input: PipelineData,
     id_column: String,
     ctrl_c: Arc<AtomicBool>,
+    id: Option<&nu_protocol::ast::Expression>,
 ) -> Result<Vec<String>, ShellError> {
     let mut ids: Vec<String> = input
         .into_interruptible_iter(Some(ctrl_c))
@@ -264,7 +269,7 @@ pub(crate) fn ids_from_input(
         })
         .collect();
 
-    if let Some(id) = args.positional_nth(0) {
+    if let Some(id) = id {
         if let Some(i) = id.as_string() {
             ids.push(i);
         }
@@ -274,7 +279,7 @@ pub(crate) fn ids_from_input(
 }
 
 #[derive(Debug)]
-pub struct GetResult {
+pub(crate) struct GetResult {
     error: Option<String>,
     content: Option<Value>,
     key: Option<String>,
