@@ -128,7 +128,13 @@ fn collections_get(
                 let mut collected = NuValueMap::default();
                 collected.add_string("scope", scope_res.name.clone(), span);
                 collected.add_string("collection", "", span);
-                collected.add("max_expiry", Value::Duration { val: 0, span });
+                collected.add(
+                    "max_expiry",
+                    Value::Duration {
+                        val: 0,
+                        internal_span: span,
+                    },
+                );
                 collected.add_string("cluster", identifier.clone(), span);
                 results.push(collected.into_value(span));
                 continue;
@@ -142,7 +148,7 @@ fn collections_get(
                     "max_expiry",
                     Value::Duration {
                         val: Duration::from_secs(collection.max_expiry).as_nanos() as i64,
-                        span,
+                        internal_span: span,
                     },
                 );
                 collected.add_string("cluster", identifier.clone(), span);
@@ -153,7 +159,7 @@ fn collections_get(
 
     Ok(Value::List {
         vals: results,
-        span,
+        internal_span: span,
     }
     .into_pipeline_data())
 }

@@ -144,7 +144,6 @@ pub use tutorial::Tutorial;
 pub use tutorial_next::TutorialNext;
 pub use tutorial_page::TutorialPage;
 pub use tutorial_prev::TutorialPrev;
-pub use user_builder::User;
 pub use users::Users;
 pub use users_drop::UsersDrop;
 pub use users_get::UsersGet;
