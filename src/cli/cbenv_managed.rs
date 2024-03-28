@@ -72,7 +72,7 @@ fn clusters(
 
     Ok(Value::List {
         vals: clusters,
-        span,
+        internal_span: span,
     }
     .into_pipeline_data())
 }
