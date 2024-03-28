@@ -93,7 +93,7 @@ fn organizations(
 
     Ok(Value::List {
         vals: results,
-        span: span,
+        internal_span: span,
     }
     .into_pipeline_data())
 }

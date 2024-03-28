@@ -168,13 +168,17 @@ fn query(
         }
     }
 
-    let results =
-        handle_query_response(call.has_flag("with-meta"), guard.active(), response, span)?;
+    let results = handle_query_response(
+        call.has_flag(engine_state, stack, "with-meta")?,
+        guard.active(),
+        response,
+        span,
+    )?;
 
     if results.len() > 0 {
         return Ok(Value::List {
             vals: results,
-            span: call.head,
+            internal_span: call.head,
         }
         .into_pipeline_data());
     }

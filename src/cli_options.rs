@@ -150,7 +150,7 @@ impl Command for Cbsh {
                 stack,
                 self.is_parser_keyword(),
             ),
-            span: call.head,
+            internal_span: call.head,
         }
         .into_pipeline_data())
     }
@@ -211,11 +211,11 @@ pub fn parse_commandline_args(
             let bucket: Option<String> = call.get_flag(context, &mut stack, "bucket")?;
             let scope: Option<String> = call.get_flag(context, &mut stack, "scope")?;
             let collection: Option<String> = call.get_flag(context, &mut stack, "collection")?;
-            let command: Option<Expression> = call.get_flag_expr("command");
+            let command: Option<&Expression> = call.get_flag_expr("command");
             let script: Option<String> = call.get_flag(context, &mut stack, "script")?;
-            let stdin = call.has_flag("stdin");
-            let no_motd = call.has_flag("no-motd");
-            let disable_tls = call.has_flag("disable-tls");
+            let stdin = call.has_flag(context, &mut stack, "stdin")?;
+            let no_motd = call.has_flag(context, &mut stack, "no-motd")?;
+            let disable_tls = call.has_flag(context, &mut stack, "disable-tls")?;
             let tls_cert_path: Option<String> =
                 call.get_flag(context, &mut stack, "tls-cert-path")?;
             let config_path: Option<String> = call.get_flag(context, &mut stack, "config-dir")?;
@@ -223,11 +223,12 @@ pub fn parse_commandline_args(
                 call.get_flag(context, &mut stack, "logger-prefix")?;
             let display_name: Option<String> =
                 call.get_flag(context, &mut stack, "display-name")?;
-            let no_config_prompt = call.has_flag("disable-config-prompt");
-            let tls_accept_all_certs = call.has_flag("tls-accept-all-certs");
+            let no_config_prompt = call.has_flag(context, &mut stack, "disable-config-prompt")?;
+            let tls_accept_all_certs =
+                call.has_flag(context, &mut stack, "tls-accept-all-certs")?;
 
             fn extract_contents(
-                expression: Option<Expression>,
+                expression: Option<&Expression>,
             ) -> Result<Option<Spanned<String>>, ShellError> {
                 if let Some(expr) = expression {
                     let str = expr.as_string();
@@ -249,7 +250,7 @@ pub fn parse_commandline_args(
 
             let command = extract_contents(command)?;
 
-            let help = call.has_flag("help");
+            let help = call.has_flag(context, &mut stack, "help")?;
 
             if help {
                 let full_help = get_full_help(
@@ -269,7 +270,7 @@ pub fn parse_commandline_args(
                 std::process::exit(1);
             }
 
-            if call.has_flag("version") {
+            if call.has_flag(context, &mut stack, "version")? {
                 let version = env!("CARGO_PKG_VERSION").to_string();
                 let _ = std::panic::catch_unwind(move || {
                     let stdout = std::io::stdout();

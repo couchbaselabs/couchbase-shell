@@ -113,7 +113,7 @@ fn run_get(
     let bucket_flag = call.get_flag(engine_state, stack, "bucket")?;
     let scope_flag = call.get_flag(engine_state, stack, "scope")?;
     let collection_flag = call.get_flag(engine_state, stack, "collection")?;
-    let halt_on_error = call.has_flag("halt-on-error");
+    let halt_on_error = call.has_flag(engine_state, stack, "halt-on-error")?;
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
 
@@ -188,7 +188,7 @@ fn run_get(
 
     Ok(Value::List {
         vals: results,
-        span,
+        internal_span: span,
     }
     .into_pipeline_data())
 }

@@ -1,5 +1,6 @@
 use crate::cli::util::NuValueMap;
 use crate::state::State;
+use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, PipelineData, ShellError, Signature};
@@ -53,13 +54,13 @@ impl Command for UseCmd {
 
 fn use_cmd(
     state: Arc<Mutex<State>>,
-    _engine_state: &EngineState,
-    _stack: &mut Stack,
+    engine_state: &EngineState,
+    stack: &mut Stack,
     call: &Call,
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
-    let show_capella = call.has_flag("capella");
-    let show_timeouts = call.has_flag("timeouts");
+    let show_capella = call.has_flag(engine_state, stack, "capella")?;
+    let show_timeouts = call.has_flag(engine_state, stack, "timeouts")?;
 
     let span = call.head;
 
