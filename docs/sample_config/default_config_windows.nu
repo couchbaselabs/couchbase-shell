@@ -8,25 +8,31 @@ def build_collection_prompt [] {
     let collection = $"($content | get collection)"
     let cluster_type = $"($content | get cluster_type)"
 
+    let bucket_prompt =
     let bucket_name = if $bucket == "" {
-        "<not-set>"
-    } else {
-        $bucket
-    }
-
-    let collection_prompt = if $bucket_name == "" or ($scope == "" and $collection == "") {
         ""
     } else {
-        if $scope != "" and $collection == "" {
-            '.' + ($scope) + '.<notset>'
-        } else if $scope == "" and $collection != "" {
-            '.<notset>.' + ($collection)
-       } else {
-            '.' + ($scope) + '.' + ($collection)
-       }
+        ' in ' + ($bucket)
     }
 
-    let prompt = $"(($user) + ' at ' + ($cluster) + ' in ' + ($bucket_name) + ($collection_prompt))
+    let collection_prompt = if $bucket_prompt == "" {
+        ""
+    } else {
+        let scope_name = if $scope == "" {
+            '._default'
+        } else {
+            '.' + $scope
+        }
+
+        let col_name = if $collection == "" {
+            '._default'
+        } else {
+            '.' + $collection
+        }
+        $"($scope_name + $col_name)"
+    }
+
+    let prompt = $"(($user) + ' at ' + ($cluster) + ($bucket_prompt) + ($collection_prompt))
 
 "
 
