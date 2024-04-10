@@ -108,6 +108,7 @@ impl Command for TransactionsListAtrs {
             .query_request(
                 QueryRequest::Execute {
                     statement,
+                    parameters: None,
                     scope: None,
                     timeout: duration_to_golang_string(active_cluster.timeouts().query_timeout()),
                     transaction: None,

@@ -638,6 +638,7 @@ impl QueryTransactionRequest {
 pub enum QueryRequest {
     Execute {
         statement: String,
+        parameters: Option<serde_json::Value>,
         scope: Option<(String, String)>,
         timeout: String,
         transaction: Option<QueryTransactionRequest>,
@@ -664,23 +665,53 @@ impl QueryRequest {
                 scope,
                 timeout,
                 transaction,
+                parameters,
             } => {
                 let mut json = HashMap::new();
                 if let Some(scope) = scope {
                     let ctx = format!("`default`:`{}`.`{}`", scope.0, scope.1);
-                    json.insert("query_context", ctx);
+                    json.insert("query_context".to_string(), serde_json::Value::String(ctx));
                 }
 
-                json.insert("statement", statement.to_string());
-                json.insert("timeout", timeout.to_string());
+                json.insert(
+                    "statement".to_string(),
+                    serde_json::Value::String(statement.to_string()),
+                );
+                json.insert(
+                    "timeout".to_string(),
+                    serde_json::Value::String(timeout.to_string()),
+                );
                 if let Some(txn) = transaction {
                     if let Some(t) = txn.tx_timeout.clone() {
-                        json.insert("txtimeout", format!("{}ms", t.as_millis()));
+                        json.insert(
+                            "txtimeout".to_string(),
+                            serde_json::Value::String(format!("{}ms", t.as_millis())),
+                        );
                     }
                     if let Some(id) = txn.tx_id.clone() {
-                        json.insert("txid", id);
+                        json.insert("txid".to_string(), serde_json::Value::String(id));
                     }
                 }
+
+                if let Some(params) = parameters {
+                    match params {
+                        serde_json::Value::Array(_) => {
+                            json.insert("args".to_string(), params.clone());
+                        }
+                        serde_json::Value::Object(map) => {
+                            for (k, v) in map.iter() {
+                                let key = if k.starts_with("$") {
+                                    k.clone()
+                                } else {
+                                    format!("${}", *k)
+                                };
+                                json.insert(key, v.clone());
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+
                 Some(serde_json::to_vec(&json).unwrap())
             }
         }

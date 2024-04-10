@@ -1,3 +1,4 @@
+use crate::cli::util::convert_nu_value_to_json_value;
 use crate::cli::util::{
     cluster_identifiers_from, convert_row_to_nu_value, duration_to_golang_string,
     get_active_cluster, is_http_status,
@@ -61,6 +62,12 @@ impl Command for Query {
                 "the scope to query against",
                 None,
             )
+            .named(
+                "params",
+                SyntaxShape::Any,
+                "named or positional parameters for the query",
+                None,
+            )
             .switch("with-meta", "include toplevel metadata", None)
             .switch("disable-context", "disable automatically detecting the query context based on the active bucket and scope", None)
             .category(Category::Custom("couchbase".to_string()))
@@ -95,6 +102,24 @@ fn query(
 
     let statement: String = call.req(engine_state, stack, 0)?;
 
+    let params: Option<serde_json::Value> =
+        match call.get_flag::<Value>(engine_state, stack, "params")? {
+            Some(p) => match p {
+                Value::Record { .. } => Some(convert_nu_value_to_json_value(&p, span).unwrap()),
+                Value::List { .. } => Some(convert_nu_value_to_json_value(&p, span).unwrap()),
+                _ => {
+                    return Err(ShellError::GenericError {
+                        error: "Parameters must be a list or JSON object ".to_string(),
+                        msg: "".to_string(),
+                        span: None,
+                        help: None,
+                        inner: vec![],
+                    });
+                }
+            },
+            None => None,
+        };
+
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
         let guard = state.lock().unwrap();
@@ -107,6 +132,7 @@ fn query(
         let response = send_query(
             active_cluster,
             statement.clone(),
+            params.clone(),
             maybe_scope,
             ctrl_c.clone(),
             None,
@@ -137,6 +163,7 @@ fn query(
 pub fn send_query(
     cluster: &RemoteCluster,
     statement: impl Into<String>,
+    parameters: Option<serde_json::Value>,
     scope: Option<(String, String)>,
     ctrl_c: Arc<AtomicBool>,
     timeout: impl Into<Option<Duration>>,
@@ -150,6 +177,7 @@ pub fn send_query(
         .query_request(
             QueryRequest::Execute {
                 statement: statement.into(),
+                parameters,
                 scope,
                 timeout: duration_to_golang_string(timeout),
                 transaction: transaction.into(),

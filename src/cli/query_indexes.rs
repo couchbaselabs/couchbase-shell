@@ -106,6 +106,7 @@ fn query(
         let response = send_query(
             active_cluster,
             statement.clone(),
+            None,
             maybe_scope,
             ctrl_c.clone(),
             None,
