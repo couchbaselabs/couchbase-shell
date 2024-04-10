@@ -24,12 +24,12 @@ pub struct ShellConfig {
     #[serde(skip)]
     path: Option<PathBuf>,
 
-    /// Note: clusters and cluster is kept for backwards compatibility and
-    /// convenience, docs should only mention database
-    #[serde(alias = "database", default)]
-    #[serde(alias = "cluster")]
+    /// Note: clusters and database are kept for backwards compatibility and
+    /// convenience, docs should only mention cluster
+    #[serde(alias = "cluster", default)]
+    #[serde(alias = "database")]
     #[serde(alias = "clusters")]
-    #[serde(rename(serialize = "database"))]
+    #[serde(rename(serialize = "cluster"))]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     clusters: Vec<ClusterConfig>,
 
@@ -637,8 +637,8 @@ pub struct StandaloneCredentialsConfig {
     #[allow(dead_code)]
     version: usize,
     /// Note: clusters and cluster are kept for backwards compatibility and
-    /// convenience, docs should only mention database
-    #[serde(alias = "database", default)]
+    /// convenience, docs should only mention cluster
+    #[serde(alias = "cluster", default)]
     #[serde(alias = "cluster")]
     #[serde(alias = "clusters")]
     clusters: Vec<StandaloneClusterCredentials>,

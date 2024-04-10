@@ -37,9 +37,9 @@ impl Command for Users {
     fn signature(&self) -> Signature {
         Signature::build("users")
             .named(
-                "databases",
+                "clusters",
                 SyntaxShape::String,
-                "the databases which should be contacted",
+                "the clusters which should be contacted",
                 None,
             )
             .category(Category::Custom("couchbase".to_string()))

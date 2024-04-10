@@ -1,7 +1,7 @@
 # Allows us to evolve in the future without breaking old config files
 version = 1
 
-[[database]]
+[[cluster]]
 identifier = "default"
 connstr = "127.0.0.1"
 default-bucket = "travel-sample"

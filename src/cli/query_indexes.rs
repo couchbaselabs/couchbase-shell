@@ -43,9 +43,9 @@ impl Command for QueryIndexes {
                 None,
             )
             .named(
-                "databases",
+                "clusters",
                 SyntaxShape::String,
-                "the databases to query against",
+                "the clusters to query against",
                 None,
             )
             .switch("with-meta", "Includes related metadata in the result", None)

@@ -31,14 +31,14 @@ The Couchbase Shell 0.75.1
 TIP: If you are running a recent macOS release (i.e. 10.15.x), you'll likely see an error similar to *"cbsh" was blocked from use because it is not from an identified developer*.
 This is because our binaries are not yet signed.
 To run it nonetheless you need to either navigate to `System Preferences -> Security & Privacy` and click `Allow Anyway`, or  run `sudo xattr -r -d com.apple.quarantine $PWD/cbsh` inside your terminal.
-Next time you run the binary you'll get another prompt but then it should run fine. 
+Next time you run the binary you'll get another prompt but then it should run fine.
 
 image::mac-binary-unsigned.png[macOS Warning,600]
 
-=== Connecting to a Database
+=== Connecting to a Cluster
 
 The first time that you run `./cbsh` you will receive a prompt asking if you'd like to create a config file.
-If you choose yes then the shell will provide you with a series of prompts to provide information about your default database.
+If you choose yes then the shell will provide you with a series of prompts to provide information about your default cluster.
 If you choose no then it will try to connect to `localhost` using the `Administrator` username and the `password` password.
 
 You can modify this through CLI arguments (see `./cbsh -h` for more information).
@@ -54,8 +54,8 @@ Password:
 >
 ```
 
-Once in the shell, you can start to execute commands (see the introduction section for more information). 
-As a quick sanity check, list the nodes in the database:
+Once in the shell, you can start to execute commands (see the introduction section for more information).
+As a quick sanity check, list the nodes in the cluster:
 
 ```
 > nodes
@@ -71,29 +71,29 @@ Or if you have the `travel-sample` bucket installed you can switch to it and the
 ```
 >  doc get airline_10 --bucket travel-sample | flatten
 ───┬────────────┬─────────────────────┬────────────┬─────────┬─────────────┬──────┬──────┬──────────┬───────────────┬───────┬─────────
- # │     id     │         cas         │ content_id │  type   │    name     │ iata │ icao │ callsign │    country    │ error │ database 
+ # │     id     │         cas         │ content_id │  type   │    name     │ iata │ icao │ callsign │    country    │ error │ cluster
 ───┼────────────┼─────────────────────┼────────────┼─────────┼─────────────┼──────┼──────┼──────────┼───────────────┼───────┼─────────
- 0 │ airline_10 │ 1629809626107281408 │         10 │ airline │ 40-Mile Air │ Q5   │ MLA  │ MILE-AIR │ United States │       │ default 
+ 0 │ airline_10 │ 1629809626107281408 │         10 │ airline │ 40-Mile Air │ Q5   │ MLA  │ MILE-AIR │ United States │       │ default
 ───┴────────────┴─────────────────────┴────────────┴─────────┴─────────────┴──────┴──────┴──────────┴───────────────┴───────┴─────────
 ```
 
 === The config dotfiles
 
-Connecting to a single database through the command line is nice when you are starting out, but later on you will likely either connect to the same database all the time or even to a multitude of them. To help with this, you can create a `.cbsh` dot folder in your home directory and place a `config` file in it that the shell will read on startup.
+Connecting to a single cluster through the command line is nice when you are starting out, but later on you will likely either connect to the same cluster all the time or even to a multitude of them. To help with this, you can create a `.cbsh` dot folder in your home directory and place a `config` file in it that the shell will read on startup.
 
 The downloaded zip contains an example already, but here is a small sample config to help you get started as well:
 
 ```
 version = 1
 
-[[database]]
+[[cluster]]
 identifier = "local"
 connstr = "127.0.0.1"
 default-bucket = "travel-sample"
 username = "Administrator"
 password = "password"
 
-[[database]]
+[[cluster]]
 identifier = "remote"
 connstr = "10.143.200.101"
 default-bucket = "myapp"
@@ -101,7 +101,7 @@ username = "user"
 password = "pass"
 ```
 
-This will register two databases, one called `local` and one called `remote`.
+This will register two clusters, one called `local` and one called `remote`.
 The file format is `toml` in case you wonder.
 Now when you start the shell, it will connect to `local` automatically and you are all set.
 

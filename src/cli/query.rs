@@ -44,9 +44,9 @@ impl Command for Query {
         Signature::build("query")
             .required("statement", SyntaxShape::String, "the query statement")
             .named(
-                "databases",
+                "clusters",
                 SyntaxShape::String,
-                "the databases to query against",
+                "the clusters to query against",
                 None,
             )
             .named(

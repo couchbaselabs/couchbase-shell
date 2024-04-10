@@ -10,13 +10,13 @@ A good example here is migrating from an on-premise cluster to a Capella cluster
 To migrate scopes, except the `_default` scope:
 
 ```
-scopes --databases "On-Prem-Cluster" --bucket travel-sample | select scope | where scope != "_default" | each { |it| scopes create $it.scope --databases "Capella-Cluster" }
+scopes --clusters "On-Prem-Cluster" --bucket travel-sample | select scope | where scope != "_default" | each { |it| scopes create $it.scope --clusters "Capella-Cluster" }
 ```
 
 To migrate all collections, except the `_default` collection:
 
 ```
-collections --databases "On-Prem-Cluster" --bucket "travel-sample" | select scope collection | where $it.scope != "_default" | where $it.collection != "_default" | each { |it| collections create $it.collection --databases "Capella-Cluster" --bucket "travel-sample-import" --scope $it.scope
+collections --clusters "On-Prem-Cluster" --bucket "travel-sample" | select scope collection | where $it.scope != "_default" | where $it.collection != "_default" | each { |it| collections create $it.collection --clusters "Capella-Cluster" --bucket "travel-sample-import" --scope $it.scope
 ```
 
 These examples can easily be extended to filter out any other scopes and collections you do not want to migrate.
@@ -30,5 +30,5 @@ A good example here is migrating from an on-premise cluster to a Capella cluster
 To migrate all of your index definitions:
 
 ```
-query indexes --definitions --databases "On-Prem-Cluster" | get definition | each { |it| query $it --databases "Capella-Cluster" }
+query indexes --definitions --clusters "On-Prem-Cluster" | get definition | each { |it| query $it --clusters "Capella-Cluster" }
 ```

@@ -1,7 +1,7 @@
 # Allows us to evolve in the future without breaking old config files
 version = 1
 
-[[database]]
+[[cluster]]
 identifier = "test"
 connstr = "d5637eaf-59a4-427e-aa8e-1aadd302728d.dp.cloud.couchbase.com"
 default-bucket = "couchbasecloudbucket"

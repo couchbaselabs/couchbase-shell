@@ -63,9 +63,9 @@ impl Command for DocGet {
                 None,
             )
             .named(
-                "databases",
+                "clusters",
                 SyntaxShape::String,
-                "the databases which should be contacted",
+                "the clusters which should be contacted",
                 None,
             )
             .named(

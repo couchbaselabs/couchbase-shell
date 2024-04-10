@@ -98,7 +98,7 @@ fn use_cmd(
                 };
                 results.add_string("username", active.username(), span);
                 results.add_string("display_name", display_name, span);
-                results.add_string("database", guard.active(), span);
+                results.add_string("cluster", guard.active(), span);
                 results.add_string(
                     "bucket",
                     active.active_bucket().unwrap_or_else(|| String::from("")),

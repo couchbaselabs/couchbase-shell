@@ -1,7 +1,7 @@
 === Faking data
 
 Couchbase Shell provides a `fake` command which can be used to generate realistic looking data.
-This can be very useful during development when you just need some data in your database.
+This can be very useful during development when you just need some data in your cluster.
 `fake` uses a templating engine called https://tera.netlify.app/docs/[`tera`] which can be used to structure your faked data.
 
 ```

@@ -1,7 +1,7 @@
 [#_cb_env_and_the_environment]
 == `cb-env` and the Environment
 
-Whilst multiple databases can be registered at the same time, there is only ever one database (at most) active.
+Whilst multiple clusters can be registered at the same time, there is only ever one cluster (at most) active.
 The same is true for buckets, scopes, and collections.
 When a resource is active then it used as the default to run commands against (this can be overridden on a per command basis).
 
@@ -12,7 +12,7 @@ You can run the `cb-env` command, which will tell you which resources are curren
 ╭──────────────┬─────────────╮
 │ username     │ charlie     │
 │ display_name │ Charlie     │
-│ database     │ capella     │
+│ cluster      │ capella     │
 │ bucket       │ default     │
 │ scope        │ inventory   │
 │ collection   │ hotel       │
@@ -23,7 +23,7 @@ You can run the `cb-env` command, which will tell you which resources are curren
 If you were to now run a command then we would be running it:
 
 * As the user "charlie"
-* Against the "capella" database
+* Against the "capella" cluster
 * Against the "default" bucket
 * Against the "inventory" scope
 * Against the "hotel" collection
@@ -43,13 +43,13 @@ Subcommands:
   cb-env bucket - Sets the active bucket based on its name
   cb-env capella-organization - Sets the active capella organization based on its identifier
   cb-env collection - Sets the active collection based on its name
-  cb-env database - Sets the active database based on its identifier
-  cb-env managed - Lists all databases currently managed by couchbase shell
+  cb-env cluster - Sets the active cluster based on its identifier
+  cb-env managed - Lists all clusters currently managed by couchbase shell
   cb-env project - Sets the active project based on its name
-  cb-env register - Registers a database for use with the shell
+  cb-env register - Registers a cluster for use with the shell
   cb-env scope - Sets the active scope based on its name
   cb-env timeouts - Sets the active timeouts for operations
-  cb-env unregister - Registers a database for use with the shell
+  cb-env unregister - Registers a cluster for use with the shell
 
 Flags:
   -h, --help - Display the help message for this command
@@ -71,7 +71,7 @@ For example if you change the active bucket:
 ╭──────────────┬─────────────╮
 │ username     │ charlie     │
 │ display_name │ Charlie     │
-│ database     │ capella     │
+│ cluster      │ capella     │
 │ bucket       │ beer-sample │
 │ scope        │ inventory   │
 │ collection   │ hotel       │
@@ -86,18 +86,18 @@ Both the output of `cb-env` and the prompt will reflect the changes.
 On many commands you will notice a set of flags which allow you to override the active execution environment.
 Different commands support different flags, depending on the command you can expect to see any of:
 
-* `--databases`
+* `--clusters`
 * `--bucket`
 * `--scope`
 * `--collection`
 
-==== The `--databases` flag
+==== The `--clusters` flag
 
 The argument for this flag is an identifier combined with a regular expression.
-So imagine you have three databases setup with the following names:
+So imagine you have three clusters setup with the following names:
 
 ```
-> cb-env | get database
+> cb-env | get cluster
 ───┬────────
  0 │ prod-us-west
  1 │ prod-us-east
@@ -106,12 +106,12 @@ So imagine you have three databases setup with the following names:
 ───┴────────
 ```
 
-If you wanted to run a command against all databases in `prod-us`, you could use `--databases prod-us.*`, e.g.
+If you wanted to run a command against all clusters in `prod-us`, you could use `--clusters prod-us.*`, e.g.
 
 ```
-> buckets --databases prod-us.*
+> buckets --clusters prod-us.*
 ───┬──────────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────
- # │   database   │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ capella
+ # │   cluster    │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ capella
 ───┼──────────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────
  0 │ prod-us-east │ default       │ couchbase │        1 │ none                 │  268.4 MB │ false         │        │ false
  1 │ prod-us-west │ default       │ couchbase │        1 │ none                 │  268.4 MB │ false         │        │ false
@@ -123,14 +123,14 @@ In the background this gets passed to a regex engine, so you can go a little cra
 
 ==== The `--bucket`, `--scope`, `--collection` flags
 
-These flags are a little different to the `--databases` flag, they are not regular expressions and can only be used to define a single name each.
-Unlike `--databases` the name provided to these flags does not have to be already known to Couchbase Shell, they can refer to any bucket, scope, and collection that exist within your active database or defined database(s).
+These flags are a little different to the `--clusters` flag, they are not regular expressions and can only be used to define a single name each.
+Unlike `--clusters` the name provided to these flags does not have to be already known to Couchbase Shell, they can refer to any bucket, scope, and collection that exist within your active cluster or defined cluster(s).
 For example:
 
 ```
 > doc get 1 --bucket travel-sample --scope tenant_agent_00 --collection users
 ───┬────┬─────────────────────┬──────────────────┬───────┬──────────────
- # │ id │         cas         │     content      │ error │   database
+ # │ id │         cas         │     content      │ error │   cluster
 ───┼────┼─────────────────────┼──────────────────┼───────┼──────────────
  0 │ 1  │ 1638870288919035904 │ [row 11 columns] │       │ prod-us-west
 ───┴────┴─────────────────────┴──────────────────┴───────┴──────────────

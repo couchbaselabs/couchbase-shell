@@ -106,11 +106,11 @@ Try running 'tutorial next' now to move to the next step of the tutorial.
         m.insert(
             "overview",
             "
-cbsh is connected to one or more Couchbase Server databases.
+cbsh is connected to one or more Couchbase Server clusters.
 
-Try 'nodes' to list the nodes in the active database.
+Try 'nodes' to list the nodes in the active cluster.
 
-Try 'cb-env managed' to list the databases currently managed by Couchbase Shell.
+Try 'cb-env managed' to list the clusters currently managed by Couchbase Shell.
 
 And, use 'tutorial next' to move to the next step in the tutorial.
     ",
@@ -177,7 +177,7 @@ Use 'tutorial next' to move to the next step in the tutorial.
     ",
         );
         m.insert("query", "
-You can use the query command to run N1QL queries (or SQL for JSON queries) against the Couchbase Server database.
+You can use the query command to run N1QL queries (or SQL for JSON queries) against the Couchbase Server cluster.
 
 Try...
 
@@ -201,9 +201,9 @@ Use 'tutorial next' to move to the next step in the tutorial.
             "
 The Couchbase Shell can do a lot more, including...
 
-- create, retrieve, update and delete JSON docs from the database.
+- create, retrieve, update and delete JSON docs from the cluster.
 
-- import and export JSON documents into / out-from the database.
+- import and export JSON documents into / out-from the cluster.
 
 - execute N1QL (e.g., SQL for JSON) queries.
 

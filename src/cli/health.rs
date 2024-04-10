@@ -38,9 +38,9 @@ impl Command for HealthCheck {
     fn signature(&self) -> Signature {
         Signature::build("health")
             .named(
-                "databases",
+                "clusters",
                 SyntaxShape::String,
-                "the databases which should be contacted",
+                "the clusters which should be contacted",
                 None,
             )
             .category(Category::Custom("couchbase".to_string()))
@@ -77,7 +77,7 @@ fn health(
     for identifier in cluster_identifiers {
         let guard = state.lock().unwrap();
         let cluster = get_active_cluster(identifier.clone(), &guard, span)?;
-        validate_is_not_cloud(cluster, "databases health", span)?;
+        validate_is_not_cloud(cluster, "clusters health", span)?;
 
         converted.push(check_autofailover(
             &identifier,

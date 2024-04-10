@@ -1,39 +1,38 @@
-use crate::cli::cloud_json::JSONCloudClusterV3;
-use crate::client::CapellaRequest;
-use crate::state::State;
-use log::debug;
-use std::ops::Add;
-use std::sync::{Arc, Mutex};
-use tokio::time::Instant;
-
+use crate::cli::cloud_json::JSONCloudClustersSummariesV3;
 use crate::cli::error::{
     client_error_to_shell_error, deserialize_error, unexpected_status_code_error,
 };
 use crate::cli::util::NuValueMap;
+use crate::client::CapellaRequest;
+use crate::state::State;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
+use nu_protocol::{
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+};
+use std::ops::Add;
+use std::sync::{Arc, Mutex};
+use tokio::time::Instant;
 
 #[derive(Clone)]
-pub struct DatabasesGet {
+pub struct Clusters {
     state: Arc<Mutex<State>>,
 }
 
-impl DatabasesGet {
+impl Clusters {
     pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
 
-impl Command for DatabasesGet {
+impl Command for Clusters {
     fn name(&self) -> &str {
-        "databases get"
+        "clusters"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("databases get")
-            .required("name", SyntaxShape::String, "the name of the database")
+        Signature::build("clusters")
             .named(
                 "capella",
                 SyntaxShape::String,
@@ -44,7 +43,7 @@ impl Command for DatabasesGet {
     }
 
     fn usage(&self) -> &str {
-        "Gets a database from the active Capella organization"
+        "Lists all clusters on the active Capella organisation"
     }
 
     fn run(
@@ -54,11 +53,11 @@ impl Command for DatabasesGet {
         call: &Call,
         input: PipelineData,
     ) -> Result<PipelineData, ShellError> {
-        clusters_get(self.state.clone(), engine_state, stack, call, input)
+        clusters(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn clusters_get(
+fn clusters(
     state: Arc<Mutex<State>>,
     engine_state: &EngineState,
     stack: &mut Stack,
@@ -67,13 +66,10 @@ fn clusters_get(
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
-
-    let name: String = call.req(engine_state, stack, 0)?;
     let capella = call.get_flag(engine_state, stack, "capella")?;
 
-    debug!("Running databases get for {}", &name);
-
     let guard = state.lock().unwrap();
+
     let control = if let Some(c) = capella {
         guard.capella_org_for_cluster(c)
     } else {
@@ -81,16 +77,10 @@ fn clusters_get(
     }?;
     let client = control.client();
 
-    let deadline = Instant::now().add(control.timeout());
-    let cluster = client
-        .find_cluster(name, deadline, ctrl_c.clone())
-        .map_err(|e| client_error_to_shell_error(e, span))?;
     let response = client
         .capella_request(
-            CapellaRequest::GetClusterV3 {
-                cluster_id: cluster.id(),
-            },
-            deadline,
+            CapellaRequest::GetClustersV3 {},
+            Instant::now().add(control.timeout()),
             ctrl_c,
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
@@ -101,22 +91,23 @@ fn clusters_get(
             span,
         ));
     };
-    let cluster: JSONCloudClusterV3 = serde_json::from_str(response.content())
+
+    let content: JSONCloudClustersSummariesV3 = serde_json::from_str(response.content())
         .map_err(|e| deserialize_error(e.to_string(), span))?;
 
-    let mut collected = NuValueMap::default();
-    collected.add_string("name", cluster.name(), span);
-    collected.add_string("id", cluster.id(), span);
-    collected.add_string("status", cluster.status(), span);
-    collected.add_string(
-        "endpoint_srv",
-        cluster.endpoints_srv().unwrap_or_default(),
-        span,
-    );
-    collected.add_string("version", cluster.version_name(), span);
-    collected.add_string("tenant_id", cluster.tenant_id(), span);
-    collected.add_string("project_id", cluster.project_id(), span);
-    collected.add_string("cidr", cluster.place().cidr(), span);
+    let mut results = vec![];
+    for cluster in content.items() {
+        let mut collected = NuValueMap::default();
+        collected.add_string("name", cluster.name(), span);
+        collected.add_string("id", cluster.id(), span);
+        collected.add_string("project_id", cluster.project_id(), span);
+        collected.add_string("tenant_id", content.tenant_id(), span);
+        results.push(collected.into_value(span))
+    }
 
-    Ok(collected.into_pipeline_data(span))
+    Ok(Value::List {
+        vals: results,
+        internal_span: span,
+    }
+    .into_pipeline_data())
 }

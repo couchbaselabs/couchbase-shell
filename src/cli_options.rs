@@ -66,7 +66,7 @@ impl Command for Cbsh {
                 Some('p'),
             )
             .named(
-                "database",
+                "cluster",
                 SyntaxShape::String,
                 "name to give to this configuration",
                 None,
