@@ -30,9 +30,9 @@ impl Command for AnalyticsDatasets {
         Signature::build("analytics datasets")
             .switch("with-meta", "Includes related metadata in the result", None)
             .named(
-                "databases",
+                "clusters",
                 SyntaxShape::String,
-                "the databases which should be contacted",
+                "the clusters which should be contacted",
                 None,
             )
             .category(Category::Custom("couchbase".to_string()))

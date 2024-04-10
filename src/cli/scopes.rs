@@ -40,9 +40,9 @@ impl Command for Scopes {
                 None,
             )
             .named(
-                "databases",
+                "clusters",
                 SyntaxShape::String,
-                "the databases to query against",
+                "the clusters to query against",
                 None,
             )
             .category(Category::Custom("couchbase".to_string()))

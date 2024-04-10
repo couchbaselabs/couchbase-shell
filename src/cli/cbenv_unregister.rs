@@ -29,18 +29,18 @@ impl Command for CbEnvUnregister {
             .required(
                 "identifier",
                 SyntaxShape::String,
-                "the identifier to use for this database",
+                "the identifier to use for this cluster",
             )
             .switch(
                 "save",
-                "whether or not to remove the database from the .cbsh config file, defaults to false",
+                "whether or not to remove the cluster from the .cbsh config file, defaults to false",
                 None,
             )
             .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {
-        "Registers a database for use with the shell"
+        "Registers a cluster for use with the shell"
     }
 
     fn run(
@@ -67,8 +67,8 @@ fn clusters_unregister(
     let mut guard = state.lock().unwrap();
     if guard.active() == identifier {
         return Err(generic_error(
-            "Cannot unregister the active database",
-            "Change the active database using cb-env database first".to_string(),
+            "Cannot unregister the active cluster",
+            "Change the active cluster using cb-env cluster first".to_string(),
             call.head,
         ));
     }

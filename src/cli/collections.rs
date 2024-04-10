@@ -46,9 +46,9 @@ impl Command for Collections {
             )
             .named("scope", SyntaxShape::String, "the name of the scope", None)
             .named(
-                "databases",
+                "clusters",
                 SyntaxShape::String,
-                "the databases to query against",
+                "the clusters to query against",
                 None,
             )
             .category(Category::Custom("couchbase".to_string()))

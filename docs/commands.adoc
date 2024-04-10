@@ -2,9 +2,9 @@
 
 The following sections discuss the individual couchbase specific commands in greater detail. Remember, you can always mix and match them with built-in other shell commands as well as executables from your environment.
 
-=== Working with `databases`
+=== Working with `clusters`
 
-The `cb-env managed` command lists all the databases you have registered with the shell.
+The `cb-env managed` command lists all the clusters you have registered with the shell.
 
 ```
 > cb-env managed
@@ -18,7 +18,7 @@ The `cb-env managed` command lists all the databases you have registered with th
 
 === Working with `buckets`
 
-The `buckets` command lists all the buckets from your active database:
+The `buckets` command lists all the buckets from your active cluster:
 
 ```
 > buckets
@@ -93,7 +93,7 @@ Subcommands:
 Flags:
   -h, --help: Display this help message
   --bucket <string>: the name of the bucket
-  --databases <string>: the databases to query against
+  --clusters <string>: the clusters to query against
 ```
 
 To list all scopes in the bucket you would use:
@@ -165,7 +165,7 @@ Flags:
   -h, --help: Display this help message
   --bucket <string>: the name of the bucket
   --scope <string>: the name of the scope
-  --databases <string>: the databases to query against
+  --clusters <string>: the clusters to query against
 ```
 
 To list all collection in the bucket you would use:
@@ -221,21 +221,21 @@ You can also create and remove collections:
 
 === Listing `nodes`
 
-The `nodes` command allows you to list all the nodes of the database you are currently connected to.
+The `nodes` command allows you to list all the nodes of the cluster you are currently connected to.
 
 ```
 > nodes
 ───┬──────────┬─────────────────────┬─────────┬───────────────────┬───────────────────────┬──────────────────────────┬──────────────┬─────────────
- # │ database │ hostname            │ status  │ services          │ version               │ os                       │ memory_total │ memory_free 
+ # │ cluster │ hostname            │ status  │ services          │ version               │ os                       │ memory_total │ memory_free
 ───┼──────────┼─────────────────────┼─────────┼───────────────────┼───────────────────────┼──────────────────────────┼──────────────┼─────────────
- 0 │ remote   │ 10.143.200.101:8091 │ healthy │ indexing,kv,query │ 6.5.0-4960-enterprise │ x86_64-unknown-linux-gnu │       2.1 GB │    837.7 MB 
- 1 │ remote   │ 10.143.200.102:8091 │ healthy │ indexing,kv,query │ 6.5.0-4960-enterprise │ x86_64-unknown-linux-gnu │       2.1 GB │      1.0 GB 
+ 0 │ remote   │ 10.143.200.101:8091 │ healthy │ indexing,kv,query │ 6.5.0-4960-enterprise │ x86_64-unknown-linux-gnu │       2.1 GB │    837.7 MB
+ 1 │ remote   │ 10.143.200.102:8091 │ healthy │ indexing,kv,query │ 6.5.0-4960-enterprise │ x86_64-unknown-linux-gnu │       2.1 GB │      1.0 GB
 ───┴──────────┴─────────────────────┴─────────┴───────────────────┴───────────────────────┴──────────────────────────┴──────────────┴─────────────
 ```
 
 === Reading and Writing `doc`uments
 
-The fastest way to interact with documents is through the key value service (as long as you know the document ID). 
+The fastest way to interact with documents is through the key value service (as long as you know the document ID).
 All those commands are located as subcommands under the `doc` namespace.
 
 ==== Reading

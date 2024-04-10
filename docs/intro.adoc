@@ -11,31 +11,31 @@ Commands take inputs and produce output in a structured manner, most often repre
 ```
 > ls
 ────┬──────────────┬──────┬──────────┬────────────────
- #  │     name     │ type │   size   │    modified    
+ #  │     name     │ type │   size   │    modified
 ────┼──────────────┼──────┼──────────┼────────────────
-  0 │ CHANGELOG.md │ File │   4.8 KB │ 2 hours ago    
-  1 │ Cargo.lock   │ File │ 170.2 KB │ 16 minutes ago 
-  2 │ Cargo.toml   │ File │   1.8 KB │ 16 minutes ago 
-  3 │ LICENSE      │ File │  11.4 KB │ 2 days ago     
-  4 │ README.md    │ File │   8.6 KB │ 9 minutes ago  
-  5 │ docs         │ Dir  │    544 B │ 2 days ago     
-  6 │ examples     │ Dir  │    192 B │ 2 days ago     
-  7 │ jupyter      │ Dir  │    128 B │ 2 days ago     
-  8 │ src          │ Dir  │    256 B │ 2 days ago     
-  9 │ target       │ Dir  │    224 B │ 32 minutes ago 
- 10 │ tests        │ Dir  │    224 B │ 2 days ago     
+  0 │ CHANGELOG.md │ File │   4.8 KB │ 2 hours ago
+  1 │ Cargo.lock   │ File │ 170.2 KB │ 16 minutes ago
+  2 │ Cargo.toml   │ File │   1.8 KB │ 16 minutes ago
+  3 │ LICENSE      │ File │  11.4 KB │ 2 days ago
+  4 │ README.md    │ File │   8.6 KB │ 9 minutes ago
+  5 │ docs         │ Dir  │    544 B │ 2 days ago
+  6 │ examples     │ Dir  │    192 B │ 2 days ago
+  7 │ jupyter      │ Dir  │    128 B │ 2 days ago
+  8 │ src          │ Dir  │    256 B │ 2 days ago
+  9 │ target       │ Dir  │    224 B │ 32 minutes ago
+ 10 │ tests        │ Dir  │    224 B │ 2 days ago
 ────┴──────────────┴──────┴──────────┴────────────────
 ```
 
 ```
 > buckets
 ───┬──────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────
- # │ database │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud 
+ # │ cluster  │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud
 ───┼──────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────
- 0 │ default  │ beer-sample   │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false 
- 1 │ default  │ default       │ couchbase │        1 │ none                 │  104.9 MB │ true          │        │ false 
- 2 │ default  │ targetBucket  │ couchbase │        0 │ none                 │  104.9 MB │ true          │        │ false 
- 3 │ default  │ travel-sample │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false 
+ 0 │ default  │ beer-sample   │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false
+ 1 │ default  │ default       │ couchbase │        1 │ none                 │  104.9 MB │ true          │        │ false
+ 2 │ default  │ targetBucket  │ couchbase │        0 │ none                 │  104.9 MB │ true          │        │ false
+ 3 │ default  │ travel-sample │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false
 ───┴──────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴────────┴───────
 ```
 
@@ -44,10 +44,10 @@ You can pipe the output into other commands, for example if you only want to see
 ```
 > buckets | where name =~ "sample"
 ───┬──────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────
- # │ database │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud 
+ # │ cluster  │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud
 ───┼──────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────
- 0 │ default  │ beer-sample   │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false 
- 1 │ default  │ travel-sample │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false 
+ 0 │ default  │ beer-sample   │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false
+ 1 │ default  │ travel-sample │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false
 ───┴──────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴────────┴───────
 ```
 
@@ -57,7 +57,7 @@ In a similar fashion you can turn this structured table into other output format
 > buckets | where name =~ "sample" | to json --pretty 2
 [
   {
-    "database": "default",
+    "cluster": "default",
     "name": "beer-sample",
     "type": "couchbase",
     "replicas": 1,
@@ -68,7 +68,7 @@ In a similar fashion you can turn this structured table into other output format
     "cloud": false
   },
   {
-    "database": "default",
+    "cluster": "default",
     "name": "travel-sample",
     "type": "couchbase",
     "replicas": 1,
@@ -92,7 +92,7 @@ Other than using this documentation for help, each command can be called with `-
 Perform bucket management operations
 
 Usage:
-  > buckets <subcommand> {flags} 
+  > buckets <subcommand> {flags}
 
 Subcommands:
   buckets config - Shows the bucket config (low level)
@@ -105,7 +105,7 @@ Subcommands:
 
 Flags:
   -h, --help: Display this help message
-  --databases <string>: the databases which should be contacted
+  --clusters <string>: the clusters which should be contacted
 ```
 
 Some commands (like the one above) only act as groupings for subcommands, like `from`, `to` or `doc`. Since they do not serve a purpose on their own, they will render their help output automatically:
@@ -115,7 +115,7 @@ Some commands (like the one above) only act as groupings for subcommands, like `
 Perform document operations against a bucket or collection
 
 Usage:
-  > doc <subcommand> {flags} 
+  > doc <subcommand> {flags}
 
 Subcommands:
   doc get - Fetches a document through the data service
@@ -129,14 +129,14 @@ Flags:
 ```
 
 === The Prompt explained
-Couchbase Shell uses a custom, two line prompt to show you exactly in what environment you are working in right now. Since you can connect to different databases, switch buckets etc. it is important to know what is currently "active". Here is a sample prompt that will greet you when starting the shell:
+Couchbase Shell uses a custom, two line prompt to show you exactly in what environment you are working in right now. Since you can connect to different clusters, switch buckets etc. it is important to know what is currently "active". Here is a sample prompt that will greet you when starting the shell:
 
 ```
 👤 Administrator at 🏠 local in 🗄 travel-sample
 >
 ```
 
-It tells you that your user is `Administrator`, the current active database identifier is `local` and the active bucket is `travel-sample`.
+It tells you that your user is `Administrator`, the current active cluster identifier is `local` and the active bucket is `travel-sample`.
 
 If you have an active scope or collection set then the prompt will also update to reflect that:
 
@@ -297,7 +297,7 @@ name,age,height
 Michael,32,180
 ```
 
-This example is dealing with only one row for simplicity, but you can save as many rows as you need in one file. 
+This example is dealing with only one row for simplicity, but you can save as many rows as you need in one file.
 
 As a motivating example, the following snippet runs a N1QL query and stores the result as a csv file:
 

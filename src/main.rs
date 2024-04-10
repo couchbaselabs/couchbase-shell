@@ -341,10 +341,10 @@ fn remote_cluster_from_opts(opt: CliOptions, password: Option<String>) -> Remote
 
 fn maybe_write_config_file(opt: CliOptions, password: Option<String>) -> PathBuf {
     let identifier = if let Some(c) = opt.cluster {
-        println!("Using {} as database identifier", c);
+        println!("Using {} as cluster identifier", c);
         c
     } else {
-        println!("Please enter an identifier for the default database:");
+        println!("Please enter an identifier for the default cluster:");
         let mut answer = String::new();
         std::io::stdin()
             .read_line(&mut answer)
@@ -355,7 +355,7 @@ fn maybe_write_config_file(opt: CliOptions, password: Option<String>) -> PathBuf
         println!("Using {} as connection string", c);
         c
     } else {
-        println!("Please enter connection string (.e.g. couchbases://cb.<database-identifier>.sdk.cloud.couchbase.com)");
+        println!("Please enter connection string (.e.g. couchbases://cb.<cluster-identifier>.sdk.cloud.couchbase.com)");
         let mut answer = String::new();
         std::io::stdin()
             .read_line(&mut answer)
@@ -690,14 +690,14 @@ fn merge_couchbase_delta(context: &mut EngineState, state: Arc<Mutex<State>>) {
         working_set.add_decl(Box::new(BucketsGet::new(state.clone())));
         working_set.add_decl(Box::new(BucketsSample::new(state.clone())));
         working_set.add_decl(Box::new(BucketsUpdate::new(state.clone())));
-        working_set.add_decl(Box::new(Databases::new(state.clone())));
-        working_set.add_decl(Box::new(DatabasesCreate::new(state.clone())));
-        working_set.add_decl(Box::new(DatabasesDrop::new(state.clone())));
-        working_set.add_decl(Box::new(DatabasesGet::new(state.clone())));
-        working_set.add_decl(Box::new(HealthCheck::new(state.clone())));
+        working_set.add_decl(Box::new(CbEnvCluster::new(state.clone())));
         working_set.add_decl(Box::new(CBEnvManaged::new(state.clone())));
         working_set.add_decl(Box::new(CbEnvRegister::new(state.clone())));
         working_set.add_decl(Box::new(CbEnvUnregister::new(state.clone())));
+        working_set.add_decl(Box::new(Clusters::new(state.clone())));
+        working_set.add_decl(Box::new(ClustersCreate::new(state.clone())));
+        working_set.add_decl(Box::new(ClustersDrop::new(state.clone())));
+        working_set.add_decl(Box::new(ClustersGet::new(state.clone())));
         working_set.add_decl(Box::new(Collections::new(state.clone())));
         working_set.add_decl(Box::new(CollectionsCreate::new(state.clone())));
         working_set.add_decl(Box::new(CollectionsDrop::new(state.clone())));
@@ -708,6 +708,7 @@ fn merge_couchbase_delta(context: &mut EngineState, state: Arc<Mutex<State>>) {
         working_set.add_decl(Box::new(DocReplace::new(state.clone())));
         working_set.add_decl(Box::new(DocRemove::new(state.clone())));
         working_set.add_decl(Box::new(DocUpsert::new(state.clone())));
+        working_set.add_decl(Box::new(HealthCheck::new(state.clone())));
         working_set.add_decl(Box::new(Help));
         working_set.add_decl(Box::new(FakeData::new(state.clone())));
         working_set.add_decl(Box::new(Nodes::new(state.clone())));
@@ -733,7 +734,6 @@ fn merge_couchbase_delta(context: &mut EngineState, state: Arc<Mutex<State>>) {
         working_set.add_decl(Box::new(TutorialPrev::new(state.clone())));
         working_set.add_decl(Box::new(UseBucket::new(state.clone())));
         working_set.add_decl(Box::new(UseCapellaOrganization::new(state.clone())));
-        working_set.add_decl(Box::new(CbEnvDatabase::new(state.clone())));
         working_set.add_decl(Box::new(UseCmd::new(state.clone())));
         working_set.add_decl(Box::new(UseCollection::new(state.clone())));
         working_set.add_decl(Box::new(UseProject::new(state.clone())));

@@ -172,7 +172,7 @@ impl From<CBShellError> for ShellError {
                 span,
             ),
             CBShellError::ClusterNotFoundInConfig { name, span } => spanned_shell_error(
-                format!("Database {} was not found in configuration", name),
+                format!("Cluster {} was not found in configuration", name),
                 "Check configuration file has an entry for the named cluster".to_string(),
                 span,
             ),
@@ -185,10 +185,10 @@ impl From<CBShellError> for ShellError {
                 spanned_shell_error("Malformed response".to_string(), format!("Malformed response, {} - {}. Please raise this as a bug", message, response), span)
             }
             CBShellError::MustBeCapella { command_name, span } => {
-                spanned_shell_error(format!("{} can only be used with databases registered to a Capella organisation", command_name), "Check the configuration file to ensure that the database has a capella-organisation entry".to_string(), span)
+                spanned_shell_error(format!("{} can only be used with clusters registered to a Capella organisation", command_name), "Check the configuration file to ensure that the cluster has a capella-organisation entry".to_string(), span)
             },
             CBShellError::MustNotBeCapella { command_name, span } => {
-                spanned_shell_error(format!("{} cannot be run against Capella", command_name), "The command cannot be used with Capella databases.".to_string(), span)
+                spanned_shell_error(format!("{} cannot be run against Capella", command_name), "The command cannot be used with Capella clusters.".to_string(), span)
             },
             CBShellError::NoActiveBucket { span } => spanned_shell_error(
                 "Unable to determine an active bucket",
@@ -196,8 +196,8 @@ impl From<CBShellError> for ShellError {
                 span,
             ),
             CBShellError::NoActiveCluster { span } => spanned_shell_error(
-                "Unable to determine an active database",
-                "Set an active cluster using cb-env database".to_string(),
+                "Unable to determine an active cluster",
+                "Set an active cluster using cb-env cluster".to_string(),
                 span,
             ),
             CBShellError::NoActiveProject { span } => spanned_shell_error(

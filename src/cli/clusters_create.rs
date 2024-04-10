@@ -18,23 +18,23 @@ use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
 
 #[derive(Clone)]
-pub struct DatabasesCreate {
+pub struct ClustersCreate {
     state: Arc<Mutex<State>>,
 }
 
-impl DatabasesCreate {
+impl ClustersCreate {
     pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
 
-impl Command for DatabasesCreate {
+impl Command for ClustersCreate {
     fn name(&self) -> &str {
-        "databases create"
+        "clusters create"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("databases create")
+        Signature::build("clusters create")
             .required(
                 "definition",
                 SyntaxShape::String,
@@ -50,7 +50,7 @@ impl Command for DatabasesCreate {
     }
 
     fn usage(&self) -> &str {
-        "Creates a new database on the active Capella organization"
+        "Creates a new cluster on the active Capella organization"
     }
 
     fn run(
@@ -77,7 +77,7 @@ fn clusters_create(
     let definition: String = call.req(engine_state, stack, 0)?;
     let capella = call.get_flag(engine_state, stack, "capella")?;
 
-    debug!("Running databases create for {}", &definition);
+    debug!("Running clusters create for {}", &definition);
 
     let guard = state.lock().unwrap();
     let control = if let Some(c) = capella {

@@ -35,9 +35,9 @@ impl Command for Nodes {
 
     fn signature(&self) -> Signature {
         Signature::build("nodes").named(
-            "databases",
+            "clusters",
             SyntaxShape::String,
-            "the databases which should be contacted",
+            "the clusters which should be contacted",
             None,
         )
     }

@@ -64,7 +64,7 @@ impl CBPlayground {
 
             let mut contents = format!(
                 "version = 1
-[[database]]
+[[cluster]]
 identifier = \"local\"
 connstr = \"{}\"
 default-bucket = \"{}\"
