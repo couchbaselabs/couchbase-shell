@@ -255,6 +255,7 @@ pub(crate) fn ids_from_input(
         .into_interruptible_iter(Some(ctrl_c))
         .filter_map(move |v| match v {
             Value::String { val, .. } => Some(val),
+            Value::Int { val, .. } => Some(val.to_string()),
             Value::Record { val, .. } => {
                 if let Some(d) = val.get(id_column.clone()) {
                     match d {
