@@ -26,15 +26,14 @@ def build_collection_prompt [] {
        }
     }
 
-    let prompt = $"(($user) + ' at ' + ($cluster) + ' in ' + ($bucket_name) + ($collection_prompt))"
+    let prompt = $"(($user) + ' at ' + ($cluster) + ' in ' + ($bucket_name) + ($collection_prompt))
+
+"
 
     $prompt
 }
 
 $env.PROMPT_COMMAND = {build_collection_prompt}
-
-$env.PROMPT_INDICATOR = "
-> "
 
 $env.PROMPT_COMMAND_RIGHT = ""
 

@@ -32,15 +32,14 @@ def build_collection_prompt [] {
         "🗄"
     }
 
-    let prompt = $"('👤 ' + (ansi ub) + ($user) + (ansi reset) + ' 🏠 ' + (ansi yb) + ($cluster) + (ansi reset) + ' in ' + ($bucket_symbol) + ' ' + (ansi wb) + ($bucket_name) + ($collection_prompt) + (ansi reset))"
+    let prompt = $"('👤 ' + (ansi ub) + ($user) + (ansi reset) + ' 🏠 ' + (ansi yb) + ($cluster) + (ansi reset) + ' in ' + ($bucket_symbol) + ' ' + (ansi wb) + ($bucket_name) + ($collection_prompt) + (ansi reset))
+
+"
 
     $prompt
 }
 
 $env.PROMPT_COMMAND = {build_collection_prompt}
-
-$env.PROMPT_INDICATOR = "
-> "
 
 $env.PROMPT_COMMAND_RIGHT = ""
 $env.config = {
