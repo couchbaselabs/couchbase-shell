@@ -247,7 +247,6 @@ fn run(
             let mut collected = NuValueMap::default();
             collected.add_string("id", row.id, span);
             collected.add_string("score", format!("{}", row.score), span);
-            collected.add_string("index", row.index, span);
             collected.add_string("cluster", identifier.clone(), span);
 
             results.push(collected.into_value(span));
@@ -273,7 +272,6 @@ fn index_name_from_namespace(index: String, namespace: (String, String, String))
 #[derive(Debug, Deserialize)]
 struct SearchResultHit {
     score: f32,
-    index: String,
     id: String,
 }
 
