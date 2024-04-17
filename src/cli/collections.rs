@@ -51,6 +51,7 @@ impl Command for Collections {
                 "the clusters to query against",
                 None,
             )
+            .switch("all", "include system scopes in the output", Some('a'))
             .category(Category::Custom("couchbase".to_string()))
     }
 
@@ -83,6 +84,8 @@ fn collections_get(
     let guard = state.lock().unwrap();
 
     let scope: Option<String> = call.get_flag(engine_state, stack, "scope")?;
+
+    let display_all = call.has_flag(engine_state, stack, "all")?;
 
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
@@ -141,13 +144,25 @@ fn collections_get(
             }
 
             for collection in collections {
+                if scope_res.name == "_system".to_string() && !display_all {
+                    continue;
+                }
                 let mut collected = NuValueMap::default();
                 collected.add_string("scope", scope_res.name.clone(), span);
                 collected.add_string("collection", collection.name, span);
+
+                let expiry = if collection.max_expiry > 0 {
+                    format!("{:?}", Duration::from_secs(collection.max_expiry as u64))
+                } else if collection.max_expiry == 0 {
+                    "inherited".to_string()
+                } else {
+                    "".to_string()
+                };
+
                 collected.add(
                     "max_expiry",
-                    Value::Duration {
-                        val: Duration::from_secs(collection.max_expiry).as_nanos() as i64,
+                    Value::String {
+                        val: expiry,
                         internal_span: span,
                     },
                 );
@@ -184,7 +199,7 @@ pub struct ManifestCollection {
     pub uid: String,
     pub name: String,
     #[serde(rename = "maxTTL")]
-    pub max_expiry: u64,
+    pub max_expiry: i64,
 }
 
 #[derive(Debug, Deserialize)]
