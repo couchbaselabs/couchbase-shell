@@ -117,13 +117,13 @@ fn run_import(
 
             if let Value::Record { val, .. } = i {
                 let mut id = None;
-                let mut content = vec![];
+                let mut content = serde_json::Map::new();
                 for (k, v) in val.iter() {
                     if k.clone() == id_column {
                         id = v.as_str().ok();
                     }
 
-                    content.push(convert_nu_value_to_json_value(&v, span).ok()?);
+                    content.insert(k.clone(), convert_nu_value_to_json_value(&v, span).ok()?);
                 }
                 if let Some(i) = id {
                     return Some((i.to_string(), content));
@@ -131,7 +131,10 @@ fn run_import(
             }
             None
         })
-        .collect::<Vec<(String, Vec<serde_json::Value>)>>();
+        .collect::<Vec<(
+            String,
+            serde_json::Map<std::string::String, serde_json::Value>,
+        )>>();
 
     let mut all_items = vec![];
     for item in filtered {
