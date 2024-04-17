@@ -1,5 +1,4 @@
 use crate::cli::error::{no_active_bucket_error, no_active_cluster_error};
-use crate::cli::util::NuValueMap;
 use crate::state::State;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
@@ -59,15 +58,6 @@ impl Command for UseCollection {
 
         active.set_active_collection(call.req(engine_state, stack, 0)?);
 
-        let mut result = NuValueMap::default();
-        result.add_string(
-            "collection",
-            active
-                .active_collection()
-                .unwrap_or_else(|| String::from("")),
-            span,
-        );
-
-        Ok(result.into_pipeline_data(span))
+        Ok(PipelineData::new_with_metadata(None, span))
     }
 }
