@@ -2,7 +2,7 @@
 
 === Installation
 
-The current latest version is *0.75*. The version of `cbsh` is kept in line with the underlying version of nushell that is supported.
+The current latest version is *0.92*. The version of `cbsh` is kept in line with the underlying version of nushell that is supported.
 
 There are a couple ways you can get access to `cbsh`, the easiest one is to download our pre-built binaries for your platform of choice:
 
@@ -46,17 +46,19 @@ You can modify this through CLI arguments (see `./cbsh -h` for more information)
 Note: Unless you specify TLS settings then PLAIN authentication is used and your credentials are sent in plaintext.
 
 ```
-❯ ./cbsh --username Administrator --connstr 127.0.0.1 -p
-Password:
-[WARN] 2023-04-14 08:32:25.180 Using PLAIN authentication for cluster dev.local, credentials will sent in plaintext - configure tls to disable this warning
-[INFO] 2023-04-14 08:32:25.389 Thanks for trying CBSH!
-👤 Administrator 🏠 dev.local in 🗄 default
+❯ ./cbsh --username Administrator --connstr 127.0.0.1 -p password --disable-tls
+No config file found
+Would you like to create one now (Y/n)?
+n
+[WARN] 2024-04-17 09:20:22.466 Using PLAIN authentication for cluster default, credentials will sent in plaintext - configure tls to disable this warning
+[INFO] 2024-04-17 09:20:22.677 Thanks for trying CBSH!
+👤 Administrator 🏠 default
 >
 ```
-
 Once in the shell, you can start to execute commands (see the introduction section for more information).
 As a quick sanity check, list the nodes in the cluster:
 
+[options="nowrap"]
 ```
 > nodes
 ╭───┬───────────┬────────────────┬─────────┬──────────────────────────┬───────────────────────┬───────────────────────────┬──────────────┬─────────────┬─────────╮
@@ -69,12 +71,20 @@ As a quick sanity check, list the nodes in the cluster:
 Or if you have the `travel-sample` bucket installed you can switch to it and then fetch a document:
 
 ```
->  doc get airline_10 --bucket travel-sample | flatten
-───┬────────────┬─────────────────────┬────────────┬─────────┬─────────────┬──────┬──────┬──────────┬───────────────┬───────┬─────────
- # │     id     │         cas         │ content_id │  type   │    name     │ iata │ icao │ callsign │    country    │ error │ cluster
-───┼────────────┼─────────────────────┼────────────┼─────────┼─────────────┼──────┼──────┼──────────┼───────────────┼───────┼─────────
- 0 │ airline_10 │ 1629809626107281408 │         10 │ airline │ 40-Mile Air │ Q5   │ MLA  │ MILE-AIR │ United States │       │ default
-───┴────────────┴─────────────────────┴────────────┴─────────┴─────────────┴──────┴──────┴──────────┴───────────────┴───────┴─────────
+>  doc get airline_10 --bucket travel-sample
+╭───┬────────────┬──────────────────────────────┬─────────────────────┬───────┬─────────╮
+│ # │     id     │           content            │         cas         │ error │ cluster │
+├───┼────────────┼──────────────────────────────┼─────────────────────┼───────┼─────────┤
+│ 0 │ airline_10 │ ╭──────────┬───────────────╮ │ 1712321628975398912 │       │ default │
+│   │            │ │ id       │ 10            │ │                     │       │         │
+│   │            │ │ type     │ airline       │ │                     │       │         │
+│   │            │ │ name     │ 40-Mile Air   │ │                     │       │         │
+│   │            │ │ iata     │ Q5            │ │                     │       │         │
+│   │            │ │ icao     │ MLA           │ │                     │       │         │
+│   │            │ │ callsign │ MILE-AIR      │ │                     │       │         │
+│   │            │ │ country  │ United States │ │                     │       │         │
+│   │            │ ╰──────────┴───────────────╯ │                     │       │         │
+╰───┴────────────┴──────────────────────────────┴─────────────────────┴───────┴─────────╯
 ```
 
 === The config dotfiles

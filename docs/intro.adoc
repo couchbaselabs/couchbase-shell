@@ -1,60 +1,70 @@
 == Introduction
 
-Couchbase Shell is fully featured, so it does not only contain commands related to couchbase but is actually built on top of a general purpose shell called https://www.nushell.sh/[nushell]. This allows you to interact with the file system or any other command available on your machine, making it a great tool for both operational and development tasks on top of Couchbase.
+Couchbase Shell is fully featured, so it does not only contain commands related to couchbase but is actually built on top of a
+general purpose shell called https://www.nushell.sh/[nushell]. This allows you to interact with the file system or any other
+command available on your machine, making it a great tool for both operational and development tasks on top of Couchbase.
 
-The following introduction only touches on the basic concepts to make you productive quickly. We recommend also checking out the great https://www.nushell.sh/book[nushell documentation] so you can get the most out of it.
+The following introduction only touches on the basic concepts to make you productive quickly. We recommend also checking out the
+great https://www.nushell.sh/book[nushell documentation] so you can get the most out of it.
 
 === Navigating the Shell
 
-Commands take inputs and produce output in a structured manner, most often represented as tables. Note how both the generic `ls` command and the couchbase-specific `buckets` command both produce a table as their output:
+Commands take inputs and produce output in a structured manner, most often represented as tables. Note how both the generic `ls`
+command and the couchbase-specific `buckets` command both produce a table as their output:
 
 ```
 > ls
-────┬──────────────┬──────┬──────────┬────────────────
- #  │     name     │ type │   size   │    modified
-────┼──────────────┼──────┼──────────┼────────────────
-  0 │ CHANGELOG.md │ File │   4.8 KB │ 2 hours ago
-  1 │ Cargo.lock   │ File │ 170.2 KB │ 16 minutes ago
-  2 │ Cargo.toml   │ File │   1.8 KB │ 16 minutes ago
-  3 │ LICENSE      │ File │  11.4 KB │ 2 days ago
-  4 │ README.md    │ File │   8.6 KB │ 9 minutes ago
-  5 │ docs         │ Dir  │    544 B │ 2 days ago
-  6 │ examples     │ Dir  │    192 B │ 2 days ago
-  7 │ jupyter      │ Dir  │    128 B │ 2 days ago
-  8 │ src          │ Dir  │    256 B │ 2 days ago
-  9 │ target       │ Dir  │    224 B │ 32 minutes ago
- 10 │ tests        │ Dir  │    224 B │ 2 days ago
-────┴──────────────┴──────┴──────────┴────────────────
+╭────┬─────────────────────┬──────┬───────────┬───────────────╮
+│  # │        name         │ type │   size    │   modified    │
+├────┼─────────────────────┼──────┼───────────┼───────────────┤
+│  0 │ CHANGELOG.md        │ file │   8.7 KiB │ 2 months ago  │
+│  1 │ Cargo.lock          │ file │ 194.6 KiB │ a day ago     │
+│  2 │ Cargo.toml          │ file │   2.7 KiB │ a day ago     │
+│  3 │ Dockerfile          │ file │     590 B │ 2 months ago  │
+│  4 │ LICENSE             │ file │  11.1 KiB │ 2 months ago  │
+│  5 │ LICENSE_AGREEMENT   │ file │  43.7 KiB │ 2 months ago  │
+│  6 │ NOTICES             │ file │ 221.6 KiB │ a week ago    │
+│  7 │ README.md           │ file │   9.4 KiB │ 2 months ago  │
+│  8 │ build               │ dir  │      64 B │ 4 weeks ago   │
+│  9 │ docs                │ dir  │     608 B │ 3 minutes ago │
+│ 10 │ examples            │ dir  │     192 B │ 4 months ago  │
+│ 11 │ jupyter             │ dir  │     128 B │ 4 months ago  │
+│ 12 │ rust-toolchain.toml │ file │     524 B │ 2 weeks ago   │
+│ 13 │ src                 │ dir  │     416 B │ a day ago     │
+│ 14 │ target              │ dir  │     352 B │ 2 weeks ago   │
+│ 15 │ tests               │ dir  │     160 B │ 4 months ago  │
+╰────┴─────────────────────┴──────┴───────────┴───────────────╯
 ```
-
+[options="nowrap"]
 ```
 > buckets
-───┬──────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────
- # │ cluster  │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud
-───┼──────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────
- 0 │ default  │ beer-sample   │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false
- 1 │ default  │ default       │ couchbase │        1 │ none                 │  104.9 MB │ true          │        │ false
- 2 │ default  │ targetBucket  │ couchbase │        0 │ none                 │  104.9 MB │ true          │        │ false
- 3 │ default  │ travel-sample │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false
-───┴──────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴────────┴───────
+╭───┬─────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────╮
+│ # │ cluster │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud │
+├───┼─────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────┤
+│ 0 │ default │ beer-sample   │ couchbase │        1 │ none                 │ 200.0 MiB │ false         │        │ false │
+│ 1 │ default │ default       │ couchbase │        2 │ none                 │ 100.0 MiB │ true          │        │ false │
+│ 2 │ default │ travel-sample │ couchbase │        2 │ none                 │ 200.0 MiB │ false         │        │ false │
+╰───┴─────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴────────┴───────╯
 ```
 
-You can pipe the output into other commands, for example if you only want to see buckets that have `sample` in their name you can utilize the `where` command:
+You can pipe the output into other commands, for example if you only want to see buckets that have `sample` in their name you
+can utilize the `where` command:
 
+[options="nowrap"]
 ```
 > buckets | where name =~ "sample"
-───┬──────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────
- # │ cluster  │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud
-───┼──────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────
- 0 │ default  │ beer-sample   │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false
- 1 │ default  │ travel-sample │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false
-───┴──────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴────────┴───────
+╭───┬─────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────╮
+│ # │ cluster │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud │
+├───┼─────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────┤
+│ 0 │ default │ beer-sample   │ couchbase │        1 │ none                 │ 200.0 MiB │ false         │        │ false │
+│ 1 │ default │ travel-sample │ couchbase │        2 │ none                 │ 200.0 MiB │ false         │        │ false │
+╰───┴─────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴────────┴───────╯
 ```
 
 In a similar fashion you can turn this structured table into other output formats, for example JSON:
 
 ```
-> buckets | where name =~ "sample" | to json --pretty 2
+> buckets | where name =~ "sample" | to json
 [
   {
     "cluster": "default",
@@ -71,7 +81,7 @@ In a similar fashion you can turn this structured table into other output format
     "cluster": "default",
     "name": "travel-sample",
     "type": "couchbase",
-    "replicas": 1,
+    "replicas": 2,
     "min_durability_level": "none",
     "ram_quota": 209715200,
     "flush_enabled": false,
@@ -81,18 +91,21 @@ In a similar fashion you can turn this structured table into other output format
 ]
 ```
 
-Exactly this type of composition takes the unix philosophy of "do one thing well" and meshes it together with the idea of flexible structured pipelines. This allows to build powerful compositions that help you in your daily operations with Couchbase, both from a developer or operations point of view.
+Exactly this type of composition takes the unix philosophy of "do one thing well" and meshes it together with the idea of flexible
+structured pipelines. This allows to build powerful compositions that help you in your daily operations with Couchbase, both from
+a developer or operations point of view.
 
 === Getting Help
 
-Other than using this documentation for help, each command can be called with `-h` or `--help` to get information about potential flags, arguments and subcommands. Also, some commands provide additional examples.
+Other than using this documentation for help, each command can be called with `-h` or `--help` to get information about potential
+flags, arguments and subcommands. Also, some commands provide additional examples.
 
 ```
 > buckets -h
 Perform bucket management operations
 
 Usage:
-  > buckets <subcommand> {flags}
+  > buckets {flags}
 
 Subcommands:
   buckets config - Shows the bucket config (low level)
@@ -104,48 +117,51 @@ Subcommands:
   buckets update - Updates a bucket
 
 Flags:
-  -h, --help: Display this help message
-  --clusters <string>: the clusters which should be contacted
+  -h, --help - Display the help message for this command
+  --clusters <String> - the clusters which should be contacted
 ```
 
-Some commands (like the one above) only act as groupings for subcommands, like `from`, `to` or `doc`. Since they do not serve a purpose on their own, they will render their help output automatically:
+Some commands (like the one above) only act as groupings for subcommands, like `from`, `to` or `doc`. Since they do not serve a
+purpose on their own, they will render their help output automatically:
 
 ```
 > doc
-Perform document operations against a bucket or collection
-
 Usage:
-  > doc <subcommand> {flags}
+  > doc
 
 Subcommands:
   doc get - Fetches a document through the data service
+  doc import - Import documents from a file through the data service
   doc insert - Insert a document through the data service
   doc remove - Removes a document through the data service
   doc replace - Replace a document through the data service
   doc upsert - Upsert (insert or override) a document through the data service
 
 Flags:
-  -h, --help: Display this help message
+  -h, --help - Display the help message for this command
 ```
 
 === The Prompt explained
-Couchbase Shell uses a custom, two line prompt to show you exactly in what environment you are working in right now. Since you can connect to different clusters, switch buckets etc. it is important to know what is currently "active". Here is a sample prompt that will greet you when starting the shell:
+Couchbase Shell uses a custom, two line prompt to show you exactly in what environment you are working in right now. Since you
+can connect to different clusters, switch buckets etc. it is important to know what is currently "active", as the active buckets/scope/collection
+will be what commands are run against. Here is a sample prompt that will greet you when starting the shell:
 
 ```
-👤 Administrator at 🏠 local in 🗄 travel-sample
+👤 Administrator 🏠 local in 🗄 travel-sample._default._default
 >
 ```
 
 It tells you that your user is `Administrator`, the current active cluster identifier is `local` and the active bucket is `travel-sample`.
+The current scope and collection have not been set, so they assume the `_default` value.
 
 If you have an active scope or collection set then the prompt will also update to reflect that:
 
 ```
-👤 Administrator 🏠 dev.local in 🗄 travel-sample.myscope.mycollection
+👤 Administrator 🏠 local in 🗄 travel-sample.inventory.landmark
 >
 ```
 
-In the second line, your actual user prompt starts.
+If we ran a `doc get` it would fetch the doc from travel-sample.inventory.landmark. In the second line, your actual user prompt starts.
 
 === Loading Data into the Shell
 
@@ -242,29 +258,34 @@ In our case we use `from json`:
 ╰────────┴─────────╯
 ```
 
-TIP: look at the many different import formats `from` supports, including csv, xml, yaml and even sqlite. With this simple tool at hand you are able to load many different data formats quickly and import them into couchbase!
+TIP: look at the many different import formats `from` supports, including csv, xml, yaml and even sqlite. With this simple tool
+at hand you are able to load many different data formats quickly and import them into couchbase!
 
 We cannot use this format directly with commands like `doc upsert` as the command expects two "columns" in the data - id and content.
 This means that we have to perform some translation from the above format to one that `doc upsert` understands.
 To do this we `wrap` the entire document into a content column and then extract the id that we want to use:
 
 ```
-> open user.json | wrap content | insert id {|it| echo $it.content.name}
-╭─────────┬───────────────────╮
-│ content │ {record 3 fields} │
-│ id      │ Michael           │
-╰─────────┴───────────────────╯
+> open user.json | wrap content | insert id $in.content.name
+╭─────────┬──────────────────────╮
+│         │ ╭────────┬─────────╮ │
+│ content │ │ name   │ Michael │ │
+│         │ │ age    │ 32      │ │
+│         │ │ height │ 180     │ │
+│         │ ╰────────┴─────────╯ │
+│ id      │ Michael              │
+╰─────────┴──────────────────────╯
 ```
 
 There are many other approaches to achieving this same result.
 With our data in the correct format we can then upsert:
 
 ```
-> open user.json | wrap content | insert id {|it| echo $it.content.name} | doc upsert
+> open user.json | wrap content | insert id $in.content.name | doc upsert
 ╭───┬───────────┬─────────┬────────┬──────────┬───────────╮
 │ # │ processed │ success │ failed │ failures │  cluster  │
 ├───┼───────────┼─────────┼────────┼──────────┼───────────┤
-│ 0 │         1 │       1 │      0 │          │ dev.local │
+│ 0 │         1 │       1 │      0 │          │ local     │
 ╰───┴───────────┴─────────┴────────┴──────────┴───────────╯
 ```
 

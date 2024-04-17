@@ -1,6 +1,7 @@
 == Couchbase Commands
 
-The following sections discuss the individual couchbase specific commands in greater detail. Remember, you can always mix and match them with built-in other shell commands as well as executables from your environment.
+The following sections discuss the individual couchbase specific commands in greater detail. Remember, you can always mix and match
+them with built-in other shell commands as well as executables from your environment.
 
 === Working with `clusters`
 
@@ -20,6 +21,7 @@ The `cb-env managed` command lists all the clusters you have registered with the
 
 The `buckets` command lists all the buckets from your active cluster:
 
+[options="nowrap"]
 ```
 > buckets
 ╭───┬───────────┬─────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────╮
@@ -32,7 +34,7 @@ The `buckets` command lists all the buckets from your active cluster:
 ```
 
 As an advanced command, it is also possible to get the configuration for a bucket:
-
+[options="nowrap"]
 ```
 > buckets config default
 ╭────────────────────────┬──────────────────────────────────────────────────────────────────────────────────────╮
@@ -84,16 +86,16 @@ The `scopes` and `collections` commands can be used for managing scopes and coll
 Fetches scopes through the HTTP API
 
 Usage:
-  > scopes <subcommand> {flags}
+  > scopes {flags}
 
 Subcommands:
   scopes create - Creates scopes through the HTTP API
   scopes drop - Deletes scopes through the HTTP API
 
 Flags:
-  -h, --help: Display this help message
-  --bucket <string>: the name of the bucket
-  --clusters <string>: the clusters to query against
+  -h, --help - Display the help message for this command
+  --bucket <String> - the name of the bucket
+  --clusters <String> - the clusters to query against
 ```
 
 To list all scopes in the bucket you would use:
@@ -155,17 +157,17 @@ You can also create and remove scopes:
 Fetches collections through the HTTP API
 
 Usage:
-  > collections <subcommand> {flags}
+  > collections {flags}
 
 Subcommands:
   collections create - Creates collections through the HTTP API
   collections drop - Deletes collections through the HTTP API
 
 Flags:
-  -h, --help: Display this help message
-  --bucket <string>: the name of the bucket
-  --scope <string>: the name of the scope
-  --clusters <string>: the clusters to query against
+  -h, --help - Display the help message for this command
+  --bucket <String> - the name of the bucket
+  --scope <String> - the name of the scope
+  --clusters <String> - the clusters to query against
 ```
 
 To list all collection in the bucket you would use:
@@ -223,14 +225,16 @@ You can also create and remove collections:
 
 The `nodes` command allows you to list all the nodes of the cluster you are currently connected to.
 
+[options="nowrap"]
 ```
 > nodes
-───┬──────────┬─────────────────────┬─────────┬───────────────────┬───────────────────────┬──────────────────────────┬──────────────┬─────────────
- # │ cluster │ hostname            │ status  │ services          │ version               │ os                       │ memory_total │ memory_free
-───┼──────────┼─────────────────────┼─────────┼───────────────────┼───────────────────────┼──────────────────────────┼──────────────┼─────────────
- 0 │ remote   │ 10.143.200.101:8091 │ healthy │ indexing,kv,query │ 6.5.0-4960-enterprise │ x86_64-unknown-linux-gnu │       2.1 GB │    837.7 MB
- 1 │ remote   │ 10.143.200.102:8091 │ healthy │ indexing,kv,query │ 6.5.0-4960-enterprise │ x86_64-unknown-linux-gnu │       2.1 GB │      1.0 GB
-───┴──────────┴─────────────────────┴─────────┴───────────────────┴───────────────────────┴──────────────────────────┴──────────────┴─────────────
+╭───┬──────────────┬──────────────────────┬─────────┬──────────────────────────┬───────────────────────┬───────────────────────────┬──────────────┬─────────────┬─────────╮
+│ # │   cluster    │       hostname       │ status  │         services         │        version        │            os             │ memory_total │ memory_free │ capella │
+├───┼──────────────┼──────────────────────┼─────────┼──────────────────────────┼───────────────────────┼───────────────────────────┼──────────────┼─────────────┼─────────┤
+│ 0 │ prod-us-west │ 192.168.107.128:8091 │ healthy │ search,indexing,kv,query │ 7.6.2-3505-enterprise │ aarch64-unknown-linux-gnu │   6201221120 │  2227081216 │ false   │
+│ 1 │ prod-us-west │ 192.168.107.129:8091 │ healthy │ search,indexing,kv,query │ 7.6.2-3505-enterprise │ aarch64-unknown-linux-gnu │   6201221120 │  2204721152 │ false   │
+│ 2 │ prod-us-west │ 192.168.107.130:8091 │ healthy │ search,indexing,kv,query │ 7.6.2-3505-enterprise │ aarch64-unknown-linux-gnu │   6201221120 │  2209816576 │ false   │
+╰───┴──────────────┴──────────────────────┴─────────┴──────────────────────────┴───────────────────────┴───────────────────────────┴──────────────┴─────────────┴─────────╯
 ```
 
 === Reading and Writing `doc`uments
@@ -244,23 +248,32 @@ You can retrieve a document with `doc get`:
 
 ```
 > doc get airline_10
-╭───┬────────────┬───────────────────┬─────────────────────┬───────┬───────────╮
-│ # │     id     │      content      │         cas         │ error │  cluster  │
-├───┼────────────┼───────────────────┼─────────────────────┼───────┼───────────┤
-│ 0 │ airline_10 │ {record 7 fields} │ 1681456999724089344 │       │ dev.local │
-╰───┴────────────┴───────────────────┴─────────────────────┴───────┴───────────╯
+╭───┬────────────┬──────────────────────────────┬─────────────────────┬───────┬──────────────╮
+│ # │     id     │           content            │         cas         │ error │   cluster    │
+├───┼────────────┼──────────────────────────────┼─────────────────────┼───────┼──────────────┤
+│ 0 │ airline_10 │ ╭──────────┬───────────────╮ │ 1712321628975398912 │       │ prod-us-west │
+│   │            │ │ id       │ 10            │ │                     │       │              │
+│   │            │ │ type     │ airline       │ │                     │       │              │
+│   │            │ │ name     │ 40-Mile Air   │ │                     │       │              │
+│   │            │ │ iata     │ Q5            │ │                     │       │              │
+│   │            │ │ icao     │ MLA           │ │                     │       │              │
+│   │            │ │ callsign │ MILE-AIR      │ │                     │       │              │
+│   │            │ │ country  │ United States │ │                     │       │              │
+│   │            │ ╰──────────┴───────────────╯ │                     │       │              │
+╰───┴────────────┴──────────────────────────────┴─────────────────────┴───────┴──────────────╯
 ```
 
 To distinguish the actual content from the metadata, the content is nested in the `content` field.
 If you want to have everything at the toplevel, you can pipe to the `flatten` command:
 
+[options="nowrap"]
 ```
 > doc get airline_10 | flatten
-╭───┬────────────┬──────────┬───────────────┬──────┬──────┬────────────┬─────────────┬─────────┬─────────────────────┬───────┬───────────╮
-│ # │     id     │ callsign │    country    │ iata │ icao │ content_id │    name     │  type   │         cas         │ error │  cluster  │
-├───┼────────────┼──────────┼───────────────┼──────┼──────┼────────────┼─────────────┼─────────┼─────────────────────┼───────┼───────────┤
-│ 0 │ airline_10 │ MILE-AIR │ United States │ Q5   │ MLA  │         10 │ 40-Mile Air │ airline │ 1681456999724089344 │       │ dev.local │
-╰───┴────────────┴──────────┴───────────────┴──────┴──────┴────────────┴─────────────┴─────────┴─────────────────────┴───────┴───────────╯
+╭───┬────────────┬────────────┬─────────┬─────────────┬──────┬──────┬──────────┬───────────────┬─────────────────────┬───────┬──────────────╮
+│ # │     id     │ content_id │  type   │    name     │ iata │ icao │ callsign │    country    │         cas         │ error │   cluster    │
+├───┼────────────┼────────────┼─────────┼─────────────┼──────┼──────┼──────────┼───────────────┼─────────────────────┼───────┼──────────────┤
+│ 0 │ airline_10 │         10 │ airline │ 40-Mile Air │ Q5   │ MLA  │ MILE-AIR │ United States │ 1712321628975398912 │       │ prod-us-west │
+╰───┴────────────┴────────────┴─────────┴─────────────┴──────┴──────┴──────────┴───────────────┴─────────────────────┴───────┴──────────────╯
 ```
 
 If the document is not found, an empty result is returned.
@@ -268,14 +281,38 @@ If the document is not found, an empty result is returned.
 To perform a bulk get operation, the incoming stream can be utilized.
 
 ```
-> echo [airline_10 airline_10748 airline_137] | wrap id | doc get
-╭───┬───────────────┬───────────────────┬─────────────────────┬───────┬───────────╮
-│ # │      id       │      content      │         cas         │ error │  cluster  │
-├───┼───────────────┼───────────────────┼─────────────────────┼───────┼───────────┤
-│ 0 │ airline_10    │ {record 7 fields} │ 1681456999724089344 │       │ dev.local │
-│ 1 │ airline_10748 │ {record 7 fields} │ 1681456996753211392 │       │ dev.local │
-│ 2 │ airline_137   │ {record 7 fields} │ 1681457004278579200 │       │ dev.local │
-╰───┴───────────────┴───────────────────┴─────────────────────┴───────┴───────────╯
+> [airline_10 airline_10748 airline_137] | wrap id | doc get
+╭───┬───────────────┬──────────────────────────────┬─────────────────────┬───────┬──────────────╮
+│ # │      id       │           content            │         cas         │ error │   cluster    │
+├───┼───────────────┼──────────────────────────────┼─────────────────────┼───────┼──────────────┤
+│ 0 │ airline_10    │ ╭──────────┬───────────────╮ │ 1712321628975398912 │       │ prod-us-west │
+│   │               │ │ id       │ 10            │ │                     │       │              │
+│   │               │ │ type     │ airline       │ │                     │       │              │
+│   │               │ │ name     │ 40-Mile Air   │ │                     │       │              │
+│   │               │ │ iata     │ Q5            │ │                     │       │              │
+│   │               │ │ icao     │ MLA           │ │                     │       │              │
+│   │               │ │ callsign │ MILE-AIR      │ │                     │       │              │
+│   │               │ │ country  │ United States │ │                     │       │              │
+│   │               │ ╰──────────┴───────────────╯ │                     │       │              │
+│ 1 │ airline_137   │ ╭──────────┬────────────╮    │ 1712321633323712512 │       │ prod-us-west │
+│   │               │ │ id       │ 137        │    │                     │       │              │
+│   │               │ │ type     │ airline    │    │                     │       │              │
+│   │               │ │ name     │ Air France │    │                     │       │              │
+│   │               │ │ iata     │ AF         │    │                     │       │              │
+│   │               │ │ icao     │ AFR        │    │                     │       │              │
+│   │               │ │ callsign │ AIRFRANS   │    │                     │       │              │
+│   │               │ │ country  │ France     │    │                     │       │              │
+│   │               │ ╰──────────┴────────────╯    │                     │       │              │
+│ 2 │ airline_10748 │ ╭──────────┬───────────────╮ │ 1712321631323947008 │       │ prod-us-west │
+│   │               │ │ id       │ 10748         │ │                     │       │              │
+│   │               │ │ type     │ airline       │ │                     │       │              │
+│   │               │ │ name     │ Locair        │ │                     │       │              │
+│   │               │ │ iata     │ ZQ            │ │                     │       │              │
+│   │               │ │ icao     │ LOC           │ │                     │       │              │
+│   │               │ │ callsign │ LOCAIR        │ │                     │       │              │
+│   │               │ │ country  │ United States │ │                     │       │              │
+│   │               │ ╰──────────┴───────────────╯ │                     │       │              │
+╰───┴───────────────┴──────────────────────────────┴─────────────────────┴───────┴──────────────╯
 ```
 
 If `doc get` operates on an incoming stream it will extract the document id from the `id` column.
@@ -314,7 +351,7 @@ Documents can be removed with `doc remove`.
 Similar to `doc get`, if you want to delete more than one document at the same time, provide a stream of ids with an `id` column:
 
 ```
-> echo [airline_10 airline_10748 airline_137] | wrap id | doc remove
+> [airline_10 airline_10748 airline_137] | wrap id | doc remove
 ╭───┬───────────┬─────────┬────────┬───────────────┬───────────╮
 │ # │ processed │ success │ failed │   failures    │  cluster  │
 ├───┼───────────┼─────────┼────────┼───────────────┼───────────┤
@@ -329,6 +366,6 @@ The `version` command lists the version of the couchbase shell.
 ```
 > version
 ╭─────────┬────────╮
-│ version │ 0.75.1 │
+│ version │ 0.92.0 │
 ╰─────────┴────────╯
 ```
