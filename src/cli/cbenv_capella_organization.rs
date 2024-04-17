@@ -1,7 +1,6 @@
 use crate::state::State;
 use std::sync::{Arc, Mutex};
 
-use crate::cli::util::NuValueMap;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -47,15 +46,6 @@ impl Command for UseCapellaOrganization {
         let guard = self.state.lock().unwrap();
         guard.set_active_capella_org(call.req(engine_state, stack, 0)?)?;
 
-        let mut result = NuValueMap::default();
-        result.add_string(
-            "capella_organization",
-            guard
-                .active_capella_org_name()
-                .unwrap_or_else(|| String::from("")),
-            call.head,
-        );
-
-        Ok(result.into_pipeline_data(call.head))
+        Ok(PipelineData::new_with_metadata(None, call.head))
     }
 }

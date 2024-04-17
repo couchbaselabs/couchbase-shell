@@ -1,7 +1,6 @@
 use crate::state::State;
 use std::sync::{Arc, Mutex};
 
-use crate::cli::util::NuValueMap;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -47,9 +46,6 @@ impl Command for CbEnvCluster {
         let guard = self.state.lock().unwrap();
         guard.set_active(call.req(engine_state, stack, 0)?)?;
 
-        let mut result = NuValueMap::default();
-        result.add_string("cluster", guard.active(), call.head);
-
-        Ok(result.into_pipeline_data(call.head))
+        Ok(PipelineData::new_with_metadata(None, call.head))
     }
 }

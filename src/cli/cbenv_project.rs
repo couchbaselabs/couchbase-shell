@@ -1,4 +1,3 @@
-use crate::cli::util::NuValueMap;
 use crate::state::State;
 
 use nu_engine::CallExt;
@@ -45,13 +44,6 @@ impl Command for UseProject {
 
         active.set_active_project(call.req(engine_state, stack, 0)?);
 
-        let mut result = NuValueMap::default();
-        result.add_string(
-            "project",
-            active.active_project().unwrap_or_else(|| String::from("")),
-            call.head,
-        );
-
-        Ok(result.into_pipeline_data(call.head))
+        Ok(PipelineData::new_with_metadata(None, call.head))
     }
 }
