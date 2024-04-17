@@ -40,7 +40,7 @@ impl Command for CbEnvUnregister {
     }
 
     fn usage(&self) -> &str {
-        "Registers a cluster for use with the shell"
+        "Unregisters a cluster for use with the shell"
     }
 
     fn run(
