@@ -122,10 +122,10 @@ impl State {
             //}
 
             if let Some(s) = remote.active_scope() {
-                remote.set_active_scope(s);
+                remote.set_active_scope(Some(s));
             }
             if let Some(c) = remote.active_collection() {
-                remote.set_active_collection(c);
+                remote.set_active_collection(Some(c));
             }
         }
 

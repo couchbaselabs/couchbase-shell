@@ -56,7 +56,7 @@ impl Command for UseCollection {
             return Err(no_active_bucket_error(span));
         }
 
-        active.set_active_collection(call.req(engine_state, stack, 0)?);
+        active.set_active_collection(Some(call.req(engine_state, stack, 0)?));
 
         Ok(PipelineData::new_with_metadata(None, span))
     }
