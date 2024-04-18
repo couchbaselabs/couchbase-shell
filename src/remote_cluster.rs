@@ -122,18 +122,18 @@ impl RemoteCluster {
         self.active_scope.lock().unwrap().as_ref().cloned()
     }
 
-    pub fn set_active_scope(&self, name: String) {
+    pub fn set_active_scope(&self, name: Option<String>) {
         let mut active = self.active_scope.lock().unwrap();
-        *active = Some(name);
+        *active = name;
     }
 
     pub fn active_collection(&self) -> Option<String> {
         self.active_collection.lock().unwrap().as_ref().cloned()
     }
 
-    pub fn set_active_collection(&self, name: String) {
+    pub fn set_active_collection(&self, name: Option<String>) {
         let mut active = self.active_collection.lock().unwrap();
-        *active = Some(name);
+        *active = name;
     }
 
     pub fn deactivate(&self) {

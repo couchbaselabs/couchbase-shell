@@ -25,6 +25,7 @@ impl Command for UseScope {
     fn signature(&self) -> Signature {
         Signature::build("cb-env scope")
             .required("identifier", SyntaxShape::String, "the name of the scope")
+            .switch("preserve", "preserve the cb-env collection", Some('p'))
             .category(Category::Custom("couchbase".to_string()))
     }
 
@@ -52,7 +53,11 @@ impl Command for UseScope {
             return Err(no_active_bucket_error(span));
         }
 
-        active.set_active_scope(call.req(engine_state, stack, 0)?);
+        active.set_active_scope(Some(call.req(engine_state, stack, 0)?));
+
+        if !call.has_flag(engine_state, stack, "preserve")? {
+            active.set_active_collection(None);
+        }
 
         Ok(PipelineData::new_with_metadata(None, span))
     }

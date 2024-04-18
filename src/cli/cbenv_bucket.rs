@@ -25,6 +25,11 @@ impl Command for UseBucket {
     fn signature(&self) -> Signature {
         Signature::build("cb-env bucket")
             .required("identifier", SyntaxShape::String, "the name of the bucket")
+            .switch(
+                "preserve",
+                "preserve the cb-env scope & collection",
+                Some('p'),
+            )
             .category(Category::Custom("couchbase".to_string()))
     }
 
@@ -50,6 +55,11 @@ impl Command for UseBucket {
         };
 
         active.set_active_bucket(call.req(engine_state, stack, 0)?);
+
+        if !call.has_flag(engine_state, stack, "preserve")? {
+            active.set_active_scope(None);
+            active.set_active_collection(None);
+        }
 
         Ok(PipelineData::new_with_metadata(None, span))
     }
