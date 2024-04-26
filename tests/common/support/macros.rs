@@ -18,13 +18,12 @@ macro_rules! cbsh {
         pub use itertools::Itertools;
         pub use std::io::prelude::*;
         pub use std::process::{Command, Stdio};
-        pub use $crate::support::NATIVE_PATH_ENV_VAR;
+        pub use crate::common::support::{NATIVE_PATH_ENV_VAR, LOGGER_PREFIX, fs, shell_os_paths, macros, Outcome};
         pub use std::time::Instant;
         pub use std::ops::Sub;
         use std::env;
-        use $crate::support::LOGGER_PREFIX;
 
-        let test_bins = $crate::support::fs::binaries();
+        let test_bins = fs::binaries();
 
         let cwd = std::env::current_dir().expect("Could not get current working directory.");
         let test_bins = nu_path::canonicalize_with(&test_bins, cwd).unwrap_or_else(|e| {
@@ -35,7 +34,7 @@ macro_rules! cbsh {
             )
         });
 
-        let mut paths = $crate::support::shell_os_paths();
+        let mut paths = shell_os_paths();
         paths.insert(0, test_bins);
 
         let path = $path.lines().collect::<Vec<_>>().join("; ");
@@ -45,28 +44,24 @@ macro_rules! cbsh {
             Err(_) => panic!("Couldn't join paths for PATH var."),
         };
 
-        let target_cwd = $crate::support::fs::in_directory(&$cwd);
+        let target_cwd = fs::in_directory(&$cwd);
 
         let start = Instant::now();
-        let process = match Command::new($crate::support::fs::executable_path())
+        let process = match Command::new(fs::executable_path())
             .env("PWD", &target_cwd)  // setting PWD is enough to set cwd
             .env(NATIVE_PATH_ENV_VAR, paths_joined)
             .envs(env::vars())  // passthrough env vars
             .current_dir(&target_cwd)
-            // .arg("--no-history")
-            // .arg("--config-file")
-            // .arg($crate::support::fs::DisplayPath::display_path(&$crate::support::fs::fixtures().join("playground/config/default.toml")))
             .arg("--logger-prefix")
             .arg(format!("\"{}\"", LOGGER_PREFIX.to_string()))
             .arg("-c")
-            .arg(format!("{}", $crate::support::fs::DisplayPath::display_path(&path)))
+            .arg(format!("{}", fs::DisplayPath::display_path(&path)))
             .stdout(Stdio::piped())
-            // .stdin(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
         {
             Ok(child) => child,
-            Err(why) => panic!("Can't run test {:?} {}", $crate::support::fs::executable_path(), why.to_string()),
+            Err(why) => panic!("Can't run test {:?} {}", fs::executable_path(), why.to_string()),
         };
 
         // let stdin = process.stdin.as_mut().expect("couldn't open stdin");
@@ -78,7 +73,7 @@ macro_rules! cbsh {
             .wait_with_output()
             .expect("couldn't read from stdout/stderr");
 
-        let out = $crate::support::macros::read_std(&output.stdout);
+        let out = macros::read_std(&output.stdout);
         let err = String::from_utf8_lossy(&output.stderr);
         let taken = Instant::now().sub(start);
 
@@ -97,7 +92,7 @@ macro_rules! cbsh {
             }
         }
 
-        $crate::support::Outcome::new(out, actual_err.join("\n"))
+        Outcome::new(out, actual_err.join("\n"))
     }};
 }
 
