@@ -1,4 +1,3 @@
-use std::io::Read;
 use std::ops::Div;
 use std::path::{Path, PathBuf};
 
@@ -152,72 +151,6 @@ impl DisplayPath for &String {
         (*self).to_string()
     }
 }
-pub enum Stub<'a> {
-    FileWithContent(&'a str, &'a str),
-    FileWithContentToBeTrimmed(&'a str, &'a str),
-    EmptyFile(&'a str),
-}
-
-pub fn file_contents(full_path: impl AsRef<Path>) -> String {
-    let mut file = std::fs::File::open(full_path.as_ref()).expect("can not open file");
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)
-        .expect("can not read file");
-    contents
-}
-
-pub fn file_contents_binary(full_path: impl AsRef<Path>) -> Vec<u8> {
-    let mut file = std::fs::File::open(full_path.as_ref()).expect("can not open file");
-    let mut contents = Vec::new();
-    file.read_to_end(&mut contents).expect("can not read file");
-    contents
-}
-
-pub fn line_ending() -> String {
-    #[cfg(windows)]
-    {
-        String::from("\r\n")
-    }
-
-    #[cfg(not(windows))]
-    {
-        String::from("\n")
-    }
-}
-
-pub fn delete_file_at(full_path: impl AsRef<Path>) {
-    let full_path = full_path.as_ref();
-
-    if full_path.exists() {
-        std::fs::remove_file(full_path).expect("can not delete file");
-    }
-}
-
-pub fn create_file_at(full_path: impl AsRef<Path>) -> Result<(), std::io::Error> {
-    let full_path = full_path.as_ref();
-
-    if full_path.parent().is_some() {
-        panic!("path exists");
-    }
-
-    std::fs::write(full_path, b"fake data")
-}
-
-pub fn copy_file_to(source: &str, destination: &str) {
-    std::fs::copy(source, destination).expect("can not copy file");
-}
-
-pub fn files_exist_at(files: Vec<impl AsRef<Path>>, path: impl AsRef<Path>) -> bool {
-    files.iter().all(|f| {
-        let mut loc = PathBuf::from(path.as_ref());
-        loc.push(f);
-        loc.exists()
-    })
-}
-
-pub fn delete_directory_at(full_path: &str) {
-    std::fs::remove_dir_all(PathBuf::from(full_path)).expect("can not remove directory");
-}
 
 pub fn executable_path() -> PathBuf {
     let mut path = binaries();
@@ -255,14 +188,6 @@ pub fn binaries() -> PathBuf {
         .ok()
         .map(|target_dir| PathBuf::from(target_dir).join(&build_type))
         .unwrap_or_else(|| root().join(format!("target/{}", &build_type)))
-}
-
-pub fn fixtures() -> PathBuf {
-    root().join("tests/fixtures")
-}
-
-pub fn assets() -> PathBuf {
-    root().join("tests/assets")
 }
 
 pub fn in_directory(str: impl AsRef<Path>) -> String {

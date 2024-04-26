@@ -78,11 +78,6 @@ jobs:
         RUSTFLAGS: -Ctarget-feature=+crt-static
       if: matrix.os == 'windows-latest'
 
-#    - name: Clippy
-#      uses: actions-rs/clippy@master
-#      with:
-#        args: --all-features -- -D warnings
-
     - name: Test
       uses: actions-rs/cargo@v1
       env:
@@ -91,12 +86,12 @@ jobs:
         RUST_LOG: debug
       with:
         command: test
-        args: --quiet
+        args: --bins --quiet
 
     - name: Create archive for Linux
       id: createarchivelinux
       run: |
-        7z a -ttar -so -an ./target/debug/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }} | 7z a -si ${{ env.ARTIFACT_BIN }}-${{ matrix.target }}.tar.gz
+        7z a -ttar -so -an ./target/${{ matrix.target }}/debug/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }} | 7z a -si ${{ env.ARTIFACT_BIN }}-${{ matrix.target }}.tar.gz
       if: matrix.os == 'ubuntu-22.04'
 
     - name: Install p7zip
@@ -107,14 +102,14 @@ jobs:
     - name: Create archive for MacOS
       id: createarchivemacos
       run: |
-        7z a -tzip ${{ env.ARTIFACT_BIN }}-${{ matrix.target }}.zip ./target/debug/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }}
+        7z a -tzip ${{ env.ARTIFACT_BIN }}-${{ matrix.target }}.zip ./target/${{ matrix.target }}/debug/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }}
       if: matrix.os == 'macos-latest'
 
     - name: Create archive for Windows
       id: createarchivewindows
       run: |
         choco install 7zip
-        7z a -tzip ${{ env.ARTIFACT_BIN }}-${{ matrix.target }}.zip ./target/debug/${{ env.ARTIFACT_BIN_WINDOWS }} ${{ env.ARTIFACT_ADDS }}
+        7z a -tzip ${{ env.ARTIFACT_BIN }}-${{ matrix.target }}.zip ./target/${{ matrix.target }}/release/${{ env.ARTIFACT_BIN_WINDOWS }} ${{ env.ARTIFACT_ADDS }}
       if: matrix.os == 'windows-latest'
 
     - name: Upload artifacts

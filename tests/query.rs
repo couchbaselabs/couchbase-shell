@@ -1,20 +1,17 @@
-use crate::features::TestFeature;
-use crate::playground::{CBPlayground, PerTestOptions, RetryExpectations};
-use crate::{ClusterUnderTest, ConfigAware, TestResult};
+mod common;
 
+use crate::common::{playground, playground::PerTestOptions, utils, TestResult};
 use serde_json::Value;
 use std::ops::Add;
 use std::path::PathBuf;
-use std::sync::Arc;
-use std::time;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use uuid::Uuid;
 
 pub fn create_primary_index(
     base_cmd: impl Into<String>,
     keyspace: String,
     cwd: &PathBuf,
-    sandbox: &mut CBPlayground,
+    sandbox: &mut playground::CBPlayground,
 ) -> TestResult<()> {
     let cmd = format!(
         "{} query \"CREATE PRIMARY INDEX ON `{}`\"",
@@ -22,11 +19,11 @@ pub fn create_primary_index(
         keyspace
     );
     sandbox.retry_until(
-        Instant::now().add(time::Duration::from_secs(30)),
-        time::Duration::from_millis(200),
+        Instant::now().add(Duration::from_secs(30)),
+        Duration::from_millis(200),
         cmd.as_str(),
         cwd,
-        RetryExpectations::AllowAny {
+        playground::RetryExpectations::AllowAny {
             allow_err: true,
             allow_out: true,
         },
@@ -35,49 +32,15 @@ pub fn create_primary_index(
     Ok(())
 }
 
-pub fn create_index(
-    base_cmd: impl Into<String>,
-    fields: impl Into<String>,
-    keyspace: String,
-    cwd: &PathBuf,
-    sandbox: &mut CBPlayground,
-) -> String {
-    let mut uuid = Uuid::new_v4().to_string();
-    uuid.truncate(6);
-    let index_name = format!("test-{}", uuid);
-    let cmd = format!(
-        "{} query \"CREATE INDEX `{}` ON `{}`({})\"",
-        base_cmd.into(),
-        index_name.clone(),
-        keyspace,
-        fields.into()
-    );
-    sandbox.retry_until(
-        Instant::now().add(time::Duration::from_secs(30)),
-        time::Duration::from_millis(200),
-        cmd.as_str(),
-        cwd,
-        RetryExpectations::AllowAny {
-            allow_err: true,
-            allow_out: true,
-        },
-        |_json| -> TestResult<bool> { Ok(true) },
-    );
+#[test]
+#[cfg_attr(not(feature = "query"), ignore)]
+#[cfg_attr(not(feature = "collections"), ignore)]
+fn send_context_with_a_query() {
+    let config = utils::test_config();
 
-    index_name
-}
-
-pub async fn test_should_send_context_with_a_query(cluster: Arc<ClusterUnderTest>) -> bool {
-    let config = cluster.config();
-    if !config.supports_feature(TestFeature::Query)
-        || !config.supports_feature(TestFeature::Collections)
-    {
-        return true;
-    }
-
-    CBPlayground::setup(
-        "test_should_send_context_with_a_query",
-        cluster.config(),
+    playground::CBPlayground::setup(
+        "send_context_with_a_query",
+        None,
         PerTestOptions::default().set_no_default_collection(true),
         |dirs, sandbox| {
             let scope = config.scope().unwrap();
@@ -92,11 +55,11 @@ pub async fn test_should_send_context_with_a_query(cluster: Arc<ClusterUnderTest
 
             let cmd = format!("{0} query \"SELECT `{1}`.* FROM `{1}` WHERE meta().id=\"{2}\"\" | select testkey | first | to json", cmd, collection, key);
             sandbox.retry_until(
-                Instant::now().add(time::Duration::from_secs(30)),
-                time::Duration::from_millis(200),
+                Instant::now().add(Duration::from_secs(30)),
+                Duration::from_millis(200),
                 cmd.as_str(),
                 dirs.test(),
-                RetryExpectations::ExpectOut,
+                playground::RetryExpectations::ExpectOut,
                 |json| -> TestResult<bool> {
                     if "testvalue" != json["testkey"] {
                         println!(
@@ -110,19 +73,16 @@ pub async fn test_should_send_context_with_a_query(cluster: Arc<ClusterUnderTest
             );
         },
     );
-
-    false
 }
 
-pub async fn test_should_execute_a_query(cluster: Arc<ClusterUnderTest>) -> bool {
-    let config = cluster.config();
-    if !config.supports_feature(TestFeature::Query) {
-        return true;
-    }
+#[test]
+#[cfg_attr(not(feature = "query"), ignore)]
+fn execute_a_query() {
+    let config = utils::test_config();
 
-    CBPlayground::setup(
-        "test_should_execute_a_query",
-        cluster.config(),
+    playground::CBPlayground::setup(
+        "execute_a_query",
+        None,
         PerTestOptions::default().set_no_default_collection(true),
         |dirs, sandbox| {
             create_primary_index("", config.bucket(), dirs.test(), sandbox).unwrap();
@@ -131,11 +91,11 @@ pub async fn test_should_execute_a_query(cluster: Arc<ClusterUnderTest>) -> bool
 
             let cmd = format!("query \"SELECT `{0}`.* FROM `{0}` WHERE meta().id=\"{1}\"\" | select testkey | first | to json", config.bucket(), key);
             sandbox.retry_until(
-                Instant::now().add(time::Duration::from_secs(30)),
-                time::Duration::from_millis(200),
+                Instant::now().add(Duration::from_secs(30)),
+                Duration::from_millis(200),
                 cmd.as_str(),
                 dirs.test(),
-                RetryExpectations::ExpectOut,
+                playground::RetryExpectations::ExpectOut,
                 |json| -> TestResult<bool> {
                     if "testvalue" != json["testkey"] {
                         println!(
@@ -149,19 +109,16 @@ pub async fn test_should_execute_a_query(cluster: Arc<ClusterUnderTest>) -> bool
             );
         },
     );
-
-    false
 }
 
-pub async fn test_should_fetch_meta(cluster: Arc<ClusterUnderTest>) -> bool {
-    let config = cluster.config();
-    if !config.supports_feature(TestFeature::Query) {
-        return true;
-    }
+#[test]
+#[cfg_attr(not(feature = "query"), ignore)]
+fn fetch_meta() {
+    let config = utils::test_config();
 
-    CBPlayground::setup(
-        "test_should_fetch_meta",
-        cluster.config(),
+    playground::CBPlayground::setup(
+        "fetch_meta",
+        None,
         PerTestOptions::default().set_no_default_collection(true),
         |dirs, sandbox| {
             create_primary_index("", config.bucket(), dirs.test(), sandbox).unwrap();
@@ -170,16 +127,16 @@ pub async fn test_should_fetch_meta(cluster: Arc<ClusterUnderTest>) -> bool {
 
             let mut val: Value = Value::default();
             let cmd = format!(
-                "query \"SELECT `{0}`.* FROM `{0}` WHERE meta().id=\"{1}\"\" --with-meta | first | to json",
-                config.bucket(),
-                key
-            );
+                    "query \"SELECT `{0}`.* FROM `{0}` WHERE meta().id=\"{1}\"\" --with-meta | first | to json",
+                    config.bucket(),
+                    key
+                );
             sandbox.retry_until(
-                Instant::now().add(time::Duration::from_secs(30)),
-                time::Duration::from_millis(200),
+                Instant::now().add(Duration::from_secs(30)),
+                Duration::from_millis(200),
                 cmd.as_str(),
                 dirs.test(),
-                RetryExpectations::ExpectOut,
+                playground::RetryExpectations::ExpectOut,
                 |json| -> TestResult<bool> {
                     val = json.clone();
                     Ok(true)
@@ -195,6 +152,4 @@ pub async fn test_should_fetch_meta(cluster: Arc<ClusterUnderTest>) -> bool {
             assert_ne!(0, metrics["resultSize"]);
         },
     );
-
-    false
 }

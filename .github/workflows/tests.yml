@@ -37,12 +37,12 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: "v1"
-          cache-on-failure: "true"  
+          cache-on-failure: "true"
 
       - name: Sleep for 30 seconds  # It takes a while for the cluster to be available and init-cluster fails if it isn't
         run: sleep 30s
         shell: bash
-          
+
       - name: Initialize couchbase
           #        env:
         #          CB_TRAVEL_SAMPLE: yes
@@ -58,4 +58,4 @@ jobs:
           DATA_TIMEOUT: "30s"
         with:
           command: test
-          args: --quiet
+          args: --features ${{ matrix.server }} --quiet

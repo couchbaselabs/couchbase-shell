@@ -83,10 +83,21 @@ nu-test-support = { version = "0.83.1"}
 strum = "0.24.1"
 strum_macros = "0.24.3"
 
-
 [features]
 # Enable to statically link OpenSSL; otherwise the system version will be used. Not enabled by default because it takes a while to build
 static-link-openssl = ["dep:openssl"]
+
+# We use a list of supported features to determine which tests we want to run, the defaults will always be run, then we
+# define any additional features using the specific server versions we test against
+default = ["key_value", "query", "query_index", "query_index_definitions", "query_index_advise"]
+"7.1.1" = ["collections"]
+"7.0.3" = ["collections"]
+key_value = []
+query = []
+collections = []
+query_index = []
+query_index_definitions = []
+query_index_advise = []
 
 [[bin]]
 name = "cbsh"
@@ -95,8 +106,3 @@ path = "src/main.rs"
 [profile.release]
 lto = true
 codegen-units = 1
-
-[[test]]
-name = "test"
-path = "tests/integration/main.rs"
-harness = false
