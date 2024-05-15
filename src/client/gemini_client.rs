@@ -1,0 +1,305 @@
+use bytes::Bytes;
+use nu_protocol::ShellError;
+use reqwest::Response;
+use serde::{Deserialize, Serialize};
+use tokio::{select, time::sleep, time::Duration};
+
+pub struct GeminiClient {
+    api_key: String,
+    max_tokens: usize,
+}
+
+// While Gemini does not have a per request limit, the per minute token limit is used here
+const MAX_FREE_TIER_TOKENS: usize = 1000000;
+
+// According to the Gemini API docs: A token is equivalent to about 4 characters for Gemini models
+const CHARS_PER_TOKEN: usize = 4;
+
+const MAX_EMBEDDING_DIMENSION: u32 = 768;
+
+// At most 100 requests can be in one batch
+const MAX_BATCH_SIZE: usize = 100;
+
+impl GeminiClient {
+    pub fn new(api_key: String, max_tokens: impl Into<Option<usize>>) -> Self {
+        let max_tokens = max_tokens.into().unwrap_or(MAX_FREE_TIER_TOKENS);
+
+        Self {
+            api_key,
+            max_tokens,
+        }
+    }
+
+    pub fn batch_chunks(&self, chunks: Vec<String>) -> Vec<Vec<String>> {
+        let mut tokens = 0;
+        let mut batch = vec![];
+        let mut batches = vec![];
+        for chunk in chunks {
+            tokens = tokens + chunk.chars().count() / CHARS_PER_TOKEN;
+
+            if tokens >= self.max_tokens || batch.len() == MAX_BATCH_SIZE {
+                batches.push(batch);
+                batch = vec![chunk.clone()];
+                tokens = chunk.chars().count();
+            } else {
+                batch.push(chunk.to_string());
+            }
+        }
+
+        batches.push(batch);
+        batches
+    }
+
+    pub async fn embed(&self, batch: &Vec<String>, dim: u32) -> Result<Vec<Vec<f32>>, ShellError> {
+        if dim > MAX_EMBEDDING_DIMENSION {
+            return Err(ShellError::GenericError {
+                error: format!(
+                    "Maximum embedding size is {:?} for Gemini",
+                    MAX_EMBEDDING_DIMENSION
+                ),
+                msg: "".to_string(),
+                span: None,
+                help: None,
+                inner: vec![],
+            });
+        }
+
+        let url = format!(
+            "https://generativelanguage.googleapis.com/v1/models/text-embedding-004:batchEmbedContents?key={}",
+            self.api_key
+        );
+
+        let mut batch_request = EmbeddingBatchRequest::new();
+        for str in batch {
+            batch_request.requests.push(EmbeddingRequest {
+                model: "models/text-embedding-004".to_string(),
+                content: Parts {
+                    parts: vec![Text {
+                        text: str.to_string(),
+                    }],
+                },
+                output_dimensionality: dim,
+            });
+        }
+
+        let res = execute_request(url, batch_request).await?;
+
+        let bytes = read_response(res).await?;
+
+        let embd: EmbeddingResponse = match serde_json::from_slice(&bytes) {
+            Ok(e) => e,
+            Err(e) => {
+                return Err(ShellError::GenericError {
+                    error: format!("could not parse Gemini response: {}", e.to_string()),
+                    msg: "".to_string(),
+                    span: None,
+                    help: None,
+                    inner: vec![],
+                })
+            }
+        };
+
+        let mut rec: Vec<Vec<f32>> = vec![];
+        for vals in embd.embeddings {
+            rec.push(vals.values);
+        }
+
+        Ok(rec)
+    }
+
+    pub async fn ask(&self, question: String, context: Vec<String>) -> Result<String, ShellError> {
+        let url = format!(
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={}",
+            self.api_key
+        );
+
+        let question_with_ctx = if context.len() > 0 {
+            format!(
+                "Please answer this question: \\\"{}\\\". Using the following context: \\\"{}\\\"",
+                question,
+                context.join(" ")
+            )
+        } else {
+            question
+        };
+
+        let ask_request: AskRequest = AskRequest {
+            contents: vec![Parts {
+                parts: vec![Text {
+                    text: question_with_ctx.clone(),
+                }],
+            }],
+        };
+
+        let res = execute_request(url, ask_request).await?;
+
+        let bytes = read_response(res).await?;
+
+        let ans: AskResponse = match serde_json::from_slice(&bytes) {
+            Ok(a) => a,
+            Err(e) => {
+                return Err(ShellError::GenericError {
+                    error: format!("could not parse Gemini response: {}", e.to_string()),
+                    msg: "".to_string(),
+                    span: None,
+                    help: None,
+                    inner: vec![],
+                })
+            }
+        };
+
+        Ok(ans.candidates[0].content.parts[0].text.clone())
+    }
+}
+
+fn error_message(bytes: bytes::Bytes) -> String {
+    #[derive(Deserialize, Debug)]
+    struct ErrorResponse {
+        error: Error,
+    }
+
+    #[derive(Deserialize, Debug)]
+    struct Error {
+        message: String,
+    }
+
+    let err_msg: ErrorResponse = serde_json::from_slice(&bytes).unwrap();
+
+    err_msg.error.message
+}
+
+async fn read_response(res: Response) -> Result<Bytes, ShellError> {
+    let status = res.status().as_u16();
+    let bytes = match res.bytes().await {
+        Ok(b) => b,
+        Err(e) => {
+            return Err(ShellError::GenericError {
+                error: format!("could not read response body: {}", e.to_string()),
+                msg: "".to_string(),
+                span: None,
+                help: None,
+                inner: vec![],
+            })
+        }
+    };
+
+    if status != 200 {
+        return Err(ShellError::GenericError {
+            error: error_message(bytes),
+            msg: "".to_string(),
+            span: None,
+            help: None,
+            inner: vec![],
+        });
+    };
+
+    Ok(bytes)
+}
+
+async fn execute_request<T>(url: String, json_body: T) -> Result<Response, ShellError>
+where
+    T: Serialize,
+{
+    let client = reqwest::Client::new();
+
+    let body = match serde_json::to_string(&json_body) {
+        Ok(b) => b,
+        Err(e) => {
+            return Err(ShellError::GenericError {
+                error: "could not create embedding request".to_string(),
+                msg: e.to_string(),
+                span: None,
+                help: None,
+                inner: vec![],
+            })
+        }
+    };
+
+    let res = match select! {
+    res = client.post(url.clone()).body(body).send() => {
+        match res {
+            Ok(r) => Ok(r),
+            Err(e) =>
+                 Err(ShellError::GenericError {
+                    error: "could not post ask request".to_string(),
+                    msg: e.to_string(),
+                    span: None,
+                    help: None,
+                    inner: vec![],
+            })
+            }
+        },
+        () =  sleep(Duration::from_secs(30)) =>
+                Err(ShellError::GenericError {
+                    error: "ask request timed out".to_string(),
+                    msg: "".to_string(),
+                    span: None,
+                    help: None,
+                    inner: vec![]
+                }),
+    } {
+        Ok(r) => r,
+        Err(e) => return Err(e),
+    };
+
+    Ok(res)
+}
+#[derive(Serialize, Debug)]
+struct EmbeddingBatchRequest {
+    requests: Vec<EmbeddingRequest>,
+}
+
+impl EmbeddingBatchRequest {
+    fn new() -> Self {
+        EmbeddingBatchRequest { requests: vec![] }
+    }
+}
+
+#[derive(Serialize, Debug)]
+struct EmbeddingRequest {
+    model: String,
+    content: Parts,
+    #[serde(alias = "outputDimensionality")]
+    output_dimensionality: u32,
+}
+
+#[derive(Serialize, Debug)]
+struct Parts {
+    parts: Vec<Text>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Text {
+    text: String,
+}
+
+#[derive(Deserialize, Debug)]
+struct EmbeddingResponse {
+    embeddings: Vec<Values>,
+}
+
+#[derive(Deserialize, Debug)]
+struct Values {
+    values: Vec<f32>,
+}
+
+#[derive(Serialize, Debug)]
+struct AskRequest {
+    contents: Vec<Parts>,
+}
+
+#[derive(Deserialize, Debug)]
+struct AskResponse {
+    candidates: Vec<Candidate>,
+}
+
+#[derive(Deserialize, Debug)]
+struct Candidate {
+    content: Content,
+}
+
+#[derive(Deserialize, Debug)]
+struct Content {
+    parts: Vec<Text>,
+    // role: String,
+}

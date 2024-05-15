@@ -375,23 +375,6 @@ pub fn duration_to_golang_string(duration: Duration) -> String {
     golang_string
 }
 
-pub fn read_openai_api_key(state: Arc<Mutex<State>>) -> Result<String, ShellError> {
-    let guard = state.lock().unwrap();
-    let key = match guard.llm() {
-        Some(llm) => llm.api_key(),
-        None => {
-            return Err(ShellError::GenericError {
-                error: "please specify llm api_key in config file".to_string(),
-                msg: "".to_string(),
-                span: None,
-                help: None,
-                inner: Vec::new(),
-            });
-        }
-    };
-    Ok(key)
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct NuValueMap {
     cols: Vec<String>,

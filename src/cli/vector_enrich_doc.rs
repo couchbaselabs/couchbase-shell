@@ -2,10 +2,8 @@ use crate::state::State;
 use log::debug;
 use std::time::SystemTime;
 
-use crate::cli::llm_client::LLMClients;
-use crate::cli::util::read_openai_api_key;
+use crate::client::LLMClients;
 use crate::CtrlcFuture;
-use crate::OpenAIClient;
 use nu_protocol::Example;
 use nu_protocol::Record;
 use std::convert::TryFrom;
@@ -230,8 +228,7 @@ fn vector_enrich_doc(
         }
     };
 
-    let key = read_openai_api_key(state)?;
-    let client = LLMClients::OpenAI(OpenAIClient::new(key, max_tokens));
+    let client = LLMClients::new(state, max_tokens)?;
 
     let batches = client.batch_chunks(field_contents);
 

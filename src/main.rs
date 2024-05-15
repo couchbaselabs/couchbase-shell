@@ -654,7 +654,7 @@ fn make_state(
         }
 
         if let Some(llm_conf) = c.llm() {
-            llm = Some(LLM::new(llm_conf.api_key()))
+            llm = Some(LLM::new(llm_conf.api_key(), llm_conf.provider()))
         }
 
         (active.unwrap_or_default(), c.location().clone())

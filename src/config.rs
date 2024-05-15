@@ -1,4 +1,5 @@
 use crate::remote_cluster::RemoteCluster;
+use crate::state::Provider;
 use log::debug;
 use log::error;
 use serde::{Deserialize, Serialize};
@@ -269,11 +270,16 @@ impl CapellaOrganizationConfig {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct LLMConfig {
     api_key: String,
+    provider: Provider,
 }
 
 impl LLMConfig {
     pub fn api_key(&self) -> String {
         self.api_key.clone()
+    }
+
+    pub fn provider(&self) -> Provider {
+        self.provider.clone()
     }
 }
 

@@ -3,45 +3,10 @@ use async_openai::types::{
     ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequestArgs,
 };
 use async_openai::{types::CreateEmbeddingRequestArgs, Client};
-use async_trait::async_trait;
 use log::debug;
 use nu_protocol::ShellError;
 use tiktoken_rs::p50k_base;
 
-#[async_trait]
-pub trait LLMClient {
-    fn batch_chunks(&self, chunks: Vec<String>) -> Vec<Vec<String>>;
-    async fn embed(&self, batch: &Vec<String>, dim: u32) -> Result<Vec<Vec<f32>>, ShellError>;
-    async fn ask(
-        &self,
-        question: String,
-        context: Vec<String>,
-    ) -> Result<nu_protocol::Value, ShellError>;
-}
-
-pub enum LLMClients {
-    OpenAI(OpenAIClient),
-}
-
-impl LLMClients {
-    pub fn batch_chunks(&self, chunks: Vec<String>) -> Vec<Vec<String>> {
-        match self {
-            Self::OpenAI(c) => c.batch_chunks(chunks),
-        }
-    }
-
-    pub async fn embed(&self, batch: &Vec<String>, dim: u32) -> Result<Vec<Vec<f32>>, ShellError> {
-        match self {
-            Self::OpenAI(c) => c.embed(batch, dim).await,
-        }
-    }
-
-    pub async fn ask(&self, question: String, context: Vec<String>) -> Result<String, ShellError> {
-        match self {
-            Self::OpenAI(c) => c.ask(question, context).await,
-        }
-    }
-}
 pub struct OpenAIClient {
     api_key: String,
     max_tokens: usize,
@@ -50,8 +15,8 @@ pub struct OpenAIClient {
 const OPENAI_MAX_FREE_TIER_TOKENS: usize = 150000;
 
 impl OpenAIClient {
-    pub fn new(api_key: String, max_tokens: Option<usize>) -> Self {
-        let max_tokens = match max_tokens {
+    pub fn new(api_key: String, max_tokens: impl Into<Option<usize>>) -> Self {
+        let max_tokens = match max_tokens.into() {
             Some(mt) => mt,
             None => OPENAI_MAX_FREE_TIER_TOKENS,
         };
@@ -62,7 +27,7 @@ impl OpenAIClient {
         }
     }
 
-    fn batch_chunks(&self, chunks: Vec<String>) -> Vec<Vec<String>> {
+    pub fn batch_chunks(&self, chunks: Vec<String>) -> Vec<Vec<String>> {
         let bpe = p50k_base().unwrap();
         let tokens = bpe.encode_with_special_tokens(&chunks.join(" "));
 
@@ -104,7 +69,7 @@ impl OpenAIClient {
         batches
     }
 
-    async fn embed(&self, batch: &Vec<String>, dim: u32) -> Result<Vec<Vec<f32>>, ShellError> {
+    pub async fn embed(&self, batch: &Vec<String>, dim: u32) -> Result<Vec<Vec<f32>>, ShellError> {
         let client = Client::with_config(
             async_openai::config::OpenAIConfig::default().with_api_key(self.api_key.clone()),
         );
@@ -144,7 +109,7 @@ impl OpenAIClient {
         Ok(rec)
     }
 
-    async fn ask(&self, question: String, context: Vec<String>) -> Result<String, ShellError> {
+    pub async fn ask(&self, question: String, context: Vec<String>) -> Result<String, ShellError> {
         let mut messages: Vec<ChatCompletionRequestMessage> = vec![];
 
         // Primes the model to respond appropriately
