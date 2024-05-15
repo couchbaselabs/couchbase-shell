@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Asciidoctor 2.0.18">
+<meta name="generator" content="Asciidoctor 2.0.22">
 <meta name="author" content="(c) Copyright 2021, All Rights Reserved">
 <title>Couchbase Shell Documentation</title>
 <link rel="stylesheet" href="./couchbase.css">
@@ -22,7 +22,7 @@
 <li><a href="#_quickstart">1. Quickstart</a>
 <ul class="sectlevel2">
 <li><a href="#_installation">1.1. Installation</a></li>
-<li><a href="#_connecting_to_a_database">1.2. Connecting to a Database</a></li>
+<li><a href="#_connecting_to_a_cluster">1.2. Connecting to a Cluster</a></li>
 <li><a href="#_the_config_dotfiles">1.3. The config dotfiles</a></li>
 </ul>
 </li>
@@ -44,7 +44,7 @@
 <ul class="sectlevel2">
 <li><a href="#_per_command_execution_environments">3.1. Per command execution environments</a>
 <ul class="sectlevel3">
-<li><a href="#_the_databases_flag">3.1.1. The <code>--databases</code> flag</a></li>
+<li><a href="#_the_clusters_flag">3.1.1. The <code>--clusters</code> flag</a></li>
 <li><a href="#_the_bucket_scope_collection_flags">3.1.2. The <code>--bucket</code>, <code>--scope</code>, <code>--collection</code> flags</a></li>
 </ul>
 </li>
@@ -52,7 +52,7 @@
 </li>
 <li><a href="#_couchbase_commands">4. Couchbase Commands</a>
 <ul class="sectlevel2">
-<li><a href="#_working_with_databases">4.1. Working with <code>databases</code></a></li>
+<li><a href="#_working_with_clusters">4.1. Working with <code>clusters</code></a></li>
 <li><a href="#_working_with_buckets">4.2. Working with <code>buckets</code></a></li>
 <li><a href="#_working_with_scopes_and_collections">4.3. Working with <code>scopes</code> and <code>collections</code></a>
 <ul class="sectlevel3">
@@ -112,8 +112,9 @@
 </li>
 <li><a href="#_release_notes">7. Release Notes</a>
 <ul class="sectlevel2">
-<li><a href="#_0_75_1_2023_04_13">7.1. 0.75.1 - 2023-04-13</a></li>
-<li><a href="#_0_75_0_2023_02_09">7.2. 0.75.0 - 2023-02-09</a></li>
+<li><a href="#_0_75_2_2023_04_10">7.1. 0.75.2 - 2023-04-10</a></li>
+<li><a href="#_0_75_1_2023_04_13">7.2. 0.75.1 - 2023-04-13</a></li>
+<li><a href="#_0_75_0_2023_02_09">7.3. 0.75.0 - 2023-02-09</a></li>
 </ul>
 </li>
 </ul>
@@ -141,7 +142,7 @@
 <div class="sect2">
 <h3 id="_installation">1.1. Installation</h3>
 <div class="paragraph">
-<p>The current latest version is <strong>0.75</strong>. The version of <code>cbsh</code> is kept in line with the underlying version of nushell that is supported.</p>
+<p>The current latest version is <strong>0.92</strong>. The version of <code>cbsh</code> is kept in line with the underlying version of nushell that is supported.</p>
 </div>
 <div class="paragraph">
 <p>There are a couple ways you can get access to <code>cbsh</code>, the easiest one is to download our pre-built binaries for your platform of choice:</p>
@@ -207,10 +208,10 @@ Next time you run the binary you&#8217;ll get another prompt but then it should 
 </div>
 </div>
 <div class="sect2">
-<h3 id="_connecting_to_a_database">1.2. Connecting to a Database</h3>
+<h3 id="_connecting_to_a_cluster">1.2. Connecting to a Cluster</h3>
 <div class="paragraph">
 <p>The first time that you run <code>./cbsh</code> you will receive a prompt asking if you&#8217;d like to create a config file.
-If you choose yes then the shell will provide you with a series of prompts to provide information about your default database.
+If you choose yes then the shell will provide you with a series of prompts to provide information about your default cluster.
 If you choose no then it will try to connect to <code>localhost</code> using the <code>Administrator</code> username and the <code>password</code> password.</p>
 </div>
 <div class="paragraph">
@@ -221,21 +222,23 @@ If you choose no then it will try to connect to <code>localhost</code> using the
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>❯ ./cbsh --username Administrator --connstr 127.0.0.1 -p
-Password:
-[WARN] 2023-04-14 08:32:25.180 Using PLAIN authentication for cluster dev.local, credentials will sent in plaintext - configure tls to disable this warning
-[INFO] 2023-04-14 08:32:25.389 Thanks for trying CBSH!
-👤 Administrator 🏠 dev.local in 🗄 default
+<pre class="CodeRay highlight"><code>❯ ./cbsh --username Administrator --connstr 127.0.0.1 -p password --disable-tls
+No config file found
+Would you like to create one now (Y/n)?
+n
+[WARN] 2024-04-17 09:20:22.466 Using PLAIN authentication for cluster default, credentials will sent in plaintext - configure tls to disable this warning
+[INFO] 2024-04-17 09:20:22.677 Thanks for trying CBSH!
+👤 Administrator 🏠 default
 &gt;</code></pre>
 </div>
 </div>
 <div class="paragraph">
 <p>Once in the shell, you can start to execute commands (see the introduction section for more information).
-As a quick sanity check, list the nodes in the database:</p>
+As a quick sanity check, list the nodes in the cluster:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; nodes
+<pre class="CodeRay highlight nowrap"><code>&gt; nodes
 ╭───┬───────────┬────────────────┬─────────┬──────────────────────────┬───────────────────────┬───────────────────────────┬──────────────┬─────────────┬─────────╮
 │ # │  cluster  │    hostname    │ status  │         services         │        version        │            os             │ memory_total │ memory_free │ capella │
 ├───┼───────────┼────────────────┼─────────┼──────────────────────────┼───────────────────────┼───────────────────────────┼──────────────┼─────────────┼─────────┤
@@ -248,19 +251,27 @@ As a quick sanity check, list the nodes in the database:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt;  doc get airline_10 --bucket travel-sample | flatten
-───┬────────────┬─────────────────────┬────────────┬─────────┬─────────────┬──────┬──────┬──────────┬───────────────┬───────┬─────────
- # │     id     │         cas         │ content_id │  type   │    name     │ iata │ icao │ callsign │    country    │ error │ database
-───┼────────────┼─────────────────────┼────────────┼─────────┼─────────────┼──────┼──────┼──────────┼───────────────┼───────┼─────────
- 0 │ airline_10 │ 1629809626107281408 │         10 │ airline │ 40-Mile Air │ Q5   │ MLA  │ MILE-AIR │ United States │       │ default
-───┴────────────┴─────────────────────┴────────────┴─────────┴─────────────┴──────┴──────┴──────────┴───────────────┴───────┴─────────</code></pre>
+<pre class="CodeRay highlight"><code>&gt;  doc get airline_10 --bucket travel-sample
+╭───┬────────────┬──────────────────────────────┬─────────────────────┬───────┬─────────╮
+│ # │     id     │           content            │         cas         │ error │ cluster │
+├───┼────────────┼──────────────────────────────┼─────────────────────┼───────┼─────────┤
+│ 0 │ airline_10 │ ╭──────────┬───────────────╮ │ 1712321628975398912 │       │ default │
+│   │            │ │ id       │ 10            │ │                     │       │         │
+│   │            │ │ type     │ airline       │ │                     │       │         │
+│   │            │ │ name     │ 40-Mile Air   │ │                     │       │         │
+│   │            │ │ iata     │ Q5            │ │                     │       │         │
+│   │            │ │ icao     │ MLA           │ │                     │       │         │
+│   │            │ │ callsign │ MILE-AIR      │ │                     │       │         │
+│   │            │ │ country  │ United States │ │                     │       │         │
+│   │            │ ╰──────────┴───────────────╯ │                     │       │         │
+╰───┴────────────┴──────────────────────────────┴─────────────────────┴───────┴─────────╯</code></pre>
 </div>
 </div>
 </div>
 <div class="sect2">
 <h3 id="_the_config_dotfiles">1.3. The config dotfiles</h3>
 <div class="paragraph">
-<p>Connecting to a single database through the command line is nice when you are starting out, but later on you will likely either connect to the same database all the time or even to a multitude of them. To help with this, you can create a <code>.cbsh</code> dot folder in your home directory and place a <code>config</code> file in it that the shell will read on startup.</p>
+<p>Connecting to a single cluster through the command line is nice when you are starting out, but later on you will likely either connect to the same cluster all the time or even to a multitude of them. To help with this, you can create a <code>.cbsh</code> dot folder in your home directory and place a <code>config</code> file in it that the shell will read on startup.</p>
 </div>
 <div class="paragraph">
 <p>The downloaded zip contains an example already, but here is a small sample config to help you get started as well:</p>
@@ -269,14 +280,14 @@ As a quick sanity check, list the nodes in the database:</p>
 <div class="content">
 <pre class="CodeRay highlight"><code>version = 1
 
-[[database]]
+[[cluster]]
 identifier = &quot;local&quot;
 connstr = &quot;127.0.0.1&quot;
 default-bucket = &quot;travel-sample&quot;
 username = &quot;Administrator&quot;
 password = &quot;password&quot;
 
-[[database]]
+[[cluster]]
 identifier = &quot;remote&quot;
 connstr = &quot;10.143.200.101&quot;
 default-bucket = &quot;myapp&quot;
@@ -285,7 +296,7 @@ password = &quot;pass&quot;</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>This will register two databases, one called <code>local</code> and one called <code>remote</code>.
+<p>This will register two clusters, one called <code>local</code> and one called <code>remote</code>.
 The file format is <code>toml</code> in case you wonder.
 Now when you start the shell, it will connect to <code>local</code> automatically and you are all set.</p>
 </div>
@@ -299,61 +310,70 @@ Now when you start the shell, it will connect to <code>local</code> automaticall
 <h2 id="_introduction">2. Introduction</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Couchbase Shell is fully featured, so it does not only contain commands related to couchbase but is actually built on top of a general purpose shell called <a href="https://www.nushell.sh/">nushell</a>. This allows you to interact with the file system or any other command available on your machine, making it a great tool for both operational and development tasks on top of Couchbase.</p>
+<p>Couchbase Shell is fully featured, so it does not only contain commands related to couchbase but is actually built on top of a
+general purpose shell called <a href="https://www.nushell.sh/">nushell</a>. This allows you to interact with the file system or any other
+command available on your machine, making it a great tool for both operational and development tasks on top of Couchbase.</p>
 </div>
 <div class="paragraph">
-<p>The following introduction only touches on the basic concepts to make you productive quickly. We recommend also checking out the great <a href="https://www.nushell.sh/book">nushell documentation</a> so you can get the most out of it.</p>
+<p>The following introduction only touches on the basic concepts to make you productive quickly. We recommend also checking out the
+great <a href="https://www.nushell.sh/book">nushell documentation</a> so you can get the most out of it.</p>
 </div>
 <div class="sect2">
 <h3 id="_navigating_the_shell">2.1. Navigating the Shell</h3>
 <div class="paragraph">
-<p>Commands take inputs and produce output in a structured manner, most often represented as tables. Note how both the generic <code>ls</code> command and the couchbase-specific <code>buckets</code> command both produce a table as their output:</p>
+<p>Commands take inputs and produce output in a structured manner, most often represented as tables. Note how both the generic <code>ls</code>
+command and the couchbase-specific <code>buckets</code> command both produce a table as their output:</p>
 </div>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; ls
-────┬──────────────┬──────┬──────────┬────────────────
- #  │     name     │ type │   size   │    modified
-────┼──────────────┼──────┼──────────┼────────────────
-  0 │ CHANGELOG.md │ File │   4.8 KB │ 2 hours ago
-  1 │ Cargo.lock   │ File │ 170.2 KB │ 16 minutes ago
-  2 │ Cargo.toml   │ File │   1.8 KB │ 16 minutes ago
-  3 │ LICENSE      │ File │  11.4 KB │ 2 days ago
-  4 │ README.md    │ File │   8.6 KB │ 9 minutes ago
-  5 │ docs         │ Dir  │    544 B │ 2 days ago
-  6 │ examples     │ Dir  │    192 B │ 2 days ago
-  7 │ jupyter      │ Dir  │    128 B │ 2 days ago
-  8 │ src          │ Dir  │    256 B │ 2 days ago
-  9 │ target       │ Dir  │    224 B │ 32 minutes ago
- 10 │ tests        │ Dir  │    224 B │ 2 days ago
-────┴──────────────┴──────┴──────────┴────────────────</code></pre>
+╭────┬─────────────────────┬──────┬───────────┬───────────────╮
+│  # │        name         │ type │   size    │   modified    │
+├────┼─────────────────────┼──────┼───────────┼───────────────┤
+│  0 │ CHANGELOG.md        │ file │   8.7 KiB │ 2 months ago  │
+│  1 │ Cargo.lock          │ file │ 194.6 KiB │ a day ago     │
+│  2 │ Cargo.toml          │ file │   2.7 KiB │ a day ago     │
+│  3 │ Dockerfile          │ file │     590 B │ 2 months ago  │
+│  4 │ LICENSE             │ file │  11.1 KiB │ 2 months ago  │
+│  5 │ LICENSE_AGREEMENT   │ file │  43.7 KiB │ 2 months ago  │
+│  6 │ NOTICES             │ file │ 221.6 KiB │ a week ago    │
+│  7 │ README.md           │ file │   9.4 KiB │ 2 months ago  │
+│  8 │ build               │ dir  │      64 B │ 4 weeks ago   │
+│  9 │ docs                │ dir  │     608 B │ 3 minutes ago │
+│ 10 │ examples            │ dir  │     192 B │ 4 months ago  │
+│ 11 │ jupyter             │ dir  │     128 B │ 4 months ago  │
+│ 12 │ rust-toolchain.toml │ file │     524 B │ 2 weeks ago   │
+│ 13 │ src                 │ dir  │     416 B │ a day ago     │
+│ 14 │ target              │ dir  │     352 B │ 2 weeks ago   │
+│ 15 │ tests               │ dir  │     160 B │ 4 months ago  │
+╰────┴─────────────────────┴──────┴───────────┴───────────────╯</code></pre>
 </div>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; buckets
-───┬──────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────
- # │ database │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud
-───┼──────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────
- 0 │ default  │ beer-sample   │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false
- 1 │ default  │ default       │ couchbase │        1 │ none                 │  104.9 MB │ true          │        │ false
- 2 │ default  │ targetBucket  │ couchbase │        0 │ none                 │  104.9 MB │ true          │        │ false
- 3 │ default  │ travel-sample │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false
-───┴──────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴────────┴───────</code></pre>
+<pre class="CodeRay highlight nowrap"><code>&gt; buckets
+╭───┬─────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────╮
+│ # │ cluster │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud │
+├───┼─────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────┤
+│ 0 │ default │ beer-sample   │ couchbase │        1 │ none                 │ 200.0 MiB │ false         │        │ false │
+│ 1 │ default │ default       │ couchbase │        2 │ none                 │ 100.0 MiB │ true          │        │ false │
+│ 2 │ default │ travel-sample │ couchbase │        2 │ none                 │ 200.0 MiB │ false         │        │ false │
+╰───┴─────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴────────┴───────╯</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>You can pipe the output into other commands, for example if you only want to see buckets that have <code>sample</code> in their name you can utilize the <code>where</code> command:</p>
+<p>You can pipe the output into other commands, for example if you only want to see buckets that have <code>sample</code> in their name you
+can utilize the <code>where</code> command:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; buckets | where name =~ &quot;sample&quot;
-───┬──────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────
- # │ database │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud
-───┼──────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────
- 0 │ default  │ beer-sample   │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false
- 1 │ default  │ travel-sample │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false
-───┴──────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴────────┴───────</code></pre>
+<pre class="CodeRay highlight nowrap"><code>&gt; buckets | where name =~ &quot;sample&quot;
+╭───┬─────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────╮
+│ # │ cluster │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud │
+├───┼─────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────┤
+│ 0 │ default │ beer-sample   │ couchbase │        1 │ none                 │ 200.0 MiB │ false         │        │ false │
+│ 1 │ default │ travel-sample │ couchbase │        2 │ none                 │ 200.0 MiB │ false         │        │ false │
+╰───┴─────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴────────┴───────╯</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -361,10 +381,10 @@ Now when you start the shell, it will connect to <code>local</code> automaticall
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; buckets | where name =~ &quot;sample&quot; | to json --pretty 2
+<pre class="CodeRay highlight"><code>&gt; buckets | where name =~ &quot;sample&quot; | to json
 [
   {
-    &quot;database&quot;: &quot;default&quot;,
+    &quot;cluster&quot;: &quot;default&quot;,
     &quot;name&quot;: &quot;beer-sample&quot;,
     &quot;type&quot;: &quot;couchbase&quot;,
     &quot;replicas&quot;: 1,
@@ -375,10 +395,10 @@ Now when you start the shell, it will connect to <code>local</code> automaticall
     &quot;cloud&quot;: false
   },
   {
-    &quot;database&quot;: &quot;default&quot;,
+    &quot;cluster&quot;: &quot;default&quot;,
     &quot;name&quot;: &quot;travel-sample&quot;,
     &quot;type&quot;: &quot;couchbase&quot;,
-    &quot;replicas&quot;: 1,
+    &quot;replicas&quot;: 2,
     &quot;min_durability_level&quot;: &quot;none&quot;,
     &quot;ram_quota&quot;: 209715200,
     &quot;flush_enabled&quot;: false,
@@ -389,13 +409,16 @@ Now when you start the shell, it will connect to <code>local</code> automaticall
 </div>
 </div>
 <div class="paragraph">
-<p>Exactly this type of composition takes the unix philosophy of "do one thing well" and meshes it together with the idea of flexible structured pipelines. This allows to build powerful compositions that help you in your daily operations with Couchbase, both from a developer or operations point of view.</p>
+<p>Exactly this type of composition takes the unix philosophy of "do one thing well" and meshes it together with the idea of flexible
+structured pipelines. This allows to build powerful compositions that help you in your daily operations with Couchbase, both from
+a developer or operations point of view.</p>
 </div>
 </div>
 <div class="sect2">
 <h3 id="_getting_help">2.2. Getting Help</h3>
 <div class="paragraph">
-<p>Other than using this documentation for help, each command can be called with <code>-h</code> or <code>--help</code> to get information about potential flags, arguments and subcommands. Also, some commands provide additional examples.</p>
+<p>Other than using this documentation for help, each command can be called with <code>-h</code> or <code>--help</code> to get information about potential
+flags, arguments and subcommands. Also, some commands provide additional examples.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -403,7 +426,7 @@ Now when you start the shell, it will connect to <code>local</code> automaticall
 Perform bucket management operations
 
 Usage:
-  &gt; buckets &lt;subcommand&gt; {flags}
+  &gt; buckets {flags}
 
 Subcommands:
   buckets config - Shows the bucket config (low level)
@@ -415,58 +438,61 @@ Subcommands:
   buckets update - Updates a bucket
 
 Flags:
-  -h, --help: Display this help message
-  --databases &lt;string&gt;: the databases which should be contacted</code></pre>
+  -h, --help - Display the help message for this command
+  --clusters &lt;String&gt; - the clusters which should be contacted</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Some commands (like the one above) only act as groupings for subcommands, like <code>from</code>, <code>to</code> or <code>doc</code>. Since they do not serve a purpose on their own, they will render their help output automatically:</p>
+<p>Some commands (like the one above) only act as groupings for subcommands, like <code>from</code>, <code>to</code> or <code>doc</code>. Since they do not serve a
+purpose on their own, they will render their help output automatically:</p>
 </div>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; doc
-Perform document operations against a bucket or collection
-
 Usage:
-  &gt; doc &lt;subcommand&gt; {flags}
+  &gt; doc
 
 Subcommands:
   doc get - Fetches a document through the data service
+  doc import - Import documents from a file through the data service
   doc insert - Insert a document through the data service
   doc remove - Removes a document through the data service
   doc replace - Replace a document through the data service
   doc upsert - Upsert (insert or override) a document through the data service
 
 Flags:
-  -h, --help: Display this help message</code></pre>
+  -h, --help - Display the help message for this command</code></pre>
 </div>
 </div>
 </div>
 <div class="sect2">
 <h3 id="_the_prompt_explained">2.3. The Prompt explained</h3>
 <div class="paragraph">
-<p>Couchbase Shell uses a custom, two line prompt to show you exactly in what environment you are working in right now. Since you can connect to different databases, switch buckets etc. it is important to know what is currently "active". Here is a sample prompt that will greet you when starting the shell:</p>
+<p>Couchbase Shell uses a custom, two line prompt to show you exactly in what environment you are working in right now. Since you
+can connect to different clusters, switch buckets etc. it is important to know what is currently "active", as the active buckets/scope/collection
+will be what commands are run against. Here is a sample prompt that will greet you when starting the shell:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>👤 Administrator at 🏠 local in 🗄 travel-sample
+<pre class="CodeRay highlight"><code>👤 Administrator 🏠 local in 🗄 travel-sample._default._default
 &gt;</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>It tells you that your user is <code>Administrator</code>, the current active database identifier is <code>local</code> and the active bucket is <code>travel-sample</code>.</p>
+<p>It tells you that your user is <code>Administrator</code>, the current active cluster identifier is <code>local</code> and the active bucket is <code>travel-sample</code>.
+The current scope and collection have not been set, so they assume the <code>_default</code> value.</p>
 </div>
 <div class="paragraph">
 <p>If you have an active scope or collection set then the prompt will also update to reflect that:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>👤 Administrator 🏠 dev.local in 🗄 travel-sample.myscope.mycollection
+<pre class="CodeRay highlight"><code>👤 Administrator 🏠 local in 🗄 travel-sample.inventory.landmark
 &gt;</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>In the second line, your actual user prompt starts.</p>
+<p>If we ran a <code>doc get</code> it would fetch the doc from travel-sample.inventory.landmark. In the second line, your actual user prompt starts.</p>
 </div>
 </div>
 <div class="sect2">
@@ -582,7 +608,8 @@ In our case we use <code>from json</code>:</p>
 <div class="title">Tip</div>
 </td>
 <td class="content">
-look at the many different import formats <code>from</code> supports, including csv, xml, yaml and even sqlite. With this simple tool at hand you are able to load many different data formats quickly and import them into couchbase!
+look at the many different import formats <code>from</code> supports, including csv, xml, yaml and even sqlite. With this simple tool
+at hand you are able to load many different data formats quickly and import them into couchbase!
 </td>
 </tr>
 </table>
@@ -594,11 +621,15 @@ To do this we <code>wrap</code> the entire document into a content column and th
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; open user.json | wrap content | insert id {|it| echo $it.content.name}
-╭─────────┬───────────────────╮
-│ content │ {record 3 fields} │
-│ id      │ Michael           │
-╰─────────┴───────────────────╯</code></pre>
+<pre class="CodeRay highlight"><code>&gt; open user.json | wrap content | insert id $in.content.name
+╭─────────┬──────────────────────╮
+│         │ ╭────────┬─────────╮ │
+│ content │ │ name   │ Michael │ │
+│         │ │ age    │ 32      │ │
+│         │ │ height │ 180     │ │
+│         │ ╰────────┴─────────╯ │
+│ id      │ Michael              │
+╰─────────┴──────────────────────╯</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -607,11 +638,11 @@ With our data in the correct format we can then upsert:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; open user.json | wrap content | insert id {|it| echo $it.content.name} | doc upsert
+<pre class="CodeRay highlight"><code>&gt; open user.json | wrap content | insert id $in.content.name | doc upsert
 ╭───┬───────────┬─────────┬────────┬──────────┬───────────╮
 │ # │ processed │ success │ failed │ failures │  cluster  │
 ├───┼───────────┼─────────┼────────┼──────────┼───────────┤
-│ 0 │         1 │       1 │      0 │          │ dev.local │
+│ 0 │         1 │       1 │      0 │          │ local     │
 ╰───┴───────────┴─────────┴────────┴──────────┴───────────╯</code></pre>
 </div>
 </div>
@@ -689,7 +720,7 @@ Cazaux,Cazaux,France</code></pre>
 <h2 id="_cb_env_and_the_environment">3. <code>cb-env</code> and the Environment</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Whilst multiple databases can be registered at the same time, there is only ever one database (at most) active.
+<p>Whilst multiple clusters can be registered at the same time, there is only ever one cluster (at most) active.
 The same is true for buckets, scopes, and collections.
 When a resource is active then it used as the default to run commands against (this can be overridden on a per command basis).</p>
 </div>
@@ -702,7 +733,7 @@ When a resource is active then it used as the default to run commands against (t
 ╭──────────────┬─────────────╮
 │ username     │ charlie     │
 │ display_name │ Charlie     │
-│ database     │ capella     │
+│ cluster      │ capella     │
 │ bucket       │ default     │
 │ scope        │ inventory   │
 │ collection   │ hotel       │
@@ -719,7 +750,7 @@ When a resource is active then it used as the default to run commands against (t
 <p>As the user "charlie"</p>
 </li>
 <li>
-<p>Against the "capella" database</p>
+<p>Against the "capella" cluster</p>
 </li>
 <li>
 <p>Against the "default" bucket</p>
@@ -733,7 +764,7 @@ When a resource is active then it used as the default to run commands against (t
 </ul>
 </div>
 <div class="paragraph">
-<p>Npte that <code>display_name</code> is the name that appears in your shell prompt and is not used by commands.</p>
+<p>Note that <code>display_name</code> is the name that appears in your shell prompt and is not used by commands.</p>
 </div>
 <div class="paragraph">
 <p>You can also change the active resources with the <code>cb-env</code> command.</p>
@@ -749,14 +780,14 @@ Usage:
 Subcommands:
   cb-env bucket - Sets the active bucket based on its name
   cb-env capella-organization - Sets the active capella organization based on its identifier
+  cb-env cluster - Sets the active cluster based on its identifier
   cb-env collection - Sets the active collection based on its name
-  cb-env database - Sets the active database based on its identifier
-  cb-env managed - Lists all databases currently managed by couchbase shell
+  cb-env managed - Lists all clusters currently managed by couchbase shell
   cb-env project - Sets the active project based on its name
-  cb-env register - Registers a database for use with the shell
+  cb-env register - Registers a cluster for use with the shell
   cb-env scope - Sets the active scope based on its name
   cb-env timeouts - Sets the active timeouts for operations
-  cb-env unregister - Registers a database for use with the shell
+  cb-env unregister - Unregisters a cluster for use with the shell
 
 Flags:
   -h, --help - Display the help message for this command
@@ -765,32 +796,24 @@ Flags:
 </div>
 </div>
 <div class="paragraph">
-<p>For example if you change the active bucket:</p>
+<p>For example if you change the active bucket both the output of <code>cb-env</code> and the prompt will reflect the changes:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; cb-env bucket beer-sample
-╭────────┬─────────────╮
-│ bucket │ beer-sample │
-╰────────┴─────────────╯</code></pre>
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local
+&gt; cb-env bucket beer-sample
+👤 Charlie 🏠 local in 🗄 beer-sample._default._default
+&gt; cb-env
+╭──────────────┬───────────────╮
+│ username     │ charlie       │
+│ display_name │ Charlie       │
+│ cluster      │ capella       │
+│ bucket       │ beer-sample   │
+│ scope        │               │
+│ collection   │               │
+│ cluster_type │ provisioned   │
+╰──────────────┴───────────────╯</code></pre>
 </div>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code>&gt; cb-env
-╭──────────────┬─────────────╮
-│ username     │ charlie     │
-│ display_name │ Charlie     │
-│ database     │ capella     │
-│ bucket       │ beer-sample │
-│ scope        │ inventory   │
-│ collection   │ hotel       │
-│ cluster_type │ provisioned │
-╰──────────────┴─────────────╯</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Both the output of <code>cb-env</code> and the prompt will reflect the changes.</p>
 </div>
 <div class="sect2">
 <h3 id="_per_command_execution_environments">3.1. Per command execution environments</h3>
@@ -801,7 +824,7 @@ Different commands support different flags, depending on the command you can exp
 <div class="ulist">
 <ul>
 <li>
-<p><code>--databases</code></p>
+<p><code>--clusters</code></p>
 </li>
 <li>
 <p><code>--bucket</code></p>
@@ -815,35 +838,34 @@ Different commands support different flags, depending on the command you can exp
 </ul>
 </div>
 <div class="sect3">
-<h4 id="_the_databases_flag">3.1.1. The <code>--databases</code> flag</h4>
+<h4 id="_the_clusters_flag">3.1.1. The <code>--clusters</code> flag</h4>
 <div class="paragraph">
 <p>The argument for this flag is an identifier combined with a regular expression.
-So imagine you have three databases setup with the following names:</p>
+So imagine you have three clusters setup with the following names:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; cb-env | get database
-───┬────────
- 0 │ prod-us-west
- 1 │ prod-us-east
- 2 │ prod-eu-center
- 3 │ local-test
-───┴────────</code></pre>
+<pre class="CodeRay highlight"><code>&gt; cb-env managed | get identifier
+╭───┬────────────────╮
+│ 0 │ prod-us-east   │
+│ 1 │ prod-us-west   │
+│ 2 │ prod-eu-center │
+╰───┴────────────────╯</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>If you wanted to run a command against all databases in <code>prod-us</code>, you could use <code>--databases prod-us.*</code>, e.g.</p>
+<p>If you wanted to run a command against all clusters in <code>prod-us</code>, you could use <code>--clusters prod-us.*</code>, e.g.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; buckets --databases prod-us.*
-───┬──────────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────
- # │   database   │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ capella
-───┼──────────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────
- 0 │ prod-us-east │ default       │ couchbase │        1 │ none                 │  268.4 MB │ false         │        │ false
- 1 │ prod-us-west │ default       │ couchbase │        1 │ none                 │  268.4 MB │ false         │        │ false
- 2 │ prod-us-west │ travel-sample │ couchbase │        1 │ none                 │  209.7 MB │ false         │        │ false
-───┴──────────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴────────┴───────</code></pre>
+<pre class="CodeRay highlight nowrap"><code>&gt; buckets --clusters prod-us.*
+╭───┬──────────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────╮
+│ # │   cluster    │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud │
+├───┼──────────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────┤
+│ 0 │ prod-us-east │ default       │ couchbase │        1 │ none                 │ 200.0 MiB │ false         │        │ false │
+│ 1 │ prod-us-west │ default       │ couchbase │        1 │ none                 │ 200.0 MiB │ false         │        │ false │
+│ 2 │ prod-us-west │ travel-sample │ couchbase │        1 │ none                 │ 200.0 MiB │ false         │        │ false │
+╰───┴──────────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴────────┴───────╯</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -853,18 +875,38 @@ So imagine you have three databases setup with the following names:</p>
 <div class="sect3">
 <h4 id="_the_bucket_scope_collection_flags">3.1.2. The <code>--bucket</code>, <code>--scope</code>, <code>--collection</code> flags</h4>
 <div class="paragraph">
-<p>These flags are a little different to the <code>--databases</code> flag, they are not regular expressions and can only be used to define a single name each.
-Unlike <code>--databases</code> the name provided to these flags does not have to be already known to Couchbase Shell, they can refer to any bucket, scope, and collection that exist within your active database or defined database(s).
+<p>These flags are a little different to the <code>--clusters</code> flag, they are not regular expressions and can only be used to define a single name each.
+Unlike <code>--clusters</code> the name provided to these flags does not have to be already known to Couchbase Shell, they can refer to any bucket, scope, and collection that exist within your active cluster or defined cluster(s).
 For example:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; doc get 1 --bucket travel-sample --scope tenant_agent_00 --collection users
-───┬────┬─────────────────────┬──────────────────┬───────┬──────────────
- # │ id │         cas         │     content      │ error │   database
-───┼────┼─────────────────────┼──────────────────┼───────┼──────────────
- 0 │ 1  │ 1638870288919035904 │ [row 11 columns] │       │ prod-us-west
-───┴────┴─────────────────────┴──────────────────┴───────┴──────────────</code></pre>
+<pre class="CodeRay highlight nowrap"><code>&gt; doc get 1 --bucket travel-sample --scope tenant_agent_00 --collection users
+╭───┬────┬───────────────────────────────────────────────────────────────────────────────────────┬─────────────────────┬───────┬──────────────╮
+│ # │ id │                                        content                                        │         cas         │ error │   cluster    │
+├───┼────┼───────────────────────────────────────────────────────────────────────────────────────┼─────────────────────┼───────┼──────────────┤
+│ 0 │ 1  │ ╭───────────────────┬───────────────────────────────────────────────────────────────╮ │ 1712321628245917696 │       │ prod-us-west │
+│   │    │ │ name              │ Rigoberto Bernier                                             │ │                     │       │              │
+│   │    │ │                   │ ╭───┬──────┬──────────────────┬────────────┬────────────────╮ │ │                     │       │              │
+│   │    │ │ addresses         │ │ # │ type │     address      │    city    │    country     │ │ │                     │       │              │
+│   │    │ │                   │ ├───┼──────┼──────────────────┼────────────┼────────────────┤ │ │                     │       │              │
+│   │    │ │                   │ │ 0 │ home │ 0622 Adams Mills │ Manchester │ United Kingdom │ │ │                     │       │              │
+│   │    │ │                   │ ╰───┴──────┴──────────────────┴────────────┴────────────────╯ │ │                     │       │              │
+│   │    │ │ driving_licence   │ 5f5f145d-a4db-5630-b7d8-874df29a505d                          │ │                     │       │              │
+│   │    │ │ passport          │ a1c4f1ac-a7d7-5b97-88ed-11cafc634896                          │ │                     │       │              │
+│   │    │ │ preferred_email   │ rigobertobernier@gadugca.sd                                   │ │                     │       │              │
+│   │    │ │ preferred_phone   │ (965) 227-3977                                                │ │                     │       │              │
+│   │    │ │ preferred_airline │ inventory.airline.airline_5479                                │ │                     │       │              │
+│   │    │ │ preferred_airport │ inventory.airport.airport_478                                 │ │                     │       │              │
+│   │    │ │                   │ ╭───┬──────────────────┬─────────────────┬────────────╮       │ │                     │       │              │
+│   │    │ │ credit_cards      │ │ # │       type       │     number      │ expiration │       │ │                     │       │              │
+│   │    │ │                   │ ├───┼──────────────────┼─────────────────┼────────────┤       │ │                     │       │              │
+│   │    │ │                   │ │ 0 │ American Express │ 346533746753899 │ 2021-04    │       │ │                     │       │              │
+│   │    │ │                   │ ╰───┴──────────────────┴─────────────────┴────────────╯       │ │                     │       │              │
+│   │    │ │ created           │ 2020-04-12                                                    │ │                     │       │              │
+│   │    │ │ updated           │ 2021-02-19                                                    │ │                     │       │              │
+│   │    │ ╰───────────────────┴───────────────────────────────────────────────────────────────╯ │                     │       │              │
+╰───┴────┴───────────────────────────────────────────────────────────────────────────────────────┴─────────────────────┴───────┴──────────────╯</code></pre>
 </div>
 </div>
 </div>
@@ -875,12 +917,13 @@ For example:</p>
 <h2 id="_couchbase_commands">4. Couchbase Commands</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The following sections discuss the individual couchbase specific commands in greater detail. Remember, you can always mix and match them with built-in other shell commands as well as executables from your environment.</p>
+<p>The following sections discuss the individual couchbase specific commands in greater detail. Remember, you can always mix and match
+them with built-in other shell commands as well as executables from your environment.</p>
 </div>
 <div class="sect2">
-<h3 id="_working_with_databases">4.1. Working with <code>databases</code></h3>
+<h3 id="_working_with_clusters">4.1. Working with <code>clusters</code></h3>
 <div class="paragraph">
-<p>The <code>cb-env managed</code> command lists all the databases you have registered with the shell.</p>
+<p>The <code>cb-env managed</code> command lists all the clusters you have registered with the shell.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -897,11 +940,11 @@ For example:</p>
 <div class="sect2">
 <h3 id="_working_with_buckets">4.2. Working with <code>buckets</code></h3>
 <div class="paragraph">
-<p>The <code>buckets</code> command lists all the buckets from your active database:</p>
+<p>The <code>buckets</code> command lists all the buckets from your active cluster:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; buckets
+<pre class="CodeRay highlight nowrap"><code>&gt; buckets
 ╭───┬───────────┬─────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────╮
 │ # │  cluster  │    name     │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud │
 ├───┼───────────┼─────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────┤
@@ -916,7 +959,7 @@ For example:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; buckets config default
+<pre class="CodeRay highlight nowrap"><code>&gt; buckets config default
 ╭────────────────────────┬──────────────────────────────────────────────────────────────────────────────────────╮
 │ authType               │ sasl                                                                                 │
 │ autoCompactionSettings │ false                                                                                │
@@ -970,16 +1013,16 @@ For example:</p>
 Fetches scopes through the HTTP API
 
 Usage:
-  &gt; scopes &lt;subcommand&gt; {flags}
+  &gt; scopes {flags}
 
 Subcommands:
   scopes create - Creates scopes through the HTTP API
   scopes drop - Deletes scopes through the HTTP API
 
 Flags:
-  -h, --help: Display this help message
-  --bucket &lt;string&gt;: the name of the bucket
-  --databases &lt;string&gt;: the databases to query against</code></pre>
+  -h, --help - Display the help message for this command
+  --bucket &lt;String&gt; - the name of the bucket
+  --clusters &lt;String&gt; - the clusters to query against</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1048,17 +1091,17 @@ Flags:
 Fetches collections through the HTTP API
 
 Usage:
-  &gt; collections &lt;subcommand&gt; {flags}
+  &gt; collections {flags}
 
 Subcommands:
   collections create - Creates collections through the HTTP API
   collections drop - Deletes collections through the HTTP API
 
 Flags:
-  -h, --help: Display this help message
-  --bucket &lt;string&gt;: the name of the bucket
-  --scope &lt;string&gt;: the name of the scope
-  --databases &lt;string&gt;: the databases to query against</code></pre>
+  -h, --help - Display the help message for this command
+  --bucket &lt;String&gt; - the name of the bucket
+  --scope &lt;String&gt; - the name of the scope
+  --clusters &lt;String&gt; - the clusters to query against</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1122,17 +1165,18 @@ Flags:
 <div class="sect2">
 <h3 id="_listing_nodes">4.4. Listing <code>nodes</code></h3>
 <div class="paragraph">
-<p>The <code>nodes</code> command allows you to list all the nodes of the database you are currently connected to.</p>
+<p>The <code>nodes</code> command allows you to list all the nodes of the cluster you are currently connected to.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; nodes
-───┬──────────┬─────────────────────┬─────────┬───────────────────┬───────────────────────┬──────────────────────────┬──────────────┬─────────────
- # │ database │ hostname            │ status  │ services          │ version               │ os                       │ memory_total │ memory_free
-───┼──────────┼─────────────────────┼─────────┼───────────────────┼───────────────────────┼──────────────────────────┼──────────────┼─────────────
- 0 │ remote   │ 10.143.200.101:8091 │ healthy │ indexing,kv,query │ 6.5.0-4960-enterprise │ x86_64-unknown-linux-gnu │       2.1 GB │    837.7 MB
- 1 │ remote   │ 10.143.200.102:8091 │ healthy │ indexing,kv,query │ 6.5.0-4960-enterprise │ x86_64-unknown-linux-gnu │       2.1 GB │      1.0 GB
-───┴──────────┴─────────────────────┴─────────┴───────────────────┴───────────────────────┴──────────────────────────┴──────────────┴─────────────</code></pre>
+<pre class="CodeRay highlight nowrap"><code>&gt; nodes
+╭───┬──────────────┬──────────────────────┬─────────┬──────────────────────────┬───────────────────────┬───────────────────────────┬──────────────┬─────────────┬─────────╮
+│ # │   cluster    │       hostname       │ status  │         services         │        version        │            os             │ memory_total │ memory_free │ capella │
+├───┼──────────────┼──────────────────────┼─────────┼──────────────────────────┼───────────────────────┼───────────────────────────┼──────────────┼─────────────┼─────────┤
+│ 0 │ prod-us-west │ 192.168.107.128:8091 │ healthy │ search,indexing,kv,query │ 7.6.2-3505-enterprise │ aarch64-unknown-linux-gnu │   6201221120 │  2227081216 │ false   │
+│ 1 │ prod-us-west │ 192.168.107.129:8091 │ healthy │ search,indexing,kv,query │ 7.6.2-3505-enterprise │ aarch64-unknown-linux-gnu │   6201221120 │  2204721152 │ false   │
+│ 2 │ prod-us-west │ 192.168.107.130:8091 │ healthy │ search,indexing,kv,query │ 7.6.2-3505-enterprise │ aarch64-unknown-linux-gnu │   6201221120 │  2209816576 │ false   │
+╰───┴──────────────┴──────────────────────┴─────────┴──────────────────────────┴───────────────────────┴───────────────────────────┴──────────────┴─────────────┴─────────╯</code></pre>
 </div>
 </div>
 </div>
@@ -1150,11 +1194,19 @@ All those commands are located as subcommands under the <code>doc</code> namespa
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; doc get airline_10
-╭───┬────────────┬───────────────────┬─────────────────────┬───────┬───────────╮
-│ # │     id     │      content      │         cas         │ error │  cluster  │
-├───┼────────────┼───────────────────┼─────────────────────┼───────┼───────────┤
-│ 0 │ airline_10 │ {record 7 fields} │ 1681456999724089344 │       │ dev.local │
-╰───┴────────────┴───────────────────┴─────────────────────┴───────┴───────────╯</code></pre>
+╭───┬────────────┬──────────────────────────────┬─────────────────────┬───────┬──────────────╮
+│ # │     id     │           content            │         cas         │ error │   cluster    │
+├───┼────────────┼──────────────────────────────┼─────────────────────┼───────┼──────────────┤
+│ 0 │ airline_10 │ ╭──────────┬───────────────╮ │ 1712321628975398912 │       │ prod-us-west │
+│   │            │ │ id       │ 10            │ │                     │       │              │
+│   │            │ │ type     │ airline       │ │                     │       │              │
+│   │            │ │ name     │ 40-Mile Air   │ │                     │       │              │
+│   │            │ │ iata     │ Q5            │ │                     │       │              │
+│   │            │ │ icao     │ MLA           │ │                     │       │              │
+│   │            │ │ callsign │ MILE-AIR      │ │                     │       │              │
+│   │            │ │ country  │ United States │ │                     │       │              │
+│   │            │ ╰──────────┴───────────────╯ │                     │       │              │
+╰───┴────────────┴──────────────────────────────┴─────────────────────┴───────┴──────────────╯</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1163,12 +1215,12 @@ If you want to have everything at the toplevel, you can pipe to the <code>flatte
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; doc get airline_10 | flatten
-╭───┬────────────┬──────────┬───────────────┬──────┬──────┬────────────┬─────────────┬─────────┬─────────────────────┬───────┬───────────╮
-│ # │     id     │ callsign │    country    │ iata │ icao │ content_id │    name     │  type   │         cas         │ error │  cluster  │
-├───┼────────────┼──────────┼───────────────┼──────┼──────┼────────────┼─────────────┼─────────┼─────────────────────┼───────┼───────────┤
-│ 0 │ airline_10 │ MILE-AIR │ United States │ Q5   │ MLA  │         10 │ 40-Mile Air │ airline │ 1681456999724089344 │       │ dev.local │
-╰───┴────────────┴──────────┴───────────────┴──────┴──────┴────────────┴─────────────┴─────────┴─────────────────────┴───────┴───────────╯</code></pre>
+<pre class="CodeRay highlight nowrap"><code>&gt; doc get airline_10 | flatten
+╭───┬────────────┬────────────┬─────────┬─────────────┬──────┬──────┬──────────┬───────────────┬─────────────────────┬───────┬──────────────╮
+│ # │     id     │ content_id │  type   │    name     │ iata │ icao │ callsign │    country    │         cas         │ error │   cluster    │
+├───┼────────────┼────────────┼─────────┼─────────────┼──────┼──────┼──────────┼───────────────┼─────────────────────┼───────┼──────────────┤
+│ 0 │ airline_10 │         10 │ airline │ 40-Mile Air │ Q5   │ MLA  │ MILE-AIR │ United States │ 1712321628975398912 │       │ prod-us-west │
+╰───┴────────────┴────────────┴─────────┴─────────────┴──────┴──────┴──────────┴───────────────┴─────────────────────┴───────┴──────────────╯</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1179,14 +1231,38 @@ If you want to have everything at the toplevel, you can pipe to the <code>flatte
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; echo [airline_10 airline_10748 airline_137] | wrap id | doc get
-╭───┬───────────────┬───────────────────┬─────────────────────┬───────┬───────────╮
-│ # │      id       │      content      │         cas         │ error │  cluster  │
-├───┼───────────────┼───────────────────┼─────────────────────┼───────┼───────────┤
-│ 0 │ airline_10    │ {record 7 fields} │ 1681456999724089344 │       │ dev.local │
-│ 1 │ airline_10748 │ {record 7 fields} │ 1681456996753211392 │       │ dev.local │
-│ 2 │ airline_137   │ {record 7 fields} │ 1681457004278579200 │       │ dev.local │
-╰───┴───────────────┴───────────────────┴─────────────────────┴───────┴───────────╯</code></pre>
+<pre class="CodeRay highlight"><code>&gt; [airline_10 airline_10748 airline_137] | wrap id | doc get
+╭───┬───────────────┬──────────────────────────────┬─────────────────────┬───────┬──────────────╮
+│ # │      id       │           content            │         cas         │ error │   cluster    │
+├───┼───────────────┼──────────────────────────────┼─────────────────────┼───────┼──────────────┤
+│ 0 │ airline_10    │ ╭──────────┬───────────────╮ │ 1712321628975398912 │       │ prod-us-west │
+│   │               │ │ id       │ 10            │ │                     │       │              │
+│   │               │ │ type     │ airline       │ │                     │       │              │
+│   │               │ │ name     │ 40-Mile Air   │ │                     │       │              │
+│   │               │ │ iata     │ Q5            │ │                     │       │              │
+│   │               │ │ icao     │ MLA           │ │                     │       │              │
+│   │               │ │ callsign │ MILE-AIR      │ │                     │       │              │
+│   │               │ │ country  │ United States │ │                     │       │              │
+│   │               │ ╰──────────┴───────────────╯ │                     │       │              │
+│ 1 │ airline_137   │ ╭──────────┬────────────╮    │ 1712321633323712512 │       │ prod-us-west │
+│   │               │ │ id       │ 137        │    │                     │       │              │
+│   │               │ │ type     │ airline    │    │                     │       │              │
+│   │               │ │ name     │ Air France │    │                     │       │              │
+│   │               │ │ iata     │ AF         │    │                     │       │              │
+│   │               │ │ icao     │ AFR        │    │                     │       │              │
+│   │               │ │ callsign │ AIRFRANS   │    │                     │       │              │
+│   │               │ │ country  │ France     │    │                     │       │              │
+│   │               │ ╰──────────┴────────────╯    │                     │       │              │
+│ 2 │ airline_10748 │ ╭──────────┬───────────────╮ │ 1712321631323947008 │       │ prod-us-west │
+│   │               │ │ id       │ 10748         │ │                     │       │              │
+│   │               │ │ type     │ airline       │ │                     │       │              │
+│   │               │ │ name     │ Locair        │ │                     │       │              │
+│   │               │ │ iata     │ ZQ            │ │                     │       │              │
+│   │               │ │ icao     │ LOC           │ │                     │       │              │
+│   │               │ │ callsign │ LOCAIR        │ │                     │       │              │
+│   │               │ │ country  │ United States │ │                     │       │              │
+│   │               │ ╰──────────┴───────────────╯ │                     │       │              │
+╰───┴───────────────┴──────────────────────────────┴─────────────────────┴───────┴──────────────╯</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1236,7 +1312,7 @@ This behavior can be customized through the <code>--id-column</code> flag.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; echo [airline_10 airline_10748 airline_137] | wrap id | doc remove
+<pre class="CodeRay highlight"><code>&gt; [airline_10 airline_10748 airline_137] | wrap id | doc remove
 ╭───┬───────────┬─────────┬────────┬───────────────┬───────────╮
 │ # │ processed │ success │ failed │   failures    │  cluster  │
 ├───┼───────────┼─────────┼────────┼───────────────┼───────────┤
@@ -1255,7 +1331,7 @@ This behavior can be customized through the <code>--id-column</code> flag.</p>
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; version
 ╭─────────┬────────╮
-│ version │ 0.75.1 │
+│ version │ 0.92.0 │
 ╰─────────┴────────╯</code></pre>
 </div>
 </div>
@@ -1275,7 +1351,7 @@ This behavior can be customized through the <code>--id-column</code> flag.</p>
 <pre class="CodeRay highlight"><code data-lang="toml"># Allows us to evolve in the future without breaking old config files
 version = 1
 
-[[database]]
+[[cluster]]
 identifier = &quot;default&quot;
 connstr = &quot;127.0.0.1&quot;
 default-bucket = &quot;travel-sample&quot;
@@ -1319,7 +1395,7 @@ management-timeout = &quot;75s&quot;</code></pre>
 <pre class="CodeRay highlight"><code data-lang="toml"># Allows us to evolve in the future without breaking old config files
 version = 1
 
-[[database]]
+[[cluster]]
 identifier = &quot;default&quot;
 username = &quot;Administrator&quot;
 password = &quot;password&quot;
@@ -1394,30 +1470,39 @@ By default, these two columns are named <code>id</code> and <code>content</code>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; ls airports
-───┬────────────────────────────┬──────┬───────┬────────────
- # │            name            │ type │ size  │  modified
-───┼────────────────────────────┼──────┼───────┼────────────
- 0 │ airports/airport_3719.json │ File │ 151 B │ 2 days ago
- 1 │ airports/airport_3720.json │ File │ 155 B │ 2 days ago
- 2 │ airports/airport_3721.json │ File │ 172 B │ 2 days ago
- 3 │ airports/airport_3722.json │ File │ 161 B │ 2 days ago
- 4 │ airports/airport_3723.json │ File │ 163 B │ 2 days ago
- 5 │ airports/airport_3724.json │ File │ 156 B │ 2 days ago
- 6 │ airports/airport_3725.json │ File │ 148 B │ 2 days ago
- 7 │ airports/airport_3726.json │ File │ 164 B │ 2 days ago
- 8 │ airports/airport_3727.json │ File │ 169 B │ 2 days ago
- 9 │ airports/airport_3728.json │ File │ 152 B │ 2 days ago
-───┴────────────────────────────┴──────┴───────┴────────────
+╭───┬────────────────────────────┬──────┬───────┬───────────────╮
+│ # │            name            │ type │ size  │   modified    │
+├───┼────────────────────────────┼──────┼───────┼───────────────┤
+│ 0 │ airports/airport_3719.json │ file │ 353 B │ 3 minutes ago │
+│ 1 │ airports/airport_3720.json │ file │ 355 B │ 3 minutes ago │
+│ 2 │ airports/airport_3721.json │ file │ 370 B │ 3 minutes ago │
+│ 3 │ airports/airport_3722.json │ file │ 362 B │ 2 minutes ago │
+│ 4 │ airports/airport_3723.json │ file │ 365 B │ 2 minutes ago │
+│ 5 │ airports/airport_3724.json │ file │ 356 B │ 2 minutes ago │
+│ 6 │ airports/airport_3725.json │ file │ 350 B │ 2 minutes ago │
+│ 7 │ airports/airport_3726.json │ file │ 362 B │ 2 minutes ago │
+│ 8 │ airports/airport_3727.json │ file │ 371 B │ 2 minutes ago │
+│ 9 │ airports/airport_3728.json │ file │ 354 B │ 2 minutes ago │
+╰───┴────────────────────────────┴──────┴───────┴───────────────╯
 
 &gt; open airports/airport_3719.json
-───┬──────┬─────────┬─────────────┬──────────┬─────────┬─────┬──────┬──────────────
- # │  id  │  type   │ airportname │   city   │ country │ faa │ icao │      tz
-───┼──────┼─────────┼─────────────┼──────────┼─────────┼─────┼──────┼──────────────
- 0 │ 3719 │ airport │ Columbia    │ Columbia │ United  │ COU │ KCOU │ America/Chic
-   │      │         │ Rgnl        │          │ States  │     │      │ ago
-───┴──────┴─────────┴─────────────┴──────────┴─────────┴─────┴──────┴──────────────
+╭─────────────┬──────────────────╮
+│ id          │ 3719             │
+│ type        │ airport          │
+│ airportname │ Columbia Rgnl    │
+│ city        │ Columbia         │
+│ country     │ United States    │
+│ faa         │ COU              │
+│ icao        │ KCOU             │
+│ tz          │ America/Chicago  │
+│             │ ╭─────┬────────╮ │
+│ geo         │ │ lat │ 38.82  │ │
+│             │ │ lon │ -92.22 │ │
+│             │ │ alt │ 889    │ │
+│             │ ╰─────┴────────╯ │
+╰─────────────┴──────────────────╯
 
-&gt; ls airports/ | each { |it| open $it.name | wrap content | insert id { |doc| echo $doc.content.airportname} } | doc upsert
+&gt; ls airports | each { |it| open $it.name | wrap content | insert id $in.content.airportname } | doc upsert
 ╭───┬───────────┬─────────┬────────┬──────────┬───────────╮
 │ # │ processed │ success │ failed │ failures │  cluster  │
 ├───┼───────────┼─────────┼────────┼──────────┼───────────┤
@@ -1437,7 +1522,7 @@ By default, these two columns are named <code>id</code> and <code>content</code>
 id,cas,type,airportname,city,country,faa,icao,tz
 3719,1600344369374167040,airport,Columbia Rgnl,Columbia,United States,COU,KCOU,America/Chicago
 
-&gt; open mydoc.csv | each { |it| wrap content | insert id { |doc| echo $doc.content.airportname} } | doc upsert
+&gt; open mydoc.csv | each { |it| wrap content | insert id $in.content.airportname} | doc upsert
 ╭───┬───────────┬─────────┬────────┬──────────┬───────────╮
 │ # │ processed │ success │ failed │ failures │  cluster  │
 ├───┼───────────┼─────────┼────────┼──────────┼───────────┤
@@ -1458,12 +1543,12 @@ Les Loges,Nangis,France,,LFAI,1256,airport,Europe/Paris
 Couterne,Bagnole-de-l'orne,France,,LFAO,1257,airport,Europe/Paris
 Bray,Albert,France,,LFAQ,1258,airport,Europe/Paris
 
-&gt;  open mydoc.csv | each { |it| wrap content | insert id { |doc| echo $doc.content.airportname }  } | doc upsert
-╭───┬───────────┬─────────┬────────┬──────────┬───────────╮
-│ # │ processed │ success │ failed │ failures │  cluster  │
-├───┼───────────┼─────────┼────────┼──────────┼───────────┤
-│ 0 │        10 │      10 │      0 │          │ dev.local │
-╰───┴───────────┴─────────┴────────┴──────────┴───────────╯</code></pre>
+&gt; open airports.csv | each { |it| wrap content | insert id $in.content.airportname} | doc upsert
+╭───┬───────────┬─────────┬────────┬──────────┬─────────╮
+│ # │ processed │ success │ failed │ failures │ cluster │
+├───┼───────────┼─────────┼────────┼──────────┼─────────┤
+│ 0 │         5 │       5 │      0 │          │ local   │
+╰───┴───────────┴─────────┴────────┴──────────┴─────────╯</code></pre>
 </div>
 </div>
 </div>
@@ -1501,7 +1586,7 @@ Bray,Albert,France,,LFAQ,1258,Europe/Paris
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; open airports.csv | each { |it| insert type $it.city }
+<pre class="CodeRay highlight nowrap"><code>&gt; open airports.csv | each { |it| insert type $it.city }
 ╭───┬────────────────────┬───────────────────┬─────────┬─────┬──────┬──────┬──────────────┬───────────────────╮
 │ # │    airportname     │       city        │ country │ faa │ icao │  id  │      tz      │       type        │
 ├───┼────────────────────┼───────────────────┼─────────┼─────┼──────┼──────┼──────────────┼───────────────────┤
@@ -1538,15 +1623,45 @@ If you want to only store the document body then you can use <code>doc get &lt;i
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; doc get airport_3719 --bucket travel-sample
-╭───┬──────────────┬───────────────────┬─────────────────────┬───────┬───────────╮
-│ # │      id      │      content      │         cas         │ error │  cluster  │
-├───┼──────────────┼───────────────────┼─────────────────────┼───────┼───────────┤
-│ 0 │ airport_3719 │ {record 9 fields} │ 1681456998755270656 │       │ dev.local │
-╰───┴──────────────┴───────────────────┴─────────────────────┴───────┴───────────╯
+╭───┬──────────────┬────────────────────────────────────┬─────────────────────┬───────┬─────────╮
+│ # │      id      │              content               │         cas         │ error │ cluster │
+├───┼──────────────┼────────────────────────────────────┼─────────────────────┼───────┼─────────┤
+│ 0 │ airport_3719 │ ╭─────────────┬──────────────────╮ │ 1712321632867319808 │       │ local   │
+│   │              │ │ id          │ 3719             │ │                     │       │         │
+│   │              │ │ type        │ airport          │ │                     │       │         │
+│   │              │ │ airportname │ Columbia Rgnl    │ │                     │       │         │
+│   │              │ │ city        │ Columbia         │ │                     │       │         │
+│   │              │ │ country     │ United States    │ │                     │       │         │
+│   │              │ │ faa         │ COU              │ │                     │       │         │
+│   │              │ │ icao        │ KCOU             │ │                     │       │         │
+│   │              │ │ tz          │ America/Chicago  │ │                     │       │         │
+│   │              │ │             │ ╭─────┬────────╮ │ │                     │       │         │
+│   │              │ │ geo         │ │ lat │ 38.82  │ │ │                     │       │         │
+│   │              │ │             │ │ lon │ -92.22 │ │ │                     │       │         │
+│   │              │ │             │ │ alt │ 889.00 │ │ │                     │       │         │
+│   │              │ │             │ ╰─────┴────────╯ │ │                     │       │         │
+│   │              │ ╰─────────────┴──────────────────╯ │                     │       │         │
+╰───┴──────────────┴────────────────────────────────────┴─────────────────────┴───────┴─────────╯
 
-&gt; doc get airport_3719 | get content | save mydoc.json
+&gt; doc get airport_3719 | get content.0 | save mydoc.json
+👤 Charlie 🏠 local
 &gt; cat mydoc.json
-{&quot;airportname&quot;:&quot;Columbia Rgnl&quot;,&quot;city&quot;:&quot;Columbia&quot;,&quot;country&quot;:&quot;United States&quot;,&quot;faa&quot;:&quot;COU&quot;,&quot;geo&quot;:{&quot;alt&quot;:889.0,&quot;lat&quot;:38.818094,&quot;lon&quot;:-92.219631},&quot;icao&quot;:&quot;KCOU&quot;,&quot;id&quot;:3719,&quot;type&quot;:&quot;airport&quot;,&quot;tz&quot;:&quot;America/Chicago&quot;}</code></pre>
+{
+  &quot;id&quot;: 3719,
+  &quot;type&quot;: &quot;airport&quot;,
+  &quot;airportname&quot;: &quot;Columbia Rgnl&quot;,
+  &quot;city&quot;: &quot;Columbia&quot;,
+  &quot;country&quot;: &quot;United States&quot;,
+  &quot;faa&quot;: &quot;COU&quot;,
+  &quot;icao&quot;: &quot;KCOU&quot;,
+  &quot;tz&quot;: &quot;America/Chicago&quot;,
+  &quot;geo&quot;:
+  {
+    &quot;lat&quot;: 38.818094,
+    &quot;lon&quot;: -92.219631,
+    &quot;alt&quot;: 889
+  }
+}</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1557,20 +1672,58 @@ If you want to only store the document body then you can use <code>doc get &lt;i
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; query &quot;SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5&quot;
-╭───┬────────────────────┬───────────────────┬─────────┬─────┬───────────────────┬──────┬──────┬─────────┬──────────────┬───────────╮
-│ # │    airportname     │       city        │ country │ faa │        geo        │ icao │  id  │  type   │      tz      │ database  │
-├───┼────────────────────┼───────────────────┼─────────┼─────┼───────────────────┼──────┼──────┼─────────┼──────────────┼───────────┤
-│ 0 │ Calais Dunkerque   │ Calais            │ France  │ CQF │ {record 3 fields} │ LFAC │ 1254 │ airport │ Europe/Paris │ dev.local │
-│ 1 │ Peronne St Quentin │ Peronne           │ France  │     │ {record 3 fields} │ LFAG │ 1255 │ airport │ Europe/Paris │ dev.local │
-│ 2 │ Les Loges          │ Nangis            │ France  │     │ {record 3 fields} │ LFAI │ 1256 │ airport │ Europe/Paris │ dev.local │
-│ 3 │ Couterne           │ Bagnole-de-l'orne │ France  │     │ {record 3 fields} │ LFAO │ 1257 │ airport │ Europe/Paris │ dev.local │
-│ 4 │ Bray               │ Albert            │ France  │     │ {record 3 fields} │ LFAQ │ 1258 │ airport │ Europe/Paris │ dev.local │
-╰───┴────────────────────┴───────────────────┴─────────┴─────┴───────────────────┴──────┴──────┴─────────┴──────────────┴───────────╯
+<pre class="CodeRay highlight nowrap"><code>&gt;  query &quot;SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5&quot;
+╭───┬─────────────────────────┬───────────────────┬───────────────┬─────┬───────────────────┬──────┬──────┬─────────┬─────────────────────┬─────────╮
+│ # │       airportname       │       city        │    country    │ faa │        geo        │ icao │  id  │  type   │         tz          │ cluster │
+├───┼─────────────────────────┼───────────────────┼───────────────┼─────┼───────────────────┼──────┼──────┼─────────┼─────────────────────┼─────────┤
+│ 0 │ Boeing Fld King Co Intl │ Seattle           │ United States │ BFI │ ╭─────┬─────────╮ │ KBFI │ 3726 │ airport │ America/Los_Angeles │ local   │
+│   │                         │                   │               │     │ │ alt │ 21      │ │      │      │         │                     │         │
+│   │                         │                   │               │     │ │ lat │ 47.53   │ │      │      │         │                     │         │
+│   │                         │                   │               │     │ │ lon │ -122.30 │ │      │      │         │                     │         │
+│   │                         │                   │               │     │ ╰─────┴─────────╯ │      │      │         │                     │         │
+│ 1 │ Bray                    │ Albert            │ France        │     │        ❎         │ LFAQ │ 1258 │ airport │ Europe/Paris        │ local   │
+│ 2 │ Calais Dunkerque        │ Calais            │ France        │ CQF │        ❎         │ LFAC │ 1254 │ airport │ Europe/Paris        │ local   │
+│ 3 │ Columbia Rgnl           │ Columbia          │ United States │ COU │ ╭─────┬────────╮  │ KCOU │ 3719 │ airport │ America/Chicago     │ local   │
+│   │                         │                   │               │     │ │ alt │ 889    │  │      │      │         │                     │         │
+│   │                         │                   │               │     │ │ lat │ 38.82  │  │      │      │         │                     │         │
+│   │                         │                   │               │     │ │ lon │ -92.22 │  │      │      │         │                     │         │
+│   │                         │                   │               │     │ ╰─────┴────────╯  │      │      │         │                     │         │
+│ 4 │ Couterne                │ Bagnole-de-l'orne │ France        │     │        ❎         │ LFAO │ 1257 │ airport │ Europe/Paris        │ local   │
+╰───┴─────────────────────────┴───────────────────┴───────────────┴─────┴───────────────────┴──────┴──────┴─────────┴─────────────────────┴─────────╯
 
 &gt; query &quot;SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5&quot; | save airports.json
 &gt; cat airports.json
-[{&quot;airportname&quot;:&quot;Calais Dunkerque&quot;,&quot;city&quot;:&quot;Calais&quot;,&quot;country&quot;:&quot;France&quot;,&quot;faa&quot;:&quot;CQF&quot;,&quot;geo&quot;:{&quot;alt&quot;:12,&quot;lat&quot;:50.962097,&quot;lon&quot;:1.9547640000000002},&quot;icao&quot;:&quot;LFAC&quot;,&quot;id&quot;:1254,&quot;type&quot;:&quot;airport&quot;,&quot;tz&quot;:&quot;Europe/Paris&quot;},{&quot;airportname&quot;:&quot;Peronne St Quentin&quot;,&quot;city&quot;:&quot;Peronne&quot;,&quot;country&quot;:&quot;France&quot;,&quot;faa&quot;:null,&quot;geo&quot;:{&quot;alt&quot;:295,&quot;lat&quot;:49.868547,&quot;lon&quot;:3.0295780000000003},&quot;icao&quot;:&quot;LFAG&quot;,&quot;id&quot;:1255,&quot;type&quot;:&quot;airport&quot;,&quot;tz&quot;:&quot;Europe/Paris&quot;},{&quot;airportname&quot;:&quot;Les Loges&quot;,&quot;city&quot;:&quot;Nangis&quot;,&quot;country&quot;:&quot;France&quot;,&quot;faa&quot;:null,&quot;geo&quot;:{&quot;alt&quot;:428,&quot;lat&quot;:48.596219,&quot;lon&quot;:3.0067860000000004},&quot;icao&quot;:&quot;LFAI&quot;,&quot;id&quot;:1256,&quot;type&quot;:&quot;airport&quot;,&quot;tz&quot;:&quot;Europe/Paris&quot;},{&quot;airportname&quot;:&quot;Couterne&quot;,&quot;city&quot;:&quot;Bagnole-de-l'orne&quot;,&quot;country&quot;:&quot;France&quot;,&quot;faa&quot;:null,&quot;geo&quot;:{&quot;alt&quot;:718,&quot;lat&quot;:48.545836,&quot;lon&quot;:-0.387444},&quot;icao&quot;:&quot;LFAO&quot;,&quot;id&quot;:1257,&quot;type&quot;:&quot;airport&quot;,&quot;tz&quot;:&quot;Europe/Paris&quot;},{&quot;airportname&quot;:&quot;Bray&quot;,&quot;city&quot;:&quot;Albert&quot;,&quot;country&quot;:&quot;France&quot;,&quot;faa&quot;:null,&quot;geo&quot;:{&quot;alt&quot;:364,&quot;lat&quot;:49.971531,&quot;lon&quot;:2.697661},&quot;icao&quot;:&quot;LFAQ&quot;,&quot;id&quot;:1258,&quot;type&quot;:&quot;airport&quot;,&quot;tz&quot;:&quot;Europe/Paris&quot;}]</code></pre>
+[
+  {
+    &quot;airportname&quot;: &quot;Boeing Fld King Co Intl&quot;,
+    &quot;city&quot;: &quot;Seattle&quot;,
+    &quot;country&quot;: &quot;United States&quot;,
+    &quot;faa&quot;: &quot;BFI&quot;,
+    &quot;geo&quot;:
+    {
+      &quot;alt&quot;: 21,
+      &quot;lat&quot;: 47.53,
+      &quot;lon&quot;: -122.301947
+    },
+    &quot;icao&quot;: &quot;KBFI&quot;,
+    &quot;id&quot;: 3726,
+    &quot;type&quot;: &quot;airport&quot;,
+    &quot;tz&quot;: &quot;America/Los_Angeles&quot;,
+    &quot;cluster&quot;: &quot;local&quot;
+  },
+...
+  {
+    &quot;airportname&quot;: &quot;Couterne&quot;,
+    &quot;city&quot;: &quot;Bagnole-de-l'orne&quot;,
+    &quot;country&quot;: &quot;France&quot;,
+    &quot;faa&quot;: &quot;&quot;,
+    &quot;icao&quot;: &quot;LFAO&quot;,
+    &quot;id&quot;: 1257,
+    &quot;type&quot;: &quot;airport&quot;,
+    &quot;tz&quot;: &quot;Europe/Paris&quot;,
+    &quot;cluster&quot;: &quot;local&quot;
+  }
+]</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1578,27 +1731,35 @@ If you want to only store the document body then you can use <code>doc get &lt;i
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; query &quot;SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5&quot;
-╭───┬────────────────────┬───────────────────┬─────────┬─────┬───────────────────┬──────┬──────┬─────────┬──────────────┬───────────╮
-│ # │    airportname     │       city        │ country │ faa │        geo        │ icao │  id  │  type   │      tz      │ database  │
-├───┼────────────────────┼───────────────────┼─────────┼─────┼───────────────────┼──────┼──────┼─────────┼──────────────┼───────────┤
-│ 0 │ Calais Dunkerque   │ Calais            │ France  │ CQF │ {record 3 fields} │ LFAC │ 1254 │ airport │ Europe/Paris │ dev.local │
-│ 1 │ Peronne St Quentin │ Peronne           │ France  │     │ {record 3 fields} │ LFAG │ 1255 │ airport │ Europe/Paris │ dev.local │
-│ 2 │ Les Loges          │ Nangis            │ France  │     │ {record 3 fields} │ LFAI │ 1256 │ airport │ Europe/Paris │ dev.local │
-│ 3 │ Couterne           │ Bagnole-de-l'orne │ France  │     │ {record 3 fields} │ LFAO │ 1257 │ airport │ Europe/Paris │ dev.local │
-│ 4 │ Bray               │ Albert            │ France  │     │ {record 3 fields} │ LFAQ │ 1258 │ airport │ Europe/Paris │ dev.local │
-╰───┴────────────────────┴───────────────────┴─────────┴─────┴───────────────────┴──────┴──────┴─────────┴──────────────┴───────────╯
+<pre class="CodeRay highlight nowrap"><code>&gt; query &quot;SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5&quot;
+╭───┬─────────────────────────┬───────────────────┬───────────────┬─────┬───────────────────┬──────┬──────┬─────────┬─────────────────────┬─────────╮
+│ # │       airportname       │       city        │    country    │ faa │        geo        │ icao │  id  │  type   │         tz          │ cluster │
+├───┼─────────────────────────┼───────────────────┼───────────────┼─────┼───────────────────┼──────┼──────┼─────────┼─────────────────────┼─────────┤
+│ 0 │ Boeing Fld King Co Intl │ Seattle           │ United States │ BFI │ ╭─────┬─────────╮ │ KBFI │ 3726 │ airport │ America/Los_Angeles │ local   │
+│   │                         │                   │               │     │ │ alt │ 21      │ │      │      │         │                     │         │
+│   │                         │                   │               │     │ │ lat │ 47.53   │ │      │      │         │                     │         │
+│   │                         │                   │               │     │ │ lon │ -122.30 │ │      │      │         │                     │         │
+│   │                         │                   │               │     │ ╰─────┴─────────╯ │      │      │         │                     │         │
+│ 1 │ Bray                    │ Albert            │ France        │     │        ❎         │ LFAQ │ 1258 │ airport │ Europe/Paris        │ local   │
+│ 2 │ Calais Dunkerque        │ Calais            │ France        │ CQF │        ❎         │ LFAC │ 1254 │ airport │ Europe/Paris        │ local   │
+│ 3 │ Columbia Rgnl           │ Columbia          │ United States │ COU │ ╭─────┬────────╮  │ KCOU │ 3719 │ airport │ America/Chicago     │ local   │
+│   │                         │                   │               │     │ │ alt │ 889    │  │      │      │         │                     │         │
+│   │                         │                   │               │     │ │ lat │ 38.82  │  │      │      │         │                     │         │
+│   │                         │                   │               │     │ │ lon │ -92.22 │  │      │      │         │                     │         │
+│   │                         │                   │               │     │ ╰─────┴────────╯  │      │      │         │                     │         │
+│ 4 │ Couterne                │ Bagnole-de-l'orne │ France        │     │        ❎         │ LFAO │ 1257 │ airport │ Europe/Paris        │ local   │
+╰───┴─────────────────────────┴───────────────────┴───────────────┴─────┴───────────────────┴──────┴──────┴─────────┴─────────────────────┴─────────╯
 
-&gt; query &quot;SELECT `travel-sample`.* FROM `travel-sample` WHERE `type`='airport' LIMIT 5&quot; | each { |it| echo $it | save (echo ([&quot;airport_&quot;, $it.id ,&quot;.json&quot;] | str join)) }
+&gt; query &quot;SELECT `travel-sample`.* FROM `travel-sample` WHERE `type`='airport' LIMIT 5&quot; | each { |it| $it | save ([&quot;airport_&quot;, $it.id ,&quot;.json&quot;] | str join) }
 &gt; ls airport*.json
 ╭───┬───────────────────┬──────┬───────┬──────────╮
 │ # │       name        │ type │ size  │ modified │
 ├───┼───────────────────┼──────┼───────┼──────────┤
-│ 0 │ airport_1254.json │ file │ 277 B │ now      │
-│ 1 │ airport_1255.json │ file │ 280 B │ now      │
-│ 2 │ airport_1256.json │ file │ 270 B │ now      │
-│ 3 │ airport_1257.json │ file │ 281 B │ now      │
-│ 4 │ airport_1258.json │ file │ 265 B │ now      │
+│ 0 │ airport_1254.json │ file │ 197 B │ now      │
+│ 1 │ airport_1257.json │ file │ 197 B │ now      │
+│ 2 │ airport_1258.json │ file │ 182 B │ now      │
+│ 3 │ airport_3719.json │ file │ 284 B │ now      │
+│ 4 │ airport_3726.json │ file │ 293 B │ now      │
 ╰───┴───────────────────┴──────┴───────┴──────────╯</code></pre>
 </div>
 </div>
@@ -1610,19 +1771,37 @@ If you want to only store the document body then you can use <code>doc get &lt;i
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; doc get airport_3719 --bucket travel-sample
-╭───┬──────────────┬───────────────────┬─────────────────────┬───────┬───────────╮
-│ # │      id      │      content      │         cas         │ error │  cluster  │
-├───┼──────────────┼───────────────────┼─────────────────────┼───────┼───────────┤
-│ 0 │ airport_3719 │ {record 9 fields} │ 1681456998755270656 │       │ dev.local │
-╰───┴──────────────┴───────────────────┴─────────────────────┴───────┴───────────╯
+<pre class="CodeRay highlight nowrap"><code>&gt; doc get airport_3719 --bucket travel-sample
+╭───┬──────────────┬────────────────────────────────────┬─────────────────────┬───────┬─────────╮
+│ # │      id      │              content               │         cas         │ error │ cluster │
+├───┼──────────────┼────────────────────────────────────┼─────────────────────┼───────┼─────────┤
+│ 0 │ airport_3719 │ ╭─────────────┬──────────────────╮ │ 1712321632867319808 │       │ local   │
+│   │              │ │ id          │ 3719             │ │                     │       │         │
+│   │              │ │ type        │ airport          │ │                     │       │         │
+│   │              │ │ airportname │ Columbia Rgnl    │ │                     │       │         │
+│   │              │ │ city        │ Columbia         │ │                     │       │         │
+│   │              │ │ country     │ United States    │ │                     │       │         │
+│   │              │ │ faa         │ COU              │ │                     │       │         │
+│   │              │ │ icao        │ KCOU             │ │                     │       │         │
+│   │              │ │ tz          │ America/Chicago  │ │                     │       │         │
+│   │              │ │             │ ╭─────┬────────╮ │ │                     │       │         │
+│   │              │ │ geo         │ │ lat │ 38.82  │ │ │                     │       │         │
+│   │              │ │             │ │ lon │ -92.22 │ │ │                     │       │         │
+│   │              │ │             │ │ alt │ 889.00 │ │ │                     │       │         │
+│   │              │ │             │ ╰─────┴────────╯ │ │                     │       │         │
+│   │              │ ╰─────────────┴──────────────────╯ │                     │       │         │
+╰───┴──────────────┴────────────────────────────────────┴─────────────────────┴───────┴─────────╯
 
 &gt; doc get airport_3719 --bucket travel-sample | get content
-╭───┬───────────────┬──────────┬───────────────┬─────┬───────────────────┬──────┬──────┬─────────┬─────────────────╮
-│ # │  airportname  │   city   │    country    │ faa │        geo        │ icao │  id  │  type   │       tz        │
-├───┼───────────────┼──────────┼───────────────┼─────┼───────────────────┼──────┼──────┼─────────┼─────────────────┤
-│ 0 │ Columbia Rgnl │ Columbia │ United States │ COU │ {record 3 fields} │ KCOU │ 3719 │ airport │ America/Chicago │
-╰───┴───────────────┴──────────┴───────────────┴─────┴───────────────────┴──────┴──────┴─────────┴─────────────────╯</code></pre>
+╭───┬──────┬─────────┬───────────────┬──────────┬───────────────┬─────┬──────┬─────────────────┬──────────────────╮
+│ # │  id  │  type   │  airportname  │   city   │    country    │ faa │ icao │       tz        │       geo        │
+├───┼──────┼─────────┼───────────────┼──────────┼───────────────┼─────┼──────┼─────────────────┼──────────────────┤
+│ 0 │ 3719 │ airport │ Columbia Rgnl │ Columbia │ United States │ COU │ KCOU │ America/Chicago │ ╭─────┬────────╮ │
+│   │      │         │               │          │               │     │      │                 │ │ lat │ 38.82  │ │
+│   │      │         │               │          │               │     │      │                 │ │ lon │ -92.22 │ │
+│   │      │         │               │          │               │     │      │                 │ │ alt │ 889.00 │ │
+│   │      │         │               │          │               │     │      │                 │ ╰─────┴────────╯ │
+╰───┴──────┴─────────┴───────────────┴──────────┴───────────────┴─────┴──────┴─────────────────┴──────────────────╯</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1648,12 +1827,12 @@ Error: nu::shell::cant_convert (link)
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; doc get airport_3719 --bucket travel-sample | get content | flatten
-╭───┬───────────────┬──────────┬───────────────┬─────┬──────────┬─────────┬──────────┬──────┬──────┬─────────┬─────────────────╮
-│ # │  airportname  │   city   │    country    │ faa │   alt    │   lat   │   lon    │ icao │  id  │  type   │       tz        │
-├───┼───────────────┼──────────┼───────────────┼─────┼──────────┼─────────┼──────────┼──────┼──────┼─────────┼─────────────────┤
-│ 0 │ Columbia Rgnl │ Columbia │ United States │ COU │ 889.0000 │ 38.8181 │ -92.2196 │ KCOU │ 3719 │ airport │ America/Chicago │
-╰───┴───────────────┴──────────┴───────────────┴─────┴──────────┴─────────┴──────────┴──────┴──────┴─────────┴─────────────────╯</code></pre>
+<pre class="CodeRay highlight nowrap"><code>&gt; doc get airport_3719 --bucket travel-sample | get content | flatten
+╭───┬──────┬─────────┬───────────────┬──────────┬───────────────┬─────┬──────┬─────────────────┬───────┬────────┬────────╮
+│ # │  id  │  type   │  airportname  │   city   │    country    │ faa │ icao │       tz        │  lat  │  lon   │  alt   │
+├───┼──────┼─────────┼───────────────┼──────────┼───────────────┼─────┼──────┼─────────────────┼───────┼────────┼────────┤
+│ 0 │ 3719 │ airport │ Columbia Rgnl │ Columbia │ United States │ COU │ KCOU │ America/Chicago │ 38.82 │ -92.22 │ 889.00 │
+╰───┴──────┴─────────┴───────────────┴──────────┴───────────────┴─────┴──────┴─────────────────┴───────┴────────┴────────╯</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1663,8 +1842,8 @@ Error: nu::shell::cant_convert (link)
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; doc get airport_3719 --bucket travel-sample | get content | flatten | save mydoc.csv
 &gt; cat mydoc.csv
-airportname,city,country,faa,alt,lat,lon,icao,id,type,tz
-Columbia Rgnl,Columbia,United States,COU,889,38.818094,-92.219631,KCOU,3719,airport,America/Chicago</code></pre>
+id,type,airportname,city,country,faa,icao,tz,lat,lon,alt
+3719,airport,Columbia Rgnl,Columbia,United States,COU,KCOU,America/Chicago,38.818094,-92.219631,889</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1672,16 +1851,24 @@ Columbia Rgnl,Columbia,United States,COU,889,38.818094,-92.219631,KCOU,3719,airp
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; query &quot;SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5&quot;
-╭───┬────────────────────┬───────────────────┬─────────┬─────┬───────────────────┬──────┬──────┬─────────┬──────────────┬───────────╮
-│ # │    airportname     │       city        │ country │ faa │        geo        │ icao │  id  │  type   │      tz      │ database  │
-├───┼────────────────────┼───────────────────┼─────────┼─────┼───────────────────┼──────┼──────┼─────────┼──────────────┼───────────┤
-│ 0 │ Calais Dunkerque   │ Calais            │ France  │ CQF │ {record 3 fields} │ LFAC │ 1254 │ airport │ Europe/Paris │ dev.local │
-│ 1 │ Peronne St Quentin │ Peronne           │ France  │     │ {record 3 fields} │ LFAG │ 1255 │ airport │ Europe/Paris │ dev.local │
-│ 2 │ Les Loges          │ Nangis            │ France  │     │ {record 3 fields} │ LFAI │ 1256 │ airport │ Europe/Paris │ dev.local │
-│ 3 │ Couterne           │ Bagnole-de-l'orne │ France  │     │ {record 3 fields} │ LFAO │ 1257 │ airport │ Europe/Paris │ dev.local │
-│ 4 │ Bray               │ Albert            │ France  │     │ {record 3 fields} │ LFAQ │ 1258 │ airport │ Europe/Paris │ dev.local │
-╰───┴────────────────────┴───────────────────┴─────────┴─────┴───────────────────┴──────┴──────┴─────────┴──────────────┴───────────╯</code></pre>
+<pre class="CodeRay highlight nowrap"><code>&gt; query &quot;SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5&quot;
+╭───┬─────────────────────────┬───────────────────┬───────────────┬─────┬───────────────────┬──────┬──────┬─────────┬─────────────────────┬─────────╮
+│ # │       airportname       │       city        │    country    │ faa │        geo        │ icao │  id  │  type   │         tz          │ cluster │
+├───┼─────────────────────────┼───────────────────┼───────────────┼─────┼───────────────────┼──────┼──────┼─────────┼─────────────────────┼─────────┤
+│ 0 │ Boeing Fld King Co Intl │ Seattle           │ United States │ BFI │ ╭─────┬─────────╮ │ KBFI │ 3726 │ airport │ America/Los_Angeles │ local   │
+│   │                         │                   │               │     │ │ alt │ 21      │ │      │      │         │                     │         │
+│   │                         │                   │               │     │ │ lat │ 47.53   │ │      │      │         │                     │         │
+│   │                         │                   │               │     │ │ lon │ -122.30 │ │      │      │         │                     │         │
+│   │                         │                   │               │     │ ╰─────┴─────────╯ │      │      │         │                     │         │
+│ 1 │ Bray                    │ Albert            │ France        │     │        ❎         │ LFAQ │ 1258 │ airport │ Europe/Paris        │ local   │
+│ 2 │ Calais Dunkerque        │ Calais            │ France        │ CQF │        ❎         │ LFAC │ 1254 │ airport │ Europe/Paris        │ local   │
+│ 3 │ Columbia Rgnl           │ Columbia          │ United States │ COU │ ╭─────┬────────╮  │ KCOU │ 3719 │ airport │ America/Chicago     │ local   │
+│   │                         │                   │               │     │ │ alt │ 889    │  │      │      │         │                     │         │
+│   │                         │                   │               │     │ │ lat │ 38.82  │  │      │      │         │                     │         │
+│   │                         │                   │               │     │ │ lon │ -92.22 │  │      │      │         │                     │         │
+│   │                         │                   │               │     │ ╰─────┴────────╯  │      │      │         │                     │         │
+│ 4 │ Couterne                │ Bagnole-de-l'orne │ France        │     │        ❎         │ LFAO │ 1257 │ airport │ Europe/Paris        │ local   │
+╰───┴─────────────────────────┴───────────────────┴───────────────┴─────┴───────────────────┴──────┴──────┴─────────┴─────────────────────┴─────────╯</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1689,7 +1876,14 @@ Columbia Rgnl,Columbia,United States,COU,889,38.818094,-92.219631,KCOU,3719,airp
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; query &quot;SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5&quot; | flatten | save mydoc.csv</code></pre>
+<pre class="CodeRay highlight"><code>&gt; query &quot;SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5&quot; | flatten | save mydoc.csv
+&gt; cat mydoc.csv
+airportname,city,country,faa,alt,lat,lon,icao,id,type,tz,cluster
+Boeing Fld King Co Intl,Seattle,United States,BFI,21,47.53,-122.301947,KBFI,3726,airport,America/Los_Angeles,local
+Bray,Albert,France,,,,,LFAQ,1258,airport,Europe/Paris,local
+Calais Dunkerque,Calais,France,CQF,,,,LFAC,1254,airport,Europe/Paris,local
+Columbia Rgnl,Columbia,United States,COU,889,38.818094,-92.219631,KCOU,3719,airport,America/Chicago,local
+Couterne,Bagnole-de-l'orne,France,,,,,LFAO,1257,airport,Europe/Paris,local</code></pre>
 </div>
 </div>
 </div>
@@ -1711,7 +1905,7 @@ A good example here is migrating from an on-premise cluster to a Capella cluster
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>scopes --databases &quot;On-Prem-Cluster&quot; --bucket travel-sample | select scope | where scope != &quot;_default&quot; | each { |it| scopes create $it.scope --databases &quot;Capella-Cluster&quot; }</code></pre>
+<pre class="CodeRay highlight"><code>scopes --clusters &quot;On-Prem-Cluster&quot; --bucket travel-sample | select scope | where scope != &quot;_default&quot; | each { |it| scopes create $it.scope --clusters &quot;Capella-Cluster&quot; }</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1719,7 +1913,7 @@ A good example here is migrating from an on-premise cluster to a Capella cluster
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>collections --databases &quot;On-Prem-Cluster&quot; --bucket &quot;travel-sample&quot; | select scope collection | where $it.scope != &quot;_default&quot; | where $it.collection != &quot;_default&quot; | each { |it| collections create $it.collection --databases &quot;Capella-Cluster&quot; --bucket &quot;travel-sample-import&quot; --scope $it.scope</code></pre>
+<pre class="CodeRay highlight"><code>collections --clusters &quot;On-Prem-Cluster&quot; --bucket &quot;travel-sample&quot; | select scope collection | where $it.scope != &quot;_default&quot; | where $it.collection != &quot;_default&quot; | each { |it| collections create $it.collection --clusters &quot;Capella-Cluster&quot; --bucket &quot;travel-sample-import&quot; --scope $it.scope</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1738,7 +1932,7 @@ A good example here is migrating from an on-premise cluster to a Capella cluster
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>query indexes --definitions --databases &quot;On-Prem-Cluster&quot; | get definition | each { |it| query $it --databases &quot;Capella-Cluster&quot; }</code></pre>
+<pre class="CodeRay highlight"><code>query indexes --definitions --clusters &quot;On-Prem-Cluster&quot; | get definition | each { |it| query $it --clusters &quot;Capella-Cluster&quot; }</code></pre>
 </div>
 </div>
 </div>
@@ -1749,7 +1943,20 @@ A good example here is migrating from an on-premise cluster to a Capella cluster
 <h2 id="_release_notes">7. Release Notes</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_0_75_1_2023_04_13">7.1. 0.75.1 - 2023-04-13</h3>
+<h3 id="_0_75_2_2023_04_10">7.1. 0.75.2 - 2023-04-10</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Updated macos build to not have any dependency on OpenSSL.</p>
+</li>
+<li>
+<p>Fixed the release workflow so that Linux release tarballs contain the <code>cbsh</code> binary.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_0_75_1_2023_04_13">7.2. 0.75.1 - 2023-04-13</h3>
 <div class="paragraph">
 <p><strong>This release contains a number of breaking changes, which are explicitly called out below.</strong>
 As our versioning continues to track the underlying Nushell minor version this has required breaking changes in a patch version.</p>
@@ -1851,7 +2058,7 @@ As our versioning continues to track the underlying Nushell minor version this h
 </div>
 </div>
 <div class="sect2">
-<h3 id="_0_75_0_2023_02_09">7.2. 0.75.0 - 2023-02-09</h3>
+<h3 id="_0_75_0_2023_02_09">7.3. 0.75.0 - 2023-02-09</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -1901,7 +2108,7 @@ As our versioning continues to track the underlying Nushell minor version this h
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2023-04-18 09:14:59 UTC
+Last updated 2024-05-15 10:08:13 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':

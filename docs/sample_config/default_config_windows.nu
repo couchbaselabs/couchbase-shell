@@ -2,42 +2,47 @@
 def build_collection_prompt [] {
     let content = (cb-env)
     let user = $"($content | get display_name)"
-    let cluster = $"($content | get database)"
+    let cluster = $"($content | get cluster)"
     let bucket = $"($content | get bucket)"
     let scope = $"($content | get scope)"
     let collection = $"($content | get collection)"
     let cluster_type = $"($content | get cluster_type)"
-    
+
+    let bucket_prompt =
     let bucket_name = if $bucket == "" {
-        "<not-set>"
-    } else {
-        $bucket
-    }
-    
-    let collection_prompt = if $bucket_name == "" or ($scope == "" and $collection == "") {
         ""
     } else {
-        if $scope != "" and $collection == "" {
-            '.' + ($scope) + '.<notset>'
-        } else if $scope == "" and $collection != "" {
-            '.<notset>.' + ($collection)
-       } else {
-            '.' + ($scope) + '.' + ($collection)
-       }
+        ' in ' + ($bucket)
     }
-    
-    let prompt = $"(($user) + ' at ' + ($cluster) + ' in ' + ($bucket_name) + ($collection_prompt))"
-    
+
+    let collection_prompt = if $bucket_prompt == "" {
+        ""
+    } else {
+        let scope_name = if $scope == "" {
+            '._default'
+        } else {
+            '.' + $scope
+        }
+
+        let col_name = if $collection == "" {
+            '._default'
+        } else {
+            '.' + $collection
+        }
+        $"($scope_name + $col_name)"
+    }
+
+    let prompt = $"(($user) + ' at ' + ($cluster) + ($bucket_prompt) + ($collection_prompt))
+
+"
+
     $prompt
 }
 
-let-env PROMPT_COMMAND = {build_collection_prompt}
+$env.PROMPT_COMMAND = {build_collection_prompt}
 
-let-env PROMPT_INDICATOR = " 
-> "
+$env.PROMPT_COMMAND_RIGHT = ""
 
-let-env PROMPT_COMMAND_RIGHT = ""
-
-let-env config = {
+$env.config = {
     show_banner: false
 }
