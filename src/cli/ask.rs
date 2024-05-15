@@ -1,7 +1,5 @@
-use crate::cli::llm_client::LLMClients;
-use crate::cli::util::read_openai_api_key;
+use crate::client::LLMClients;
 use crate::state::State;
-use crate::OpenAIClient;
 use nu_protocol::Example;
 use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
@@ -54,8 +52,8 @@ impl Command for Ask {
                 result: None,
             },
             Example {
-                description: "Use the description field of 3 docs as context",
-                example: "[airline_10 airline_11] | subdoc get description | select content | ask \"summarize this for me\"",
+                description: "Use the content field of 2 docs as context",
+                example: "[landmark_10019 landmark_10020] | subdoc get content | select content | ask \"summarize this for me\"",
                 result: None,
             },
         ]
@@ -82,46 +80,62 @@ pub fn ask(
     let span = call.head;
 
     let question: String = call.req(engine_state, stack, 0)?;
-    let mut context: Vec<String> = Vec::new();
-    match input.into_value(span) {
-        Value::List {
-            vals,
-            internal_span: span,
-        } => {
-            for v in vals {
-                let rec = match v.as_record() {
-                    Ok(r) => r,
-                    Err(e) => {
+    let context: Vec<String> = match call.opt(engine_state, stack, 1)? {
+        Some(ctx) => ctx,
+        None => match input.into_value(span) {
+            Value::List {
+                vals,
+                internal_span: span,
+            } => {
+                let mut ctx: Vec<String> = Vec::new();
+                for v in vals {
+                    let rec = match v.as_record() {
+                        Ok(r) => r,
+                        Err(e) => {
+                            return Err(ShellError::GenericError {
+                                error: "Context must be a nushell table".to_string(),
+                                msg: "".to_string(),
+                                span: Some(span),
+                                help: None,
+                                inner: vec![e],
+                            });
+                        }
+                    };
+
+                    if rec.columns().len() > 1 {
                         return Err(ShellError::GenericError {
-                            error: "Context must be a nushell table".to_string(),
+                            error: "Use 'select' to choose a single column to pipe to 'ask'"
+                                .to_string(),
                             msg: "".to_string(),
                             span: Some(span),
                             help: None,
-                            inner: vec![e],
+                            inner: vec![],
                         });
                     }
-                };
 
-                if rec.columns().len() > 1 {
-                    return Err(ShellError::GenericError {
-                        error: "Use 'select' to choose a single column to pipe to 'ask'"
-                            .to_string(),
-                        msg: "".to_string(),
-                        span: Some(span),
-                        help: None,
-                        inner: vec![],
-                    });
+                    let ctx_string = match rec.get_index(0) {
+                        Some(r) => r.1.as_str()?,
+                        None => {
+                            return Err(ShellError::GenericError {
+                                error: "question context is empty".to_string(),
+                                msg: "".to_string(),
+                                span: None,
+                                help: None,
+                                inner: vec![],
+                            })
+                        }
+                    };
+                    ctx.push(ctx_string.to_string());
                 }
-
-                let ctx = rec.get_index(0).unwrap().1.as_str()?;
-                context.push(ctx.to_string());
+                ctx
             }
-        }
-        _ => {}
+            _ => {
+                vec![]
+            }
+        },
     };
 
-    let key = read_openai_api_key(state)?;
-    let client = LLMClients::OpenAI(OpenAIClient::new(key, None));
+    let client = LLMClients::new(state, None)?;
 
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
     let ctrl_c_fut = CtrlcFuture::new(ctrl_c);

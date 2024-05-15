@@ -4,6 +4,7 @@ use crate::tutorial::Tutorial;
 use crate::RemoteCluster;
 use nu_protocol::LabeledError;
 use nu_protocol::ShellError;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -28,15 +29,26 @@ impl TransactionState {
 #[derive(Debug)]
 pub struct LLM {
     api_key: String,
+    provider: Provider,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum Provider {
+    Gemini,
+    OpenAI,
 }
 
 impl LLM {
-    pub fn new(api_key: String) -> Self {
-        Self { api_key }
+    pub fn new(api_key: String, provider: Provider) -> Self {
+        Self { api_key, provider }
     }
 
     pub fn api_key(&self) -> String {
         self.api_key.clone()
+    }
+
+    pub fn provider(&self) -> Provider {
+        self.provider.clone()
     }
 }
 

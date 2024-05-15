@@ -9,6 +9,7 @@ pub use crate::client::http_handler::HttpResponse;
 pub use crate::client::kv_client::{KeyValueRequest, KvClient, KvResponse};
 pub use crate::client::tls::RustTlsConfig;
 use log::debug;
+
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
@@ -22,12 +23,17 @@ mod cloud;
 mod codec;
 mod crc;
 mod error;
+mod gemini_client;
 mod http_client;
 mod http_handler;
 mod kv;
 mod kv_client;
+mod llm_client;
+mod openai_client;
 mod protocol;
 mod tls;
+
+pub use llm_client::LLMClients;
 
 pub struct Client {
     seeds: Vec<String>,

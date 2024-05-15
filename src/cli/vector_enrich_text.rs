@@ -1,7 +1,5 @@
-use crate::cli::util::read_openai_api_key;
 use crate::state::State;
 use crate::CtrlcFuture;
-use crate::OpenAIClient;
 use log::debug;
 use nu_protocol::Example;
 use nu_protocol::Record;
@@ -14,7 +12,7 @@ use tokio::runtime::Runtime;
 use tokio::select;
 use uuid::Uuid;
 
-use crate::cli::llm_client::LLMClients;
+use crate::client::LLMClients;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::Command;
@@ -121,8 +119,7 @@ fn vector_enrich_text(
 
     let max_tokens: Option<usize> = call.get_flag::<usize>(engine_state, stack, "maxTokens")?;
 
-    let key = read_openai_api_key(state)?;
-    let client = LLMClients::OpenAI(OpenAIClient::new(key, max_tokens));
+    let client = LLMClients::new(state, max_tokens)?;
 
     let mut results: Vec<Value> = Vec::new();
     let chunks = chunks_from_input(input, call, engine_state, stack)?;
