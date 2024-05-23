@@ -6,7 +6,6 @@ use crate::client::LLMClients;
 use crate::CtrlcFuture;
 use nu_protocol::Example;
 use nu_protocol::Record;
-use std::convert::TryFrom;
 use std::str;
 use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
@@ -47,7 +46,7 @@ impl Command for VectorEnrichDoc {
             .named(
                 "dimension",
                 SyntaxShape::Int,
-                "dimension of the resulting embeddings (default 128)",
+                "dimension of the resulting embeddings",
                 None,
             )
             .named(
@@ -121,10 +120,7 @@ fn vector_enrich_doc(
         .get_flag(engine_state, stack, "id-column")?
         .unwrap_or_else(|| "id".to_string());
 
-    let dim = match call.get_flag::<i64>(engine_state, stack, "dimension")? {
-        Some(d) => u32::try_from(d).ok().unwrap(),
-        None => 128,
-    };
+    let dim = call.get_flag::<usize>(engine_state, stack, "dimension")?;
 
     match input.into_value(span) {
         Value::List { vals, .. } => {

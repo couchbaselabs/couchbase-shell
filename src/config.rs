@@ -269,12 +269,12 @@ impl CapellaOrganizationConfig {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct LLMConfig {
-    api_key: String,
+    api_key: Option<String>,
     provider: Provider,
 }
 
 impl LLMConfig {
-    pub fn api_key(&self) -> String {
+    pub fn api_key(&self) -> Option<String> {
         self.api_key.clone()
     }
 

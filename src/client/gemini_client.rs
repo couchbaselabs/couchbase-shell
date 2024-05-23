@@ -15,19 +15,32 @@ const MAX_FREE_TIER_TOKENS: usize = 1000000;
 // According to the Gemini API docs: A token is equivalent to about 4 characters for Gemini models
 const CHARS_PER_TOKEN: usize = 4;
 
-const MAX_EMBEDDING_DIMENSION: u32 = 768;
+const MAX_EMBEDDING_DIMENSION: usize = 768;
 
 // At most 100 requests can be in one batch
 const MAX_BATCH_SIZE: usize = 100;
 
 impl GeminiClient {
-    pub fn new(api_key: String, max_tokens: impl Into<Option<usize>>) -> Self {
+    pub fn new(
+        api_key: Option<String>,
+        max_tokens: impl Into<Option<usize>>,
+    ) -> Result<Self, ShellError> {
         let max_tokens = max_tokens.into().unwrap_or(MAX_FREE_TIER_TOKENS);
 
-        Self {
-            api_key,
-            max_tokens,
-        }
+        if let Some(api_key) = api_key {
+            return Ok(Self {
+                api_key,
+                max_tokens,
+            });
+        };
+
+        Err(ShellError::GenericError {
+            error: "api_key required when using Gemini".to_string(),
+            msg: "".to_string(),
+            span: None,
+            help: None,
+            inner: Vec::new(),
+        })
     }
 
     pub fn batch_chunks(&self, chunks: Vec<String>) -> Vec<Vec<String>> {
@@ -50,19 +63,29 @@ impl GeminiClient {
         batches
     }
 
-    pub async fn embed(&self, batch: &Vec<String>, dim: u32) -> Result<Vec<Vec<f32>>, ShellError> {
-        if dim > MAX_EMBEDDING_DIMENSION {
-            return Err(ShellError::GenericError {
-                error: format!(
-                    "Maximum embedding size is {:?} for Gemini",
-                    MAX_EMBEDDING_DIMENSION
-                ),
-                msg: "".to_string(),
-                span: None,
-                help: None,
-                inner: vec![],
-            });
-        }
+    pub async fn embed(
+        &self,
+        batch: &Vec<String>,
+        dim: Option<usize>,
+    ) -> Result<Vec<Vec<f32>>, ShellError> {
+        let dimension = match dim {
+            Some(d) => {
+                if d > MAX_EMBEDDING_DIMENSION || d < 1 {
+                    return Err(ShellError::GenericError {
+                        error: format!(
+                            "Gemini supports embedding dimensions of 1 - {:?}",
+                            MAX_EMBEDDING_DIMENSION
+                        ),
+                        msg: "".to_string(),
+                        span: None,
+                        help: None,
+                        inner: vec![],
+                    });
+                }
+                d
+            }
+            None => 768,
+        };
 
         let url = format!(
             "https://generativelanguage.googleapis.com/v1/models/text-embedding-004:batchEmbedContents?key={}",
@@ -78,7 +101,7 @@ impl GeminiClient {
                         text: str.to_string(),
                     }],
                 },
-                output_dimensionality: dim,
+                output_dimensionality: dimension,
             });
         }
 
@@ -260,7 +283,7 @@ struct EmbeddingRequest {
     model: String,
     content: Parts,
     #[serde(alias = "outputDimensionality")]
-    output_dimensionality: u32,
+    output_dimensionality: usize,
 }
 
 #[derive(Serialize, Debug)]
