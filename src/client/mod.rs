@@ -18,6 +18,7 @@ use tokio::time::Instant;
 use trust_dns_resolver::config::{ResolverConfig, ResolverOpts};
 use trust_dns_resolver::Resolver;
 
+mod bedrock_client;
 mod capella_ca;
 mod cloud;
 mod codec;

@@ -1,3 +1,4 @@
+use crate::client::bedrock_client::BedrockClient;
 use crate::client::gemini_client::GeminiClient;
 use crate::client::openai_client::OpenAIClient;
 use crate::state::{Provider, State};
@@ -8,7 +9,11 @@ use std::sync::{Arc, Mutex};
 #[async_trait]
 pub trait LLMClient {
     fn batch_chunks(&self, chunks: Vec<String>) -> Vec<Vec<String>>;
-    async fn embed(&self, batch: &Vec<String>, dim: u32) -> Result<Vec<Vec<f32>>, ShellError>;
+    async fn embed(
+        &self,
+        batch: &Vec<String>,
+        dim: Option<usize>,
+    ) -> Result<Vec<Vec<f32>>, ShellError>;
     async fn ask(
         &self,
         question: String,
@@ -19,6 +24,7 @@ pub trait LLMClient {
 pub enum LLMClients {
     OpenAI(OpenAIClient),
     Gemini(GeminiClient),
+    Bedrock(BedrockClient),
 }
 
 impl LLMClients {
@@ -26,13 +32,19 @@ impl LLMClients {
         match self {
             Self::OpenAI(c) => c.batch_chunks(chunks),
             Self::Gemini(c) => c.batch_chunks(chunks),
+            Self::Bedrock(c) => c.batch_chunks(chunks),
         }
     }
 
-    pub async fn embed(&self, batch: &Vec<String>, dim: u32) -> Result<Vec<Vec<f32>>, ShellError> {
+    pub async fn embed(
+        &self,
+        batch: &Vec<String>,
+        dim: Option<usize>,
+    ) -> Result<Vec<Vec<f32>>, ShellError> {
         match self {
             Self::OpenAI(c) => c.embed(batch, dim).await,
             Self::Gemini(c) => c.embed(batch, dim).await,
+            Self::Bedrock(c) => c.embed(batch, dim).await,
         }
     }
 
@@ -40,6 +52,7 @@ impl LLMClients {
         match self {
             Self::OpenAI(c) => c.ask(question, context).await,
             Self::Gemini(c) => c.ask(question, context).await,
+            Self::Bedrock(c) => c.ask(question, context).await,
         }
     }
 
@@ -48,7 +61,7 @@ impl LLMClients {
         max_tokens: impl Into<Option<usize>>,
     ) -> Result<LLMClients, ShellError> {
         let guard = state.lock().unwrap();
-        let (provider, key) = match guard.llm() {
+        let (provider, api_key) = match guard.llm() {
             Some(llm) => (llm.provider(), llm.api_key()),
             None => {
                 return Err(ShellError::GenericError {
@@ -62,8 +75,9 @@ impl LLMClients {
         };
 
         let client = match provider {
-            Provider::OpenAI => LLMClients::OpenAI(OpenAIClient::new(key, max_tokens)),
-            Provider::Gemini => LLMClients::Gemini(GeminiClient::new(key, max_tokens)),
+            Provider::OpenAI => LLMClients::OpenAI(OpenAIClient::new(api_key, max_tokens)?),
+            Provider::Gemini => LLMClients::Gemini(GeminiClient::new(api_key, max_tokens)?),
+            Provider::Bedrock => LLMClients::Bedrock(BedrockClient::new()),
         };
 
         Ok(client)

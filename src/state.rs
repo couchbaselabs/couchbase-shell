@@ -28,22 +28,23 @@ impl TransactionState {
 
 #[derive(Debug)]
 pub struct LLM {
-    api_key: String,
+    api_key: Option<String>,
     provider: Provider,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub enum Provider {
     Gemini,
     OpenAI,
+    Bedrock,
 }
 
 impl LLM {
-    pub fn new(api_key: String, provider: Provider) -> Self {
+    pub fn new(api_key: Option<String>, provider: Provider) -> Self {
         Self { api_key, provider }
     }
 
-    pub fn api_key(&self) -> String {
+    pub fn api_key(&self) -> Option<String> {
         self.api_key.clone()
     }
 

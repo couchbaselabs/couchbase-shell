@@ -3,7 +3,6 @@ use crate::CtrlcFuture;
 use log::debug;
 use nu_protocol::Example;
 use nu_protocol::Record;
-use std::convert::TryFrom;
 use std::fs;
 use std::str;
 use std::sync::{Arc, Mutex};
@@ -49,7 +48,7 @@ impl Command for VectorEnrichText {
             .named(
                 "dimension",
                 SyntaxShape::Int,
-                "dimension of the resulting embeddings (default 128)",
+                "dimension of the resulting embeddings",
                 None,
             )
             .named(
@@ -112,10 +111,7 @@ fn vector_enrich_text(
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
 
-    let dim = match call.get_flag::<i64>(engine_state, stack, "dimension")? {
-        Some(d) => u32::try_from(d).ok().unwrap(),
-        None => 128,
-    };
+    let dim = call.get_flag::<usize>(engine_state, stack, "dimension")?;
 
     let max_tokens: Option<usize> = call.get_flag::<usize>(engine_state, stack, "maxTokens")?;
 

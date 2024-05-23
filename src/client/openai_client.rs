@@ -12,19 +12,31 @@ pub struct OpenAIClient {
     max_tokens: usize,
 }
 
-const OPENAI_MAX_FREE_TIER_TOKENS: usize = 150000;
+const MAX_FREE_TIER_TOKENS: usize = 150000;
+
+const MAX_EMBEDDING_DIMENSION: usize = 1536;
 
 impl OpenAIClient {
-    pub fn new(api_key: String, max_tokens: impl Into<Option<usize>>) -> Self {
-        let max_tokens = match max_tokens.into() {
-            Some(mt) => mt,
-            None => OPENAI_MAX_FREE_TIER_TOKENS,
+    pub fn new(
+        api_key: Option<String>,
+        max_tokens: impl Into<Option<usize>>,
+    ) -> Result<Self, ShellError> {
+        let max_tokens = max_tokens.into().unwrap_or(MAX_FREE_TIER_TOKENS);
+
+        if let Some(api_key) = api_key {
+            return Ok(Self {
+                api_key,
+                max_tokens,
+            });
         };
 
-        Self {
-            api_key,
-            max_tokens,
-        }
+        Err(ShellError::GenericError {
+            error: "api_key required when using OpenAI".to_string(),
+            msg: "".to_string(),
+            span: None,
+            help: None,
+            inner: Vec::new(),
+        })
     }
 
     pub fn batch_chunks(&self, chunks: Vec<String>) -> Vec<Vec<String>> {
@@ -69,7 +81,11 @@ impl OpenAIClient {
         batches
     }
 
-    pub async fn embed(&self, batch: &Vec<String>, dim: u32) -> Result<Vec<Vec<f32>>, ShellError> {
+    pub async fn embed(
+        &self,
+        batch: &Vec<String>,
+        dim: Option<usize>,
+    ) -> Result<Vec<Vec<f32>>, ShellError> {
         let client = Client::with_config(
             async_openai::config::OpenAIConfig::default().with_api_key(self.api_key.clone()),
         );
@@ -80,9 +96,28 @@ impl OpenAIClient {
             debug!("- Tokens: {:?}", tokens.len());
         }
 
+        let dimension = match dim {
+            Some(d) => {
+                if d > MAX_EMBEDDING_DIMENSION || d < 1 {
+                    return Err(ShellError::GenericError {
+                        error: format!(
+                            "OpenAI supports embedding dimensions of 1 - {:?}",
+                            MAX_EMBEDDING_DIMENSION
+                        ),
+                        msg: "".to_string(),
+                        span: None,
+                        help: None,
+                        inner: vec![],
+                    });
+                }
+                d as u32
+            }
+            None => 128,
+        };
+
         let request = CreateEmbeddingRequestArgs::default()
             .model("text-embedding-3-small")
-            .dimensions(dim)
+            .dimensions(dimension)
             .input(batch.clone())
             .build()
             .unwrap();
