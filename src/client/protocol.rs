@@ -504,6 +504,7 @@ pub enum Status {
     KeyExists,
     CollectionUnknown,
     ScopeUnknown,
+    PathNotFound,
     Unknown(u16),
 }
 
@@ -523,6 +524,7 @@ impl Status {
             Status::KeyExists => "key already exists".into(),
             Status::CollectionUnknown => "collection unknown".into(),
             Status::ScopeUnknown => "scope unknown".into(),
+            Status::PathNotFound => "field not found".into(),
             Status::Unknown(status) => format!("{:#04x}", status),
         }
     }
@@ -538,6 +540,7 @@ impl From<u16> for Status {
             0x8c => Status::ScopeUnknown,
             0x20 => Status::AuthError,
             0x24 => Status::AccessError,
+            0xc0 => Status::PathNotFound,
             _ => Status::Unknown(input),
         }
     }
