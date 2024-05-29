@@ -271,12 +271,19 @@ impl KvEndpoint {
         rx: Receiver<KvResponse>,
         key: String,
         cid: u32,
+        path: impl Into<Option<String>>,
     ) -> Result<KvResponse, ClientError> {
         let mut response = self.await_response(rx, key.clone()).await?;
         let status = response.status();
         if status != Status::Success {
             let reason = ClientError::try_parse_kv_fail_body(&mut response);
-            return Err(ClientError::make_kv_doc_op_error(status, reason, key, cid));
+            return Err(ClientError::make_kv_doc_op_error(
+                status,
+                reason,
+                key,
+                cid,
+                path.into(),
+            ));
         }
         Ok(response)
     }
@@ -343,7 +350,7 @@ impl KvEndpoint {
         let (tx, rx) = oneshot::channel::<KvResponse>();
         self.send(req, tx).await?;
 
-        self.await_and_handle_doc_response(rx, key, collection_id)
+        self.await_and_handle_doc_response(rx, key, collection_id, None)
             .await
     }
 
@@ -374,7 +381,7 @@ impl KvEndpoint {
         let (tx, rx) = oneshot::channel::<KvResponse>();
         self.send(req, tx).await?;
 
-        self.await_and_handle_doc_response(rx, key, collection_id)
+        self.await_and_handle_doc_response(rx, key, collection_id, path)
             .await
     }
 
@@ -421,7 +428,7 @@ impl KvEndpoint {
         let (tx, rx) = oneshot::channel::<KvResponse>();
         self.send(req, tx).await?;
 
-        self.await_and_handle_doc_response(rx, key, collection_id)
+        self.await_and_handle_doc_response(rx, key, collection_id, None)
             .await
     }
 
@@ -450,7 +457,7 @@ impl KvEndpoint {
         let (tx, rx) = oneshot::channel::<KvResponse>();
         self.send(req, tx).await?;
 
-        self.await_and_handle_doc_response(rx, key, collection_id)
+        self.await_and_handle_doc_response(rx, key, collection_id, None)
             .await
     }
 
@@ -479,7 +486,7 @@ impl KvEndpoint {
         let (tx, rx) = oneshot::channel::<KvResponse>();
         self.send(req, tx).await?;
 
-        self.await_and_handle_doc_response(rx, key, collection_id)
+        self.await_and_handle_doc_response(rx, key, collection_id, None)
             .await
     }
 
@@ -508,7 +515,7 @@ impl KvEndpoint {
         let (tx, rx) = oneshot::channel::<KvResponse>();
         self.send(req, tx).await?;
 
-        self.await_and_handle_doc_response(rx, key, collection_id)
+        self.await_and_handle_doc_response(rx, key, collection_id, None)
             .await
     }
 
@@ -532,7 +539,7 @@ impl KvEndpoint {
         let (tx, rx) = oneshot::channel::<KvResponse>();
         self.send(req, tx).await?;
 
-        self.await_and_handle_doc_response(rx, key, collection_id)
+        self.await_and_handle_doc_response(rx, key, collection_id, None)
             .await
     }
 

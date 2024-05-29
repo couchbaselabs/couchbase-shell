@@ -84,6 +84,10 @@ pub enum ClientError {
         reason: String,
         address: String,
     },
+    PathNotFound {
+        key: String,
+        path: String,
+    },
 }
 
 impl ClientError {
@@ -95,6 +99,7 @@ impl ClientError {
             ClientError::Timeout { key, .. } => key.clone(),
             ClientError::Cancelled { key } => key.clone(),
             ClientError::RequestFailed { key, .. } => key.clone(),
+            ClientError::PathNotFound { key, .. } => Some(key.clone()),
             _ => None,
         }
     }
@@ -119,6 +124,7 @@ impl ClientError {
             Self::CapellaClusterNotFound { .. } => "Cluster not found".to_string(),
             Self::RequestFailed { .. } => "Request failed".to_string(),
             Self::KVCouldNotConnect { .. } => "Could not establish kv connection".to_string(),
+            Self::PathNotFound { .. } => "Path not found".to_string(),
         }
     }
 
@@ -173,6 +179,9 @@ impl ClientError {
             Self::KVCouldNotConnect { reason, address } => {
                 format!("could not connect to {}: {}", address, reason)
             }
+            Self::PathNotFound { key, path } => {
+                format!("Path {} was not found in doc with key {}", path, key).to_string()
+            }
         }
     }
 
@@ -191,12 +200,17 @@ impl ClientError {
         reason: Option<String>,
         key: String,
         cid: u32,
+        path: Option<String>,
     ) -> Self {
         match status {
             Status::AuthError => ClientError::AuthError { reason },
             Status::AccessError => ClientError::AccessError { reason },
             Status::KeyNotFound => ClientError::KeyNotFound { key },
             Status::KeyExists => ClientError::KeyAlreadyExists { key },
+            Status::PathNotFound => ClientError::PathNotFound {
+                key,
+                path: path.unwrap_or("".to_string()),
+            },
             Status::CollectionUnknown => ClientError::CollectionUnknownDuringRequest { key, cid },
             _ => ClientError::RequestFailed {
                 reason: Some(status.as_string()),
