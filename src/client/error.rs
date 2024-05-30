@@ -101,8 +101,26 @@ impl ClientError {
 
     pub fn message(&self) -> String {
         match self {
-            Self::ConfigurationLoadFailed { .. } => {
-                "Could not load config from cluster".to_string()
+            Self::ConfigurationLoadFailed { reason } => {
+                let msg = "Failed to load cluster config".to_string();
+                match reason {
+                    ConfigurationLoadFailedReason::NotFound { bucket } => {
+                        if let Some(b) = bucket {
+                            format!("{}: bucket '{}' could not be found", msg, b)
+                        } else {
+                            format!("{}: endpoint could not be found", msg)
+                        }
+                    }
+                    ConfigurationLoadFailedReason::Unauthorized {} => {
+                        format!("{}: unauthorized or non-existent user", msg)
+                    }
+                    ConfigurationLoadFailedReason::Forbidden {} => {
+                        format!("{}: user does not have correct permissions", msg)
+                    }
+                    ConfigurationLoadFailedReason::Unknown { reason } => {
+                        format!("{}: {}", msg, reason.to_string())
+                    }
+                }
             }
             Self::CollectionNotFound { .. } => "Collection unknown".to_string(),
             Self::CollectionUnknownDuringRequest { .. } => {
@@ -117,7 +135,14 @@ impl ClientError {
             Self::Timeout { .. } => "Timeout".to_string(),
             Self::Cancelled { .. } => "Request cancelled".to_string(),
             Self::CapellaClusterNotFound { .. } => "Cluster not found".to_string(),
-            Self::RequestFailed { .. } => "Request failed".to_string(),
+            Self::RequestFailed { reason, .. } => {
+                let msg = "Request failed";
+                if let Some(r) = reason {
+                    format!("{}: {}", msg, r)
+                } else {
+                    format!("{}: reason unknown", msg)
+                }
+            }
             Self::KVCouldNotConnect { .. } => "Could not establish kv connection".to_string(),
         }
     }
