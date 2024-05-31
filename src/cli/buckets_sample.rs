@@ -1,6 +1,4 @@
-use crate::cli::error::{
-    client_error_to_shell_error, deserialize_error, unexpected_status_code_error,
-};
+use crate::cli::error::client_error_to_shell_error;
 use crate::cli::util::{
     cluster_identifiers_from, get_active_cluster, validate_is_not_cloud, NuValueMap,
 };
@@ -12,8 +10,6 @@ use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
 };
-use serde::Deserialize;
-use serde_derive::Serialize;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
@@ -65,19 +61,6 @@ impl Command for BucketsSample {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-struct SampleLoadTask {
-    #[serde(rename = "taskId", default)]
-    task_id: String,
-    sample: String,
-    bucket: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct SampleLoadTasks {
-    tasks: Vec<SampleLoadTask>,
-}
-
 fn load_sample_bucket(
     state: Arc<Mutex<State>>,
     engine_state: &EngineState,
@@ -103,32 +86,36 @@ fn load_sample_bucket(
             .http_client()
             .management_request(
                 ManagementRequest::LoadSampleBucket {
-                    name: format!("[\"{}\"]", bucket_name),
+                    name: format!("[\"{}\"]", bucket_name.clone()),
                 },
                 Instant::now().add(cluster.timeouts().management_timeout()),
                 ctrl_c.clone(),
             )
             .map_err(|e| client_error_to_shell_error(e, span))?;
 
+        let mut collected = NuValueMap::default();
+        collected.add_string("cluster", identifier.clone(), span);
+        collected.add_string("sample", bucket_name.clone(), span);
+
         match response.status() {
-            202 => {}
+            202 => {
+                collected.add_string("status", "success", span);
+            }
             _ => {
-                return Err(unexpected_status_code_error(
-                    response.status(),
-                    response.content(),
-                    span,
-                ))
+                // Errors are in the form: `["error msg here"]`
+                let msg = if let (Some(start), Some(end)) =
+                    (response.content().find("["), response.content().find("]"))
+                {
+                    &response.content()[start + 2..end - 1]
+                } else {
+                    response.content()
+                };
+
+                collected.add_string("status", format!("failure - {}", msg), span);
             }
         }
 
-        let resp: SampleLoadTasks = serde_json::from_str(response.content())
-            .map_err(|e| deserialize_error(e.to_string(), span))?;
-        for r in resp.tasks {
-            let mut collected = NuValueMap::default();
-            collected.add_string("cluster", identifier.clone(), span);
-            collected.add_string("results", serde_json::to_string(&r).unwrap(), span);
-            results.push(collected.into_value(span));
-        }
+        results.push(collected.into_value(span));
     }
 
     Ok(Value::List {
