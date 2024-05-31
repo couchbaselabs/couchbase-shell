@@ -139,10 +139,10 @@ fn fetch_meta() {
                 playground::RetryExpectations::ExpectOut,
                 |json| -> TestResult<bool> {
                     val = json.clone();
-                    Ok(true)
+                    // Wait until the document has been indexed
+                    Ok(val["results"].as_array().unwrap().len() == 1)
                 },
             );
-            assert_eq!(1, val["results"].as_array().unwrap().len());
             assert_ne!("", val["requestID"]);
             assert_eq!("success", val["status"]);
             let metrics = val["metrics"].clone();
