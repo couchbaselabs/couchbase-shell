@@ -39,21 +39,34 @@ jobs:
           key: "v1"
           cache-on-failure: "true"
 
-      - name: Sleep for 30 seconds  # It takes a while for the cluster to be available and init-cluster fails if it isn't
-        run: sleep 30s
-        shell: bash
-
-      - name: Initialize couchbase
-          #        env:
-        #          CB_TRAVEL_SAMPLE: yes
-        run: ./.github/bin/init-cluster
-      - name: Check couchbase
-        run: ./.github/bin/check-cluster
+      - name: Install cbdinocluster
+        run: |
+          mkdir -p "$HOME/bin"
+          wget -nv -O $HOME/bin/cbdinocluster https://github.com/couchbaselabs/cbdinocluster/releases/download/v0.0.41/cbdinocluster-linux-amd64
+          chmod +x $HOME/bin/cbdinocluster
+          echo "$HOME/bin" >> $GITHUB_PATH
+      - name: Initialize cbdinocluster
+        run: |
+          cbdinocluster -v init --auto
+      - name: Start couchbase cluster
+        env:
+          CLUSTERCONFIG: |
+            nodes:
+              - count: 3
+                version: ${{ matrix.server }}
+                services: [kv, n1ql, index, fts, cbas]
+            docker:
+              kv-memory: 2048
+        run: |
+          CBDC_ID=$(cbdinocluster -v alloc --def="${CLUSTERCONFIG}")
+          cbdinocluster -v buckets add ${CBDC_ID} default --ram-quota-mb=100 --flush-enabled=true --num-replicas=2
+          CBDC_CONNSTR=$(cbdinocluster mgmt $CBDC_ID)
+          echo "CBDC_CONNSTR=$CBDC_CONNSTR" >> "$GITHUB_ENV"
 
       - name: Test
         uses: actions-rs/cargo@v1
         env:
-          CONN_STRING: http://127.0.0.1:8091
+          CONN_STRING: ${{ env.CBDC_CONNSTR }}
           CBSH_LOG: cbsh=trace
           DATA_TIMEOUT: "30s"
         with:
