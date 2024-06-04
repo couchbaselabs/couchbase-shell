@@ -26,7 +26,7 @@ fn import_sample() {
         assert!(json[0]["status"].to_string().contains("already loaded"));
 
         //Create a bucket that takes up the remainder of the available RAM
-        let out = cbsh!(cwd: dirs.test(), pipeline(r#"buckets create temp 1500 | to json"#));
+        let out = cbsh!(cwd: dirs.test(), pipeline(r#"buckets create temp 1650 | to json"#));
         assert_eq!("", out.err);
 
         //Check not enough memeory error
