@@ -18,7 +18,11 @@ impl BedrockClient {
 
     pub fn batch_chunks(&self, chunks: Vec<String>) -> Vec<Vec<String>> {
         // AWS Bedrock only support batch processing on data stored in S3 buckets so we have to process chunks one at a time
-        vec![chunks]
+        let mut batches: Vec<Vec<String>> = Vec::new();
+        for chunk in chunks {
+            batches.push(vec![chunk])
+        }
+        batches
     }
 
     pub async fn embed(
