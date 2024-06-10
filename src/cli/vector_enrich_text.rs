@@ -39,6 +39,12 @@ impl Command for VectorEnrichText {
     fn signature(&self) -> Signature {
         Signature::build("vector enrich-text")
             .optional("text", SyntaxShape::String, "the text to be embedded")
+            .required_named(
+                "model",
+                SyntaxShape::String,
+                "the model to generate the embeddings with",
+                None,
+            )
             .named(
                 "model",
                 SyntaxShape::String,

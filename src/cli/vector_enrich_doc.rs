@@ -43,6 +43,12 @@ impl Command for VectorEnrichDoc {
                 SyntaxShape::String,
                 "the field from which the vector is generated",
             )
+            .required_named(
+                "model",
+                SyntaxShape::String,
+                "the model to generate the embeddings with",
+                None,
+            )
             .named(
                 "model",
                 SyntaxShape::String,
