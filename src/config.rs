@@ -271,6 +271,7 @@ impl CapellaOrganizationConfig {
 pub struct LLMConfig {
     api_key: Option<String>,
     provider: Provider,
+    model: Option<String>,
 }
 
 impl LLMConfig {
@@ -280,6 +281,10 @@ impl LLMConfig {
 
     pub fn provider(&self) -> Provider {
         self.provider.clone()
+    }
+
+    pub fn model(&self) -> Option<String> {
+        self.model.clone()
     }
 }
 

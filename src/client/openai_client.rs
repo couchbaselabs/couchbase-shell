@@ -14,8 +14,6 @@ pub struct OpenAIClient {
 
 const MAX_FREE_TIER_TOKENS: usize = 150000;
 
-const MAX_EMBEDDING_DIMENSION: usize = 1536;
-
 impl OpenAIClient {
     pub fn new(
         api_key: Option<String>,
@@ -85,6 +83,7 @@ impl OpenAIClient {
         &self,
         batch: &Vec<String>,
         dim: Option<usize>,
+        model: String,
     ) -> Result<Vec<Vec<f32>>, ShellError> {
         let client = Client::with_config(
             async_openai::config::OpenAIConfig::default().with_api_key(self.api_key.clone()),
@@ -96,43 +95,38 @@ impl OpenAIClient {
             debug!("- Tokens: {:?}", tokens.len());
         }
 
-        let dimension = match dim {
-            Some(d) => {
-                if d > MAX_EMBEDDING_DIMENSION || d < 1 {
-                    return Err(ShellError::GenericError {
-                        error: format!(
-                            "OpenAI supports embedding dimensions of 1 - {:?}",
-                            MAX_EMBEDDING_DIMENSION
-                        ),
-                        msg: "".to_string(),
-                        span: None,
-                        help: None,
-                        inner: vec![],
-                    });
-                }
-                d as u32
-            }
-            None => 128,
+        let request = if let Some(d) = dim {
+            CreateEmbeddingRequestArgs::default()
+                .model(model.to_string())
+                .dimensions(d as u32)
+                .input(batch.clone())
+                .build()
+                .unwrap()
+        } else {
+            CreateEmbeddingRequestArgs::default()
+                .model(model.to_string())
+                .input(batch.clone())
+                .build()
+                .unwrap()
         };
-
-        let request = CreateEmbeddingRequestArgs::default()
-            .model("text-embedding-3-small")
-            .dimensions(dimension)
-            .input(batch.clone())
-            .build()
-            .unwrap();
 
         let embeddings = client.embeddings();
         let response = match embeddings.create(request).await {
             Ok(r) => r,
             Err(e) => {
+                let msg = match e {
+                    async_openai::error::OpenAIError::ApiError(err) => err.message.to_string(),
+                    _ => {
+                        format!("failed to execute request: {:?}", e)
+                    }
+                };
                 return Err(ShellError::GenericError {
-                    error: format!("failed to execute request: {}", e),
+                    error: msg,
                     msg: "".to_string(),
                     span: None,
                     help: None,
                     inner: Vec::new(),
-                })
+                });
             }
         };
 

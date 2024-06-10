@@ -30,6 +30,7 @@ impl TransactionState {
 pub struct LLM {
     api_key: Option<String>,
     provider: Provider,
+    model: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -40,8 +41,12 @@ pub enum Provider {
 }
 
 impl LLM {
-    pub fn new(api_key: Option<String>, provider: Provider) -> Self {
-        Self { api_key, provider }
+    pub fn new(api_key: Option<String>, provider: Provider, model: Option<String>) -> Self {
+        Self {
+            api_key,
+            provider,
+            model,
+        }
     }
 
     pub fn api_key(&self) -> Option<String> {
@@ -50,6 +55,10 @@ impl LLM {
 
     pub fn provider(&self) -> Provider {
         self.provider.clone()
+    }
+
+    pub fn model(&self) -> Option<String> {
+        self.model.clone()
     }
 }
 

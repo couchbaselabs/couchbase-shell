@@ -1,7 +1,9 @@
 use bytes::Bytes;
+use log::info;
 use nu_protocol::ShellError;
 use reqwest::Response;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use tokio::{select, time::sleep, time::Duration};
 
 pub struct GeminiClient {
@@ -14,8 +16,6 @@ const MAX_FREE_TIER_TOKENS: usize = 1000000;
 
 // According to the Gemini API docs: A token is equivalent to about 4 characters for Gemini models
 const CHARS_PER_TOKEN: usize = 4;
-
-const MAX_EMBEDDING_DIMENSION: usize = 768;
 
 // At most 100 requests can be in one batch
 const MAX_BATCH_SIZE: usize = 100;
@@ -67,45 +67,54 @@ impl GeminiClient {
         &self,
         batch: &Vec<String>,
         dim: Option<usize>,
+        model: String,
     ) -> Result<Vec<Vec<f32>>, ShellError> {
-        let dimension = match dim {
-            Some(d) => {
-                if d > MAX_EMBEDDING_DIMENSION || d < 1 {
+        let model = if !model.contains("models/") {
+            info!(
+                "Gemini models must begin 'models/' so model name has been changed to 'models/{}'",
+                model
+            );
+            format!("models/{}", model)
+        } else {
+            model
+        };
+
+        let url = format!(
+            "https://generativelanguage.googleapis.com/v1/{}:batchEmbedContents?key={}",
+            model, self.api_key
+        );
+
+        let mut batch_json = EmbeddingBatchRequest {
+            requests: Vec::new(),
+        };
+        for str in batch {
+            let mut request = json!(
+                {
+                    "model": model,
+                    "content": {
+                        "parts": [
+                            {"text": str.to_string()}
+                        ]
+                    }
+                }
+            );
+
+            if let Some(d) = dim {
+                if d == 0 {
                     return Err(ShellError::GenericError {
-                        error: format!(
-                            "Gemini supports embedding dimensions of 1 - {:?}",
-                            MAX_EMBEDDING_DIMENSION
-                        ),
+                        error: "Embedding dimension must be greater than 0".to_string(),
                         msg: "".to_string(),
                         span: None,
                         help: None,
                         inner: vec![],
                     });
                 }
-                d
-            }
-            None => 768,
-        };
-
-        let url = format!(
-            "https://generativelanguage.googleapis.com/v1/models/text-embedding-004:batchEmbedContents?key={}",
-            self.api_key
-        );
-
-        let mut batch_request = EmbeddingBatchRequest::new();
-        for str in batch {
-            batch_request.requests.push(EmbeddingRequest {
-                model: "models/text-embedding-004".to_string(),
-                content: Parts {
-                    parts: vec![Text {
-                        text: str.to_string(),
-                    }],
-                },
-                output_dimensionality: dimension,
-            });
+                request["outputDimensionality"] = d.into()
+            };
+            batch_json.requests.push(request);
         }
 
-        let res = execute_request(url, batch_request).await?;
+        let res = execute_request(url, batch_json).await?;
 
         let bytes = read_response(res).await?;
 
@@ -267,23 +276,10 @@ where
 
     Ok(res)
 }
+
 #[derive(Serialize, Debug)]
 struct EmbeddingBatchRequest {
-    requests: Vec<EmbeddingRequest>,
-}
-
-impl EmbeddingBatchRequest {
-    fn new() -> Self {
-        EmbeddingBatchRequest { requests: vec![] }
-    }
-}
-
-#[derive(Serialize, Debug)]
-struct EmbeddingRequest {
-    model: String,
-    content: Parts,
-    #[serde(alias = "outputDimensionality")]
-    output_dimensionality: usize,
+    requests: Vec<serde_json::Value>,
 }
 
 #[derive(Serialize, Debug)]
