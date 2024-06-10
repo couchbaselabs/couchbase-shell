@@ -44,6 +44,12 @@ impl Command for VectorEnrichDoc {
                 "the field from which the vector is generated",
             )
             .named(
+                "model",
+                SyntaxShape::String,
+                "the model to generate the embeddings with",
+                None,
+            )
+            .named(
                 "dimension",
                 SyntaxShape::Int,
                 "dimension of the resulting embeddings",
@@ -52,7 +58,7 @@ impl Command for VectorEnrichDoc {
             .named(
                 "maxTokens",
                 SyntaxShape::Int,
-                "the token per minute limit with 'text-embedding-3-small' for your API key",
+                "the token per minute limit for the provider/model",
                 None,
             )
             .named(
@@ -88,18 +94,18 @@ impl Command for VectorEnrichDoc {
         vec![
             Example {
                 description: "Open local json doc and enrich the field named 'description'",
-                example: "open ./local.json | vector enrich-doc description",
+                example: "open ./local.json | vector enrich-doc description --model amazon.titan-embed-text-v2:0",
                 result: None,
             },
             Example {
                 description:
                     "Fetch a single doc with id '12345' and enrich the field named 'description'",
-                example: "doc get 12345 | select content | vector enrich-doc description",
+                example: "doc get 12345 | select content | vector enrich-doc description --model models/text-embedding-004",
                 result: None,
             },
             Example {
                 description: "Fetch and enrich all landmark documents from travel sample and upload the results to couchabase",
-                example: "query  'SELECT * FROM `travel-sample` WHERE type = \"landmark\"' | select content | vector enrich-doc content | doc upsert",
+                example: "query  'SELECT * FROM `travel-sample` WHERE type = \"landmark\"' | select content | vector enrich-doc content --model amazon.titan-embed-text-v1 | doc upsert",
                 result: None,
             },
         ]
@@ -128,6 +134,40 @@ fn vector_enrich_doc(
         } else {
             format!("{}Vector", field.clone())
         };
+
+    let model = match call.get_flag::<String>(engine_state, stack, "model")? {
+        Some(m) => m,
+        None => {
+            let guard = state.lock().unwrap();
+            let model = match guard.llm() {
+                Some(m) => match m.model() {
+                    Some(m) => m,
+                    None => {
+                        return Err(ShellError::GenericError {
+                            error: "no model provided".to_string(),
+                            msg: "".to_string(),
+                            span: Some(span),
+                            help: Some(
+                                "supply the model in the config file or using the --model flag"
+                                    .to_string(),
+                            ),
+                            inner: Vec::new(),
+                        });
+                    }
+                },
+                None => {
+                    return Err(ShellError::GenericError {
+                        error: "no llm defined in config file".to_string(),
+                        msg: "".to_string(),
+                        span: Some(span),
+                        help: None,
+                        inner: Vec::new(),
+                    });
+                }
+            };
+            model
+        }
+    };
 
     let id_column: String = call
         .get_flag(engine_state, stack, "id-column")?
@@ -253,16 +293,10 @@ fn vector_enrich_doc(
         let rt = Runtime::new().unwrap();
         let embeddings = match rt.block_on(async {
             select! {
-                result = client.embed(batch, dim) => {
+                result = client.embed(batch, dim, model.clone()) => {
                     match result {
                         Ok(r) => Ok(r),
-                        Err(e) => Err(ShellError::GenericError{
-                        error: format!("failed to execute request: {}", e),
-                        msg: "".to_string(),
-                        span: None,
-                        help: None,
-                        inner: Vec::new(),
-                    })
+                        Err(e)  => Err(e)
                     }
                 },
                 () = ctrl_c_fut =>

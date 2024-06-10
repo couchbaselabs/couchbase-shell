@@ -2,24 +2,8 @@ use crate::client::bedrock_client::BedrockClient;
 use crate::client::gemini_client::GeminiClient;
 use crate::client::openai_client::OpenAIClient;
 use crate::state::{Provider, State};
-use async_trait::async_trait;
 use nu_protocol::ShellError;
 use std::sync::{Arc, Mutex};
-
-#[async_trait]
-pub trait LLMClient {
-    fn batch_chunks(&self, chunks: Vec<String>) -> Vec<Vec<String>>;
-    async fn embed(
-        &self,
-        batch: &Vec<String>,
-        dim: Option<usize>,
-    ) -> Result<Vec<Vec<f32>>, ShellError>;
-    async fn ask(
-        &self,
-        question: String,
-        context: Vec<String>,
-    ) -> Result<nu_protocol::Value, ShellError>;
-}
 
 pub enum LLMClients {
     OpenAI(OpenAIClient),
@@ -40,11 +24,12 @@ impl LLMClients {
         &self,
         batch: &Vec<String>,
         dim: Option<usize>,
+        model: String,
     ) -> Result<Vec<Vec<f32>>, ShellError> {
         match self {
-            Self::OpenAI(c) => c.embed(batch, dim).await,
-            Self::Gemini(c) => c.embed(batch, dim).await,
-            Self::Bedrock(c) => c.embed(batch, dim).await,
+            Self::OpenAI(c) => c.embed(batch, dim, model).await,
+            Self::Gemini(c) => c.embed(batch, dim, model).await,
+            Self::Bedrock(c) => c.embed(batch, dim, model).await,
         }
     }
 

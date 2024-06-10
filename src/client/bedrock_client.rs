@@ -1,12 +1,12 @@
+use aws_sdk_bedrockruntime::operation::invoke_model::InvokeModelError;
 use aws_sdk_bedrockruntime::primitives::Blob;
+use aws_smithy_runtime_api;
 use nu_protocol::ShellError;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::str;
 
 pub struct BedrockClient {}
-
-// Tokens processed per minute for titan-embed-text-v2
-// const MAX_FREE_TIER_TOKENS: usize = 300000;
 
 // The max number of tokens that can be generated in text response for Titan Express models
 const MAX_RESPONSE_TOKENS: i32 = 8192;
@@ -29,38 +29,28 @@ impl BedrockClient {
         &self,
         batch: &Vec<String>,
         dim: Option<usize>,
+        model: String,
     ) -> Result<Vec<Vec<f32>>, ShellError> {
         let config = aws_config::load_from_env().await;
         let client = aws_sdk_bedrockruntime::Client::new(&config);
 
         let mut rec: Vec<Vec<f32>> = vec![];
 
-        let dimension = match dim {
-            Some(d) => {
-                if d != 256 && d != 512 && d != 1024 {
-                    return Err(ShellError::GenericError {
-                        error: "Bedrock supports embedding dimensions of 256, 512 and 1024"
-                            .to_string(),
-                        msg: "".to_string(),
-                        span: None,
-                        help: None,
-                        inner: vec![],
-                    });
-                }
-                d
-            }
-            None => 256,
-        };
-
         for text in batch {
-            let prompt = EmbeddingPromptBody {
-                input_text: text.to_string(),
-                dimensions: dimension,
+            let prompt = if let Some(dimension) = dim {
+                json!({
+                    "inputText": text.to_string(),
+                    "dimensions": dimension,
+                })
+            } else {
+                json!({
+                    "inputText": text.to_string(),
+                })
             };
 
             let result = match client
                 .invoke_model()
-                .model_id("amazon.titan-embed-text-v2:0")
+                .model_id(model.clone())
                 .content_type("application/json")
                 .body(Blob::new(serde_json::to_string(&prompt).unwrap()))
                 .send()
@@ -68,13 +58,57 @@ impl BedrockClient {
             {
                 Ok(r) => r,
                 Err(e) => {
-                    return Err(ShellError::GenericError {
-                        error: format!("error returned from Bedrock API: {:?}", e),
-                        msg: "".to_string(),
-                        span: None,
-                        help: Some("Please supply AWS SDK config and credentials in ~/.aws/config and ~/.aws/credentials files".to_string()),
-                        inner: Vec::new(),
-                    })
+                    match e {
+                        aws_smithy_runtime_api::client::result::SdkError::DispatchFailure(_) => {
+                            return Err(ShellError::GenericError {
+                                error: "failed to dispatch Bedrock embedding request".to_string(),
+                                msg: "".to_string(),
+                                span: None,
+                                help: Some(
+                                    "check aws credentials are correctly configured".to_string(),
+                                ),
+                                inner: Vec::new(),
+                            });
+                        }
+                        aws_smithy_runtime_api::client::result::SdkError::ServiceError(err) => {
+                            let (err_msg, help) = match err.err() {
+                                InvokeModelError::ResourceNotFoundException(inner_err) => {
+                                    (inner_err.message.as_ref().unwrap().to_string(),
+                                    Some("Supply the name of the model as you would in a Bedrock API request.".to_string()))
+                                },
+                                InvokeModelError::AccessDeniedException(inner_err) => {
+                                    (inner_err.message.as_ref().unwrap().to_string(),
+                                    Some("Have you been granted access to this model in the AWS web console?".to_string()))
+                                },
+                                InvokeModelError::ValidationException(inner_err) => {
+                                    (inner_err.message.as_ref().unwrap().to_string(),
+                                    Some("Supply the model name as required for the Bedrock API and check that it supports the chosen dimensionality.".to_string()))
+                                },
+                                _ => {
+                                    (format!("unexpected error returned from Bedrock API: {:?}", err.err()), None)
+                                }
+                            };
+                            return Err(ShellError::GenericError {
+                                error: err_msg,
+                                msg: "".to_string(),
+                                span: None,
+                                help: help,
+                                inner: Vec::new(),
+                            });
+                        }
+                        _ => {
+                            return Err(ShellError::GenericError {
+                                error: format!(
+                                    "unexpected error returned from Bedrock API: {:?}",
+                                    e
+                                ),
+                                msg: "".to_string(),
+                                span: None,
+                                help: None,
+                                inner: Vec::new(),
+                            });
+                        }
+                    };
                 }
             };
 
@@ -153,13 +187,6 @@ impl BedrockClient {
 
         Ok(answer.to_string())
     }
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct EmbeddingPromptBody {
-    input_text: String,
-    dimensions: usize,
 }
 
 #[derive(Debug, Serialize)]

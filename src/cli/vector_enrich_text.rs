@@ -40,6 +40,12 @@ impl Command for VectorEnrichText {
         Signature::build("vector enrich-text")
             .optional("text", SyntaxShape::String, "the text to be embedded")
             .named(
+                "model",
+                SyntaxShape::String,
+                "the model to generate the embeddings with",
+                None,
+            )
+            .named(
                 "chunk",
                 SyntaxShape::Int,
                 "length of the data chunks to embed (default 1024)",
@@ -54,7 +60,7 @@ impl Command for VectorEnrichText {
             .named(
                 "maxTokens",
                 SyntaxShape::Int,
-                "the token per minute limit with 'text-embedding-3-small' for your API key",
+                "the token per minute limit for the provider/model",
                 None,
             )
             .category(Category::Custom("couchbase".to_string()))
@@ -78,24 +84,24 @@ impl Command for VectorEnrichText {
         vec![
             Example {
                 description: "Retrieves an embedding from a plain text string",
-                example: "vector enrich-text \"embed this for me\"",
+                example: "vector enrich-text \"embed this for me\" --model amazon.titan-embed-text-v2:0",
                 result: None
             },
             Example {
                 description: "Retrieves an embedding for a plain text string from pipeline data",
-                example: "\"embed this for me\" | vector enrich-text",
+                example: "\"embed this for me\" | vector enrich-text --model models/text-embedding-004",
                 result: None,
             },
             Example {
                 description:
                     "Chunks longer text from file and retrieves the embedding for the chunks",
-                example: "open ./some-text.txt | vector enrich-text",
+                example: "open ./some-text.txt | vector enrich-text --model amazon.titan-embed-text-v1",
                 result: None,
             },
             Example {
                 description:
                     "Chunks text from all files in the current directory, retrieves embeddings \n  and uploads the vector docs to couchbase",
-                example: "ls | vector enrich-text | doc upsert",
+                example: "ls | vector enrich-text --model models/embedding-001 | doc upsert",
                 result: None,
             },
         ]
@@ -115,6 +121,40 @@ fn vector_enrich_text(
 
     let max_tokens: Option<usize> = call.get_flag::<usize>(engine_state, stack, "maxTokens")?;
 
+    let model = match call.get_flag::<String>(engine_state, stack, "model")? {
+        Some(m) => m,
+        None => {
+            let guard = state.lock().unwrap();
+            let model = match guard.llm() {
+                Some(m) => match m.model() {
+                    Some(m) => m,
+                    None => {
+                        return Err(ShellError::GenericError {
+                            error: "no model provided".to_string(),
+                            msg: "".to_string(),
+                            span: Some(span),
+                            help: Some(
+                                "supply the model in the config file or using the --model flag"
+                                    .to_string(),
+                            ),
+                            inner: Vec::new(),
+                        });
+                    }
+                },
+                None => {
+                    return Err(ShellError::GenericError {
+                        error: "no llm defined in config file".to_string(),
+                        msg: "".to_string(),
+                        span: Some(span),
+                        help: None,
+                        inner: Vec::new(),
+                    });
+                }
+            };
+            model
+        }
+    };
+
     let client = LLMClients::new(state, max_tokens)?;
 
     let mut results: Vec<Value> = Vec::new();
@@ -131,16 +171,10 @@ fn vector_enrich_text(
         let rt = Runtime::new().unwrap();
         let embeddings = match rt.block_on(async {
             select! {
-                result = client.embed(batch, dim) => {
+                result = client.embed(batch, dim, model.clone()) => {
                     match result {
                         Ok(r) => Ok(r),
-                        Err(e) => Err(ShellError::GenericError{
-                             error: format!("failed to execute request: {}", e),
-                            msg: "".to_string(),
-                            span: None,
-                            help: None,
-                            inner: Vec::new(),
-                    })
+                        Err(e) => Err(e)
                     }
                 },
                 () = ctrl_c_fut =>
