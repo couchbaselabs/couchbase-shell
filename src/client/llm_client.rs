@@ -46,7 +46,7 @@ impl LLMClients {
         max_tokens: impl Into<Option<usize>>,
     ) -> Result<LLMClients, ShellError> {
         let guard = state.lock().unwrap();
-        let (provider, api_key) = match guard.llm() {
+        let (provider, api_key) = match guard.active_llm() {
             Some(llm) => (llm.provider(), llm.api_key()),
             None => {
                 return Err(ShellError::GenericError {

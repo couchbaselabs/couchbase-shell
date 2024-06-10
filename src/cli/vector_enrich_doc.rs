@@ -140,7 +140,7 @@ fn vector_enrich_doc(
         Some(m) => m,
         None => {
             let guard = state.lock().unwrap();
-            let model = match guard.llm() {
+            let model = match guard.active_llm() {
                 Some(m) => match m.model() {
                     Some(m) => m,
                     None => {
