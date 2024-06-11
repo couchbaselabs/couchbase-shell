@@ -61,6 +61,12 @@ impl Command for VectorEnrichDoc {
                 "the name of the id column if used with an input stream",
                 None,
             )
+            .named(
+                "vectorField",
+                SyntaxShape::String,
+                "the name of the field into which the embedding is written, defaults to fieldVector".to_string(),
+                None,
+            )
             .category(Category::Custom("couchbase".to_string()))
     }
 
@@ -115,6 +121,13 @@ fn vector_enrich_doc(
     let mut input_records: Vec<nu_protocol::Record> = vec![];
 
     let max_tokens: Option<usize> = call.get_flag::<usize>(engine_state, stack, "maxTokens")?;
+
+    let vector_field =
+        if let Some(vf) = call.get_flag::<String>(engine_state, stack, "vectorField")? {
+            vf
+        } else {
+            format!("{}Vector", field.clone())
+        };
 
     let id_column: String = call
         .get_flag(engine_state, stack, "id-column")?
@@ -270,7 +283,7 @@ fn vector_enrich_doc(
 
         for (i, _) in batch.iter().enumerate() {
             input_records[count].insert(
-                format!("{}Vector", field.clone()),
+                vector_field.clone(),
                 Value::List {
                     internal_span: span,
                     vals: embeddings[i]
