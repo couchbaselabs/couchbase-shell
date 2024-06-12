@@ -5,6 +5,7 @@ use nu_test_support::pipeline;
 use std::{thread, time};
 
 #[test]
+#[cfg_attr(not(feature = "import_sample"), ignore)]
 fn import_sample() {
     CBPlayground::setup("import_sample", None, None, |dirs, sandbox| {
         let out =
@@ -47,6 +48,7 @@ fn import_sample() {
 }
 
 #[test]
+#[cfg_attr(not(feature = "import_sample"), ignore)]
 fn import_sample_invalid_sample() {
     CBPlayground::setup("import_sample", None, None, |dirs, sandbox| {
         let out =
