@@ -4,6 +4,7 @@ use crate::common::{utils, TestConfig, TestResult};
 use log::debug;
 use nu_test_support::pipeline;
 use nu_test_support::playground::{Dirs, Playground};
+use reqwest::{Client, ClientBuilder};
 use serde_json::{Error, Value};
 use std::collections::HashMap;
 use std::ops::Add;
@@ -11,6 +12,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
+use tokio::task;
+use tokio_rustls::rustls::crypto::{aws_lc_rs::default_provider, CryptoProvider};
+use tokio_rustls::rustls::ClientConfig;
 use uuid::Uuid;
 
 pub struct CBPlayground {
@@ -80,12 +84,14 @@ impl CBPlayground {
     default-bucket = \"{}\"
     username = \"{}\"
     password = \"{}\"
-    tls-enabled = false
+    tls-enabled = {}
+    tls-accept-all-certs = true
     data-timeout = \"{}\"",
                 config.connstr(),
                 config.bucket(),
                 config.username(),
                 config.password(),
+                config.connstr().starts_with("couchbases://"),
                 config.data_timeout(),
             );
 
@@ -255,7 +261,10 @@ impl CBPlayground {
         let password = c.password().unwrap();
 
         let (scope, collection) = if cfg!(feature = "collections") {
+            let client = build_client(conn_str.clone()).await;
+
             let scope = Self::create_scope(
+                client.clone(),
                 conn_str.clone(),
                 bucket.clone(),
                 username.clone(),
@@ -263,6 +272,7 @@ impl CBPlayground {
             )
             .await;
             let collection = Self::create_collection(
+                client,
                 conn_str.clone(),
                 bucket.clone(),
                 scope.clone(),
@@ -288,7 +298,6 @@ impl CBPlayground {
         Self::wait_for_scope(config.clone()).await;
         Self::wait_for_collection(config.clone()).await;
         Self::wait_for_kv(config.clone()).await;
-
         config
     }
 
@@ -377,13 +386,12 @@ impl CBPlayground {
     }
 
     pub async fn create_scope(
+        client: Client,
         conn_string: String,
         bucket: String,
         username: String,
         password: String,
     ) -> String {
-        let uri = format!("{}/pools/default/buckets/{}/scopes", conn_string, bucket);
-
         let mut uuid = Uuid::new_v4().to_string();
         uuid.truncate(6);
         let scope_name = format!("test-{}", uuid);
@@ -391,7 +399,8 @@ impl CBPlayground {
         let mut params = HashMap::new();
         params.insert("name", scope_name.clone());
 
-        let client = reqwest::Client::new();
+        let uri = build_uri(conn_string.clone(), bucket, None).await;
+
         let res = client
             .post(uri)
             .form(&params)
@@ -399,6 +408,7 @@ impl CBPlayground {
             .send()
             .await
             .unwrap();
+
         if !res.status().is_success() {
             panic!("Create scope failed: {}", res.status())
         };
@@ -407,17 +417,13 @@ impl CBPlayground {
     }
 
     pub async fn create_collection(
+        client: Client,
         conn_string: String,
         bucket: String,
         scope: String,
         username: String,
         password: String,
     ) -> String {
-        let uri = format!(
-            "{}/pools/default/buckets/{}/scopes/{}/collections",
-            conn_string, bucket, scope
-        );
-
         let mut uuid = Uuid::new_v4().to_string();
         uuid.truncate(6);
         let collection_name = format!("test-{}", uuid);
@@ -425,7 +431,8 @@ impl CBPlayground {
         let mut params = HashMap::new();
         params.insert("name", collection_name.clone());
 
-        let client = reqwest::Client::new();
+        let uri = build_uri(conn_string.clone(), bucket, scope).await;
+
         let res = client
             .post(uri)
             .form(&params)
@@ -433,6 +440,7 @@ impl CBPlayground {
             .send()
             .await
             .unwrap();
+
         if !res.status().is_success() {
             panic!("Create collection failed: {}", res.status())
         };
@@ -446,4 +454,61 @@ pub enum RetryExpectations {
     ExpectOut,
     //ExpectNoOut
     AllowAny { allow_out: bool, allow_err: bool },
+}
+
+async fn build_client(conn_string: String) -> Client {
+    let mut client_builder = ClientBuilder::new();
+    let _ = CryptoProvider::install_default(default_provider());
+    let builder = ClientConfig::builder();
+
+    if conn_string.starts_with("couchbases://") {
+        let config = builder
+            .dangerous()
+            .with_custom_certificate_verifier(Arc::new(utilities::InsecureCertVerifier {}))
+            .with_no_client_auth();
+        client_builder = client_builder.use_preconfigured_tls(config);
+    };
+    client_builder.build().unwrap()
+}
+
+async fn build_uri(
+    conn_string: String,
+    bucket: String,
+    scope: impl Into<Option<String>>,
+) -> String {
+    if conn_string.starts_with("couchbases://") {
+        let seeds = task::spawn_blocking(move || {
+            utilities::try_lookup_srv(
+                conn_string
+                    .clone()
+                    .strip_prefix("couchbases://")
+                    .unwrap()
+                    .to_string(),
+            )
+            .unwrap()
+        })
+        .await
+        .unwrap();
+
+        if let Some(scope) = scope.into() {
+            format!(
+                "https://{}:18091/pools/default/buckets/{}/scopes/{}/collections",
+                seeds[0], bucket, scope
+            )
+        } else {
+            format!(
+                "https://{}:18091/pools/default/buckets/{}/scopes",
+                seeds[0], bucket
+            )
+        }
+    } else {
+        if let Some(scope) = scope.into() {
+            format!(
+                "{}/pools/default/buckets/{}/scopes/{}/collections",
+                conn_string, bucket, scope
+            )
+        } else {
+            format!("{}/pools/default/buckets/{}/scopes", conn_string, bucket)
+        }
+    }
 }

@@ -15,8 +15,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tokio::time::Instant;
 
-use trust_dns_resolver::config::{ResolverConfig, ResolverOpts};
-use trust_dns_resolver::Resolver;
+extern crate utilities;
 
 mod bedrock_client;
 mod capella_ca;
@@ -51,7 +50,13 @@ impl Client {
         tls_config: Option<RustTlsConfig>,
     ) -> Self {
         let seeds = if Client::might_be_srv(&seeds) {
-            Client::try_lookup_srv(seeds[0].clone()).unwrap_or(seeds)
+            match utilities::try_lookup_srv(seeds[0].clone()) {
+                Ok(s) => s,
+                Err(e) => {
+                    debug!("Server lookup failed, falling back to hostnames: {}", e);
+                    seeds
+                }
+            }
         } else {
             seeds
         };
@@ -89,44 +94,6 @@ impl Client {
             ctrl_c,
         )
         .await
-    }
-
-    fn try_lookup_srv(addr: String) -> Result<Vec<String>, ClientError> {
-        // NOTE: resolver is going to build its own runtime, which is a pain...
-        let resolver =
-            Resolver::new(ResolverConfig::default(), ResolverOpts::default()).map_err(|e| {
-                ClientError::RequestFailed {
-                    reason: Some(e.to_string()),
-                    key: None,
-                }
-            })?;
-        let mut address = addr;
-        if !address.starts_with("_couchbases._tcp.") {
-            address = format!("_couchbases._tcp.{}", address);
-        }
-
-        let response = match resolver.srv_lookup(address) {
-            Ok(k) => k,
-            Err(e) => {
-                return Err(ClientError::RequestFailed {
-                    reason: Some(e.to_string()),
-                    key: None,
-                })
-            }
-        };
-
-        let mut addresses: Vec<String> = Vec::new();
-        for a in response.iter() {
-            // The addresses get suffixed with a . so we have to remove this to later match the address
-            // with the addresses in the alternate addresses in the config.
-            let mut host = a.target().to_string();
-            if let Some(prefix) = host.strip_suffix('.') {
-                host = prefix.to_string();
-            }
-            addresses.push(host);
-        }
-
-        Ok(addresses)
     }
 
     // This broadly mirrors the srv logic from the connstr package within gocbcore.

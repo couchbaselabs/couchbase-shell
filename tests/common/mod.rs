@@ -6,6 +6,7 @@ pub mod utils;
 
 use crate::common::error::TestError;
 use uuid::Uuid;
+extern crate utilities;
 
 pub type TestResult<T> = Result<T, TestError>;
 
