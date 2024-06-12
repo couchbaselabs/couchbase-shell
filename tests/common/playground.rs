@@ -4,13 +4,20 @@ use crate::common::{utils, TestConfig, TestResult};
 use log::debug;
 use nu_test_support::pipeline;
 use nu_test_support::playground::{Dirs, Playground};
+use reqwest::blocking::{Client, ClientBuilder};
 use serde_json::{Error, Value};
 use std::collections::HashMap;
 use std::ops::Add;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::thread::sleep;
+use std::time::SystemTime;
 use std::time::{Duration, Instant};
+use tokio::task;
+use tokio_rustls::rustls::client::{ServerCertVerified, ServerCertVerifier};
+use tokio_rustls::rustls::{Certificate, ClientConfig, ServerName};
+use trust_dns_resolver::config::{ResolverConfig, ResolverOpts};
+use trust_dns_resolver::Resolver;
 use uuid::Uuid;
 
 pub struct CBPlayground {
@@ -80,12 +87,14 @@ impl CBPlayground {
     default-bucket = \"{}\"
     username = \"{}\"
     password = \"{}\"
-    tls-enabled = false
+    tls-enabled = {}
+    tls-accept-all-certs = true
     data-timeout = \"{}\"",
                 config.connstr(),
                 config.bucket(),
                 config.username(),
                 config.password(),
+                config.connstr().starts_with("couchbases://"),
                 config.data_timeout(),
             );
 
@@ -255,7 +264,10 @@ impl CBPlayground {
         let password = c.password().unwrap();
 
         let (scope, collection) = if cfg!(feature = "collections") {
+            let client = build_client(conn_str.clone()).await;
+
             let scope = Self::create_scope(
+                client.clone(),
                 conn_str.clone(),
                 bucket.clone(),
                 username.clone(),
@@ -263,6 +275,7 @@ impl CBPlayground {
             )
             .await;
             let collection = Self::create_collection(
+                client,
                 conn_str.clone(),
                 bucket.clone(),
                 scope.clone(),
@@ -288,7 +301,6 @@ impl CBPlayground {
         Self::wait_for_scope(config.clone()).await;
         Self::wait_for_collection(config.clone()).await;
         Self::wait_for_kv(config.clone()).await;
-
         config
     }
 
@@ -377,13 +389,12 @@ impl CBPlayground {
     }
 
     pub async fn create_scope(
+        client: Client,
         conn_string: String,
         bucket: String,
         username: String,
         password: String,
     ) -> String {
-        let uri = format!("{}/pools/default/buckets/{}/scopes", conn_string, bucket);
-
         let mut uuid = Uuid::new_v4().to_string();
         uuid.truncate(6);
         let scope_name = format!("test-{}", uuid);
@@ -391,14 +402,20 @@ impl CBPlayground {
         let mut params = HashMap::new();
         params.insert("name", scope_name.clone());
 
-        let client = reqwest::Client::new();
-        let res = client
-            .post(uri)
-            .form(&params)
-            .basic_auth(username, Some(password))
-            .send()
-            .await
-            .unwrap();
+        let uri = build_uri(conn_string.clone(), bucket, None).await;
+
+        // Send creates it's own runtime so need to spwn a thread where blocking is allowed to do this in an async fn
+        let res = task::spawn_blocking(move || {
+            client
+                .post(uri)
+                .form(&params)
+                .basic_auth(username, Some(password))
+                .send()
+                .unwrap()
+        })
+        .await
+        .unwrap();
+
         if !res.status().is_success() {
             panic!("Create scope failed: {}", res.status())
         };
@@ -407,17 +424,13 @@ impl CBPlayground {
     }
 
     pub async fn create_collection(
+        client: Client,
         conn_string: String,
         bucket: String,
         scope: String,
         username: String,
         password: String,
     ) -> String {
-        let uri = format!(
-            "{}/pools/default/buckets/{}/scopes/{}/collections",
-            conn_string, bucket, scope
-        );
-
         let mut uuid = Uuid::new_v4().to_string();
         uuid.truncate(6);
         let collection_name = format!("test-{}", uuid);
@@ -425,14 +438,20 @@ impl CBPlayground {
         let mut params = HashMap::new();
         params.insert("name", collection_name.clone());
 
-        let client = reqwest::Client::new();
-        let res = client
-            .post(uri)
-            .form(&params)
-            .basic_auth(username, Some(password))
-            .send()
-            .await
-            .unwrap();
+        let uri = build_uri(conn_string.clone(), bucket, scope).await;
+
+        // Send creates it's own runtime so need to spwn a thread where blocking is allowed to do this in an async fn
+        let res = task::spawn_blocking(move || {
+            client
+                .post(uri)
+                .form(&params)
+                .basic_auth(username, Some(password))
+                .send()
+                .unwrap()
+        })
+        .await
+        .unwrap();
+
         if !res.status().is_success() {
             panic!("Create collection failed: {}", res.status())
         };
@@ -446,4 +465,107 @@ pub enum RetryExpectations {
     ExpectOut,
     //ExpectNoOut
     AllowAny { allow_out: bool, allow_err: bool },
+}
+
+fn try_lookup_srv(addr: String) -> Vec<String> {
+    // NOTE: resolver is going to build its own runtime, which is a pain...
+    // Construct a new Resolver with default configuration options
+    let resolver = Resolver::new(ResolverConfig::default(), ResolverOpts::default()).unwrap();
+    let mut address = addr;
+    if !address.starts_with("_couchbases._tcp.") {
+        address = format!("_couchbases._tcp.{}", address);
+    }
+
+    let response = match resolver.srv_lookup(address) {
+        Ok(k) => k,
+        Err(_) => return vec![],
+    };
+
+    let mut addresses: Vec<String> = Vec::new();
+    for a in response.iter() {
+        // The addresses get suffixed with a . so we have to remove this to later match the address
+        // with the addresses in the alternate addresses in the config.
+        let mut host = a.target().to_string();
+        if let Some(prefix) = host.strip_suffix('.') {
+            host = prefix.to_string();
+        }
+        addresses.push(host);
+    }
+
+    addresses
+}
+
+async fn build_client(conn_string: String) -> Client {
+    let mut client_builder = ClientBuilder::new();
+    let builder = ClientConfig::builder().with_safe_defaults();
+
+    if conn_string.starts_with("couchbases://") {
+        let config = builder
+            .with_custom_certificate_verifier(Arc::new(InsecureCertVerifier {}))
+            .with_no_client_auth();
+        client_builder = client_builder.use_preconfigured_tls(config);
+    };
+
+    // Build creates it's own runtime, so we need to spawn a thread where blocking is allowed so that this can be called
+    // in an async function
+    task::spawn_blocking(move || client_builder.build().unwrap())
+        .await
+        .unwrap()
+}
+
+async fn build_uri(
+    conn_string: String,
+    bucket: String,
+    scope: impl Into<Option<String>>,
+) -> String {
+    if conn_string.starts_with("couchbases://") {
+        let seeds = task::spawn_blocking(move || {
+            try_lookup_srv(
+                conn_string
+                    .clone()
+                    .strip_prefix("couchbases://")
+                    .unwrap()
+                    .to_string(),
+            )
+        })
+        .await
+        .unwrap();
+
+        if let Some(scope) = scope.into() {
+            format!(
+                "https://{}:18091/pools/default/buckets/{}/scopes/{}/collections",
+                seeds[0], bucket, scope
+            )
+        } else {
+            format!(
+                "https://{}:18091/pools/default/buckets/{}/scopes",
+                seeds[0], bucket
+            )
+        }
+    } else {
+        if let Some(scope) = scope.into() {
+            format!(
+                "{}/pools/default/buckets/{}/scopes/{}/collections",
+                conn_string, bucket, scope
+            )
+        } else {
+            format!("{}/pools/default/buckets/{}/scopes", conn_string, bucket)
+        }
+    }
+}
+
+struct InsecureCertVerifier {}
+
+impl ServerCertVerifier for InsecureCertVerifier {
+    fn verify_server_cert(
+        &self,
+        _end_entity: &Certificate,
+        _intermediates: &[Certificate],
+        _server_name: &ServerName,
+        _scts: &mut dyn Iterator<Item = &[u8]>,
+        _ocsp_response: &[u8],
+        _now: SystemTime,
+    ) -> Result<ServerCertVerified, tokio_rustls::rustls::Error> {
+        Ok(ServerCertVerified::assertion())
+    }
 }

@@ -92,14 +92,16 @@ static-link-openssl = ["dep:openssl"]
 # We use a list of supported features to determine which tests we want to run, the defaults will always be run, then we
 # define any additional features using the specific server versions we test against
 default = ["key_value", "query", "query_index", "query_index_definitions", "query_index_advise"]
-"7.1.1" = ["collections"]
-"7.0.3" = ["collections"]
+"7.1.1" = ["collections", "import_sample"]
+"7.0.3" = ["collections", "import_sample"]
+"Capella" = ["collections"]
 key_value = []
 query = []
 collections = []
 query_index = []
 query_index_definitions = []
 query_index_advise = []
+import_sample = []
 
 [[bin]]
 name = "cbsh"
