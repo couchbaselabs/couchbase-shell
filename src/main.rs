@@ -674,12 +674,19 @@ fn make_state(
             capella_orgs.insert(name, plane);
         }
 
-        for llm_conf in c.llms() {
-            let llm = LLM::new(llm_conf.api_key(), llm_conf.provider(), llm_conf.model());
-            llms.insert(llm_conf.identifier(), llm);
+        if let Some(llm_configs) = c.llms() {
+            for config in llm_configs {
+                let llm = LLM::new(
+                    config.api_key(),
+                    config.provider(),
+                    config.embed_model(),
+                    config.chat_model(),
+                );
+                llms.insert(config.identifier(), llm);
 
-            if active_llm.is_none() {
-                active_llm = Some(llm_conf.identifier())
+                if active_llm.is_none() {
+                    active_llm = Some(config.identifier())
+                }
             }
         }
 

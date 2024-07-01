@@ -40,7 +40,7 @@ pub struct ShellConfig {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     capella_orgs: Vec<CapellaOrganizationConfig>,
 
-    llm: Vec<LLMConfig>,
+    llm: Option<Vec<LLMConfig>>,
 }
 
 impl ShellConfig {
@@ -114,7 +114,7 @@ impl ShellConfig {
             path: None,
             version: 1,
             capella_orgs,
-            llm: vec![],
+            llm: None,
         }
     }
 
@@ -156,7 +156,7 @@ impl ShellConfig {
         &mut self.capella_orgs
     }
 
-    pub fn llms(&self) -> &Vec<LLMConfig> {
+    pub fn llms(&self) -> &Option<Vec<LLMConfig>> {
         &self.llm
     }
 }
@@ -168,7 +168,7 @@ impl Default for ShellConfig {
             version: 1,
             path: None,
             capella_orgs: vec![],
-            llm: vec![],
+            llm: None,
         }
     }
 }
@@ -272,7 +272,8 @@ pub struct LLMConfig {
     identifier: String,
     api_key: Option<String>,
     provider: Provider,
-    model: Option<String>,
+    embed_model: Option<String>,
+    chat_model: Option<String>,
 }
 
 impl LLMConfig {
@@ -288,8 +289,12 @@ impl LLMConfig {
         self.provider.clone()
     }
 
-    pub fn model(&self) -> Option<String> {
-        self.model.clone()
+    pub fn embed_model(&self) -> Option<String> {
+        self.embed_model.clone()
+    }
+
+    pub fn chat_model(&self) -> Option<String> {
+        self.chat_model.clone()
     }
 }
 

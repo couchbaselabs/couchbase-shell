@@ -121,7 +121,12 @@ impl BedrockClient {
         Ok(rec)
     }
 
-    pub async fn ask(&self, question: String, context: Vec<String>) -> Result<String, ShellError> {
+    pub async fn ask(
+        &self,
+        question: String,
+        context: Vec<String>,
+        model: String,
+    ) -> Result<String, ShellError> {
         let config = aws_config::load_from_env().await;
         let client = aws_sdk_bedrockruntime::Client::new(&config);
 
@@ -144,7 +149,7 @@ impl BedrockClient {
 
         let result = match client
             .invoke_model()
-            .model_id("amazon.titan-text-express-v1")
+            .model_id(model)
             .content_type("application/json")
             .body(Blob::new(serde_json::to_string(&prompt).unwrap()))
             .send()
