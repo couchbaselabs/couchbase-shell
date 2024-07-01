@@ -40,7 +40,7 @@ pub struct ShellConfig {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     capella_orgs: Vec<CapellaOrganizationConfig>,
 
-    llm: Option<Vec<LLMConfig>>,
+    ai: Option<Vec<LLMConfig>>,
 }
 
 impl ShellConfig {
@@ -114,7 +114,7 @@ impl ShellConfig {
             path: None,
             version: 1,
             capella_orgs,
-            llm: None,
+            ai: None,
         }
     }
 
@@ -157,7 +157,7 @@ impl ShellConfig {
     }
 
     pub fn llms(&self) -> &Option<Vec<LLMConfig>> {
-        &self.llm
+        &self.ai
     }
 }
 
@@ -168,7 +168,7 @@ impl Default for ShellConfig {
             version: 1,
             path: None,
             capella_orgs: vec![],
-            llm: None,
+            ai: None,
         }
     }
 }

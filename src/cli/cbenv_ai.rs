@@ -7,19 +7,19 @@ use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
 
 #[derive(Clone)]
-pub struct CbEnvLLM {
+pub struct CbEnvAI {
     state: Arc<Mutex<State>>,
 }
 
-impl CbEnvLLM {
+impl CbEnvAI {
     pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
 
-impl Command for CbEnvLLM {
+impl Command for CbEnvAI {
     fn name(&self) -> &str {
-        "cb-env llm"
+        "cb-env ai"
     }
 
     fn signature(&self) -> Signature {
@@ -27,13 +27,13 @@ impl Command for CbEnvLLM {
             .required(
                 "identifier",
                 SyntaxShape::String,
-                "the identifier of the llm",
+                "the identifier of the ai",
             )
             .category(Category::Custom("couchbase".to_string()))
     }
 
     fn usage(&self) -> &str {
-        "Sets the active llm based on its identifier"
+        "Sets the active ai based on its identifier"
     }
 
     fn run(

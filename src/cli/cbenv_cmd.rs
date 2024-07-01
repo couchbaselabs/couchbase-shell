@@ -163,7 +163,7 @@ fn use_cmd(
     }
 
     if let Some(llm_id) = guard.active_llm_id() {
-        results.add_string("llm", llm_id, span);
+        results.add_string("ai", llm_id, span);
     }
 
     Ok(results.into_pipeline_data(call.head))
