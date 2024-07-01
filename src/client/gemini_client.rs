@@ -139,10 +139,15 @@ impl GeminiClient {
         Ok(rec)
     }
 
-    pub async fn ask(&self, question: String, context: Vec<String>) -> Result<String, ShellError> {
+    pub async fn ask(
+        &self,
+        question: String,
+        context: Vec<String>,
+        model: String,
+    ) -> Result<String, ShellError> {
         let url = format!(
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={}",
-            self.api_key
+            "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
+            model, self.api_key
         );
 
         let question_with_ctx = if context.len() > 0 {

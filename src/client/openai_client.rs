@@ -138,7 +138,12 @@ impl OpenAIClient {
         Ok(rec)
     }
 
-    pub async fn ask(&self, question: String, context: Vec<String>) -> Result<String, ShellError> {
+    pub async fn ask(
+        &self,
+        question: String,
+        context: Vec<String>,
+        model: String,
+    ) -> Result<String, ShellError> {
         let mut messages: Vec<ChatCompletionRequestMessage> = vec![];
 
         // Primes the model to respond appropriately
@@ -174,7 +179,7 @@ impl OpenAIClient {
 
         let request = CreateChatCompletionRequestArgs::default()
             .max_tokens(512u16)
-            .model("gpt-3.5-turbo")
+            .model(model)
             .messages(messages)
             .build()
             .unwrap();

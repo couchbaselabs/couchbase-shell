@@ -655,7 +655,12 @@ fn make_state(
         }
 
         for llm_conf in c.llms() {
-            let llm = LLM::new(llm_conf.api_key(), llm_conf.provider(), llm_conf.model());
+            let llm = LLM::new(
+                llm_conf.api_key(),
+                llm_conf.provider(),
+                llm_conf.embed_model(),
+                llm_conf.chat_model(),
+            );
             llms.insert(llm_conf.identifier(), llm);
 
             if active_llm.is_none() {
