@@ -7,6 +7,7 @@ def build_collection_prompt [] {
     let scope = $"($content | get scope)"
     let collection = $"($content | get collection)"
     let cluster_type = $"($content | get cluster_type)"
+    let ai = $"($content | get ai)"
 
     let bucket_prompt =
     let bucket_name = if $bucket == "" {
@@ -32,7 +33,13 @@ def build_collection_prompt [] {
         $"($scope_name + $col_name)"
     }
 
-    let prompt = $"(($user) + ' at ' + ($cluster) + ($bucket_prompt) + ($collection_prompt))
+    let ai_prompt = if $ai == "" {
+        ""
+    } else {
+        ' assisted by ' + (ansi gb) + ($ai)
+    }
+
+    let prompt = $"(($user) + ' at ' + ($cluster) + ($bucket_prompt) + ($collection_prompt) + ($ai_prompt))
 
 "
 

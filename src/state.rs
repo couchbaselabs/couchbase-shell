@@ -312,10 +312,6 @@ impl State {
         }
     }
 
-    pub fn llms(&self) -> &HashMap<String, LLM> {
-        &self.llms
-    }
-
     pub fn active_llm_id(&self) -> Option<String> {
         self.active_llm.lock().unwrap().clone()
     }
