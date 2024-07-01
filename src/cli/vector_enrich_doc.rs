@@ -50,12 +50,6 @@ impl Command for VectorEnrichDoc {
                 None,
             )
             .named(
-                "model",
-                SyntaxShape::String,
-                "the model to generate the embeddings with",
-                None,
-            )
-            .named(
                 "dimension",
                 SyntaxShape::Int,
                 "dimension of the resulting embeddings",
@@ -145,7 +139,7 @@ fn vector_enrich_doc(
         Some(m) => m,
         None => {
             let guard = state.lock().unwrap();
-            let model = match guard.llm() {
+            let model = match guard.active_llm() {
                 Some(m) => match m.model() {
                     Some(m) => m,
                     None => {

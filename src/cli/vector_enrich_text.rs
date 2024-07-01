@@ -46,12 +46,6 @@ impl Command for VectorEnrichText {
                 None,
             )
             .named(
-                "model",
-                SyntaxShape::String,
-                "the model to generate the embeddings with",
-                None,
-            )
-            .named(
                 "chunk",
                 SyntaxShape::Int,
                 "length of the data chunks to embed (default 1024)",
@@ -131,7 +125,7 @@ fn vector_enrich_text(
         Some(m) => m,
         None => {
             let guard = state.lock().unwrap();
-            let model = match guard.llm() {
+            let model = match guard.active_llm() {
                 Some(m) => match m.model() {
                     Some(m) => m,
                     None => {

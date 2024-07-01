@@ -2,6 +2,7 @@ use crate::client::{CapellaClient, Endpoint};
 
 use crate::tutorial::Tutorial;
 use crate::RemoteCluster;
+use lazy_static::__Deref;
 use nu_protocol::LabeledError;
 use nu_protocol::ShellError;
 use serde::{Deserialize, Serialize};
@@ -70,7 +71,8 @@ pub struct State {
     capella_orgs: HashMap<String, RemoteCapellaOrganization>,
     active_capella_org: Mutex<Option<String>>,
     active_transaction: Mutex<Option<TransactionState>>,
-    llm: Option<LLM>,
+    llms: HashMap<String, LLM>,
+    active_llm: Mutex<Option<String>>,
 }
 
 impl State {
@@ -80,7 +82,8 @@ impl State {
         config_path: Option<PathBuf>,
         capella_orgs: HashMap<String, RemoteCapellaOrganization>,
         active_capella_org: Option<String>,
-        llm: Option<LLM>,
+        llms: HashMap<String, LLM>,
+        active_llm: Option<String>,
     ) -> Self {
         let state = Self {
             active: Mutex::new(active.clone()),
@@ -90,7 +93,8 @@ impl State {
             capella_orgs,
             active_capella_org: Mutex::new(active_capella_org),
             active_transaction: Mutex::new(None),
-            llm,
+            llms,
+            active_llm: Mutex::new(active_llm),
         };
         if !active.is_empty() {
             state.set_active(active).unwrap();
@@ -297,8 +301,20 @@ impl State {
         }
     }
 
-    pub fn llm(&self) -> &Option<LLM> {
-        &self.llm
+    pub fn llms(&self) -> &HashMap<String, LLM> {
+        &self.llms
+    }
+
+    pub fn active_llm_id(&self) -> Option<String> {
+        self.active_llm.lock().unwrap().clone()
+    }
+
+    pub fn active_llm(&self) -> Option<&LLM> {
+        let active_llm = match self.active_llm.lock().unwrap().deref() {
+            Some(active) => self.llms.get(&*active),
+            None => None,
+        };
+        active_llm
     }
 }
 

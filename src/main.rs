@@ -508,7 +508,8 @@ fn make_state(
 ) -> Arc<Mutex<State>> {
     let mut capella_orgs = HashMap::new();
     let mut active_capella_org = None;
-    let mut llm: Option<LLM> = None;
+    let mut llms = HashMap::new();
+    let mut active_llm = None;
     let (active, config_location) = if let Some(c) = config {
         let mut active = None;
         for v in c.clusters() {
@@ -653,12 +654,13 @@ fn make_state(
             capella_orgs.insert(name, plane);
         }
 
-        if let Some(llm_conf) = c.llm() {
-            llm = Some(LLM::new(
-                llm_conf.api_key(),
-                llm_conf.provider(),
-                llm_conf.model(),
-            ))
+        for llm_conf in c.llms() {
+            let llm = LLM::new(llm_conf.api_key(), llm_conf.provider(), llm_conf.model());
+            llms.insert(llm_conf.identifier(), llm);
+
+            if active_llm.is_none() {
+                active_llm = Some(llm_conf.identifier())
+            }
         }
 
         (active.unwrap_or_default(), c.location().clone())
@@ -672,7 +674,8 @@ fn make_state(
         config_location,
         capella_orgs,
         active_capella_org,
-        llm,
+        llms,
+        active_llm,
     )))
 }
 
