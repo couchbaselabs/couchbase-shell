@@ -31,7 +31,8 @@ impl TransactionState {
 pub struct LLM {
     api_key: Option<String>,
     provider: Provider,
-    model: Option<String>,
+    embed_model: Option<String>,
+    chat_model: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -42,11 +43,17 @@ pub enum Provider {
 }
 
 impl LLM {
-    pub fn new(api_key: Option<String>, provider: Provider, model: Option<String>) -> Self {
+    pub fn new(
+        api_key: Option<String>,
+        provider: Provider,
+        embed_model: Option<String>,
+        chat_model: Option<String>,
+    ) -> Self {
         Self {
             api_key,
             provider,
-            model,
+            embed_model,
+            chat_model,
         }
     }
 
@@ -58,8 +65,12 @@ impl LLM {
         self.provider.clone()
     }
 
-    pub fn model(&self) -> Option<String> {
-        self.model.clone()
+    pub fn embed_model(&self) -> Option<String> {
+        self.embed_model.clone()
+    }
+
+    pub fn chat_model(&self) -> Option<String> {
+        self.chat_model.clone()
     }
 }
 
@@ -299,10 +310,6 @@ impl State {
             let mut guard = self.active_transaction.lock().unwrap();
             *guard = None;
         }
-    }
-
-    pub fn llms(&self) -> &HashMap<String, LLM> {
-        &self.llms
     }
 
     pub fn active_llm_id(&self) -> Option<String> {

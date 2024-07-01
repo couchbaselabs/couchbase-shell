@@ -141,15 +141,15 @@ fn vector_enrich_doc(
         None => {
             let guard = state.lock().unwrap();
             let model = match guard.active_llm() {
-                Some(m) => match m.model() {
+                Some(m) => match m.embed_model() {
                     Some(m) => m,
                     None => {
                         return Err(ShellError::GenericError {
-                            error: "no model provided".to_string(),
+                            error: "no embed model provided".to_string(),
                             msg: "".to_string(),
                             span: Some(span),
                             help: Some(
-                                "supply the model in the config file or using the --model flag"
+                                "supply the embed_model in the config file or using the --model flag"
                                     .to_string(),
                             ),
                             inner: Vec::new(),
