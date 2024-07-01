@@ -699,6 +699,7 @@ fn merge_couchbase_delta(context: &mut EngineState, state: Arc<Mutex<State>>) {
         working_set.add_decl(Box::new(BucketsSample::new(state.clone())));
         working_set.add_decl(Box::new(BucketsUpdate::new(state.clone())));
         working_set.add_decl(Box::new(CbEnvCluster::new(state.clone())));
+        working_set.add_decl(Box::new(CbEnvLLM::new(state.clone())));
         working_set.add_decl(Box::new(CBEnvManaged::new(state.clone())));
         working_set.add_decl(Box::new(CbEnvRegister::new(state.clone())));
         working_set.add_decl(Box::new(CbEnvUnregister::new(state.clone())));

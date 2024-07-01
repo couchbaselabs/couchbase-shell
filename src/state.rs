@@ -316,6 +316,17 @@ impl State {
         };
         active_llm
     }
+
+    pub fn set_active_llm(&self, active: String) -> Result<(), ShellError> {
+        if !self.llms.contains_key(&active) {
+            return Err(LabeledError::new(format!("The llm named {} is not known", active)).into());
+        }
+
+        let mut guard = self.active_llm.lock().unwrap();
+        *guard = Some(active);
+
+        Ok(())
+    }
 }
 
 pub struct RemoteCapellaOrganization {
