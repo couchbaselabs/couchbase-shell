@@ -33,11 +33,16 @@ impl LLMClients {
         }
     }
 
-    pub async fn ask(&self, question: String, context: Vec<String>) -> Result<String, ShellError> {
+    pub async fn ask(
+        &self,
+        question: String,
+        context: Vec<String>,
+        model: String,
+    ) -> Result<String, ShellError> {
         match self {
-            Self::OpenAI(c) => c.ask(question, context).await,
-            Self::Gemini(c) => c.ask(question, context).await,
-            Self::Bedrock(c) => c.ask(question, context).await,
+            Self::OpenAI(c) => c.ask(question, context, model).await,
+            Self::Gemini(c) => c.ask(question, context, model).await,
+            Self::Bedrock(c) => c.ask(question, context, model).await,
         }
     }
 
@@ -46,7 +51,7 @@ impl LLMClients {
         max_tokens: impl Into<Option<usize>>,
     ) -> Result<LLMClients, ShellError> {
         let guard = state.lock().unwrap();
-        let (provider, api_key) = match guard.llm() {
+        let (provider, api_key) = match guard.active_llm() {
             Some(llm) => (llm.provider(), llm.api_key()),
             None => {
                 return Err(ShellError::GenericError {

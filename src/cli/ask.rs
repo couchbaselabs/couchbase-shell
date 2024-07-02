@@ -37,6 +37,12 @@ impl Command for Ask {
                 SyntaxShape::Any,
                 "table of strings used as context for the question",
             )
+            .named(
+                "model",
+                SyntaxShape::String,
+                "the chat model to ask the question",
+                None,
+            )
             .category(Category::Custom("couchbase".to_string()))
     }
 
@@ -135,6 +141,40 @@ pub fn ask(
         },
     };
 
+    let model = match call.get_flag::<String>(engine_state, stack, "model")? {
+        Some(m) => m,
+        None => {
+            let guard = state.lock().unwrap();
+            let model = match guard.active_llm() {
+                Some(m) => match m.chat_model() {
+                    Some(m) => m,
+                    None => {
+                        return Err(ShellError::GenericError {
+                            error: "no chat model provided".to_string(),
+                            msg: "".to_string(),
+                            span: Some(span),
+                            help: Some(
+                                "supply the chat_model in the config file or using the --model flag"
+                                    .to_string(),
+                            ),
+                            inner: Vec::new(),
+                        });
+                    }
+                },
+                None => {
+                    return Err(ShellError::GenericError {
+                        error: "no llm defined in config file".to_string(),
+                        msg: "".to_string(),
+                        span: Some(span),
+                        help: None,
+                        inner: Vec::new(),
+                    });
+                }
+            };
+            model
+        }
+    };
+
     let client = LLMClients::new(state, None)?;
 
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
@@ -142,7 +182,7 @@ pub fn ask(
     let rt = Runtime::new().unwrap();
     let answer = match rt.block_on(async {
         select! {
-            answer = client.ask(question.clone(), context.clone()) => {
+            answer = client.ask(question.clone(), context.clone(), model) => {
                 match answer {
                     Ok(a) => Ok(a),
                     Err(e) => Err(e),

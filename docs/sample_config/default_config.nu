@@ -7,6 +7,7 @@ def build_collection_prompt [] {
     let scope = $"($content | get scope)"
     let collection = $"($content | get collection)"
     let cluster_type = $"($content | get cluster_type)"
+    let ai = $"($content | get ai)"
 
  let bucket_symbol = if $cluster_type == "provisioned" {
         "☁️"
@@ -37,7 +38,13 @@ def build_collection_prompt [] {
         $"($scope_name + $col_name)"
     }
 
-    let prompt = $"('👤 ' + (ansi ub) + ($user) + (ansi reset) + ' 🏠 ' + (ansi yb) + ($cluster) + (ansi reset) + ($bucket_prompt) + ($collection_prompt) + (ansi reset))
+    let ai_prompt = if $ai == "" {
+        ""
+    } else {
+        ' 🤖 ' + (ansi gb) + ($ai)
+    }
+
+    let prompt = $"('👤 ' + (ansi ub) + ($user) + (ansi reset) + ' 🏠 ' + (ansi yb) + ($cluster) + (ansi reset) + ($bucket_prompt) + ($collection_prompt) + (ansi reset) + ($ai_prompt))
 
 "
 
