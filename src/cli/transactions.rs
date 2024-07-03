@@ -2,7 +2,7 @@ use nu_engine::get_full_help;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
-    Category, Example, IntoPipelineData, PipelineData, ShellError, Signature, Value,
+    Category, IntoPipelineData, PipelineData, ShellError, Signature, Value,
 };
 
 #[derive(Clone)]
@@ -30,11 +30,9 @@ impl Command for Transactions {
     ) -> Result<PipelineData, ShellError> {
         Ok(Value::String {
             val: get_full_help(
-                &Transactions.signature(),
-                &Vec::<Example>::new(),
+                &Transactions,
                 engine_state,
                 stack,
-                self.is_parser_keyword(),
             ),
             internal_span: call.head,
         }

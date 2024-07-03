@@ -5,6 +5,7 @@ use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
+use nu_protocol::Value::Nothing;
 
 #[derive(Clone)]
 pub struct CbEnvCluster {
@@ -46,6 +47,6 @@ impl Command for CbEnvCluster {
         let guard = self.state.lock().unwrap();
         guard.set_active(call.req(engine_state, stack, 0)?)?;
 
-        Ok(PipelineData::new_with_metadata(None, call.head))
+        Ok(PipelineData::Value(Nothing {internal_span: call.head}, None))
     }
 }

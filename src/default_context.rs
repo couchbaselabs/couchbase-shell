@@ -1,5 +1,4 @@
 use nu_cli::add_cli_context;
-use nu_cmd_dataframe::add_dataframe_context;
 use nu_cmd_extra::*;
 use nu_cmd_lang::*;
 use nu_command::*;
@@ -15,7 +14,7 @@ pub fn create_default_context() -> EngineState {
     // them only accessible if the correct input value category is used with the
     // declaration.
     // These commands typically all start with dfr so we're safe to blindly add them all.
-    let engine_state = add_dataframe_context(engine_state);
+    // let engine_state = add_dataframe_context(engine_state);
     let engine_state = add_extra_command_context(engine_state);
     let engine_state = add_cli_context(engine_state);
     let mut engine_state = nu_explore::add_explore_context(engine_state);
@@ -58,7 +57,6 @@ pub fn create_default_context() -> EngineState {
             OverlayList,
             OverlayNew,
             OverlayHide,
-            LazyMake,
             Let,
             Loop,
             Match,

@@ -11,6 +11,7 @@ use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
+use nu_protocol::Value::Nothing;
 
 #[derive(Clone)]
 pub struct UsersDrop {
@@ -100,5 +101,5 @@ fn users_drop(
         }
     }
 
-    Ok(PipelineData::new_with_metadata(None, span))
+    Ok(PipelineData::Value(Nothing {internal_span: span}, None))
 }

@@ -40,7 +40,7 @@ use serde::Deserialize;
 use nu_cli::{add_plugin_file, gather_parent_env_vars, read_plugin_file};
 use nu_cmd_base::util::get_init_cwd;
 use nu_protocol::engine::{EngineState, Stack, StateWorkingSet};
-use nu_protocol::{report_error_new, BufferedReader, PipelineData, RawStream, Span};
+use nu_protocol::{report_error_new, Span, ByteStreamType, ByteStream, ByteStreamSource, PipelineData, Value, IntoPipelineData};
 
 use crate::client::RustTlsConfig;
 use std::collections::HashMap;
@@ -110,22 +110,32 @@ fn main() -> Result<(), Box<dyn Error>> {
     let input = if opt.stdin {
         let stdin = std::io::stdin();
         let buf_reader = BufReader::new(stdin);
-
-        PipelineData::ExternalStream {
-            stdout: Some(RawStream::new(
-                Box::new(BufferedReader::new(buf_reader)),
-                Some(ctrlc),
+        PipelineData::ByteStream(
+            ByteStream::new(
+                ByteStreamSource::Read(Box::new(buf_reader)),
                 Span::new(0, 0),
-                None,
-            )),
-            stderr: None,
-            exit_code: None,
-            span: Span::new(0, 0),
-            metadata: None,
-            trim_end_newline: false,
-        }
+                Some(ctrlc),
+                ByteStreamType::String,
+        ), None)
+
+        // PipelineData::ByteStream {
+        //     ByteStream
+        //     stdout: Some(RawStream::new(
+        //         Box::new(BufferedReader::new(buf_reader)),
+        //         Some(ctrlc),
+        //         Span::new(0, 0),
+        //         None,
+        //     )),
+        //     stderr: None,
+        //     exit_code: None,
+        //     span: Span::new(0, 0),
+        //     metadata: None,
+        //     trim_end_newline: false,
+        //     1: None,
+        // }
     } else {
-        PipelineData::new_with_metadata(None, Span::new(0, 0))
+        // PipelineData::new_with_metadata(None, Span::new(0, 0))
+        Value::nothing(Span::new(0, 0)).into_pipeline_data()
     };
 
     // This is throwing errors at me, looks like it's something in nu stdlib itself.

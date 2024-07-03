@@ -5,6 +5,7 @@ use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
 use std::sync::{Arc, Mutex};
+use nu_protocol::Value::Nothing;
 
 #[derive(Clone)]
 pub struct UseScope {
@@ -59,6 +60,6 @@ impl Command for UseScope {
             active.set_active_collection(None);
         }
 
-        Ok(PipelineData::new_with_metadata(None, span))
+        Ok(PipelineData::Value(Nothing {internal_span: span}, None))
     }
 }

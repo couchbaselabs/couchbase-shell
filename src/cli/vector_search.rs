@@ -99,7 +99,7 @@ fn run(
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
     let mut vector: Vec<f32> = vec![];
-    match input.into_value(span) {
+    match input.into_value(span)? {
         Value::List { vals, .. } => {
             let rec = match vals[0].as_record() {
                 Ok(r) => r,

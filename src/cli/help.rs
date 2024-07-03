@@ -3,7 +3,7 @@ use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
-    span, Category, Example, IntoPipelineData, PipelineData, ShellError, Signature, Span, Spanned,
+    Category, Example, IntoPipelineData, PipelineData, ShellError, Signature, Span, Spanned,
     SyntaxShape, Type, Value,
 };
 
@@ -96,7 +96,7 @@ impl Command for Help {
             if let Err(ShellError::ModuleNotFoundAtRuntime { .. }) = result {
                 let rest_spans: Vec<Span> = rest.iter().map(|arg| arg.span).collect();
                 Err(ShellError::NotFound {
-                    span: span(&rest_spans),
+                    span: Span::concat(&rest_spans),
                 })
             } else {
                 result

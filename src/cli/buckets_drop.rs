@@ -110,5 +110,5 @@ fn buckets_drop(
         }
     }
 
-    Ok(PipelineData::new_with_metadata(None, span))
+    Ok(PipelineData::empty())
 }

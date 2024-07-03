@@ -192,7 +192,7 @@ fn buckets_update(
         }
     }
 
-    Ok(PipelineData::new_with_metadata(None, span))
+    Ok(PipelineData::empty())
 }
 
 fn update_bucket_settings(

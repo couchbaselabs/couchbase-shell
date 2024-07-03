@@ -106,7 +106,6 @@ fn run_get(
     let ids = ids_from_input(
         input,
         id_column.clone(),
-        ctrl_c.clone(),
         call.positional_nth(0),
     )?;
     let batch_size: Option<i64> = call.get_flag(engine_state, stack, "batch-size")?;

@@ -151,7 +151,6 @@ fn run_subdoc_lookup(
     let ids = ids_from_input(
         input,
         id_column.clone(),
-        ctrl_c.clone(),
         call.positional_nth(1),
     )?;
 

@@ -14,6 +14,7 @@ use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape, Value,
 };
+use nu_protocol::Value::Nothing;
 
 #[derive(Clone)]
 pub struct QueryTransactions {
@@ -184,7 +185,7 @@ fn query(
         .into_pipeline_data());
     }
 
-    Ok(PipelineData::new_with_metadata(None, span))
+    Ok(PipelineData::Value(Nothing {internal_span: span}, None))
 }
 
 fn validate_statement(statement: &String, span: Span) -> Result<(), ShellError> {

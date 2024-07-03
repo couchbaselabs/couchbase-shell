@@ -82,7 +82,7 @@ pub fn ask(
     let question: String = call.req(engine_state, stack, 0)?;
     let context: Vec<String> = match call.opt(engine_state, stack, 1)? {
         Some(ctx) => ctx,
-        None => match input.into_value(span) {
+        None => match input.into_value(span)? {
             Value::List {
                 vals,
                 internal_span: span,
