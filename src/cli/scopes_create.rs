@@ -13,8 +13,8 @@ use crate::cli::error::{
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
 use nu_protocol::Value::Nothing;
+use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
 
 #[derive(Clone)]
 pub struct ScopesCreate {
@@ -116,5 +116,10 @@ fn run(
         }
     }
 
-    Ok(PipelineData::Value(Nothing {internal_span: span}, None))
+    Ok(PipelineData::Value(
+        Nothing {
+            internal_span: span,
+        },
+        None,
+    ))
 }

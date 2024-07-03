@@ -21,10 +21,10 @@ use crate::RemoteCluster;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::Value::Nothing;
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape, Value,
 };
-use nu_protocol::Value::Nothing;
 
 #[derive(Clone)]
 pub struct Query {
@@ -158,7 +158,12 @@ fn query(
         .into_pipeline_data());
     }
 
-    Ok(PipelineData::Value(Nothing {internal_span: span}, None))
+    Ok(PipelineData::Value(
+        Nothing {
+            internal_span: span,
+        },
+        None,
+    ))
 }
 
 pub fn send_query(

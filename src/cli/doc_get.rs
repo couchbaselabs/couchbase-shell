@@ -122,11 +122,7 @@ fn run_get(
     let id_column: String = call
         .get_flag(engine_state, stack, "id-column")?
         .unwrap_or_else(|| "id".to_string());
-    let ids = ids_from_input(
-        input,
-        id_column.clone(),
-        call.positional_nth(0),
-    )?;
+    let ids = ids_from_input(input, id_column.clone(), call.positional_nth(0))?;
 
     let mut workers = FuturesUnordered::new();
     let guard = state.lock().unwrap();

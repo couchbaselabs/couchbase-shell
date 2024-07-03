@@ -3,9 +3,9 @@ use crate::state::State;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::Value::Nothing;
 use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
 use std::sync::{Arc, Mutex};
-use nu_protocol::Value::Nothing;
 
 #[derive(Clone)]
 pub struct UseCollection {
@@ -59,6 +59,11 @@ impl Command for UseCollection {
 
         active.set_active_collection(Some(call.req(engine_state, stack, 0)?));
 
-        Ok(PipelineData::Value(Nothing {internal_span: span}, None))
+        Ok(PipelineData::Value(
+            Nothing {
+                internal_span: span,
+            },
+            None,
+        ))
     }
 }

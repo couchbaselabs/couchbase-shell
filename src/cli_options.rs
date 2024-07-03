@@ -143,11 +143,7 @@ impl Command for Cbsh {
         _input: PipelineData,
     ) -> Result<PipelineData, ShellError> {
         Ok(Value::String {
-            val: get_full_help(
-                &Cbsh,
-                context,
-                stack,
-            ),
+            val: get_full_help(&Cbsh, context, stack),
             internal_span: call.head,
         }
         .into_pipeline_data())
@@ -253,11 +249,7 @@ pub fn parse_commandline_args(
             let help = call.has_flag(context, &mut stack, "help")?;
 
             if help {
-                let full_help = get_full_help(
-                    &Cbsh,
-                    context,
-                    &mut stack,
-                );
+                let full_help = get_full_help(&Cbsh, context, &mut stack);
 
                 let _ = std::panic::catch_unwind(move || {
                     let stdout = std::io::stdout();
@@ -303,11 +295,7 @@ pub fn parse_commandline_args(
     }
 
     // Just give the help and exit if the above fails
-    let full_help = get_full_help(
-        &Cbsh,
-        context,
-        &mut stack,
-    );
+    let full_help = get_full_help(&Cbsh, context, &mut stack);
     print!("{}", full_help);
     std::process::exit(1);
 }

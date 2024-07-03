@@ -6,8 +6,8 @@ use crate::cli::error::{cluster_not_found_error, generic_error};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
 use nu_protocol::Value::Nothing;
+use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
 
 #[derive(Clone)]
 pub struct CbEnvUnregister {
@@ -82,5 +82,10 @@ fn clusters_unregister(
         update_config_file(&mut guard, call.head)?;
     };
 
-    Ok(PipelineData::Value(Nothing {internal_span: call.head}, None))
+    Ok(PipelineData::Value(
+        Nothing {
+            internal_span: call.head,
+        },
+        None,
+    ))
 }

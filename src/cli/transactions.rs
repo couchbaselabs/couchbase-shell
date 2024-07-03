@@ -1,9 +1,7 @@
 use nu_engine::get_full_help;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::{
-    Category, IntoPipelineData, PipelineData, ShellError, Signature, Value,
-};
+use nu_protocol::{Category, IntoPipelineData, PipelineData, ShellError, Signature, Value};
 
 #[derive(Clone)]
 pub struct Transactions;
@@ -29,11 +27,7 @@ impl Command for Transactions {
         _input: PipelineData,
     ) -> Result<PipelineData, ShellError> {
         Ok(Value::String {
-            val: get_full_help(
-                &Transactions,
-                engine_state,
-                stack,
-            ),
+            val: get_full_help(&Transactions, engine_state, stack),
             internal_span: call.head,
         }
         .into_pipeline_data())

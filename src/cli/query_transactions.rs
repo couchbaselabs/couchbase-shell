@@ -11,10 +11,10 @@ use crate::cli::query::{handle_query_response, query_context_from_args, send_que
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::Value::Nothing;
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape, Value,
 };
-use nu_protocol::Value::Nothing;
 
 #[derive(Clone)]
 pub struct QueryTransactions {
@@ -185,7 +185,12 @@ fn query(
         .into_pipeline_data());
     }
 
-    Ok(PipelineData::Value(Nothing {internal_span: span}, None))
+    Ok(PipelineData::Value(
+        Nothing {
+            internal_span: span,
+        },
+        None,
+    ))
 }
 
 fn validate_statement(statement: &String, span: Span) -> Result<(), ShellError> {

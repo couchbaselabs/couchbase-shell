@@ -103,11 +103,7 @@ fn run_get(
         .get_flag(engine_state, stack, "id-column")?
         .unwrap_or_else(|| String::from("id"));
 
-    let ids = ids_from_input(
-        input,
-        id_column.clone(),
-        call.positional_nth(0),
-    )?;
+    let ids = ids_from_input(input, id_column.clone(), call.positional_nth(0))?;
     let batch_size: Option<i64> = call.get_flag(engine_state, stack, "batch-size")?;
     let mut all_ids: Vec<Vec<String>> = vec![];
     if let Some(size) = batch_size {

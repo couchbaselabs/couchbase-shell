@@ -4,8 +4,8 @@ use std::sync::{Arc, Mutex};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
 use nu_protocol::Value::Nothing;
+use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
 
 #[derive(Clone)]
 pub struct CbEnvCluster {
@@ -47,6 +47,11 @@ impl Command for CbEnvCluster {
         let guard = self.state.lock().unwrap();
         guard.set_active(call.req(engine_state, stack, 0)?)?;
 
-        Ok(PipelineData::Value(Nothing {internal_span: call.head}, None))
+        Ok(PipelineData::Value(
+            Nothing {
+                internal_span: call.head,
+            },
+            None,
+        ))
     }
 }
