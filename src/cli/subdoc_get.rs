@@ -11,6 +11,7 @@ use futures::StreamExt;
 use log::debug;
 use nu_protocol::Example;
 use nu_protocol::Record;
+use nu_utils::SharedCow;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
@@ -245,7 +246,7 @@ fn run_subdoc_lookup(
                                         let list = c.as_list().unwrap().to_vec();
 
                                         let record = Value::Record {
-                                            val: Box::new(
+                                            val: SharedCow::new(
                                                 Record::from_raw_cols_vals(
                                                     paths.clone(),
                                                     list,

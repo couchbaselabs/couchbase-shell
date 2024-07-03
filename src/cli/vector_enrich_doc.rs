@@ -6,6 +6,7 @@ use crate::client::LLMClients;
 use crate::CtrlcFuture;
 use nu_protocol::Example;
 use nu_protocol::Record;
+use nu_utils::SharedCow;
 use std::str;
 use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
@@ -264,7 +265,7 @@ fn vector_enrich_doc(
             };
 
             field_contents.push(content);
-            input_records.push(*val);
+            input_records.push(val.into_owned());
         }
         _ => {
             return Err(ShellError::GenericError {
@@ -362,13 +363,13 @@ fn vector_enrich_doc(
                     internal_span: span,
                 },
                 Value::Record {
-                    val: Box::new(input_records[count].clone()),
+                    val: SharedCow::new(input_records[count].clone()),
                     internal_span: span,
                 },
             ];
 
             let vector_doc = Value::Record {
-                val: Box::new(Record::from_raw_cols_vals(cols, vals, span, span).unwrap()),
+                val: SharedCow::new(Record::from_raw_cols_vals(cols, vals, span, span).unwrap()),
                 internal_span: span,
             };
 
