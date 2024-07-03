@@ -106,14 +106,16 @@ fn use_cmd(
                 );
                 results.add_string(
                     "scope",
-                    active.active_scope().unwrap_or_else(|| String::from("")),
+                    active
+                        .active_scope()
+                        .unwrap_or_else(|| String::from("_default")),
                     span,
                 );
                 results.add_string(
                     "collection",
                     active
                         .active_collection()
-                        .unwrap_or_else(|| String::from("")),
+                        .unwrap_or_else(|| String::from("_default")),
                     span,
                 );
                 results.add_string("cluster_type", active.cluster_type(), span);
