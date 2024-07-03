@@ -19,6 +19,7 @@ use nu_protocol::engine::{EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
 };
+use nu_utils::SharedCow;
 
 #[derive(Clone)]
 pub struct VectorEnrichText {
@@ -217,7 +218,7 @@ fn vector_enrich_text(
                 },
             ];
             let content = Value::Record {
-                val: Box::new(Record::from_raw_cols_vals(cols, vals, span, span).unwrap()),
+                val: SharedCow::new(Record::from_raw_cols_vals(cols, vals, span, span).unwrap()),
                 internal_span: span,
             };
 
@@ -230,7 +231,7 @@ fn vector_enrich_text(
                 content,
             ];
             let vector_doc = Value::Record {
-                val: Box::new(Record::from_raw_cols_vals(cols, vals, span, span).unwrap()),
+                val: SharedCow::new(Record::from_raw_cols_vals(cols, vals, span, span).unwrap()),
                 internal_span: span,
             };
 

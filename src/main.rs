@@ -133,7 +133,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     if let Some(c) = opt.command {
         add_plugin_file(&mut context, None, CBSHELL_FOLDER);
-        nu_cli::evaluate_commands(&c, &mut context, &mut stack, input, None)
+        nu_cli::evaluate_commands(&c, &mut context, &mut stack, input, None, false)
             .expect("Failed to run command");
         return Ok(());
     }
@@ -152,7 +152,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     #[cfg(unix)]
     terminal::acquire();
 
-    read_plugin_file(&mut context, &mut stack, None, CBSHELL_FOLDER);
+    read_plugin_file(&mut context, None, CBSHELL_FOLDER);
     read_nu_config_file(&mut context, &mut stack);
 
     nu_cli::evaluate_repl(
