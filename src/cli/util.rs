@@ -14,8 +14,8 @@ use nu_protocol::ast::{Call, PathMember};
 use nu_protocol::engine::{EngineState, Stack};
 use nu_protocol::Record;
 use nu_protocol::{IntoPipelineData, PipelineData, ShellError, Span, Value};
-use num_traits::cast::ToPrimitive;
 use nu_utils::SharedCow;
+use num_traits::cast::ToPrimitive;
 use regex::Regex;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -409,14 +409,18 @@ impl NuValueMap {
 
     pub fn into_value(self, span: Span) -> Value {
         Value::Record {
-            val: SharedCow::new(Record::from_raw_cols_vals(self.cols, self.vals, span, span).unwrap()),
+            val: SharedCow::new(
+                Record::from_raw_cols_vals(self.cols, self.vals, span, span).unwrap(),
+            ),
             internal_span: span,
         }
     }
 
     pub fn into_pipeline_data(self, span: Span) -> PipelineData {
         Value::Record {
-            val: SharedCow::new(Record::from_raw_cols_vals(self.cols, self.vals, span, span).unwrap()),
+            val: SharedCow::new(
+                Record::from_raw_cols_vals(self.cols, self.vals, span, span).unwrap(),
+            ),
             internal_span: span,
         }
         .into_pipeline_data()

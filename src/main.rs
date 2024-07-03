@@ -37,10 +37,13 @@ use log::{debug, warn};
 use log::{error, info};
 use serde::Deserialize;
 
-use nu_cli::{add_plugin_file, gather_parent_env_vars, read_plugin_file};
+use nu_cli::{add_plugin_file, gather_parent_env_vars, read_plugin_file, EvaluateCommandsOpts};
 use nu_cmd_base::util::get_init_cwd;
 use nu_protocol::engine::{EngineState, Stack, StateWorkingSet};
-use nu_protocol::{report_error_new, Span, ByteStreamType, ByteStream, ByteStreamSource, PipelineData, Value, IntoPipelineData};
+use nu_protocol::{
+    report_error_new, ByteStream, ByteStreamSource, ByteStreamType, IntoPipelineData, PipelineData,
+    Span, Value,
+};
 
 use crate::client::RustTlsConfig;
 use std::collections::HashMap;
@@ -116,7 +119,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                 Span::new(0, 0),
                 Some(ctrlc),
                 ByteStreamType::String,
-        ), None)
+            ),
+            None,
+        )
 
         // PipelineData::ByteStream {
         //     ByteStream
@@ -143,7 +148,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     if let Some(c) = opt.command {
         add_plugin_file(&mut context, None, CBSHELL_FOLDER);
-        nu_cli::evaluate_commands(&c, &mut context, &mut stack, input, None, false)
+        let opts = EvaluateCommandsOpts {
+            table_mode: None,
+            error_style: None,
+            no_newline: false,
+        };
+        nu_cli::evaluate_commands(&c, &mut context, &mut stack, input, opts)
             .expect("Failed to run command");
         return Ok(());
     }
