@@ -195,10 +195,6 @@ pub fn convert_nu_value_to_json_value(
         Value::Custom { .. } => serde_json::Value::Null,
         Value::Range { .. } => serde_json::Value::Null,
         Value::Closure { .. } => serde_json::Value::Null,
-        Value::LazyRecord { val, .. } => {
-            let collected = val.collect()?;
-            convert_nu_value_to_json_value(&collected, span)?
-        }
         Value::Glob { val, .. } => serde_json::Value::String(val.clone()),
     })
 }

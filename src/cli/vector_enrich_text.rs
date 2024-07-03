@@ -267,7 +267,7 @@ fn chunks_from_input(
         None => 1024,
     };
 
-    match input.into_value(span) {
+    match input.into_value(span)? {
         Value::List { vals, .. } => {
             for v in vals {
                 let rec = match v.as_record() {

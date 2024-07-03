@@ -176,7 +176,7 @@ fn vector_enrich_doc(
 
     let dim = call.get_flag::<usize>(engine_state, stack, "dimension")?;
 
-    match input.into_value(span) {
+    match input.into_value(span)? {
         Value::List { vals, .. } => {
             // This is able to parse a list of records, where the first value in each record is the contents
             // of a json document. This allows it to work with the output of query and 'doc commands | select content'

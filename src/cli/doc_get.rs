@@ -10,7 +10,6 @@ use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use log::debug;
 use std::ops::Add;
-use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 use tokio::time::Instant;
@@ -126,7 +125,6 @@ fn run_get(
     let ids = ids_from_input(
         input,
         id_column.clone(),
-        ctrl_c.clone(),
         call.positional_nth(0),
     )?;
 
@@ -248,11 +246,10 @@ fn run_get(
 pub(crate) fn ids_from_input(
     input: PipelineData,
     id_column: String,
-    ctrl_c: Arc<AtomicBool>,
     id: Option<&nu_protocol::ast::Expression>,
 ) -> Result<Vec<String>, ShellError> {
     let mut ids: Vec<String> = input
-        .into_interruptible_iter(Some(ctrl_c))
+        .into_iter()
         .filter_map(move |v| match v {
             Value::String { val, .. } => Some(val),
             Value::Int { val, .. } => Some(val.to_string()),

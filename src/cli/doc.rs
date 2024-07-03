@@ -28,11 +28,9 @@ impl Command for Doc {
     ) -> Result<PipelineData, ShellError> {
         Ok(Value::String {
             val: get_full_help(
-                &Doc.signature(),
-                &[],
+                &Doc,
                 engine_state,
                 stack,
-                self.is_parser_keyword(),
             ),
             internal_span: call.head,
         }

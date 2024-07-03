@@ -11,6 +11,7 @@ use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, PipelineData, ShellError, Signature, Span, SyntaxShape};
+use nu_protocol::Value::Nothing;
 
 #[derive(Clone)]
 pub struct CbEnvRegister {
@@ -190,7 +191,7 @@ fn clusters_register(
         update_config_file(&mut guard, call.head)?;
     }
 
-    Ok(PipelineData::new_with_metadata(None, call.head))
+    Ok(PipelineData::Value(Nothing {internal_span: call.head}, None))
 }
 
 pub fn update_config_file(guard: &mut MutexGuard<State>, span: Span) -> Result<(), ShellError> {
