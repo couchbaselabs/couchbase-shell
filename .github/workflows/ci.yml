@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:       # trigger on pull requests
   push:
-    branches:         # array of glob patterns matching against refs/heads. Optional; defaults to all
+    branches: # array of glob patterns matching against refs/heads. Optional; defaults to all
       - main
 
 env:
@@ -24,7 +24,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        target: [x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu, x86_64-apple-darwin, aarch64-apple-darwin, x86_64-pc-windows-msvc]
+        target: [ x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu, x86_64-apple-darwin, aarch64-apple-darwin, x86_64-pc-windows-msvc ]
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-22.04
@@ -38,86 +38,87 @@ jobs:
             os: windows-latest
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: ilammy/setup-nasm@v1
+      - uses: actions/checkout@v3
 
-    - name: Update Rust Toolchain Target
-      run: |
-        echo "targets = ['${{matrix.target}}']" >> rust-toolchain.toml
+      - name: Update Rust Toolchain Target
+        run: |
+          echo "targets = ['${{matrix.target}}']" >> rust-toolchain.toml
 
-    - name: Setup Rust toolchain and cache
-      uses: actions-rust-lang/setup-rust-toolchain@v1.4.3
+      - name: Setup Rust toolchain and cache
+        uses: actions-rust-lang/setup-rust-toolchain@v1.4.3
 
-    - name: Install aarch64-linux gcc
-      run: sudo apt-get update && sudo apt-get install gcc-aarch64-linux-gnu -y
-      if: matrix.target == 'aarch64-unknown-linux-gnu'
+      - name: Install aarch64-linux gcc
+        run: sudo apt-get update && sudo apt-get install gcc-aarch64-linux-gnu -y
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
 
-    - name: Build
-      uses: actions-rs/cargo@v1
-      env:
-        CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: 'aarch64-linux-gnu-gcc'
-      with:
-        command: build
-        args: --verbose --target ${{ matrix.target }} --features static-link-openssl
-      if: matrix.os == 'ubuntu-22.04'
+      - name: Build
+        uses: actions-rs/cargo@v1
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: 'aarch64-linux-gnu-gcc'
+        with:
+          command: build
+          args: --verbose --target ${{ matrix.target }} --features static-link-openssl
+        if: matrix.os == 'ubuntu-22.04'
 
-    - name: Build
-      uses: actions-rs/cargo@v1
-      with:
-        command: build
-        args: --verbose --target ${{ matrix.target }}
-      if: matrix.os == 'macos-latest'
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --verbose --target ${{ matrix.target }}
+        if: matrix.os == 'macos-latest'
 
-    - name: Build
-      uses: actions-rs/cargo@v1
-      with:
-        command: build
-        # We build windows as a release build as debug builds are stack overflowing on startup.
-        args: --verbose --release --target ${{ matrix.target }}
-      env:
-        VCPKGRS_DYNAMIC: 1
-        RUSTFLAGS: -Ctarget-feature=+crt-static
-      if: matrix.os == 'windows-latest'
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          # We build windows as a release build as debug builds are stack overflowing on startup.
+          args: --verbose --release --target ${{ matrix.target }}
+        env:
+          VCPKGRS_DYNAMIC: 1
+          RUSTFLAGS: -Ctarget-feature=+crt-static
+        if: matrix.os == 'windows-latest'
 
-    - name: Test
-      uses: actions-rs/cargo@v1
-      env:
-        DATA_TIMEOUT: "15s"
-        CBSH_LOG: cbsh=trace
-        RUST_LOG: debug
-      with:
-        command: test
-        args: --bins --quiet
+      - name: Test
+        uses: actions-rs/cargo@v1
+        env:
+          DATA_TIMEOUT: "15s"
+          CBSH_LOG: cbsh=trace
+          RUST_LOG: debug
+        with:
+          command: test
+          args: --bins --quiet
 
-    - name: Create archive for Linux
-      id: createarchivelinux
-      run: |
-        7z a -ttar -so -an ./target/${{ matrix.target }}/debug/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }} | 7z a -si ${{ env.ARTIFACT_BIN }}-${{ matrix.target }}.tar.gz
-      if: matrix.os == 'ubuntu-22.04'
+      - name: Create archive for Linux
+        id: createarchivelinux
+        run: |
+          7z a -ttar -so -an ./target/${{ matrix.target }}/debug/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }} | 7z a -si ${{ env.ARTIFACT_BIN }}-${{ matrix.target }}.tar.gz
+        if: matrix.os == 'ubuntu-22.04'
 
-    - name: Install p7zip
-      # 7Zip not available on MacOS, install p7zip via homebrew.
-      run: brew install p7zip
-      if: matrix.os == 'macos-latest'
+      - name: Install p7zip
+        # 7Zip not available on MacOS, install p7zip via homebrew.
+        run: brew install p7zip
+        if: matrix.os == 'macos-latest'
 
-    - name: Create archive for MacOS
-      id: createarchivemacos
-      run: |
-        7z a -tzip ${{ env.ARTIFACT_BIN }}-${{ matrix.target }}.zip ./target/${{ matrix.target }}/debug/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }}
-      if: matrix.os == 'macos-latest'
+      - name: Create archive for MacOS
+        id: createarchivemacos
+        run: |
+          7z a -tzip ${{ env.ARTIFACT_BIN }}-${{ matrix.target }}.zip ./target/${{ matrix.target }}/debug/${{ env.ARTIFACT_BIN }} ${{ env.ARTIFACT_ADDS }}
+        if: matrix.os == 'macos-latest'
 
-    - name: Create archive for Windows
-      id: createarchivewindows
-      run: |
-        choco install 7zip
-        7z a -tzip ${{ env.ARTIFACT_BIN }}-${{ matrix.target }}.zip ./target/${{ matrix.target }}/release/${{ env.ARTIFACT_BIN_WINDOWS }} ${{ env.ARTIFACT_ADDS }}
-      if: matrix.os == 'windows-latest'
+      - name: Create archive for Windows
+        id: createarchivewindows
+        run: |
+          choco install 7zip
+          7z a -tzip ${{ env.ARTIFACT_BIN }}-${{ matrix.target }}.zip ./target/${{ matrix.target }}/release/${{ env.ARTIFACT_BIN_WINDOWS }} ${{ env.ARTIFACT_ADDS }}
+        if: matrix.os == 'windows-latest'
 
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: ${{ env.ARTIFACT_BIN }}-${{ matrix.target }}
-        path: ${{ env.ARTIFACT_BIN }}-${{ matrix.target }}*
-        if-no-files-found: error
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.ARTIFACT_BIN }}-${{ matrix.target }}
+          path: ${{ env.ARTIFACT_BIN }}-${{ matrix.target }}*
+          if-no-files-found: error
 
   rustfmt:
     name: Rustfmt

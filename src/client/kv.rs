@@ -14,7 +14,7 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
 use tokio::sync::oneshot::Receiver;
 use tokio::sync::{mpsc, oneshot};
-use tokio_rustls::rustls::ServerName;
+use tokio_rustls::rustls::pki_types::ServerName;
 use tokio_rustls::TlsConnector;
 use tokio_util::codec::{FramedRead, FramedWrite};
 use uuid::Uuid;
@@ -58,7 +58,7 @@ impl KvEndpoint {
 
             let connector = TlsConnector::from(Arc::new(tls_config.config()));
             let socket = connector
-                .connect(ServerName::try_from(hostname.as_str()).unwrap(), tcp_socket)
+                .connect(ServerName::try_from(hostname).unwrap(), tcp_socket)
                 .await
                 .map_err(|e| ClientError::KVCouldNotConnect {
                     reason: e.to_string(),
