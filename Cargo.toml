@@ -6,27 +6,29 @@ edition = "2018"
 default-run = "cbsh"
 
 [dependencies]
-ansi_term = "0.12"
-async-stream = "0.3.3"
-async-trait = "0.1.31"
-aws-config = { version = "1.1.7", features = ["behavior-version-latest"] }
-aws-sdk-bedrockruntime = "1.27.0"
-aws-smithy-runtime-api = "1.6.2"
-base64 = "0.21.0"
-bytes = "1.0"
-chrono = { version = "0.4.11", features = ["serde"] }
-ctrlc = "3.2.1"
-dirs = "5.0.0"
+ansi_term = "0.12.1"
+async-stream = "0.3.5"
+async-trait = "0.1.80"
+async-openai = "0.23.3"
+aws-config = { version = "1.5.3", features = ["behavior-version-latest"] }
+aws-sdk-bedrockruntime = "1.37.0"
+aws-smithy-runtime-api = "1.7.0"
+base64 = "0.22.1"
+bytes = "1.6.0"
+chrono = { version = "0.4.38", features = ["serde"] }
+ctrlc = "3.4.4"
+dirs = "5.0.1"
 env_logger = "0.10.0"
-fake = { version = "2.4", features = ["chrono", "random_color"] }
-futures = "0.3"
+fake = { version = "2.9.2", features = ["chrono", "random_color"] }
+futures = "0.3.30"
 hmac = "0.12.1"
-http = "0.2"
-http-types = "2.5"
-humantime-serde = "1.0"
-lazy_static = "1.4.0"
-log = "0.4"
-mime_guess = "2.0"
+http = "1.1.0"
+http-types = "2.12.0"
+humantime-serde = "1.1.1"
+lazy_static = "1.5.0"
+log = "0.4.22"
+mime_guess = "2.0.5"
+nix = {  version = "0.28.0", features = ["signal"] }
 nu = { version = "0.95.0" }
 nu-protocol = { version = "0.95.0" }
 nu-color-config = { version = "0.95.0" }
@@ -43,49 +45,46 @@ nu-plugin = { version = "0.95.0" }
 nu-std = { version = "0.95.0" }
 nu-system = { version = "0.95.0" }
 nu-utils = "0.95.0"
-num-bigint = "0.4"
-num-traits = "0.2.14"
-pretty_env_logger = "0.4.0"
-rand = "0.8.3"
-regex = "1.5.5"
-reqwest = { version = "0.11", features = ["json", "rustls-tls", "blocking"] }
-rpassword = "7.0.0"
-rust-embed = "6.3"
-rustls-pemfile = "1.0.0"
-serde = "1.0"
-serde_json = "1.0"
-serde_derive = "1.0"
+num-bigint = "0.4.6"
+num-traits = "0.2.19"
+pretty_env_logger = "0.5.0"
+rand = "0.8.5"
+regex = "1.10.5"
+reqwest = { version = "0.12.5", features = ["json", "rustls-tls", "blocking"] }
+rpassword = "7.3.1"
+rust-embed = "8.4.0"
+rustls-pemfile = "2.1.2"
+serde = "1.0.203"
+serde_json = "1.0.120"
+serde_derive = "1.0.203"
 serde_urlencoded = "0.7.1"
-sha2 = "0.10.2"
-shellexpand = "3.1"
-structopt = "0.3"
-tera = "1.1"
-temp-dir = "0.1"
-tokio = { version = "1", features = ["full"] }
-tokio-util = { version = "0.7.3", features = ["codec"] }
-tokio-rustls = { version = "0.24.0",  features = ["dangerous_configuration"] }
-toml = "0.7.3"
-trust-dns-resolver = { version = "0.22.0", features = ["dns-over-rustls"] }
-url = "2.1"
-uuid = { version = "1.1.2", features = ["v4"] }
-webpki-roots = "0.25.1"
-async-openai = "0.18.3"
-tiktoken-rs = "0.5.8"
-nix = "0.28.0"
-
+sha2 = "0.10.8"
+shellexpand = "3.1.0"
+structopt = "0.3.26"
+tera = "1.20.0"
+temp-dir = "0.1.13"
+tiktoken-rs = "0.5.9"
+tokio = { version = "1.38.0", features = ["full"] }
+tokio-util = { version = "0.7.11", features = ["codec"] }
+tokio-rustls = { version = "0.26.0" }
+toml = "0.8.14"
+trust-dns-resolver = { version = "0.23.2", features = ["dns-over-rustls"] }
+url = "2.5.2"
+uuid = { version = "1.9.1", features = ["v4"] }
+webpki-roots = "0.26.3"
 
 [target.'cfg(not(any(target_os = "macos", target_os = "windows")))'.dependencies]
 # Our dependencies don't use OpenSSL on Macos
-openssl = { version = "0.10.48", features = ["vendored"], optional=true }
+openssl = { version = "0.10.64", features = ["vendored"], optional=true }
 
 [dev-dependencies]
 dunce = "1.0.1"
 envconfig = "0.10.0"
-itertools = "0.10.3"
-lazy_static = "1.4.0"
+itertools = "0.13.0"
+lazy_static = "1.5.0"
 nu-test-support = { version = "0.83.1"}
-strum = "0.24.1"
-strum_macros = "0.24.3"
+strum = "0.26.3"
+strum_macros = "0.26.4"
 
 [features]
 # Enable to statically link OpenSSL; otherwise the system version will be used. Not enabled by default because it takes a while to build
