@@ -8,9 +8,7 @@ use log::debug;
 use std::ops::Add;
 use tokio::time::Instant;
 
-use crate::cli::error::{
-    client_error_to_shell_error, deserialize_error, unexpected_status_code_error,
-};
+use crate::cli::error::{client_error_to_shell_error, deserialize_error};
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, IntoPipelineData, PipelineData, ShellError, Signature, Value};
@@ -63,31 +61,39 @@ fn organizations(
     debug!("Running organizations");
 
     let guard = state.lock().unwrap();
-    let control = guard.active_capella_org()?;
-    let client = control.client();
-    let response = client
-        .capella_request(
-            CapellaRequest::GetOrganizations {},
-            Instant::now().add(control.timeout()),
-            ctrl_c,
-        )
-        .map_err(|e| client_error_to_shell_error(e, span))?;
-    if response.status() != 200 {
-        return Err(unexpected_status_code_error(
-            response.status(),
-            response.content(),
-            span,
-        ));
-    }
-
-    let content: JSONCloudsOrganizationsResponse = serde_json::from_str(response.content())
-        .map_err(|e| deserialize_error(e.to_string(), span))?;
-
+    let orgs = guard.capella_orgs();
     let mut results = vec![];
-    for project in content.items() {
+    for (identifier, org) in orgs.into_iter() {
+        let client = org.client();
+        let response = client
+            .capella_request(
+                CapellaRequest::GetOrganizations {},
+                Instant::now().add(org.timeout()),
+                ctrl_c.clone(),
+            )
+            .map_err(|e| client_error_to_shell_error(e, span))?;
         let mut collected = NuValueMap::default();
-        collected.add_string("name", project.name(), span);
-        collected.add_string("id", project.id(), span);
+        collected.add_string("identifier", identifier, span);
+
+        match response.status() {
+            200 => {
+                let content: JSONCloudsOrganizationsResponse =
+                    serde_json::from_str(response.content())
+                        .map_err(|e| deserialize_error(e.to_string(), span))?;
+
+                for json_org in content.items() {
+                    collected.add_string("name", json_org.name(), span);
+                    collected.add_string("id", json_org.id(), span);
+                }
+            }
+            401 => {
+                collected.add_string("error", "Unauthorized: Check API key", span);
+            }
+            _ => {
+                collected.add_string("error", "An unexpected status code was returned", span);
+            }
+        }
+
         results.push(collected.into_value(span))
     }
 
