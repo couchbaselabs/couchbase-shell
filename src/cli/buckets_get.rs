@@ -1,22 +1,28 @@
 //! The `buckets get` command fetches buckets from the server.
 
-use crate::state::State;
+use crate::state::{RemoteCapellaOrganization, State};
+use base64::prelude::*;
 
 use crate::cli::buckets_builder::{BucketSettings, JSONBucketSettings};
 use crate::cli::util::{
-    cluster_identifiers_from, get_active_cluster, validate_is_not_cloud, NuValueMap,
+    cluster_identifiers_from, find_cluster_id, find_org_id, find_project_id, get_active_cluster,
+    NuValueMap,
 };
-use crate::client::ManagementRequest;
+use crate::client::{CapellaRequest, HttpResponse, ManagementRequest};
 use log::debug;
 use std::convert::TryFrom;
 use std::ops::Add;
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use crate::cli::cloud_json::JSONCloudsBucketsV4ResponseItem;
 use crate::cli::error::{
     bucket_not_found_error, client_error_to_shell_error, deserialize_error,
     malformed_response_error, unexpected_status_code_error,
 };
+use crate::remote_cluster::RemoteCluster;
+use crate::remote_cluster::RemoteClusterType::Provisioned;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -86,55 +92,28 @@ fn buckets_get(
     for identifier in cluster_identifiers {
         let guard = state.lock().unwrap();
         let cluster = get_active_cluster(identifier.clone(), &guard, span)?;
-        validate_is_not_cloud(cluster, "buckets get", span)?;
 
-        let response = cluster
-            .cluster()
-            .http_client()
-            .management_request(
-                ManagementRequest::GetBucket {
-                    name: bucket.clone(),
-                },
-                Instant::now().add(cluster.timeouts().query_timeout()),
+        let content = if cluster.cluster_type() == Provisioned {
+            let org = if let Some(cluster_org) = cluster.capella_org() {
+                guard.get_capella_org(cluster_org)
+            } else {
+                guard.active_capella_org()
+            }?;
+
+            get_capella_bucket(
+                org,
+                guard.active_project()?,
+                cluster,
+                bucket.clone(),
+                identifier.clone(),
                 ctrl_c.clone(),
-            )
-            .map_err(|e| client_error_to_shell_error(e, span))?;
-
-        match response.status() {
-            200 => {}
-            404 => {
-                if response
-                    .content()
-                    .to_string()
-                    .to_lowercase()
-                    .contains("resource not found")
-                {
-                    return Err(bucket_not_found_error(bucket, span));
-                }
-            }
-            _ => {
-                return Err(unexpected_status_code_error(
-                    response.status(),
-                    response.content(),
-                    span,
-                ));
-            }
+                span,
+            )?
+        } else {
+            get_server_bucket(cluster, bucket.clone(), ctrl_c.clone(), span)?
         };
 
-        let content: JSONBucketSettings = serde_json::from_str(response.content())
-            .map_err(|e| deserialize_error(e.to_string(), span))?;
-        results.push(bucket_to_nu_value(
-            BucketSettings::try_from(content).map_err(|e| {
-                malformed_response_error(
-                    "Could not parse bucket settings",
-                    format!("Error: {}, response content: {}", e, response.content()),
-                    span,
-                )
-            })?,
-            identifier,
-            false,
-            span,
-        ));
+        results.push(bucket_to_nu_value(content, identifier, false, span));
     }
 
     Ok(Value::List {
@@ -142,6 +121,126 @@ fn buckets_get(
         internal_span: call.head,
     }
     .into_pipeline_data())
+}
+
+pub fn get_server_bucket(
+    cluster: &RemoteCluster,
+    bucket: String,
+    ctrl_c: Arc<AtomicBool>,
+    span: Span,
+) -> Result<BucketSettings, ShellError> {
+    let response = cluster
+        .cluster()
+        .http_client()
+        .management_request(
+            ManagementRequest::GetBucket {
+                name: bucket.clone(),
+            },
+            Instant::now().add(cluster.timeouts().query_timeout()),
+            ctrl_c.clone(),
+        )
+        .map_err(|e| client_error_to_shell_error(e, span))?;
+
+    check_response(&response, bucket.clone(), span)?;
+
+    let json: JSONBucketSettings = serde_json::from_str(response.content())
+        .map_err(|e| deserialize_error(e.to_string(), span))?;
+
+    BucketSettings::try_from(json).map_err(|e| {
+        malformed_response_error(
+            "Could not parse bucket settings",
+            format!("Error: {}, response content: {:?}", e, response.content()),
+            span,
+        )
+    })
+}
+
+pub fn get_capella_bucket(
+    org: &RemoteCapellaOrganization,
+    project: String,
+    cluster: &RemoteCluster,
+    bucket: String,
+    identifier: String,
+    ctrl_c: Arc<AtomicBool>,
+    span: Span,
+) -> Result<BucketSettings, ShellError> {
+    let client = org.client();
+    let deadline = Instant::now().add(org.timeout());
+
+    let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
+    let project_id = find_project_id(
+        ctrl_c.clone(),
+        project,
+        &client,
+        deadline,
+        span,
+        org_id.clone(),
+    )?;
+
+    let cluster_id = find_cluster_id(
+        identifier.clone(),
+        ctrl_c.clone(),
+        cluster.hostnames().clone(),
+        &client,
+        deadline,
+        span,
+        org_id.clone(),
+        project_id.clone(),
+    )?;
+
+    let response = client
+        .capella_request(
+            CapellaRequest::GetBucketV4 {
+                org_id,
+                project_id,
+                cluster_id,
+                bucket_id: BASE64_STANDARD.encode(bucket.clone()),
+            },
+            deadline,
+            ctrl_c.clone(),
+        )
+        .map_err(|e| client_error_to_shell_error(e, span))?;
+
+    check_response(&response, bucket.clone(), span)?;
+
+    let json: JSONCloudsBucketsV4ResponseItem = serde_json::from_str(response.content())
+        .map_err(|e| deserialize_error(e.to_string(), span))?;
+
+    BucketSettings::try_from(json).map_err(|e| {
+        malformed_response_error(
+            "Could not parse bucket settings",
+            format!("Error: {}, response content: {:?}", e, response.content()),
+            span,
+        )
+    })
+}
+
+pub(crate) fn check_response(
+    response: &HttpResponse,
+    bucket: String,
+    span: Span,
+) -> Result<(), ShellError> {
+    match response.status() {
+        200..=204 => {}
+        404 => {
+            if response
+                .content()
+                .to_string()
+                .to_lowercase()
+                .contains("resource not found")
+            {
+                return Err(bucket_not_found_error(bucket, span));
+            }
+        }
+        _ => {
+            return Err(unexpected_status_code_error(
+                response.status(),
+                response.content(),
+                span,
+            ));
+        }
+    };
+    Ok(())
 }
 
 pub(crate) fn bucket_to_nu_value(
@@ -168,11 +267,7 @@ pub(crate) fn bucket_to_nu_value(
         },
     );
     collected.add_bool("flush_enabled", bucket.flush_enabled(), span);
-    collected.add_string(
-        "status",
-        bucket.status().unwrap_or(&"".to_string()).clone(),
-        span,
-    );
     collected.add_bool("cloud", is_cloud, span);
+    collected.add_i64("max_expiry", bucket.max_expiry(), span);
     collected.into_value(span)
 }

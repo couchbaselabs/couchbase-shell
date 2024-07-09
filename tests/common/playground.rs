@@ -116,9 +116,39 @@ impl CBPlayground {
                 }
             }
 
+            if config.connstr().starts_with("couchbases://") {
+                if let Some(org_access) = config.access_key() {
+                    contents = format!(
+                        "
+    {}
+    capella-organization = \"test-org\"
+    type = \"Provisioned\"
+
+    [[capella-organization]]
+    identifier = \"test-org\"
+    access-key = \"{}\"",
+                        contents, org_access
+                    );
+                } else {
+                    panic!("Set ACCESS_KEY to test against Capella cluster");
+                }
+
+                if let Some(org_secret) = config.secret_key() {
+                    contents = format!(
+                        "
+    {}
+    secret-key = \"{}\"
+    default-project = \"default\"",
+                        contents, org_secret
+                    );
+                } else {
+                    panic!("Set SECRET_KEY to test against Capella cluster");
+                }
+            }
             config_dir.push("config");
 
-            std::fs::write(config_dir, contents.as_bytes()).expect("can not create config file");
+            std::fs::write(config_dir.clone(), contents.as_bytes())
+                .expect("can not create config file");
 
             block(dirs, &mut playground);
         })
@@ -294,6 +324,8 @@ impl CBPlayground {
             username,
             password,
             data_timeout: c.data_timeout(),
+            access_key: c.access_key(),
+            secret_key: c.secret_key(),
         });
         Self::wait_for_scope(config.clone()).await;
         Self::wait_for_collection(config.clone()).await;

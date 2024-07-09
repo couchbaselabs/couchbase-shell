@@ -1,4 +1,5 @@
-use crate::cli::cloud_json::JSONCloudsProjectsResponse;
+use super::cloud_json::JSONCloudsOrganizationsResponse;
+use crate::cli::cloud_json::{JSONCloudClustersV4Response, JSONCloudsProjectsResponse};
 use crate::cli::error::CBShellError::{
     GenericError, MustNotBeCapella, ProjectNotFound, UnexpectedResponseStatus,
 };
@@ -6,6 +7,7 @@ use crate::cli::error::{
     client_error_to_shell_error, cluster_not_found_error, deserialize_error,
     malformed_response_error, no_active_bucket_error, unexpected_status_code_error,
 };
+use crate::cli::CBShellError::ClusterNotFound;
 use crate::client::{CapellaClient, CapellaRequest, HttpResponse};
 use crate::state::State;
 use crate::{RemoteCluster, RemoteClusterType};
@@ -21,8 +23,6 @@ use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 use tokio::time::Instant;
-
-use super::cloud_json::JSONCloudsOrganizationsResponse;
 
 pub fn is_http_status(response: &HttpResponse, status: u16, span: Span) -> Result<(), ShellError> {
     if response.status() != status {
@@ -295,6 +295,48 @@ pub fn validate_is_not_cloud(
         }
         .into()),
     }
+}
+
+// We take a conn_string instead of name since cluster local identfiers can differ from names of
+// clusters
+pub(crate) fn find_cluster_id(
+    identifier: String,
+    ctrl_c: Arc<AtomicBool>,
+    hostnames: Vec<String>,
+    client: &Arc<CapellaClient>,
+    deadline: Instant,
+    span: Span,
+    org_id: String,
+    project_id: String,
+) -> Result<String, ShellError> {
+    let response = client
+        .capella_request(
+            CapellaRequest::GetClustersV4 { org_id, project_id },
+            deadline,
+            ctrl_c,
+        )
+        .map_err(|e| client_error_to_shell_error(e, span))?;
+    if response.status() != 200 {
+        return Err(UnexpectedResponseStatus {
+            status_code: response.status(),
+            message: response.content().to_string(),
+            span,
+        }
+        .into());
+    }
+
+    let content: JSONCloudClustersV4Response = serde_json::from_str(response.content())
+        .map_err(|e| deserialize_error(e.to_string(), span))?;
+
+    for c in content.items() {
+        for conn_str in hostnames.clone() {
+            if c.connection_string().contains(conn_str.as_str()) {
+                return Ok(c.id().to_string());
+            }
+        }
+    }
+
+    Err(ShellError::from(ClusterNotFound { identifier, span }))
 }
 
 pub(crate) fn find_project_id(

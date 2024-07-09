@@ -1,11 +1,15 @@
-use crate::cli::buckets_builder::{BucketSettings, DurabilityLevel, JSONBucketSettings};
-use crate::cli::error::{
-    bucket_not_found_error, client_error_to_shell_error, deserialize_error, generic_error,
-    serialize_error, unexpected_status_code_error,
+use crate::cli::buckets_builder::{BucketSettings, DurabilityLevel};
+use crate::cli::buckets_get::{check_response, get_capella_bucket, get_server_bucket};
+use crate::cli::error::{client_error_to_shell_error, generic_error, serialize_error};
+use crate::cli::util::{
+    cluster_identifiers_from, find_cluster_id, find_org_id, find_project_id, get_active_cluster,
 };
-use crate::cli::util::{cluster_identifiers_from, get_active_cluster, validate_is_not_cloud};
-use crate::client::ManagementRequest;
-use crate::state::State;
+use crate::client::{CapellaRequest, HttpResponse, ManagementRequest};
+use crate::remote_cluster::RemoteCluster;
+use crate::remote_cluster::RemoteClusterType::Provisioned;
+use crate::state::{RemoteCapellaOrganization, State};
+use base64::prelude::BASE64_STANDARD;
+use base64::Engine;
 use log::debug;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
@@ -13,6 +17,7 @@ use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, PipelineData, ShellError, Signature, Span, SyntaxShape};
 use std::convert::TryFrom;
 use std::ops::Add;
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::{Duration, Instant};
 
@@ -113,31 +118,26 @@ fn buckets_update(
 
     for identifier in cluster_identifiers {
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
-        validate_is_not_cloud(active_cluster, "buckets", span)?;
 
-        let deadline = Instant::now().add(active_cluster.timeouts().management_timeout());
-        let get_response = active_cluster
-            .cluster()
-            .http_client()
-            .management_request(
-                ManagementRequest::GetBucket { name: name.clone() },
-                deadline,
+        let mut settings = if active_cluster.cluster_type() == Provisioned {
+            let org = if let Some(cluster_org) = active_cluster.capella_org() {
+                guard.get_capella_org(cluster_org)
+            } else {
+                guard.active_capella_org()
+            }?;
+
+            get_capella_bucket(
+                org,
+                guard.active_project()?,
+                active_cluster,
+                name.clone(),
+                identifier.clone(),
                 ctrl_c.clone(),
-            )
-            .map_err(|e| client_error_to_shell_error(e, span))?;
-        if get_response.status() != 200 {
-            debug!("Failed to get buckets from server");
-            return Err(unexpected_status_code_error(
-                get_response.status(),
-                get_response.content(),
                 span,
-            ));
-        }
-
-        let content: JSONBucketSettings = serde_json::from_str(get_response.content())
-            .map_err(|e| deserialize_error(e.to_string(), span))?;
-        let mut settings = BucketSettings::try_from(content)
-            .map_err(|e| generic_error("Invalid argument", e.to_string(), span))?;
+            )
+        } else {
+            get_server_bucket(active_cluster, name.clone(), ctrl_c.clone(), span)
+        }?;
 
         update_bucket_settings(
             &mut settings,
@@ -149,50 +149,105 @@ fn buckets_update(
             span,
         )?;
 
-        let form = settings
-            .as_form(true)
-            .map_err(|e| generic_error("Invalid argument", e.to_string(), span))?;
-        let payload =
-            serde_urlencoded::to_string(&form).map_err(|e| serialize_error(e.to_string(), span))?;
+        let response = if active_cluster.cluster_type() == Provisioned {
+            let org = if let Some(cluster_org) = active_cluster.capella_org() {
+                guard.get_capella_org(cluster_org)
+            } else {
+                guard.active_capella_org()
+            }?;
 
-        let response = active_cluster
-            .cluster()
-            .http_client()
-            .management_request(
-                ManagementRequest::UpdateBucket {
-                    name: name.clone(),
-                    payload,
-                },
-                deadline,
+            update_capella_bucket(
+                org,
+                guard.active_project()?,
+                active_cluster,
+                identifier.clone(),
+                settings,
                 ctrl_c.clone(),
+                span,
             )
-            .map_err(|e| client_error_to_shell_error(e, span))?;
+        } else {
+            update_server_bucket(settings, active_cluster, ctrl_c.clone(), span)
+        }?;
 
-        match response.status() {
-            200 => {}
-            201 => {}
-            202 => {}
-            404 => {
-                if response
-                    .content()
-                    .to_string()
-                    .to_lowercase()
-                    .contains("resource not found")
-                {
-                    return Err(bucket_not_found_error(name, span));
-                }
-            }
-            _ => {
-                return Err(unexpected_status_code_error(
-                    response.status(),
-                    response.content(),
-                    span,
-                ));
-            }
-        }
+        check_response(&response, name.clone(), span)?;
     }
 
     Ok(PipelineData::empty())
+}
+
+fn update_server_bucket(
+    settings: BucketSettings,
+    cluster: &RemoteCluster,
+    ctrl_c: Arc<AtomicBool>,
+    span: Span,
+) -> Result<HttpResponse, ShellError> {
+    let form = settings.as_form();
+    let payload =
+        serde_urlencoded::to_string(form).map_err(|e| serialize_error(e.to_string(), span))?;
+
+    cluster
+        .cluster()
+        .http_client()
+        .management_request(
+            ManagementRequest::UpdateBucket {
+                name: settings.name().to_string(),
+                payload,
+            },
+            Instant::now().add(cluster.timeouts().management_timeout()),
+            ctrl_c.clone(),
+        )
+        .map_err(|e| client_error_to_shell_error(e, span))
+}
+
+fn update_capella_bucket(
+    org: &RemoteCapellaOrganization,
+    project: String,
+    cluster: &RemoteCluster,
+    identifier: String,
+    settings: BucketSettings,
+    ctrl_c: Arc<AtomicBool>,
+    span: Span,
+) -> Result<HttpResponse, ShellError> {
+    let client = org.client();
+    let deadline = Instant::now().add(org.timeout());
+
+    let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
+
+    let project_id = find_project_id(
+        ctrl_c.clone(),
+        project,
+        &client,
+        deadline,
+        span,
+        org_id.clone(),
+    )?;
+
+    let cluster_id = find_cluster_id(
+        identifier.clone(),
+        ctrl_c.clone(),
+        cluster.hostnames().clone(),
+        &client,
+        deadline,
+        span,
+        org_id.clone(),
+        project_id.clone(),
+    )?;
+
+    let json = settings.as_json();
+
+    client
+        .capella_request(
+            CapellaRequest::UpdateBucketV4 {
+                org_id,
+                project_id,
+                cluster_id,
+                bucket_id: BASE64_STANDARD.encode(settings.name()),
+                payload: serde_json::to_string(&json).unwrap(),
+            },
+            deadline,
+            ctrl_c.clone(),
+        )
+        .map_err(|e| client_error_to_shell_error(e, span))
 }
 
 fn update_bucket_settings(
