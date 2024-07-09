@@ -70,17 +70,19 @@ fn use_cmd(
         let org = guard.active_capella_org()?;
 
         results.add_string(
-            "capella-organisation",
+            "capella-organization",
             guard
                 .active_capella_org_name()
                 .unwrap_or_else(|| String::from("")),
             span,
         );
+
         results.add_string(
-            "project",
-            org.active_project().unwrap_or_else(|| String::from("")),
+            "capella-project",
+            guard.active_project().unwrap_or_else(|_| String::from("")),
             span,
         );
+
         if show_timeouts {
             results.add_i64(
                 "management-timeout (ms)",

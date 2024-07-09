@@ -72,14 +72,7 @@ fn projects_create(
     let project = JSONCloudCreateProjectRequest::new(name);
     let deadline = Instant::now().add(control.timeout());
 
-    let org_id = match control.id() {
-        Some(id) => id,
-        None => {
-            let id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
-            guard.set_active_capella_org_id(id.clone())?;
-            id
-        }
-    };
+    let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
 
     let response = client
         .capella_request(

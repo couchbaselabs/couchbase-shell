@@ -41,9 +41,8 @@ impl Command for UseProject {
         _input: PipelineData,
     ) -> Result<PipelineData, ShellError> {
         let guard = self.state.lock().unwrap();
-        let active = guard.active_capella_org()?;
-
-        active.set_active_project(call.req(engine_state, stack, 0)?);
+        let project: String = call.req(engine_state, stack, 0)?;
+        guard.set_active_project(project);
 
         Ok(PipelineData::Value(
             Nothing {

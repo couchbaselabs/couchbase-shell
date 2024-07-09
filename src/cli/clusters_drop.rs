@@ -6,6 +6,7 @@ use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 use crate::cli::error::{client_error_to_shell_error, unexpected_status_code_error};
+use crate::cli::util::{find_org_id, find_project_id};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -71,20 +72,39 @@ fn clusters_drop(
 
     let guard = state.lock().unwrap();
     let control = if let Some(c) = capella {
-        guard.capella_org_for_cluster(c)
+        guard.get_capella_org(c)
     } else {
         guard.active_capella_org()
     }?;
 
     let client = control.client();
-
     let deadline = Instant::now().add(control.timeout());
+
+    let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
+    let project_id = find_project_id(
+        ctrl_c.clone(),
+        guard.active_project()?,
+        &client,
+        deadline,
+        span,
+        org_id.clone(),
+    )?;
+
     let cluster = client
-        .find_cluster(name, deadline, ctrl_c.clone())
+        .find_cluster(
+            name,
+            org_id.clone(),
+            project_id.clone(),
+            deadline,
+            ctrl_c.clone(),
+        )
         .map_err(|e| client_error_to_shell_error(e, span))?;
+
     let response = client
         .capella_request(
-            CapellaRequest::DeleteClusterV3 {
+            CapellaRequest::DeleteClusterV4 {
+                org_id,
+                project_id,
                 cluster_id: cluster.id(),
             },
             deadline,

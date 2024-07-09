@@ -1,6 +1,4 @@
-use crate::cli::cloud_json::JSONCloudCreateClusterRequestV3;
-use crate::cli::util::find_org_id;
-use crate::cli::util::find_project_id;
+use crate::cli::cloud_json::JSONCloudCreateClusterRequestV4;
 use crate::client::CapellaRequest;
 use crate::state::State;
 use log::debug;
@@ -9,9 +7,9 @@ use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 use crate::cli::error::{
-    client_error_to_shell_error, no_active_project_error, serialize_error,
-    unexpected_status_code_error,
+    client_error_to_shell_error, serialize_error, unexpected_status_code_error,
 };
+use crate::cli::util::{find_org_id, find_project_id};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -81,41 +79,31 @@ fn clusters_create(
 
     let guard = state.lock().unwrap();
     let control = if let Some(c) = capella {
-        guard.capella_org_for_cluster(c)
+        guard.get_capella_org(c)
     } else {
         guard.active_capella_org()
     }?;
     let client = control.client();
     let deadline = Instant::now().add(control.timeout());
 
-    let project_name = match control.active_project() {
-        Some(p) => p,
-        None => {
-            return Err(no_active_project_error(span));
-        }
-    };
-
-    let org_id = match control.id() {
-        Some(id) => id,
-        None => find_org_id(ctrl_c.clone(), &client, deadline, span)?,
-    };
-
+    let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
     let project_id = find_project_id(
         ctrl_c.clone(),
-        project_name,
+        guard.active_project()?,
         &client,
         deadline,
         span,
-        org_id,
+        org_id.clone(),
     )?;
 
-    let mut json: JSONCloudCreateClusterRequestV3 = serde_json::from_str(definition.as_str())
+    let json: JSONCloudCreateClusterRequestV4 = serde_json::from_str(definition.as_str())
         .map_err(|e| serialize_error(e.to_string(), span))?;
-    json.set_project_id(project_id);
 
     let response = client
         .capella_request(
-            CapellaRequest::CreateClusterV3 {
+            CapellaRequest::CreateClusterV4 {
+                org_id,
+                project_id,
                 payload: serde_json::to_string(&json)
                     .map_err(|e| serialize_error(e.to_string(), span))?,
             },

@@ -1,5 +1,4 @@
-use crate::cli::util::find_org_id;
-use crate::cli::util::find_project_id;
+use crate::cli::util::{find_org_id, find_project_id};
 use crate::client::CapellaRequest;
 use crate::state::State;
 use log::debug;
@@ -70,15 +69,7 @@ fn projects_drop(
     let client = control.client();
     let deadline = Instant::now().add(control.timeout());
 
-    let org_id = match control.id() {
-        Some(id) => id,
-        None => {
-            let id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
-            guard.set_active_capella_org_id(id.clone())?;
-            id
-        }
-    };
-
+    let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
     let project_id = find_project_id(
         ctrl_c.clone(),
         name,

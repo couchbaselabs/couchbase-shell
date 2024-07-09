@@ -1,4 +1,4 @@
-use crate::cli::cloud_json::JSONCloudClusterV3;
+use crate::cli::cloud_json::JSONCloudsClustersV4ResponseItem;
 use crate::client::CapellaRequest;
 use crate::state::State;
 use log::debug;
@@ -9,7 +9,7 @@ use tokio::time::Instant;
 use crate::cli::error::{
     client_error_to_shell_error, deserialize_error, unexpected_status_code_error,
 };
-use crate::cli::util::NuValueMap;
+use crate::cli::util::{convert_json_value_to_nu_value, find_org_id, find_project_id, NuValueMap};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -44,7 +44,7 @@ impl Command for ClustersGet {
     }
 
     fn usage(&self) -> &str {
-        "Gets a cluster from the active Capella organization"
+        "Gets a cluster from the active Capella Project"
     }
 
     fn run(
@@ -75,19 +75,37 @@ fn clusters_get(
 
     let guard = state.lock().unwrap();
     let control = if let Some(c) = capella {
-        guard.capella_org_for_cluster(c)
+        guard.get_capella_org(c)
     } else {
         guard.active_capella_org()
     }?;
     let client = control.client();
-
     let deadline = Instant::now().add(control.timeout());
+
+    let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
+    let project_id = find_project_id(
+        ctrl_c.clone(),
+        guard.active_project()?,
+        &client,
+        deadline,
+        span,
+        org_id.clone(),
+    )?;
+
     let cluster = client
-        .find_cluster(name, deadline, ctrl_c.clone())
+        .find_cluster(
+            name,
+            org_id.clone(),
+            project_id.clone(),
+            deadline,
+            ctrl_c.clone(),
+        )
         .map_err(|e| client_error_to_shell_error(e, span))?;
     let response = client
         .capella_request(
-            CapellaRequest::GetClusterV3 {
+            CapellaRequest::GetClusterV4 {
+                org_id,
+                project_id: project_id.clone(),
                 cluster_id: cluster.id(),
             },
             deadline,
@@ -101,22 +119,65 @@ fn clusters_get(
             span,
         ));
     };
-    let cluster: JSONCloudClusterV3 = serde_json::from_str(response.content())
+    let cluster: JSONCloudsClustersV4ResponseItem = serde_json::from_str(response.content())
         .map_err(|e| deserialize_error(e.to_string(), span))?;
 
     let mut collected = NuValueMap::default();
     collected.add_string("name", cluster.name(), span);
     collected.add_string("id", cluster.id(), span);
-    collected.add_string("status", cluster.status(), span);
-    collected.add_string(
-        "endpoint_srv",
-        cluster.endpoints_srv().unwrap_or_default(),
-        span,
+    collected.add_string("description", cluster.description(), span);
+    collected.add_string("state", cluster.state(), span);
+    collected.add_string("connection string", cluster.connection_string(), span);
+    collected.add_string("configuration type", cluster.configuration_type(), span);
+    collected.add(
+        "server",
+        convert_json_value_to_nu_value(
+            &serde_json::to_value(cluster.couchbase_server()).unwrap(),
+            span,
+        )
+        .unwrap(),
     );
-    collected.add_string("version", cluster.version_name(), span);
-    collected.add_string("tenant_id", cluster.tenant_id(), span);
-    collected.add_string("project_id", cluster.project_id(), span);
-    collected.add_string("cidr", cluster.place().cidr(), span);
+    collected.add(
+        "cloud provider",
+        convert_json_value_to_nu_value(
+            &serde_json::to_value(cluster.cloud_provider()).unwrap(),
+            span,
+        )
+        .unwrap(),
+    );
+    collected.add(
+        "service groups",
+        convert_json_value_to_nu_value(
+            &serde_json::to_value(cluster.service_groups()).unwrap(),
+            span,
+        )
+        .unwrap(),
+    );
+    collected.add(
+        "availability",
+        convert_json_value_to_nu_value(
+            &serde_json::to_value(cluster.availability()).unwrap(),
+            span,
+        )
+        .unwrap(),
+    );
+    collected.add(
+        "support",
+        convert_json_value_to_nu_value(&serde_json::to_value(cluster.support()).unwrap(), span)
+            .unwrap(),
+    );
+    if let Some(audit) = cluster.audit_data() {
+        collected.add(
+            "audit data",
+            convert_json_value_to_nu_value(&serde_json::to_value(audit).unwrap(), span).unwrap(),
+        );
+    }
+    if let Some(app_service_id) = cluster.app_service_id() {
+        collected.add_string("app service id", app_service_id, span);
+    }
+    if let Some(cmek_id) = cluster.cmek_id() {
+        collected.add_string("cmek id", cmek_id, span);
+    }
 
     Ok(collected.into_pipeline_data(span))
 }

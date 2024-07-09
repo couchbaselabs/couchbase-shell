@@ -528,6 +528,7 @@ fn make_state(
 ) -> Arc<Mutex<State>> {
     let mut capella_orgs = HashMap::new();
     let mut active_capella_org = None;
+    let mut active_project = None;
     let mut llms = HashMap::new();
     let mut active_llm = None;
     let (active, config_location) = if let Some(c) = config {
@@ -658,17 +659,17 @@ fn make_state(
                 None => DEFAULT_MANAGEMENT_TIMEOUT,
             };
             let name = c.identifier();
-            let default_project = c.default_project();
 
             let plane = RemoteCapellaOrganization::new(
                 c.secret_key(),
                 c.access_key(),
                 management_timeout,
-                default_project,
+                c.default_project(),
             );
 
             if active_capella_org.is_none() {
                 active_capella_org = Some(name.clone());
+                active_project = c.default_project()
             }
 
             capella_orgs.insert(name, plane);
@@ -701,6 +702,7 @@ fn make_state(
         config_location,
         capella_orgs,
         active_capella_org,
+        active_project,
         llms,
         active_llm,
     )))
