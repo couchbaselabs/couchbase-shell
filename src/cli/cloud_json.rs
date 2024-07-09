@@ -1,46 +1,57 @@
 use serde_derive::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
-pub(crate) struct JSONCloudClusterSummaryV3 {
+pub(crate) struct JSONCloudClustersV4Response {
+    data: Vec<JSONCloudsClustersV4ResponseItem>,
+}
+
+impl JSONCloudClustersV4Response {
+    pub fn items(&self) -> &Vec<JSONCloudsClustersV4ResponseItem> {
+        self.data.as_ref()
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct JSONCloudsClustersV4ResponseItem {
     id: String,
+    app_service_id: Option<String>,
     name: String,
-    #[serde(rename = "projectId")]
-    project_id: String,
+    current_state: String,
+    configuration_type: String,
+    description: String,
+    couchbase_server: CouchbaseServer,
+    connection_string: String,
+    cloud_provider: CloudProvider,
+    service_groups: Vec<ServiceGroup>,
+    availability: Availability,
+    support: Support,
+    audit_data: Option<AuditData>,
+    cmek_id: Option<String>,
 }
 
-impl JSONCloudClusterSummaryV3 {
-    pub fn id(&self) -> String {
-        self.id.clone()
-    }
-    pub fn name(&self) -> String {
-        self.name.clone()
-    }
-    pub fn project_id(&self) -> String {
-        self.project_id.clone()
-    }
+#[derive(Debug, Deserialize, Serialize)]
+pub(crate) struct CloudProvider {
+    #[serde(rename(serialize = "type"))]
+    #[serde(alias = "type")]
+    provider: String,
+    region: String,
+    cidr: String,
 }
 
-#[derive(Debug, Deserialize)]
-pub(crate) struct JSONCloudClustersSummariesItemsV3 {
-    #[serde(rename = "tenantId", default)]
-    tenant_id: String,
-    #[serde(default)]
-    items: Vec<JSONCloudClusterSummaryV3>,
+#[derive(Debug, Deserialize, Serialize)]
+pub(crate) struct CouchbaseServer {
+    version: String,
 }
 
-#[derive(Debug, Deserialize)]
-pub(crate) struct JSONCloudClustersSummariesV3 {
-    data: JSONCloudClustersSummariesItemsV3,
-}
-
-impl JSONCloudClustersSummariesV3 {
-    pub fn items(&self) -> &Vec<JSONCloudClusterSummaryV3> {
-        self.data.items.as_ref()
-    }
-
-    pub fn tenant_id(&self) -> String {
-        self.data.tenant_id.clone()
-    }
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct AuditData {
+    created_by: String,
+    created_at: String,
+    modified_by: String,
+    modified_at: String,
+    version: i32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -111,151 +122,115 @@ impl JSONCloudCreateProjectRequest {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub(crate) struct JSONCloudCreateClusterServerAWS {
-    #[serde(rename = "instanceSize")]
-    instance_size: String,
-    #[serde(rename = "ebsSizeGib")]
-    size_gb: u32,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub(crate) struct JSONCloudCreateClusterServerAzure {
-    #[serde(rename = "instanceSize")]
-    instance_size: String,
-    #[serde(rename = "volumeType")]
-    volume_type: String,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub(crate) struct JSONCloudCreateClusterServer {
-    size: u32,
-    services: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    aws: Option<JSONCloudCreateClusterServerAWS>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    azure: Option<JSONCloudCreateClusterServerAzure>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub(crate) struct JSONCloudCreateClusterServerStorageV3 {
-    size: u32,
-    #[serde(rename = "IOPS")]
-    iops: u32,
-    #[serde(rename = "type")]
-    typ: String,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub(crate) struct JSONCloudCreateClusterServerV3 {
-    size: u32,
-    services: Vec<String>,
-    compute: String,
-    storage: JSONCloudCreateClusterServerStorageV3,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub(crate) struct JSONCloudCreateClusterPlaceHostedV3 {
-    provider: String,
-    #[serde(rename = "CIDR")]
-    cidr: String,
-    region: String,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub(crate) struct JSONCloudCreateClusterPlaceV3 {
-    #[serde(rename = "singleAZ")]
-    single_az: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    hosted: Option<JSONCloudCreateClusterPlaceHostedV3>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub(crate) struct JSONCloudCreateClusterServerSupportPackage {
-    #[serde(rename = "type")]
-    support_type: String,
-    timezone: String,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub(crate) struct JSONCloudCreateClusterRequestV3 {
-    #[serde(rename = "clusterName")]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct JSONCloudCreateClusterRequestV4 {
     name: String,
-    environment: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     description: Option<String>,
-    #[serde(default)]
-    #[serde(rename = "projectId")]
-    project_id: String,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    servers: Vec<JSONCloudCreateClusterServerV3>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "supportPackage")]
-    support_package: Option<JSONCloudCreateClusterServerSupportPackage>,
-    place: JSONCloudCreateClusterPlaceV3,
+    configuration_type: Option<String>,
+    cloud_provider: CloudProvider,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    couchbase_server: Option<CouchbaseServer>,
+    service_groups: Vec<ServiceGroup>,
+    availability: Availability,
+    support: Support,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    zones: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cmek_id: Option<String>,
 }
 
-impl JSONCloudCreateClusterRequestV3 {
-    pub fn set_project_id(&mut self, id: String) {
-        self.project_id = id
-    }
+#[derive(Debug, Deserialize, Serialize)]
+pub(crate) struct Support {
+    plan: String,
+    timezone: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
-pub(crate) struct JSONCloudClusterVersion {
-    name: String,
+#[derive(Debug, Deserialize, Serialize)]
+pub(crate) struct Availability {
+    #[serde(rename(serialize = "type"))]
+    #[serde(alias = "type")]
+    availability_type: String,
 }
 
-#[derive(Debug, Deserialize, Clone)]
-pub(crate) struct JSONCloudClusterPlaceV3 {
-    #[serde(rename = "CIDR")]
-    cidr: String,
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ServiceGroup {
+    node: Node,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    num_of_nodes: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    services: Option<Vec<String>>,
 }
 
-impl JSONCloudClusterPlaceV3 {
-    pub fn cidr(&self) -> String {
-        self.cidr.clone()
-    }
+#[derive(Debug, Deserialize, Serialize)]
+pub(crate) struct Node {
+    compute: Compute,
+    disk: Disk,
 }
 
-#[derive(Debug, Deserialize)]
-pub(crate) struct JSONCloudClusterV3 {
-    id: String,
-    name: String,
-    #[serde(rename = "tenantId")]
-    tenant_id: String,
-    #[serde(rename = "projectId")]
-    project_id: String,
-    status: String,
-    version: JSONCloudClusterVersion,
-    #[serde(default)]
-    #[serde(rename = "endpointsSrv")]
-    endpoints_srv: Option<String>,
-    place: JSONCloudClusterPlaceV3,
+#[derive(Debug, Deserialize, Serialize)]
+pub(crate) struct Compute {
+    cpu: i32,
+    ram: i32,
 }
 
-impl JSONCloudClusterV3 {
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct Disk {
+    #[serde(rename(serialize = "type"))]
+    #[serde(alias = "type")]
+    disk_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    storage: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    iops: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    auto_expansion: Option<bool>,
+}
+
+impl JSONCloudsClustersV4ResponseItem {
     pub fn id(&self) -> String {
         self.id.clone()
     }
     pub fn name(&self) -> String {
         self.name.clone()
     }
-    pub fn tenant_id(&self) -> String {
-        self.tenant_id.clone()
+    pub fn state(&self) -> String {
+        self.current_state.clone()
     }
-    pub fn project_id(&self) -> String {
-        self.project_id.clone()
+    pub fn configuration_type(&self) -> String {
+        self.configuration_type.clone()
     }
-    pub fn status(&self) -> String {
-        self.status.clone()
+    pub fn description(&self) -> String {
+        self.description.clone()
     }
-    pub fn version_name(&self) -> String {
-        self.version.name.clone()
+    pub fn couchbase_server(&self) -> &CouchbaseServer {
+        &self.couchbase_server
     }
-    pub fn endpoints_srv(&self) -> Option<String> {
-        self.endpoints_srv.as_ref().cloned()
+    pub fn connection_string(&self) -> String {
+        self.connection_string.clone()
     }
-    pub fn place(&self) -> JSONCloudClusterPlaceV3 {
-        self.place.clone()
+    pub fn cloud_provider(&self) -> &CloudProvider {
+        &self.cloud_provider
+    }
+    pub fn service_groups(&self) -> &Vec<ServiceGroup> {
+        &self.service_groups
+    }
+    pub fn availability(&self) -> &Availability {
+        &self.availability
+    }
+    pub fn support(&self) -> &Support {
+        &self.support
+    }
+    pub fn audit_data(&self) -> Option<&AuditData> {
+        self.audit_data.as_ref()
+    }
+    pub fn app_service_id(&self) -> Option<String> {
+        self.app_service_id.clone()
+    }
+    pub fn cmek_id(&self) -> Option<String> {
+        self.cmek_id.clone()
     }
 }

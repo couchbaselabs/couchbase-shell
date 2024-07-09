@@ -127,7 +127,7 @@ pub enum CBShellError {
         span: Span,
     },
     NoActiveProject {
-        span: Span,
+        span: Option<Span>,
     },
     NoActiveScope {
         span: Span,
@@ -160,6 +160,9 @@ pub enum CBShellError {
         status_code: Option<i64>,
         message: String,
         span: Span,
+    },
+    OrganizationNotRegistered {
+        name: String,
     },
 }
 
@@ -238,6 +241,9 @@ impl From<CBShellError> for ShellError {
                 };
                 spanned_shell_error(error_reason.to_string(), help, span)
             }
+            CBShellError::OrganizationNotRegistered {name} => {
+                spanned_shell_error("Organization not registered".to_string(), Some(format!("Has the organization {} been registered in the config file?", name)), None)
+            }
         }
     }
 }
@@ -273,7 +279,7 @@ pub fn no_active_cluster_error(span: Span) -> ShellError {
     CBShellError::NoActiveCluster { span }.into()
 }
 
-pub fn no_active_project_error(span: Span) -> ShellError {
+pub fn no_active_project_error(span: Option<Span>) -> ShellError {
     CBShellError::NoActiveProject { span }.into()
 }
 
@@ -299,6 +305,10 @@ pub fn serialize_error(message: String, span: Span) -> ShellError {
 
 pub fn deserialize_error(message: String, span: Span) -> ShellError {
     CBShellError::ResponseDeserializationError { message, span }.into()
+}
+
+pub fn organization_not_registered(name: String) -> ShellError {
+    CBShellError::OrganizationNotRegistered { name }.into()
 }
 
 pub fn malformed_response_error(

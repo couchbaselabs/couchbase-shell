@@ -1,5 +1,6 @@
 use crate::client::{CapellaClient, Endpoint};
 
+use crate::cli::{no_active_project_error, organization_not_registered};
 use crate::tutorial::Tutorial;
 use crate::RemoteCluster;
 use lazy_static::__Deref;
@@ -81,6 +82,7 @@ pub struct State {
     config_path: Option<PathBuf>,
     capella_orgs: HashMap<String, RemoteCapellaOrganization>,
     active_capella_org: Mutex<Option<String>>,
+    active_project: Mutex<Option<String>>,
     active_transaction: Mutex<Option<TransactionState>>,
     llms: HashMap<String, LLM>,
     active_llm: Mutex<Option<String>>,
@@ -93,6 +95,7 @@ impl State {
         config_path: Option<PathBuf>,
         capella_orgs: HashMap<String, RemoteCapellaOrganization>,
         active_capella_org: Option<String>,
+        active_project: Option<String>,
         llms: HashMap<String, LLM>,
         active_llm: Option<String>,
     ) -> Self {
@@ -103,6 +106,7 @@ impl State {
             config_path,
             capella_orgs,
             active_capella_org: Mutex::new(active_capella_org),
+            active_project: Mutex::new(active_project),
             active_transaction: Mutex::new(None),
             llms,
             active_llm: Mutex::new(active_llm),
@@ -208,13 +212,7 @@ impl State {
 
         self.capella_orgs
             .get(&active)
-            .ok_or_else(|| ShellError::GenericError {
-                error: "Active Capella organization not known".to_string(),
-                msg: "".to_string(),
-                span: None,
-                help: None,
-                inner: Vec::new(),
-            })
+            .ok_or_else(|| organization_not_registered(active))
     }
 
     pub fn active_capella_org_name(&self) -> Option<String> {
@@ -222,74 +220,41 @@ impl State {
     }
 
     pub fn set_active_capella_org(&self, active: String) -> Result<(), ShellError> {
-        if !self.capella_orgs.contains_key(&active) {
-            return Err(ShellError::GenericError {
-                error: "Capella organization not known".to_string(),
-                msg: format!("Capella organization {} has not been registered", active),
-                span: None,
-                help: None,
-                inner: Vec::new(),
-            });
-        }
-
-        {
-            let mut guard = self.active_capella_org.lock().unwrap();
-            *guard = Some(active);
+        if let Some(org) = self.capella_orgs.get(&active) {
+            {
+                let mut guard = self.active_capella_org.lock().unwrap();
+                *guard = Some(active);
+            }
+            self.set_active_project(org.default_project());
+        } else {
+            return Err(organization_not_registered(active));
         }
 
         Ok(())
     }
 
-    pub fn set_active_capella_org_id(&mut self, id: String) -> Result<(), ShellError> {
-        let active = match self.active_capella_org_name() {
-            Some(a) => a,
-            None => {
-                return Err(ShellError::GenericError {
-                    error: "No active Capella organization set".to_string(),
-                    msg: "".to_string(),
-                    span: None,
-                    help: None,
-                    inner: Vec::new(),
-                })
-            }
-        };
-
-        let orgs = &mut self.capella_orgs;
-        let org = match orgs.get_mut(&active) {
-            Some(org) => org,
-            None => {
-                return Err(ShellError::GenericError {
-                    error: "Capella organization not known".to_string(),
-                    msg: format!("Capella organization {} has not been registered", active),
-                    span: None,
-                    help: None,
-                    inner: Vec::new(),
-                })
-            }
-        };
-        org.set_id(id);
-        Ok(())
-    }
-
-    pub fn capella_org_for_cluster(
+    pub fn get_capella_org(
         &self,
         identifier: String,
     ) -> Result<&RemoteCapellaOrganization, ShellError> {
-        let org = &self.capella_orgs.get(identifier.as_str());
+        let org = self.capella_orgs.get(identifier.as_str());
         if let Some(c) = org {
             Ok(c)
         } else {
-            Err(ShellError::GenericError {
-                error: format!(
-                    "No cloud organization registered for cluster name {}",
-                    identifier,
-                ),
-                msg: "".to_string(),
-                span: None,
-                help: None,
-                inner: Vec::new(),
-            })
+            Err(organization_not_registered(identifier))
         }
+    }
+
+    pub fn active_project(&self) -> Result<String, ShellError> {
+        if let Some(active) = self.active_project.lock().unwrap().clone() {
+            return Ok(active);
+        }
+        Err(no_active_project_error(None))
+    }
+
+    pub fn set_active_project(&self, active_project: impl Into<Option<String>>) {
+        let mut active = self.active_project.lock().unwrap();
+        *active = active_project.into();
     }
 
     pub fn active_transaction(&self) -> Option<TransactionState> {
@@ -337,12 +302,11 @@ impl State {
 }
 
 pub struct RemoteCapellaOrganization {
-    id: Option<String>,
     secret_key: String,
     access_key: String,
     client: Mutex<Option<Arc<CapellaClient>>>,
     timeout: Duration,
-    active_project: Mutex<Option<String>>,
+    default_project: Option<String>,
 }
 
 impl RemoteCapellaOrganization {
@@ -350,15 +314,14 @@ impl RemoteCapellaOrganization {
         secret_key: String,
         access_key: String,
         timeout: Duration,
-        active_project: Option<String>,
+        default_project: Option<String>,
     ) -> Self {
         Self {
-            id: None,
             secret_key,
             access_key,
             client: Mutex::new(None),
             timeout,
-            active_project: Mutex::new(active_project),
+            default_project,
         }
     }
 
@@ -385,20 +348,7 @@ impl RemoteCapellaOrganization {
         self.timeout
     }
 
-    pub fn active_project(&self) -> Option<String> {
-        self.active_project.lock().unwrap().clone()
-    }
-
-    pub fn set_active_project(&self, name: String) {
-        let mut active = self.active_project.lock().unwrap();
-        *active = Some(name);
-    }
-
-    pub fn id(&self) -> Option<String> {
-        self.id.clone()
-    }
-
-    pub fn set_id(&mut self, id: String) {
-        self.id = Some(id);
+    pub fn default_project(&self) -> Option<String> {
+        self.default_project.clone()
     }
 }

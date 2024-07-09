@@ -116,6 +116,7 @@ pub use doc_insert::DocInsert;
 pub use doc_remove::DocRemove;
 pub use doc_replace::DocReplace;
 pub use doc_upsert::DocUpsert;
+pub use error::*;
 pub use fake_data::FakeData;
 pub use health::HealthCheck;
 pub use help::Help;

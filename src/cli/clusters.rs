@@ -1,8 +1,8 @@
-use crate::cli::cloud_json::JSONCloudClustersSummariesV3;
+use crate::cli::cloud_json::JSONCloudClustersV4Response;
 use crate::cli::error::{
     client_error_to_shell_error, deserialize_error, unexpected_status_code_error,
 };
-use crate::cli::util::NuValueMap;
+use crate::cli::util::{convert_json_value_to_nu_value, find_org_id, find_project_id, NuValueMap};
 use crate::client::CapellaRequest;
 use crate::state::State;
 use nu_engine::CallExt;
@@ -69,18 +69,29 @@ fn clusters(
     let capella = call.get_flag(engine_state, stack, "capella")?;
 
     let guard = state.lock().unwrap();
-
     let control = if let Some(c) = capella {
-        guard.capella_org_for_cluster(c)
+        guard.get_capella_org(c)
     } else {
         guard.active_capella_org()
     }?;
+
     let client = control.client();
+    let deadline = Instant::now().add(control.timeout());
+
+    let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
+    let project_id = find_project_id(
+        ctrl_c.clone(),
+        guard.active_project()?,
+        &client,
+        deadline,
+        span,
+        org_id.clone(),
+    )?;
 
     let response = client
         .capella_request(
-            CapellaRequest::GetClustersV3 {},
-            Instant::now().add(control.timeout()),
+            CapellaRequest::GetClustersV4 { org_id, project_id },
+            deadline,
             ctrl_c,
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
@@ -92,7 +103,7 @@ fn clusters(
         ));
     };
 
-    let content: JSONCloudClustersSummariesV3 = serde_json::from_str(response.content())
+    let content: JSONCloudClustersV4Response = serde_json::from_str(response.content())
         .map_err(|e| deserialize_error(e.to_string(), span))?;
 
     let mut results = vec![];
@@ -100,8 +111,15 @@ fn clusters(
         let mut collected = NuValueMap::default();
         collected.add_string("name", cluster.name(), span);
         collected.add_string("id", cluster.id(), span);
-        collected.add_string("project_id", cluster.project_id(), span);
-        collected.add_string("tenant_id", content.tenant_id(), span);
+        collected.add_string("state", cluster.state(), span);
+        collected.add(
+            "cloud provider",
+            convert_json_value_to_nu_value(
+                &serde_json::to_value(cluster.cloud_provider()).unwrap(),
+                span,
+            )
+            .unwrap(),
+        );
         results.push(collected.into_value(span))
     }
 
