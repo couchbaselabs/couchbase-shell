@@ -98,6 +98,10 @@ pub enum CBShellError {
         name: String,
         span: Span,
     },
+    ClusterNotFound {
+        identifier: String,
+        span: Span,
+    },
     ClusterNotFoundInConfig {
         name: String,
         span: Span,
@@ -176,6 +180,11 @@ impl From<CBShellError> for ShellError {
                 format!("Bucket {} was not found", name),
                 "Check that the bucket exists and that permissions are set up correctly".to_string(),
                 span,
+            ),
+            CBShellError::ClusterNotFound {identifier, span} => spanned_shell_error(
+                format!("Cluster {} not found in active project", identifier),
+                "Check that the cluster you are trying to connect to exists and that it is in the active project".to_string(),
+                span
             ),
             CBShellError::ClusterNotFoundInConfig { name, span } => spanned_shell_error(
                 format!("Cluster {} was not found in configuration", name),

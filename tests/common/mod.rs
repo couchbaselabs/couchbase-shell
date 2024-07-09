@@ -19,6 +19,8 @@ pub struct TestConfig {
     username: String,
     password: String,
     data_timeout: String,
+    access_key: Option<String>,
+    secret_key: Option<String>,
 }
 
 impl TestConfig {
@@ -42,6 +44,12 @@ impl TestConfig {
     }
     pub fn data_timeout(&self) -> String {
         self.data_timeout.clone()
+    }
+    pub fn access_key(&self) -> Option<String> {
+        self.access_key.clone()
+    }
+    pub fn secret_key(&self) -> Option<String> {
+        self.secret_key.clone()
     }
 }
 

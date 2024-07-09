@@ -1,3 +1,4 @@
+use crate::cli::cloud_json::JSONCloudsBucketsV4ResponseItem;
 use serde_derive::Deserialize;
 use std::convert::TryFrom;
 use std::fmt;
@@ -195,13 +196,9 @@ pub struct BucketSettingsBuilder {
     ram_quota_mb: u64,
     flush_enabled: bool,
     num_replicas: u32,
-    replica_indexes: bool,
     bucket_type: BucketType,
-    eviction_policy: Option<EvictionPolicy>,
     max_expiry: Duration,
-    compression_mode: CompressionMode,
     durability_level: DurabilityLevel,
-    conflict_resolution_type: Option<ConflictResolutionType>,
 }
 
 impl BucketSettingsBuilder {
@@ -210,14 +207,10 @@ impl BucketSettingsBuilder {
             name: name.into(),
             ram_quota_mb: 100,
             flush_enabled: false,
-            num_replicas: 1,
-            replica_indexes: false,
+            num_replicas: 0,
             bucket_type: BucketType::Couchbase,
-            eviction_policy: None,
             max_expiry: Duration::from_secs(0),
-            compression_mode: CompressionMode::Passive,
             durability_level: DurabilityLevel::None,
-            conflict_resolution_type: None,
         }
     }
 
@@ -260,31 +253,22 @@ impl BucketSettingsBuilder {
             ram_quota_mb: self.ram_quota_mb,
             flush_enabled: self.flush_enabled,
             num_replicas: self.num_replicas,
-            replica_indexes: self.replica_indexes,
             bucket_type: self.bucket_type,
-            eviction_policy: self.eviction_policy,
             max_expiry: self.max_expiry,
-            compression_mode: self.compression_mode,
             durability_level: self.durability_level,
-            conflict_resolution_type: self.conflict_resolution_type,
-            status: None,
         }
     }
 }
 
-pub struct BucketSettings {
+#[derive(Debug)]
+pub(crate) struct BucketSettings {
     name: String,
     ram_quota_mb: u64,
     flush_enabled: bool,
     num_replicas: u32,
-    replica_indexes: bool,
     bucket_type: BucketType,
-    eviction_policy: Option<EvictionPolicy>,
     max_expiry: Duration,
-    compression_mode: CompressionMode,
     durability_level: DurabilityLevel,
-    conflict_resolution_type: Option<ConflictResolutionType>,
-    status: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -306,21 +290,12 @@ pub struct JSONBucketSettings {
     quota: JSONQuota,
     #[serde(rename = "replicaNumber")]
     num_replicas: u32,
-    #[serde(default)]
-    #[serde(rename = "replicaIndex")]
-    replica_indexes: bool,
     #[serde(rename = "bucketType")]
     bucket_type: String,
-    #[serde(rename = "evictionPolicy")]
-    eviction_policy: String,
-    // #[serde(rename = "maxTTL")]
-    // max_expiry: u32,
-    #[serde(rename = "compressionMode")]
-    compression_mode: String,
+    #[serde(rename = "maxTTL")]
+    max_expiry: u32,
     #[serde(rename = "durabilityMinLevel", default)]
     durability_level: String,
-    #[serde(rename = "conflictResolutionType")]
-    conflict_resolution_type: String,
 }
 
 impl TryFrom<JSONBucketSettings> for BucketSettings {
@@ -332,32 +307,77 @@ impl TryFrom<JSONBucketSettings> for BucketSettings {
             ram_quota_mb: settings.quota.raw_ram / 1024 / 1024,
             flush_enabled: !settings.controllers.flush.is_empty(),
             num_replicas: settings.num_replicas,
-            replica_indexes: settings.replica_indexes,
             bucket_type: BucketType::try_from(settings.bucket_type.as_str())?,
-            eviction_policy: Some(EvictionPolicy::try_from(settings.eviction_policy.as_str())?),
-            max_expiry: Default::default(),
-            compression_mode: CompressionMode::try_from(settings.compression_mode.as_str())?,
+            max_expiry: Duration::from_secs(settings.max_expiry as u64),
             durability_level: DurabilityLevel::try_from(settings.durability_level.as_str())?,
-            conflict_resolution_type: Some(ConflictResolutionType::try_from(
-                settings.conflict_resolution_type.as_str(),
-            )?),
-            status: None,
+        })
+    }
+}
+
+impl TryFrom<JSONCloudsBucketsV4ResponseItem> for BucketSettings {
+    type Error = BuilderError;
+
+    fn try_from(settings: JSONCloudsBucketsV4ResponseItem) -> Result<Self, Self::Error> {
+        Ok(BucketSettings {
+            name: settings.name(),
+            ram_quota_mb: settings.ram_quota(),
+            flush_enabled: settings.flush(),
+            num_replicas: settings.replicas(),
+            bucket_type: BucketType::try_from(settings.bucket_type().as_str())?,
+            max_expiry: Duration::from_secs(settings.ttl_seconds()),
+            durability_level: DurabilityLevel::try_from(settings.durability_level().as_str())?,
         })
     }
 }
 
 impl BucketSettings {
-    pub fn as_form(&self, is_update: bool) -> Result<Vec<(&str, String)>, BuilderError> {
+    pub fn validate(&self, is_capella: bool) -> Result<(), BuilderError> {
         if self.ram_quota_mb < 100 {
             return Err(BuilderError {
                 message: "ram quota must be more than 100mb".to_string(),
             });
         }
-        let flush_enabled = match self.flush_enabled {
-            true => "1",
-            false => "0",
+
+        if let BucketType::Memcached = self.bucket_type {
+            if is_capella {
+                return Err(BuilderError {
+                    message: "memcached buckets are not supported on Capella clusters".to_string(),
+                });
+            }
+            if self.num_replicas > 0 {
+                return Err(BuilderError {
+                    message: "num replicas cannot be used with memcached buckets".to_string(),
+                });
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn as_json(&self) -> serde_json::Map<String, serde_json::Value> {
+        let mut json = serde_json::Map::new();
+        json.insert("name".into(), self.name.clone().into());
+        json.insert("memoryAllocationInMb".into(), self.ram_quota_mb.into());
+        json.insert("flush".into(), self.flush_enabled.into());
+        json.insert("type".into(), self.bucket_type.to_string().into());
+        json.insert(
+            "timeToLiveInSeconds".into(),
+            self.max_expiry.as_secs().into(),
+        );
+        json.insert(
+            "durabilityLevel".into(),
+            self.durability_level.to_string().into(),
+        );
+
+        if self.num_replicas > 0 {
+            json.insert("replicas".into(), self.num_replicas.into());
         };
-        let replica_index_enabled = match self.replica_indexes {
+
+        json
+    }
+
+    pub fn as_form(&self) -> Vec<(&str, String)> {
+        let flush_enabled = match self.flush_enabled {
             true => "1",
             false => "0",
         };
@@ -366,81 +386,19 @@ impl BucketSettings {
             ("ramQuotaMB", self.ram_quota_mb.to_string()),
             ("flushEnabled", flush_enabled.into()),
             ("bucketType", self.bucket_type.to_string()),
-            ("compressionMode", self.compression_mode.to_string()),
         ];
 
-        match self.durability_level {
-            DurabilityLevel::None => {}
-            _ => {
-                form.push(("durabilityMinLevel", self.durability_level.to_string()));
-            }
+        form.push(("durabilityMinLevel", self.durability_level.to_string()));
+
+        if self.max_expiry.as_secs() > 0 {
+            form.push(("maxTTL", self.max_expiry.as_secs().to_string()));
         }
 
-        if !is_update {
-            if let Some(conflict_type) = self.conflict_resolution_type {
-                form.push(("conflictResolutionType", conflict_type.to_string()));
-            }
+        if self.num_replicas > 0 {
+            form.push(("replicaNumber", self.num_replicas.to_string()));
         }
 
-        match self.bucket_type {
-            BucketType::Couchbase => {
-                if let Some(eviction_policy) = self.eviction_policy {
-                    match eviction_policy {
-                        EvictionPolicy::NoEviction => {
-                            return Err(BuilderError{
-                                message: "specified eviction policy cannot be used with couchbase buckets".to_string(),
-                            });
-                        }
-                        EvictionPolicy::NotRecentlyUsed => {
-                            return Err(BuilderError{
-                                message: "specified eviction policy cannot be used with couchbase buckets".to_string(),
-                            });
-                        }
-                        _ => {
-                            form.push(("evictionPolicy", eviction_policy.to_string()));
-                        }
-                    }
-                }
-                form.push(("replicaNumber", self.num_replicas.to_string()));
-                form.push(("replicaIndex", replica_index_enabled.to_string()));
-            }
-            BucketType::Ephemeral => {
-                if let Some(eviction_policy) = self.eviction_policy {
-                    match eviction_policy {
-                        EvictionPolicy::Full => {
-                            return Err(BuilderError{
-                                message: "specified eviction policy cannot be used with ephemeral buckets".to_string(),
-                            });
-                        }
-                        EvictionPolicy::ValueOnly => {
-                            return Err(BuilderError{
-                                message: "specified eviction policy cannot be used with ephemeral buckets".to_string(),
-                            });
-                        }
-                        _ => {
-                            form.push(("evictionPolicy", eviction_policy.to_string()));
-                        }
-                    }
-                }
-                form.push(("replicaNumber", self.num_replicas.to_string()));
-            }
-            BucketType::Memcached => {
-                if self.num_replicas > 0 {
-                    return Err(BuilderError {
-                        message: "num replicas cannot be used with memcached buckets".to_string(),
-                    });
-                }
-                if self.eviction_policy.is_some() {
-                    return Err(BuilderError {
-                        message: "eviction policy cannot be used with memcached buckets"
-                            .to_string(),
-                    });
-                }
-                form.push(("replicaIndex", replica_index_enabled.to_string()));
-            }
-        }
-
-        Ok(form)
+        form
     }
 
     pub fn name(&self) -> &str {
@@ -467,8 +425,8 @@ impl BucketSettings {
         self.durability_level
     }
 
-    pub fn status(&self) -> Option<&String> {
-        self.status.as_ref()
+    pub fn max_expiry(&self) -> i64 {
+        self.max_expiry.as_secs() as i64
     }
 
     pub fn set_ram_quota_mb(&mut self, ram_quota_mb: u64) {

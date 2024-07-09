@@ -638,7 +638,7 @@ fn make_state(
                 ),
                 v.cloud_org(),
                 kv_batch_size,
-                cluster_type,
+                v.cluster_type().unwrap_or(cluster_type),
             );
             if !v.tls().clone().enabled() {
                 warn!(

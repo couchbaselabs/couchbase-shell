@@ -1,4 +1,4 @@
-use crate::remote_cluster::RemoteCluster;
+use crate::remote_cluster::{RemoteCluster, RemoteClusterType};
 use crate::state::Provider;
 use log::debug;
 use log::error;
@@ -382,6 +382,7 @@ impl ClusterConfigBuilder {
             tls: self.tls.unwrap_or_default(),
             kv_batch_size: None,
             capella_org: None,
+            cluster_type: None,
         }
     }
 }
@@ -416,6 +417,9 @@ pub struct ClusterConfig {
         serialize = "capella-organization"
     ))]
     capella_org: Option<String>,
+
+    #[serde(rename(deserialize = "type"))]
+    cluster_type: Option<RemoteClusterType>,
 }
 
 impl ClusterConfig {
@@ -473,6 +477,9 @@ impl ClusterConfig {
     pub fn display_name(&self) -> Option<String> {
         self.display_name.clone()
     }
+    pub fn cluster_type(&self) -> Option<RemoteClusterType> {
+        self.cluster_type.clone()
+    }
 }
 
 impl From<(String, &RemoteCluster)> for ClusterConfig {
@@ -515,6 +522,8 @@ impl From<(String, &RemoteCluster)> for ClusterConfig {
             capella_org: cloud,
             kv_batch_size: Some(cluster.1.kv_batch_size()),
             display_name: cluster.1.display_name(),
+            // This is a config option for dev ony so we won't want to write to file
+            cluster_type: None,
         }
     }
 }

@@ -3,10 +3,11 @@ use crate::{
     DEFAULT_ANALYTICS_TIMEOUT, DEFAULT_DATA_TIMEOUT, DEFAULT_MANAGEMENT_TIMEOUT,
     DEFAULT_QUERY_TIMEOUT, DEFAULT_SEARCH_TIMEOUT, DEFAULT_TRANSACTION_TIMEOUT,
 };
+use serde_derive::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, Copy, Eq, PartialEq)]
 pub enum RemoteClusterType {
     Provisioned,
     Other,
@@ -14,7 +15,7 @@ pub enum RemoteClusterType {
 
 impl From<Vec<String>> for RemoteClusterType {
     fn from(hostnames: Vec<String>) -> Self {
-        if hostnames.len() == 1 && hostnames[0].contains(&CAPELLA_SRV_SUFFIX.to_string()) {
+        if hostnames.len() == 1 && (hostnames[0].contains(&CAPELLA_SRV_SUFFIX.to_string())) {
             // This means that this is a Capella host.
             RemoteClusterType::Provisioned
         } else {
