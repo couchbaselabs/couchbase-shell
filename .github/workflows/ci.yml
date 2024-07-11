@@ -135,3 +135,12 @@ jobs:
         with:
           command: fmt
           args: --all -- --check
+
+  machete:
+    name: Cargo Machete
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Machete
+        uses: bnjbvr/cargo-machete@main
