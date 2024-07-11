@@ -68,7 +68,7 @@ dunce = "1.0.1"
 envconfig = "0.10.0"
 itertools = "0.13.0"
 lazy_static = "1.5.0"
-nu-test-support = { version = "0.83.1" }
+nu-test-support = { version = "0.95.0" }
 strum = "0.26.3"
 strum_macros = "0.26.4"
 

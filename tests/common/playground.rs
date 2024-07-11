@@ -7,7 +7,7 @@ use nu_test_support::playground::{Dirs, Playground};
 use serde_json::{Error, Value};
 use std::collections::HashMap;
 use std::ops::Add;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
@@ -174,7 +174,7 @@ impl CBPlayground {
         deadline: Instant,
         interval: Duration,
         cmd: &str,
-        cwd: &PathBuf,
+        cwd: &Path,
         opts: RetryExpectations,
         mut func: F,
     ) where
