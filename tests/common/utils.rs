@@ -1,7 +1,7 @@
 use crate::common::TestConfig;
 use crate::common::{config::Config, playground, TestResult};
 use std::ops::Add;
-use std::path::PathBuf;
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time;
 use std::time::Instant;
@@ -37,7 +37,7 @@ pub fn create_index(
     base_cmd: impl Into<String>,
     fields: impl Into<String>,
     keyspace: String,
-    cwd: &PathBuf,
+    cwd: &Path,
     sandbox: &mut playground::CBPlayground,
 ) -> String {
     let mut uuid = Uuid::new_v4().to_string();

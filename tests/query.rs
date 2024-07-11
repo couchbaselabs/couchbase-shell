@@ -3,14 +3,14 @@ mod common;
 use crate::common::{playground, playground::PerTestOptions, utils, TestResult};
 use serde_json::Value;
 use std::ops::Add;
-use std::path::PathBuf;
+use std::path::Path;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
 pub fn create_primary_index(
     base_cmd: impl Into<String>,
     keyspace: String,
-    cwd: &PathBuf,
+    cwd: &Path,
     sandbox: &mut playground::CBPlayground,
 ) -> TestResult<()> {
     let cmd = format!(

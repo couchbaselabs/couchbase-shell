@@ -6,7 +6,7 @@ use nu_test_support::playground::Dirs;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::ops::Add;
-use std::path::PathBuf;
+use std::path::Path;
 use std::time;
 use std::time::Instant;
 
@@ -237,7 +237,7 @@ fn assert_index(index: Index, actual: &Value) {
 fn get_indexes(
     base_cmd: String,
     index_names: Vec<String>,
-    cwd: &PathBuf,
+    cwd: &Path,
     sandbox: &mut playground::CBPlayground,
     flags: impl Into<String>,
 ) -> HashMap<String, Value> {
