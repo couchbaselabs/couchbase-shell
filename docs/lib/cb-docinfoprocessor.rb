@@ -14,7 +14,7 @@ Asciidoctor::Extensions.register do
         if (window.self === window.top) {
           var s = document.createElement("script");
           s.src = "https://cdn.cookielaw.org/scripttemplates/otSDKStub.js";
-          s.setAttribute("data-domain-script", "748511ff-10bf-44bf-88b8-36382e5b5fd9");
+          s.setAttribute("data-domain-script", "a3f24ada-7dfd-4533-8672-6014ad300642");
           document.body.appendChild(s);
         }
       </script>
