@@ -852,7 +852,7 @@ pub enum VectorSearchQueryRequest {
         query: serde_json::Value,
         vector: Vec<f32>,
         field: String,
-        neighbours: i64,
+        neighbors: i64,
         timeout: u128,
     },
 }
@@ -877,10 +877,10 @@ impl SearchQueryRequest for VectorSearchQueryRequest {
                 timeout,
                 vector,
                 field,
-                neighbours,
+                neighbors,
                 ..
             } => {
-                let json = json!({ "query":  query, "knn" :[{"field": field, "k": neighbours, "vector":vector}], "ctl": { "timeout": timeout }});
+                let json = json!({ "query":  query, "knn" :[{"field": field, "k": neighbors, "vector":vector}], "ctl": { "timeout": timeout }});
                 Some(serde_json::to_vec(&json).unwrap())
             }
         }
