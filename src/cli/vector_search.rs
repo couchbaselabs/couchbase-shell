@@ -58,9 +58,9 @@ impl Command for VectorSearch {
                 None,
             )
             .named(
-                "neighbours",
+                "neighbors",
                 SyntaxShape::Int,
-                "number of neighbours returned by vector search (default = 3)",
+                "number of neighbors returned by vector search (default = 3)",
                 None,
             )
             .named(
@@ -187,7 +187,7 @@ fn run(
         }
     };
 
-    let neighbours: i64 = match call.get_flag(engine_state, stack, "neighbours")? {
+    let neighbors: i64 = match call.get_flag(engine_state, stack, "neighbors")? {
         Some(n) => n,
         None => 3,
     };
@@ -222,7 +222,7 @@ fn run(
                     index: qualified_index.clone(),
                     vector: vector.clone(),
                     field: field.clone(),
-                    neighbours: neighbours.clone(),
+                    neighbors,
                     timeout: active_cluster.timeouts().search_timeout().as_millis(),
                 },
                 Instant::now().add(active_cluster.timeouts().search_timeout()),
