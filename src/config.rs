@@ -40,7 +40,8 @@ pub struct ShellConfig {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     capella_orgs: Vec<CapellaOrganizationConfig>,
 
-    llm: Option<Vec<LLMConfig>>,
+    #[serde(alias = "llm", default)]
+    llms: Vec<LLMConfig>,
 }
 
 impl ShellConfig {
@@ -67,7 +68,6 @@ impl ShellConfig {
             let standalone_credentials =
                 try_credentials_from_dot_path(std::env::current_dir().unwrap())
                     .or_else(|| try_credentials_from_dot_path(dirs::home_dir().unwrap()));
-
             (config, standalone_credentials)
         };
 
@@ -100,6 +100,16 @@ impl ShellConfig {
                     }
                 }
             }
+
+            for llm in config.llms_mut() {
+                for creds in &standalone.llms {
+                    if llm.identifier == creds.identifier {
+                        if llm.api_key.is_none() && !creds.api_key.is_empty() {
+                            llm.api_key = Some(creds.api_key.clone())
+                        }
+                    }
+                }
+            }
         }
 
         Some(config)
@@ -114,7 +124,7 @@ impl ShellConfig {
             path: None,
             version: 1,
             capella_orgs,
-            llm: None,
+            llms: vec![],
         }
     }
 
@@ -156,8 +166,12 @@ impl ShellConfig {
         &mut self.capella_orgs
     }
 
-    pub fn llms(&self) -> &Option<Vec<LLMConfig>> {
-        &self.llm
+    pub fn llms(&self) -> &Vec<LLMConfig> {
+        &self.llms
+    }
+
+    pub fn llms_mut(&mut self) -> &mut Vec<LLMConfig> {
+        &mut self.llms
     }
 }
 
@@ -168,7 +182,7 @@ impl Default for ShellConfig {
             version: 1,
             path: None,
             capella_orgs: vec![],
-            llm: None,
+            llms: vec![],
         }
     }
 }
@@ -657,15 +671,16 @@ impl Default for ClusterTlsConfig {
 pub struct StandaloneCredentialsConfig {
     #[allow(dead_code)]
     version: usize,
-    /// Note: clusters and cluster are kept for backwards compatibility and
-    /// convenience, docs should only mention cluster
+    /// Note: clusters is kept for backwards compatibility and convenience
     #[serde(alias = "cluster", default)]
-    #[serde(alias = "cluster")]
     #[serde(alias = "clusters")]
     clusters: Vec<StandaloneClusterCredentials>,
 
     #[serde(alias = "capella-organization", default)]
     capella_orgs: Vec<CapellaOrganizationCredentials>,
+
+    #[serde(alias = "llm", default)]
+    llms: Vec<LLMCredentials>,
 }
 
 impl StandaloneCredentialsConfig {
@@ -689,6 +704,7 @@ impl Default for StandaloneCredentialsConfig {
             clusters: vec![],
             version: 1,
             capella_orgs: vec![],
+            llms: vec![],
         }
     }
 }
@@ -708,4 +724,10 @@ impl StandaloneClusterCredentials {
 
 fn default_as_true() -> bool {
     true
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LLMCredentials {
+    identifier: String,
+    api_key: String,
 }

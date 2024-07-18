@@ -1,3 +1,4 @@
+use crate::cli::llm_api_key_missing;
 use async_openai::types::{
     ChatCompletionRequestMessage, ChatCompletionRequestSystemMessageArgs,
     ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequestArgs,
@@ -22,19 +23,13 @@ impl OpenAIClient {
         let max_tokens = max_tokens.into().unwrap_or(MAX_FREE_TIER_TOKENS);
 
         if let Some(api_key) = api_key {
-            return Ok(Self {
+            Ok(Self {
                 api_key,
                 max_tokens,
-            });
-        };
-
-        Err(ShellError::GenericError {
-            error: "api_key required when using OpenAI".to_string(),
-            msg: "".to_string(),
-            span: None,
-            help: None,
-            inner: Vec::new(),
-        })
+            })
+        } else {
+            Err(llm_api_key_missing("OpenAI".to_string()))
+        }
     }
 
     pub fn batch_chunks(&self, chunks: Vec<String>) -> Vec<Vec<String>> {
