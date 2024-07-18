@@ -164,6 +164,9 @@ pub enum CBShellError {
     OrganizationNotRegistered {
         name: String,
     },
+    LLMApiKeyMissing {
+        provider: String,
+    },
 }
 
 impl From<CBShellError> for ShellError {
@@ -244,6 +247,9 @@ impl From<CBShellError> for ShellError {
             CBShellError::OrganizationNotRegistered {name} => {
                 spanned_shell_error("Organization not registered".to_string(), Some(format!("Has the organization {} been registered in the config file?", name)), None)
             }
+            CBShellError::LLMApiKeyMissing {provider} => {
+                spanned_shell_error(format!("api_key required to use {} models", provider), Some("Define an api_key in the config/credentials file".to_string()), None)
+            }
         }
     }
 }
@@ -309,6 +315,10 @@ pub fn deserialize_error(message: String, span: Span) -> ShellError {
 
 pub fn organization_not_registered(name: String) -> ShellError {
     CBShellError::OrganizationNotRegistered { name }.into()
+}
+
+pub fn llm_api_key_missing(provider: String) -> ShellError {
+    CBShellError::LLMApiKeyMissing { provider }.into()
 }
 
 pub fn malformed_response_error(
