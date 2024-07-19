@@ -8,8 +8,7 @@ def build_collection_prompt [] {
     let collection = $"($content | get collection)"
     let cluster_type = $"($content | get cluster_type)"
 
-    let bucket_prompt =
-    let bucket_name = if $bucket == "" {
+    let bucket_prompt = if $bucket == "" {
         ""
     } else {
         ' in ' + ($bucket)
