@@ -36,10 +36,23 @@ pub(crate) fn read_nu_config_file(engine_state: &mut EngineState, stack: &mut St
             debug!("No config file found at {}", config_path.to_string_lossy());
         }
 
+        let set_prompt = "$env.PROMPT_COMMAND = {build_collection_prompt}
+        $env.PROMPT_COMMAND_RIGHT = \"\"
+        $env.config = {
+            show_banner: false
+        }";
         let config_file = if cfg!(windows) {
-            include_str!("../docs/sample_config/default_config_windows.nu")
+            format!(
+                "{}{}",
+                include_str!("../docs/sample_config/default_config_windows.nu"),
+                set_prompt
+            )
         } else {
-            include_str!("../docs/sample_config/default_config.nu")
+            format!(
+                "{}{}",
+                include_str!("../docs/sample_config/default_config.nu"),
+                set_prompt
+            )
         };
 
         let mut output = File::create(&config_path).expect("Unable to create file");
