@@ -151,3 +151,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run Clippy
         run: cargo clippy --all-targets --all-features
+
+  nu-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hustcer/setup-nu@main
+        with:
+          version: "*"
+      - run: nu docs/sample_config/prompt_tests.nu
