@@ -144,19 +144,17 @@ fn collections_get(
             }
 
             for collection in collections {
-                if scope_res.name == "_system".to_string() && !display_all {
+                if scope_res.name == *"_system" && !display_all {
                     continue;
                 }
                 let mut collected = NuValueMap::default();
                 collected.add_string("scope", scope_res.name.clone(), span);
                 collected.add_string("collection", collection.name, span);
 
-                let expiry = if collection.max_expiry > 0 {
-                    format!("{:?}", Duration::from_secs(collection.max_expiry as u64))
-                } else if collection.max_expiry == 0 {
-                    "inherited".to_string()
-                } else {
-                    "".to_string()
+                let expiry = match collection.max_expiry {
+                    -1 => "".to_string(),
+                    0 => "inherited".to_string(),
+                    _ => format!("{:?}", Duration::from_secs(collection.max_expiry as u64)),
                 };
 
                 collected.add(

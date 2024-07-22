@@ -1,6 +1,5 @@
 use aws_sdk_bedrockruntime::operation::invoke_model::InvokeModelError;
 use aws_sdk_bedrockruntime::primitives::Blob;
-use aws_smithy_runtime_api;
 use nu_protocol::ShellError;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -92,7 +91,7 @@ impl BedrockClient {
                                 error: err_msg,
                                 msg: "".to_string(),
                                 span: None,
-                                help: help,
+                                help,
                                 inner: Vec::new(),
                             });
                         }
@@ -113,8 +112,7 @@ impl BedrockClient {
             };
 
             let bytes = result.body().as_ref();
-
-            let res: EmbeddingResponse = serde_json::from_slice(&bytes).unwrap();
+            let res: EmbeddingResponse = serde_json::from_slice(bytes).unwrap();
             rec.push(res.embedding);
         }
 
@@ -130,7 +128,7 @@ impl BedrockClient {
         let config = aws_config::load_from_env().await;
         let client = aws_sdk_bedrockruntime::Client::new(&config);
 
-        let question_with_ctx = if context.len() > 0 {
+        let question_with_ctx = if !context.is_empty() {
             format!(
                 "Please answer this question: \\\"{}\\\". Using the following context: \\\"{}\\\"",
                 question,
@@ -168,10 +166,9 @@ impl BedrockClient {
         };
 
         let bytes = result.body().as_ref();
+        let ans: AskResponse = serde_json::from_slice(bytes).unwrap();
 
-        let ans: AskResponse = serde_json::from_slice(&bytes).unwrap();
-
-        if ans.results.len() < 1 {
+        if ans.results.is_empty() {
             return Err(ShellError::GenericError {
                 error: "no answer contained in the response".to_string(),
                 msg: "".to_string(),

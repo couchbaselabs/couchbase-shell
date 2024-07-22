@@ -9,7 +9,6 @@ use std::io::BufReader;
 use std::sync::Arc;
 use tokio_rustls::rustls::crypto::{aws_lc_rs::default_provider, CryptoProvider};
 use tokio_rustls::rustls::{ClientConfig, RootCertStore};
-use utilities;
 
 #[derive(Clone)]
 pub struct RustTlsConfig {
@@ -72,7 +71,7 @@ impl RustTlsConfig {
         } else {
             debug!("Adding webpki tls server roots");
             root_cert_store = RootCertStore {
-                roots: webpki_roots::TLS_SERVER_ROOTS.iter().cloned().collect(),
+                roots: webpki_roots::TLS_SERVER_ROOTS.to_vec(),
             };
 
             debug!("Adding Capella root CA to trust store");

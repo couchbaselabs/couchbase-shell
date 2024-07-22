@@ -233,7 +233,7 @@ fn vector_enrich_doc(
                 };
 
                 //The API will return an error on empty strings
-                if content != "" {
+                if !content.is_empty() {
                     field_contents.push(content);
                     input_records.push(doc_json.clone());
                 }

@@ -600,10 +600,10 @@ impl KvEndpoint {
                 map.remove(&opaque);
                 drop(map);
 
-                return Err(ClientError::RequestFailed {
+                Err(ClientError::RequestFailed {
                     reason: Some(e.to_string()),
                     key: None,
-                });
+                })
             }
         }
     }

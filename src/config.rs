@@ -103,10 +103,11 @@ impl ShellConfig {
 
             for llm in config.llms_mut() {
                 for creds in &standalone.llms {
-                    if llm.identifier == creds.identifier {
-                        if llm.api_key.is_none() && !creds.api_key.is_empty() {
-                            llm.api_key = Some(creds.api_key.clone())
-                        }
+                    if llm.identifier == creds.identifier
+                        && llm.api_key.is_none()
+                        && !creds.api_key.is_empty()
+                    {
+                        llm.api_key = Some(creds.api_key.clone())
                     }
                 }
             }

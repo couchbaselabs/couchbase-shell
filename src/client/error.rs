@@ -123,7 +123,7 @@ impl ClientError {
                         format!("{}: user does not have correct permissions", msg)
                     }
                     ConfigurationLoadFailedReason::Unknown { reason } => {
-                        format!("{}: {}", msg, reason.to_string())
+                        format!("{}: {}", msg, reason)
                     }
                 }
             }
@@ -190,7 +190,7 @@ impl ClientError {
             }
             Self::Timeout { key } => match key {
                 Some(k) => format!("Timeout was observed for key {}, check network latency. Does the timeout need to be longer? You can change it with cb-env timeouts", k),
-                None =>  format!("Timeout was observed, check network latency. Does the timeout need to be longer? You can change it with cb-env timeout")
+                None =>  "Timeout was observed, check network latency. Does the timeout need to be longer? You can change it with cb-env timeout".to_string()
             }
             Self::Cancelled { key } => match key {
                 Some(k) => format!("Request was cancelled for {}", k),
@@ -212,7 +212,7 @@ impl ClientError {
 
     pub fn try_parse_kv_fail_body(response: &mut KvResponse) -> Option<String> {
         match response.body() {
-            Some(b) => match serde_json::from_slice::<KVErrorContext>(&*b) {
+            Some(b) => match serde_json::from_slice::<KVErrorContext>(&b) {
                 Ok(context) => context.context,
                 Err(_) => None,
             },

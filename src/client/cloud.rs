@@ -337,7 +337,7 @@ impl CapellaRequest {
                 )
             }
             Self::CreateProject { org_id, .. } => {
-                format!("/v4/organizations/{}/projects", org_id).into()
+                format!("/v4/organizations/{}/projects", org_id)
             }
             Self::CreateUser { cluster_id, .. } => {
                 format!("/v2/clusters/{}/users", cluster_id)
@@ -359,7 +359,7 @@ impl CapellaRequest {
                 )
             }
             Self::DeleteProject { org_id, project_id } => {
-                format!("/v4/organizations/{}/projects/{}", org_id, project_id).into()
+                format!("/v4/organizations/{}/projects/{}", org_id, project_id)
             }
             Self::DeleteUser {
                 cluster_id,

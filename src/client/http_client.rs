@@ -682,7 +682,7 @@ impl QueryRequest {
                     serde_json::Value::String(timeout.to_string()),
                 );
                 if let Some(txn) = transaction {
-                    if let Some(t) = txn.tx_timeout.clone() {
+                    if let Some(t) = txn.tx_timeout {
                         json.insert(
                             "txtimeout".to_string(),
                             serde_json::Value::String(format!("{}ms", t.as_millis())),
@@ -700,7 +700,7 @@ impl QueryRequest {
                         }
                         serde_json::Value::Object(map) => {
                             for (k, v) in map.iter() {
-                                let key = if k.starts_with("$") {
+                                let key = if k.starts_with('$') {
                                     k.clone()
                                 } else {
                                     format!("${}", *k)

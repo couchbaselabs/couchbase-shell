@@ -181,7 +181,7 @@ pub fn do_analytics_query(
     if let Some(content_errors) = content.get("errors") {
         return if let Some(arr) = content_errors.as_array() {
             if arr.len() == 1 {
-                let e = match arr.get(0) {
+                let e = match arr.first() {
                     Some(e) => e,
                     None => {
                         return Err(malformed_response_error(
@@ -203,7 +203,7 @@ pub fn do_analytics_query(
                 Err(analytics_error(reason, code, msg, span))
             } else {
                 let messages = arr
-                    .into_iter()
+                    .iter()
                     .map(|e| e.to_string())
                     .collect::<Vec<String>>()
                     .join(",");
@@ -234,14 +234,12 @@ pub fn do_analytics_query(
                 span,
             ));
         }
-    } else {
-        if !could_contain_mutations {
-            return Err(malformed_response_error(
-                "analytics toplevel result not an object",
-                content.to_string(),
-                span,
-            ));
-        }
+    } else if !could_contain_mutations {
+        return Err(malformed_response_error(
+            "analytics toplevel result not an object",
+            content.to_string(),
+            span,
+        ));
     }
 
     Ok(results)
