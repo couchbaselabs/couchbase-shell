@@ -104,7 +104,7 @@ fn load_sample_bucket(
             _ => {
                 // Errors are in the form: `["error msg here"]`
                 let msg = if let (Some(start), Some(end)) =
-                    (response.content().find("["), response.content().find("]"))
+                    (response.content().find('['), response.content().find(']'))
                 {
                     &response.content()[start + 2..end - 1]
                 } else {

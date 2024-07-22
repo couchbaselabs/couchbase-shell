@@ -25,7 +25,7 @@ impl From<Vec<String>> for RemoteClusterType {
 
 impl From<String> for RemoteClusterType {
     fn from(cluster_type: String) -> Self {
-        if cluster_type == "provisioned".to_string() {
+        if cluster_type == "provisioned" {
             RemoteClusterType::Provisioned
         } else {
             RemoteClusterType::Other
@@ -33,9 +33,9 @@ impl From<String> for RemoteClusterType {
     }
 }
 
-impl Into<String> for RemoteClusterType {
-    fn into(self) -> String {
-        match self {
+impl From<RemoteClusterType> for String {
+    fn from(cluster_type: RemoteClusterType) -> Self {
+        match cluster_type {
             RemoteClusterType::Provisioned => "provisioned",
             RemoteClusterType::Other => "other",
         }

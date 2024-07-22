@@ -29,7 +29,7 @@ impl TransactionState {
 }
 
 #[derive(Debug)]
-pub struct LLM {
+pub struct Llm {
     api_key: Option<String>,
     provider: Provider,
     embed_model: Option<String>,
@@ -43,7 +43,7 @@ pub enum Provider {
     Bedrock,
 }
 
-impl LLM {
+impl Llm {
     pub fn new(
         api_key: Option<String>,
         provider: Provider,
@@ -84,7 +84,7 @@ pub struct State {
     active_capella_org: Mutex<Option<String>>,
     active_project: Mutex<Option<String>>,
     active_transaction: Mutex<Option<TransactionState>>,
-    llms: HashMap<String, LLM>,
+    llms: HashMap<String, Llm>,
     active_llm: Mutex<Option<String>>,
 }
 
@@ -96,7 +96,7 @@ impl State {
         capella_orgs: HashMap<String, RemoteCapellaOrganization>,
         active_capella_org: Option<String>,
         active_project: Option<String>,
-        llms: HashMap<String, LLM>,
+        llms: HashMap<String, Llm>,
         active_llm: Option<String>,
     ) -> Self {
         let state = Self {
@@ -281,9 +281,9 @@ impl State {
         self.active_llm.lock().unwrap().clone()
     }
 
-    pub fn active_llm(&self) -> Option<&LLM> {
+    pub fn active_llm(&self) -> Option<&Llm> {
         let active_llm = match self.active_llm.lock().unwrap().deref() {
-            Some(active) => self.llms.get(&*active),
+            Some(active) => self.llms.get(active),
             None => None,
         };
         active_llm

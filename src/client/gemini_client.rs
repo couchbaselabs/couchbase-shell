@@ -43,7 +43,7 @@ impl GeminiClient {
         let mut batch = vec![];
         let mut batches = vec![];
         for chunk in chunks {
-            tokens = tokens + chunk.chars().count() / CHARS_PER_TOKEN;
+            tokens += chunk.chars().count() / CHARS_PER_TOKEN;
 
             if tokens >= self.max_tokens || batch.len() == MAX_BATCH_SIZE {
                 batches.push(batch);
@@ -117,7 +117,7 @@ impl GeminiClient {
             Ok(e) => e,
             Err(e) => {
                 return Err(ShellError::GenericError {
-                    error: format!("could not parse Gemini response: {}", e.to_string()),
+                    error: format!("could not parse Gemini response: {}", e),
                     msg: "".to_string(),
                     span: None,
                     help: None,
@@ -145,7 +145,7 @@ impl GeminiClient {
             model, self.api_key
         );
 
-        let question_with_ctx = if context.len() > 0 {
+        let question_with_ctx = if !context.is_empty() {
             format!(
                 "Please answer this question: \\\"{}\\\". Using the following context: \\\"{}\\\"",
                 question,
@@ -171,7 +171,7 @@ impl GeminiClient {
             Ok(a) => a,
             Err(e) => {
                 return Err(ShellError::GenericError {
-                    error: format!("could not parse Gemini response: {}", e.to_string()),
+                    error: format!("could not parse Gemini response: {}", e),
                     msg: "".to_string(),
                     span: None,
                     help: None,
@@ -206,7 +206,7 @@ async fn read_response(res: Response) -> Result<Bytes, ShellError> {
         Ok(b) => b,
         Err(e) => {
             return Err(ShellError::GenericError {
-                error: format!("could not read response body: {}", e.to_string()),
+                error: format!("could not read response body: {}", e),
                 msg: "".to_string(),
                 span: None,
                 help: None,

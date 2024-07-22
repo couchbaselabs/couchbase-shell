@@ -177,7 +177,7 @@ fn query(
         span,
     )?;
 
-    if results.len() > 0 {
+    if !results.is_empty() {
         return Ok(Value::List {
             vals: results,
             internal_span: call.head,
@@ -193,9 +193,9 @@ fn query(
     ))
 }
 
-fn validate_statement(statement: &String, span: Span) -> Result<(), ShellError> {
+fn validate_statement(statement: &str, span: Span) -> Result<(), ShellError> {
     let statement = statement.trim().to_string();
-    if statement.contains(";") {
+    if statement.contains(';') {
         if let Some(p) = statement.chars().position(|e| e == ';') {
             if p != statement.len() - 1 {
                 return Err(generic_error(
@@ -236,7 +236,7 @@ fn parse_txid(response: &str, span: Span) -> Result<Option<String>, ShellError> 
     let results = content.get("results");
     if let Some(results) = results {
         if let Some(results) = results.as_array() {
-            if let Some(result) = results.get(0) {
+            if let Some(result) = results.first() {
                 if let Some(map) = result.as_object() {
                     if let Some(txid) = map.get("txid") {
                         if let Some(txid) = txid.as_str() {
@@ -259,7 +259,7 @@ enum TransactionStatementType {
     Rollback,
 }
 
-fn parse_statement(statement: &String) -> TransactionStatementType {
+fn parse_statement(statement: &str) -> TransactionStatementType {
     let mut statement = statement.trim().to_string();
     statement = match statement.get(..32) {
         Some(s) => s.to_string(),
@@ -270,8 +270,8 @@ fn parse_statement(statement: &String) -> TransactionStatementType {
         .split_whitespace()
         .map(|e| e.to_string())
         .collect();
-    if parts.len() > 0 {
-        match parts.get(0).unwrap().trim_end_matches(';') {
+    if !parts.is_empty() {
+        match parts.first().unwrap().trim_end_matches(';') {
             "start" => {
                 if parts.len() > 1 {
                     return TransactionStatementType::Start;

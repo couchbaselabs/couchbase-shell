@@ -150,7 +150,7 @@ fn query(
         )?);
     }
 
-    if results.len() > 0 {
+    if !results.is_empty() {
         return Ok(Value::List {
             vals: results,
             internal_span: call.head,
@@ -215,7 +215,7 @@ pub fn handle_query_response(
         if let Some(content_errors) = content.get("errors") {
             return if let Some(arr) = content_errors.as_array() {
                 if arr.len() == 1 {
-                    let e = match arr.get(0) {
+                    let e = match arr.first() {
                         Some(e) => e,
                         None => {
                             return Err(malformed_response_error(
@@ -237,7 +237,7 @@ pub fn handle_query_response(
                     Err(query_error(reason, code, msg, span))
                 } else {
                     let messages = arr
-                        .into_iter()
+                        .iter()
                         .map(|e| e.to_string())
                         .collect::<Vec<String>>()
                         .join(",");

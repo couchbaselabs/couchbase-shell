@@ -127,11 +127,7 @@ fn buckets_get(
             BucketSettings::try_from(content).map_err(|e| {
                 malformed_response_error(
                     "Could not parse bucket settings",
-                    format!(
-                        "Error: {}, response content: {}",
-                        e,
-                        response.content().to_string()
-                    ),
+                    format!("Error: {}, response content: {}", e, response.content()),
                     span,
                 )
             })?,

@@ -42,7 +42,7 @@ impl From<i64> for QueryErrorReason {
             3 => Self::ParseSyntaxError,
             4 => Self::PlanError,
             5 => Self::GeneralError,
-            10 | 11 | 12 | 13 | 14 | 15 => Self::DatastoreError,
+            10..=15 => Self::DatastoreError,
             _ => Self::UnknownError,
         }
     }
@@ -354,9 +354,7 @@ pub fn query_error(
     span: Span,
 ) -> ShellError {
     CBShellError::QueryError {
-        error_reason: reason
-            .into()
-            .unwrap_or_else(|| QueryErrorReason::UnknownError),
+        error_reason: reason.into().unwrap_or(QueryErrorReason::UnknownError),
         status_code: status_code.into(),
         message,
         span,
@@ -371,9 +369,7 @@ pub fn analytics_error(
     span: Span,
 ) -> ShellError {
     CBShellError::AnalyticsError {
-        error_reason: reason
-            .into()
-            .unwrap_or_else(|| AnalyticsErrorReason::UnknownError),
+        error_reason: reason.into().unwrap_or(AnalyticsErrorReason::UnknownError),
         status_code: status_code.into(),
         message,
         span,

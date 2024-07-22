@@ -262,10 +262,9 @@ fn chunks_from_input(
     let span = call.head;
     let mut chunks: Vec<String> = Vec::new();
 
-    let chunk_len = match call.get_flag::<usize>(engine_state, stack, "chunk")? {
-        Some(l) => l,
-        None => 1024,
-    };
+    let chunk_len = call
+        .get_flag::<usize>(engine_state, stack, "chunk")?
+        .unwrap_or(1024);
 
     match input.into_value(span)? {
         Value::List { vals, .. } => {

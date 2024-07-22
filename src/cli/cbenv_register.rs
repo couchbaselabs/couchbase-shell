@@ -149,7 +149,7 @@ fn clusters_register(
     let display_name = call.get_flag(engine_state, stack, "display-name")?;
 
     let hostnames = conn_string
-        .split(",")
+        .split(',')
         .map(|s| s.to_string())
         .collect::<Vec<String>>();
     let tls_config = if tls_enabled {

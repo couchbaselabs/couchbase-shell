@@ -59,7 +59,7 @@ impl OpenAIClient {
                     bpe.encode_with_special_tokens(&chunks[lower..=upper].to_vec().join(" "));
 
                 if tokens.len() > self.max_tokens {
-                    upper = upper - batch_size / 2;
+                    upper -= batch_size / 2;
                 }
 
                 batches.push(chunks[lower..=upper].to_vec());
@@ -76,7 +76,7 @@ impl OpenAIClient {
 
     pub async fn embed(
         &self,
-        batch: &Vec<String>,
+        batch: &[String],
         dim: Option<usize>,
         model: String,
     ) -> Result<Vec<Vec<f32>>, ShellError> {
@@ -94,13 +94,13 @@ impl OpenAIClient {
             CreateEmbeddingRequestArgs::default()
                 .model(model.to_string())
                 .dimensions(d as u32)
-                .input(batch.clone())
+                .input(batch.to_owned())
                 .build()
                 .unwrap()
         } else {
             CreateEmbeddingRequestArgs::default()
                 .model(model.to_string())
-                .input(batch.clone())
+                .input(batch.to_owned())
                 .build()
                 .unwrap()
         };

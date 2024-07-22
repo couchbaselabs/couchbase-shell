@@ -167,7 +167,7 @@ pub(crate) fn run_kv_store_ops(
                     id = v.as_str().ok();
                 }
                 if k.clone() == content_column {
-                    content = convert_nu_value_to_json_value(&v, span).ok();
+                    content = convert_nu_value_to_json_value(v, span).ok();
                 }
             }
             if let Some(i) = id {
@@ -375,7 +375,7 @@ pub(crate) fn get_active_cluster_client_cid<'a>(
     ctrl_c: Arc<AtomicBool>,
     span: Span,
 ) -> Result<(&'a RemoteCluster, Arc<KvClient>, u32), ShellError> {
-    let active_cluster = get_active_cluster(cluster, &guard, span)?;
+    let active_cluster = get_active_cluster(cluster, guard, span)?;
 
     let (bucket, scope, collection) =
         namespace_from_args(bucket, scope, collection, active_cluster, span)?;

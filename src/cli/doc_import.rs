@@ -123,7 +123,7 @@ fn run_import(
                         id = v.as_str().ok();
                     }
 
-                    content.insert(k.clone(), convert_nu_value_to_json_value(&v, span).ok()?);
+                    content.insert(k.clone(), convert_nu_value_to_json_value(v, span).ok()?);
                 }
                 if let Some(i) = id {
                     return Some((i.to_string(), content));

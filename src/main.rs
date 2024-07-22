@@ -26,8 +26,8 @@ use crate::default_context::create_default_context;
 use crate::remote_cluster::{
     ClusterTimeouts, RemoteCluster, RemoteClusterResources, RemoteClusterType,
 };
+use crate::state::Llm;
 use crate::state::RemoteCapellaOrganization;
-use crate::state::LLM;
 use state::State;
 
 use chrono::Local;
@@ -257,10 +257,9 @@ fn validate_hostnames(hostnames: Vec<String>) -> (RemoteClusterType, Vec<String>
             } else {
                 stripped_couchbase.to_string()
             }
-        } else if hostname.strip_suffix(":11210").is_some() {
-            error!("Memcached port detected, http scheme must be used with custom port (management port)");
-            std::process::exit(1);
-        } else if hostname.strip_suffix(":11211").is_some() {
+        } else if hostname.strip_suffix(":11210").is_some()
+            || hostname.strip_suffix(":11211").is_some()
+        {
             error!("Memcached port detected, http scheme must be used with custom port (management port)");
             std::process::exit(1);
         } else if let Some(stripped_http) = hostname.strip_prefix("http://") {
@@ -385,7 +384,7 @@ fn maybe_write_config_file(opt: CliOptions, password: Option<String>) -> PathBuf
     validate_hostnames(
         conn_string
             .clone()
-            .split(",")
+            .split(',')
             .map(|s| s.to_string())
             .collect::<Vec<String>>(),
     );
@@ -483,11 +482,7 @@ fn load_config(
     password: &Option<String>,
     clusters: &mut HashMap<String, RemoteCluster>,
 ) -> Option<ShellConfig> {
-    let config_path = if let Some(p) = opt.clone().config_path {
-        Some(PathBuf::from(p))
-    } else {
-        None
-    };
+    let config_path = opt.clone().config_path.map(PathBuf::from);
     match ShellConfig::new(config_path) {
         Some(c) => Some(c),
         None => {
@@ -612,7 +607,7 @@ fn make_state(
 
             let (cluster_type, hostnames) = validate_hostnames(
                 v.conn_string()
-                    .split(",")
+                    .split(',')
                     .map(|s| s.to_string())
                     .collect::<Vec<String>>(),
             );
@@ -676,7 +671,7 @@ fn make_state(
         }
 
         for config in c.llms() {
-            let llm = LLM::new(
+            let llm = Llm::new(
                 config.api_key(),
                 config.provider(),
                 config.embed_model(),
@@ -708,7 +703,7 @@ fn make_state(
 
 fn merge_couchbase_delta(context: &mut EngineState, state: Arc<Mutex<State>>) {
     let delta = {
-        let mut working_set = StateWorkingSet::new(&context);
+        let mut working_set = StateWorkingSet::new(context);
         working_set.add_decl(Box::new(Analytics::new(state.clone())));
         working_set.add_decl(Box::new(AnalyticsBuckets::new(state.clone())));
         working_set.add_decl(Box::new(AnalyticsDatasets::new(state.clone())));
@@ -792,6 +787,6 @@ fn merge_couchbase_delta(context: &mut EngineState, state: Arc<Mutex<State>>) {
     };
 
     if let Err(err) = context.merge_delta(delta) {
-        report_error_new(&context, &err);
+        report_error_new(context, &err);
     }
 }

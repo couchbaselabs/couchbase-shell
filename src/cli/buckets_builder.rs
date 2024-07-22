@@ -16,18 +16,13 @@ impl Display for BuilderError {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 pub enum DurabilityLevel {
+    #[default]
     None = 0x00,
     Majority = 0x01,
     MajorityAndPersistOnMaster = 0x02,
     PersistToMajority = 0x03,
-}
-
-impl Default for DurabilityLevel {
-    fn default() -> Self {
-        DurabilityLevel::None
-    }
 }
 
 impl Display for DurabilityLevel {

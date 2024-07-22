@@ -118,7 +118,7 @@ fn run(
             if rec.contains("id") && rec.contains("content") {
                 // Input is from vector enrich-text
                 let id = rec.get("id").unwrap().as_str().unwrap();
-                if id.len() > 6 && id[..6] == "vector".to_string() {
+                if id.len() > 6 && id[..6] == *"vector" {
                     let content = rec.get("content").unwrap().as_record().unwrap();
                     vector = content
                         .get("vector")
@@ -187,10 +187,9 @@ fn run(
         }
     };
 
-    let neighbors: i64 = match call.get_flag(engine_state, stack, "neighbors")? {
-        Some(n) => n,
-        None => 3,
-    };
+    let neighbors = call
+        .get_flag(engine_state, stack, "neighbors")?
+        .unwrap_or(3);
 
     let bucket_flag: Option<String> = call.get_flag(engine_state, stack, "bucket")?;
     let scope_flag: Option<String> = call.get_flag(engine_state, stack, "scope")?;
@@ -261,7 +260,7 @@ fn run(
 }
 
 fn index_name_from_namespace(index: String, namespace: (String, String, String)) -> String {
-    let scope = if namespace.1 == "" {
+    let scope = if namespace.1.is_empty() {
         "_default".to_string()
     } else {
         namespace.1

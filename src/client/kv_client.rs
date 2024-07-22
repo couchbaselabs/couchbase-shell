@@ -304,7 +304,7 @@ impl KvClient {
                             let mut results: Vec<serde_json::Value> = vec![];
                             let mut bytes = body.clone();
 
-                            while bytes.len() > 0 {
+                            while !bytes.is_empty() {
                                 //Drop leading empty bytes
                                 bytes.get_u32();
                                 let len: usize = bytes.get_u16().into();

@@ -63,7 +63,7 @@ fn organizations(
     let guard = state.lock().unwrap();
     let orgs = guard.capella_orgs();
     let mut results = vec![];
-    for (identifier, org) in orgs.into_iter() {
+    for (identifier, org) in orgs.iter() {
         let client = org.client();
         let response = client
             .capella_request(
