@@ -94,6 +94,7 @@ query_index = []
 query_index_definitions = []
 query_index_advise = []
 import_sample = []
+vector = []
 
 [[bin]]
 name = "cbsh"

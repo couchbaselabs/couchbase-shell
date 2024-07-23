@@ -478,7 +478,7 @@ impl ClusterConfig {
         self.display_name.clone()
     }
     pub fn cluster_type(&self) -> Option<RemoteClusterType> {
-        self.cluster_type.clone()
+        self.cluster_type
     }
 }
 
