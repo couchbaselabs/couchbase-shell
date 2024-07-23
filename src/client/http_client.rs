@@ -493,6 +493,12 @@ pub enum ManagementRequest {
     },
     IndexStatus,
     SettingsAutoFailover,
+    VectorCreateIndex {
+        bucket: String,
+        scope: String,
+        name: String,
+        payload: String,
+    },
 }
 
 impl ManagementRequest {
@@ -541,6 +547,15 @@ impl ManagementRequest {
                 format!("/pools/default/buckets/{}/scopes/{}", bucket, name)
             }
             Self::GetScopes { bucket } => format!("/pools/default/buckets/{}/scopes", bucket),
+            Self::VectorCreateIndex {
+                bucket,
+                scope,
+                name,
+                ..
+            } => format!(
+                "/_p/fts/api/bucket/{}/scope/{}/index/{}",
+                bucket, scope, name
+            ),
         }
     }
 
@@ -568,6 +583,7 @@ impl ManagementRequest {
             Self::CreateScope { .. } => HttpVerb::Post,
             Self::DropScope { .. } => HttpVerb::Delete,
             Self::GetScopes { .. } => HttpVerb::Get,
+            Self::VectorCreateIndex { .. } => HttpVerb::Put,
         }
     }
 
@@ -579,6 +595,7 @@ impl ManagementRequest {
             Self::CreateCollection { payload, .. } => Some(payload.as_bytes().into()),
             Self::UpsertUser { payload, .. } => Some(payload.as_bytes().into()),
             Self::CreateScope { payload, .. } => Some(payload.as_bytes().into()),
+            Self::VectorCreateIndex { payload, .. } => Some(payload.as_bytes().into()),
             _ => None,
         }
     }
