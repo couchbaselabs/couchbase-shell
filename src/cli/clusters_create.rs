@@ -1,7 +1,8 @@
-use crate::cli::cloud_json::JSONCloudCreateClusterRequestV4;
+use crate::cli::cloud_json::{JSONCloudCreateClusterRequestV4, Provider};
 use crate::client::CapellaRequest;
 use crate::state::State;
-use log::debug;
+use log::{debug, info};
+use std::convert::TryFrom;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
@@ -13,7 +14,8 @@ use crate::cli::util::{find_org_id, find_project_id};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
+use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape, Value};
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct ClustersCreate {
@@ -33,15 +35,24 @@ impl Command for ClustersCreate {
 
     fn signature(&self) -> Signature {
         Signature::build("clusters create")
-            .required(
-                "definition",
+            .named("name", SyntaxShape::String, "the name of the cluster", None)
+            .named("provider", SyntaxShape::String, "the cloud provider", None)
+            .named(
+                "version",
                 SyntaxShape::String,
-                "the definition of the cluster",
+                "the couchbase server version",
+                None,
             )
             .named(
                 "capella",
                 SyntaxShape::String,
                 "the Capella organization to use",
+                None,
+            )
+            .named(
+                "nodes",
+                SyntaxShape::Int,
+                "the number of nodes in the cluster",
                 None,
             )
             .category(Category::Custom("couchbase".to_string()))
@@ -67,15 +78,60 @@ fn clusters_create(
     engine_state: &EngineState,
     stack: &mut Stack,
     call: &Call,
-    _input: PipelineData,
+    input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
 
-    let definition: String = call.req(engine_state, stack, 0)?;
+    let definition = match input.into_value(span)? {
+        Value::Nothing { .. } => {
+            let provider = match call.get_flag::<String>(engine_state, stack, "provider")? {
+                Some(p) => Provider::try_from(p.as_str())?,
+                None => {
+                    return Err(ShellError::GenericError {
+                        error: "no provider specified".to_string(),
+                        msg: "".to_string(),
+                        span: None,
+                        help: Some(
+                            "Please specify a cloud provider using the '--provider' flag".into(),
+                        ),
+                        inner: vec![],
+                    })
+                }
+            };
+            let name = call
+                .get_flag(engine_state, stack, "name")?
+                .unwrap_or_else(|| {
+                    info!("Cluster name not specified, a randomly generated name will be used");
+                    random_cluster_name()
+                });
+            let nodes = call
+                .get_flag(engine_state, stack, "nodes")?
+                .unwrap_or_else(|| {
+                    info!("Number of nodes not specified, defaulting to 1");
+                    1
+                });
+
+            let version = call.get_flag(engine_state, stack, "version")?;
+            JSONCloudCreateClusterRequestV4::new(name, provider, version, nodes)
+        }
+        Value::String { val, .. } => {
+            serde_json::from_str(val.as_str()).map_err(|e| serialize_error(e.to_string(), span))?
+        }
+        _ => {
+            return Err(ShellError::GenericError {
+                error: "cluster definition must be a string".to_string(),
+                msg: "".to_string(),
+                span: None,
+                help: None,
+                inner: vec![],
+            })
+        }
+    };
+
     let capella = call.get_flag(engine_state, stack, "capella")?;
 
-    debug!("Running clusters create for {}", &definition);
+    debug!("Running clusters create for {:?}", definition);
 
     let guard = state.lock().unwrap();
     let control = if let Some(c) = capella {
@@ -96,15 +152,12 @@ fn clusters_create(
         org_id.clone(),
     )?;
 
-    let json: JSONCloudCreateClusterRequestV4 = serde_json::from_str(definition.as_str())
-        .map_err(|e| serialize_error(e.to_string(), span))?;
-
     let response = client
         .capella_request(
             CapellaRequest::CreateClusterV4 {
                 org_id,
                 project_id,
-                payload: serde_json::to_string(&json)
+                payload: serde_json::to_string(&definition)
                     .map_err(|e| serialize_error(e.to_string(), span))?,
             },
             deadline,
@@ -120,4 +173,10 @@ fn clusters_create(
     };
 
     Ok(PipelineData::empty())
+}
+
+fn random_cluster_name() -> String {
+    let mut uuid = Uuid::new_v4().to_string();
+    uuid.truncate(6);
+    format!("cbshell-cluster-{}", uuid)
 }
