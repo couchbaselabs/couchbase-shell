@@ -1,4 +1,6 @@
+use nu_protocol::ShellError;
 use serde_derive::{Deserialize, Serialize};
+use std::convert::TryFrom;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct JSONCloudBucketsV4Response {
@@ -84,12 +86,67 @@ pub(crate) struct CloudProvider {
     #[serde(alias = "type")]
     provider: String,
     region: String,
-    cidr: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cidr: Option<String>,
+}
+
+impl CloudProvider {
+    pub fn new(provider: &Provider) -> Self {
+        match provider {
+            Provider::Aws => Self {
+                provider: "aws".into(),
+                region: "us-east-1".into(),
+                cidr: None,
+            },
+            Provider::Azure => Self {
+                provider: "azure".into(),
+                region: "eastus".into(),
+                cidr: None,
+            },
+            Provider::Gcp => Self {
+                provider: "gcp".into(),
+                region: "us-east1".into(),
+                cidr: None,
+            },
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub enum Provider {
+    Aws,
+    Gcp,
+    Azure,
+}
+
+impl TryFrom<&str> for Provider {
+    type Error = ShellError;
+
+    fn try_from(alias: &str) -> Result<Self, Self::Error> {
+        match alias {
+            "aws" => Ok(Provider::Aws),
+            "gcp" => Ok(Provider::Gcp),
+            "azure" => Ok(Provider::Azure),
+            _ => Err(ShellError::GenericError {
+                error: "invalid cloud provider".to_string(),
+                msg: "".to_string(),
+                span: None,
+                help: Some("The supported providers are 'aws', 'gcp' and 'azure'".into()),
+                inner: vec![],
+            }),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct CouchbaseServer {
     version: String,
+}
+
+impl CouchbaseServer {
+    pub fn new(version: String) -> Self {
+        Self { version }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -189,6 +246,47 @@ pub(crate) struct JSONCloudCreateClusterRequestV4 {
     cmek_id: Option<String>,
 }
 
+impl JSONCloudCreateClusterRequestV4 {
+    pub fn new(
+        name: String,
+        provider: Provider,
+        version: Option<String>,
+        num_of_nodes: i32,
+    ) -> Self {
+        Self {
+            name,
+            description: Some("A single node cluster created using cbshell".to_string()),
+            configuration_type: None,
+            cloud_provider: CloudProvider::new(&provider),
+            couchbase_server: version.map(CouchbaseServer::new),
+            service_groups: vec![{
+                ServiceGroup {
+                    node: Node {
+                        compute: Compute { cpu: 4, ram: 16 },
+                        disk: Disk::single_node_disk_from_provider(&provider),
+                    },
+                    num_of_nodes: Some(num_of_nodes),
+                    services: Some(vec![
+                        "index".to_string(),
+                        "data".to_string(),
+                        "query".to_string(),
+                        "search".to_string(),
+                    ]),
+                }
+            }],
+            availability: Availability {
+                availability_type: "single".into(),
+            },
+            support: Support {
+                plan: "basic".into(),
+                timezone: None,
+            },
+            zones: None,
+            cmek_id: None,
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct Support {
     plan: String,
@@ -236,6 +334,31 @@ pub(crate) struct Disk {
     iops: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     auto_expansion: Option<bool>,
+}
+
+impl Disk {
+    pub fn single_node_disk_from_provider(provider: &Provider) -> Self {
+        match provider {
+            Provider::Aws => Self {
+                disk_type: "gp3".into(),
+                storage: Some(50),
+                iops: Some(3000),
+                auto_expansion: None,
+            },
+            Provider::Azure => Self {
+                disk_type: "P6".into(),
+                storage: None,
+                iops: None,
+                auto_expansion: None,
+            },
+            Provider::Gcp => Self {
+                disk_type: "pd-ssd".into(),
+                storage: Some(50),
+                iops: None,
+                auto_expansion: None,
+            },
+        }
+    }
 }
 
 impl JSONCloudsClustersV4ResponseItem {
