@@ -1,7 +1,7 @@
 //! The `buckets get` command fetches buckets from the server.
 use crate::cli::error::client_error_to_shell_error;
 use crate::cli::util::{
-    cluster_id_from_conn_str, cluster_identifiers_from, find_org_id, find_project_id,
+    cluster_from_conn_str, cluster_identifiers_from, find_org_id, find_project_id,
     get_active_cluster,
 };
 use crate::client::{ClientError, ManagementRequest};
@@ -152,7 +152,7 @@ fn drop_capella_bucket(
         org_id.clone(),
     )?;
 
-    let cluster_id = cluster_id_from_conn_str(
+    let json_cluster = cluster_from_conn_str(
         identifier.clone(),
         ctrl_c.clone(),
         cluster.hostnames().clone(),
@@ -167,7 +167,7 @@ fn drop_capella_bucket(
         .delete_bucket(
             org_id,
             project_id,
-            cluster_id,
+            json_cluster.id(),
             bucket,
             deadline,
             ctrl_c.clone(),

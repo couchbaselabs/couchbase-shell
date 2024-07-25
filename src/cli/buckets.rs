@@ -1,7 +1,7 @@
 use crate::cli::buckets_builder::{BucketSettings, JSONBucketSettings};
 use crate::cli::buckets_get::bucket_to_nu_value;
 use crate::cli::util::{
-    cluster_id_from_conn_str, cluster_identifiers_from, find_org_id, find_project_id,
+    cluster_from_conn_str, cluster_identifiers_from, find_org_id, find_project_id,
     get_active_cluster,
 };
 use crate::client::ManagementRequest;
@@ -186,7 +186,7 @@ pub fn get_capella_buckets(
         org_id.clone(),
     )?;
 
-    let cluster_id = cluster_id_from_conn_str(
+    let json_cluster = cluster_from_conn_str(
         identifier.clone(),
         ctrl_c.clone(),
         cluster.hostnames().clone(),
@@ -198,7 +198,7 @@ pub fn get_capella_buckets(
     )?;
 
     let buckets = client
-        .get_buckets(org_id, project_id, cluster_id, deadline, ctrl_c)
+        .get_buckets(org_id, project_id, json_cluster.id(), deadline, ctrl_c)
         .map_err(|e| client_error_to_shell_error(e, span))?;
     let mut buckets_settings: Vec<BucketSettings> = vec![];
     for bucket in buckets.items() {

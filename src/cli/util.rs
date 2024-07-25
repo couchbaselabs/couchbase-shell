@@ -6,7 +6,7 @@ use crate::cli::error::{
     malformed_response_error, no_active_bucket_error, unexpected_status_code_error,
 };
 use crate::cli::CBShellError::ClusterNotFound;
-use crate::client::cloud_json::{OrganizationsResponse, ProjectsResponse};
+use crate::client::cloud_json::{Cluster, OrganizationsResponse, ProjectsResponse};
 use crate::client::{CapellaClient, CapellaRequest, HttpResponse};
 use crate::state::State;
 use crate::{RemoteCluster, RemoteClusterType};
@@ -298,7 +298,7 @@ pub fn validate_is_not_cloud(
 
 // We take a conn_string instead of name since cluster local identfiers can differ from names of
 // clusters
-pub(crate) fn cluster_id_from_conn_str(
+pub(crate) fn cluster_from_conn_str(
     identifier: String,
     ctrl_c: Arc<AtomicBool>,
     hostnames: Vec<String>,
@@ -307,7 +307,7 @@ pub(crate) fn cluster_id_from_conn_str(
     span: Span,
     org_id: String,
     project_id: String,
-) -> Result<String, ShellError> {
+) -> Result<Cluster, ShellError> {
     let response = client
         .get_clusters(org_id, project_id, deadline, ctrl_c)
         .map_err(|e| client_error_to_shell_error(e, span))?;
@@ -315,7 +315,7 @@ pub(crate) fn cluster_id_from_conn_str(
     for c in response.items() {
         for conn_str in hostnames.clone() {
             if c.connection_string().contains(conn_str.as_str()) {
-                return Ok(c.id().to_string());
+                return Ok(c);
             }
         }
     }
