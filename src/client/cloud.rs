@@ -540,6 +540,32 @@ impl CapellaClient {
             }),
         }
     }
+
+    pub fn allow_ip_address(
+        &self,
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+        address: String,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<(), ClientError> {
+        let request = CapellaRequest::AllowIPAddress {
+            org_id,
+            project_id,
+            cluster_id,
+            payload: format!("{{\"cidr\": \"{}\"}}", address.clone()),
+        };
+        let response = self.capella_request(request, deadline, ctrl_c)?;
+
+        match response.status() {
+            201 => Ok(()),
+            _ => Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            }),
+        }
+    }
 }
 
 #[allow(dead_code)]
@@ -547,6 +573,12 @@ pub enum CapellaRequest {
     OrganizationList,
     ProjectCreate {
         org_id: String,
+        payload: String,
+    },
+    AllowIPAddress {
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
         payload: String,
     },
     ProjectDelete {
@@ -625,6 +657,17 @@ impl CapellaRequest {
             Self::OrganizationList => "/v4/organizations".into(),
             Self::ProjectDelete { org_id, project_id } => {
                 format!("/v4/organizations/{}/projects/{}", org_id, project_id)
+            }
+            Self::AllowIPAddress {
+                org_id,
+                project_id,
+                cluster_id,
+                ..
+            } => {
+                format!(
+                    "/v4/organizations/{}/projects/{}/clusters/{}/allowedcidrs",
+                    org_id, project_id, cluster_id
+                )
             }
             Self::ProjectCreate { org_id, .. } => {
                 format!("/v4/organizations/{}/projects", org_id)
@@ -762,6 +805,7 @@ impl CapellaRequest {
             Self::BucketLoadSample { .. } => HttpVerb::Post,
             Self::BucketList { .. } => HttpVerb::Get,
             Self::BucketUpdate { .. } => HttpVerb::Put,
+            Self::AllowIPAddress { .. } => HttpVerb::Post,
             Self::CredentialsCreate { .. } => HttpVerb::Post,
         }
     }
@@ -773,6 +817,7 @@ impl CapellaRequest {
             Self::BucketCreate { payload, .. } => Some(payload.as_bytes().into()),
             Self::BucketLoadSample { payload, .. } => Some(payload.as_bytes().into()),
             Self::BucketUpdate { payload, .. } => Some(payload.as_bytes().into()),
+            Self::AllowIPAddress { payload, .. } => Some(payload.as_bytes().into()),
             Self::CredentialsCreate { payload, .. } => Some(payload.as_bytes().into()),
             _ => None,
         }

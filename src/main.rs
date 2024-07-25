@@ -708,6 +708,7 @@ fn make_state(
 fn merge_couchbase_delta(context: &mut EngineState, state: Arc<Mutex<State>>) {
     let delta = {
         let mut working_set = StateWorkingSet::new(context);
+        working_set.add_decl(Box::new(AllowIP::new(state.clone())));
         working_set.add_decl(Box::new(Analytics::new(state.clone())));
         working_set.add_decl(Box::new(AnalyticsBuckets::new(state.clone())));
         working_set.add_decl(Box::new(AnalyticsDatasets::new(state.clone())));
