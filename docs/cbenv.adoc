@@ -217,6 +217,107 @@ Once registered the new cluster can be seen in the output of `cb-env managed`, a
 
 Note that by default although tls is enabled the shell will accept all certs. This can be changed with the `--tls-accept-all-certs` flag.
 
+=== `cb-env llm`
+
+```
+> cb-env llm --help
+Sets the active llm based on its identifier
+
+Usage:
+  > cb-env llm <identifier>
+
+Flags:
+  -h, --help - Display the help message for this command
+
+Parameters:
+  identifier <string>: the identifier of the llm
+```
+
+This command sets the active llm (large language model), which will be used by the <<_vector_enrich_doc,vector enrich-doc>>, <<_vector_enrich_text,vector enrich-text>> and <<_ask,ask>> commands.
+
+To be set as active the llm must be specified in the config file.
+For example:
+
+```
+[[llm]]
+identifier = "OpenAI-small"
+provider = "OpenAI"
+embed_model = "text-embedding-3-small"
+chat_model = "gpt-3.5-turbo"
+api_key = "get-your-own"
+
+[[llm]]
+identifier = "Bedrock-titan"
+provider = "Bedrock"
+embed_model = "amazon.titan-embed-text-v1"
+chat_model = "amazon.titan-text-express-v1"
+
+[[llm]]
+identifier = "Gemini-pro"
+provider = "Gemini"
+embed_model = "text-embedding-004"
+chat_model = "gemini-1.0-pro"
+api_key = "get-your-own"
+```
+
+The currently supported providers are Gemini (Google), Bedrock (AWS) and OpenAI.
+Specifying values other than these for the provider will result in an error when starting the shell.
+Notice that the Bedrock entry does not have an API key, this is because it requires the user to configure an appropriate role using the https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-role.html[AWS CLI].
+
+The `embed-model` field is the model that will be used to generate embeddings by the <<_vector_enrich_doc,vector enrich-doc>> and <<_vector_enrich_text,vector enrich-text>> commands.
+While the `chat-model` is the model that will be used to answer questions with the <<_ask,ask>> command.
+These models can be any that the provider's API supports, and should be provided in the format given in the provider's API docs.
+
+The api-keys can also be given separately in the <<_credentials_file_format,credentials file>>, for example:
+
+```
+[[llm]]
+identifier = "Gemini-pro"
+api_key = "get-your-own"
+```
+
+The identifier must be the same as the entry in the config file for this to work.
+
+The active llm can be checked using the <<_cb_env_and_the_environment,cb-env>> command:
+
+```
+👤 Charlie 🏠 remote in ☁️ default._default._default
+> cb-env
+╭──────────────────────┬───────────────╮
+│ username             │ Administrator │
+│ display_name         │ Charlie       │
+│ cluster              │ remote        │
+│ bucket               │ default       │
+│ scope                │ _default      │
+│ collection           │ _default      │
+│ cluster_type         │ provisioned   │
+│ capella-organization │ my-org        │
+│ llm                  │ Bedrock-titan │
+╰──────────────────────┴───────────────╯
+```
+
+When the active llm is changed using `cb-env llm` this will be reflected in the output of `cb-env`:
+
+```
+> cb-env llm Gemini-pro
+👤 Charlie 🏠 remote in ☁️ default._default._default
+> cb-env
+╭──────────────────────┬──────────────╮
+│ username             │ Administrator│
+│ display_name         │ Charlie      │
+│ cluster              │ remote       │
+│ bucket               │ default      │
+│ scope                │ _default     │
+│ collection           │ _default     │
+│ cluster_type         │ provisioned  │
+│ capella-organization │ my-org       │
+│ llm                  │ Gemini-pro   │
+╰──────────────────────┴──────────────╯
+```
+
+
+
+
 === Per command execution environments
 
 On many commands you will notice a set of flags which allow you to override the active execution environment.
