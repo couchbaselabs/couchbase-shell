@@ -3,7 +3,7 @@ use crate::cli::error::{
     client_error_to_shell_error, generic_error, serialize_error, unexpected_status_code_error,
 };
 use crate::cli::util::{
-    cluster_id_from_conn_str, cluster_identifiers_from, find_org_id, find_project_id,
+    cluster_from_conn_str, cluster_identifiers_from, find_org_id, find_project_id,
     get_active_cluster,
 };
 use crate::client::ManagementRequest;
@@ -241,7 +241,7 @@ pub fn create_capella_bucket(
         org_id.clone(),
     )?;
 
-    let cluster_id = cluster_id_from_conn_str(
+    let json_cluster = cluster_from_conn_str(
         identifier.clone(),
         ctrl_c.clone(),
         cluster.hostnames().clone(),
@@ -253,6 +253,13 @@ pub fn create_capella_bucket(
     )?;
 
     client
-        .create_bucket(org_id, project_id, cluster_id, payload, deadline, ctrl_c)
+        .create_bucket(
+            org_id,
+            project_id,
+            json_cluster.id(),
+            payload,
+            deadline,
+            ctrl_c,
+        )
         .map_err(|e| client_error_to_shell_error(e, span))
 }

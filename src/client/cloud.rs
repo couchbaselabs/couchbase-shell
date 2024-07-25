@@ -353,6 +353,32 @@ impl CapellaClient {
         Ok(())
     }
 
+    pub fn create_credentials(
+        &self,
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+        payload: String,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<(), ClientError> {
+        let request = CapellaRequest::CredentialsCreateV4 {
+            org_id,
+            project_id,
+            cluster_id,
+            payload,
+        };
+        let response = self.capella_request(request, deadline, ctrl_c)?;
+
+        if response.status() != 201 {
+            return Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            });
+        }
+        Ok(())
+    }
+
     pub fn get_bucket(
         &self,
         org_id: String,
@@ -548,6 +574,12 @@ pub enum CapellaRequest {
         cluster_id: String,
         payload: String,
     },
+    CredentialsCreateV4 {
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+        payload: String,
+    },
     DeleteAllowListEntry {
         cluster_id: String,
         payload: String,
@@ -674,6 +706,17 @@ impl CapellaRequest {
             }
             Self::CreateUser { cluster_id, .. } => {
                 format!("/v2/clusters/{}/users", cluster_id)
+            }
+            Self::CredentialsCreateV4 {
+                org_id,
+                project_id,
+                cluster_id,
+                ..
+            } => {
+                format!(
+                    "/v4/organizations/{}/projects/{}/clusters/{}/users",
+                    org_id, project_id, cluster_id
+                )
             }
             Self::DeleteAllowListEntry { cluster_id, .. } => {
                 format!("/v2/clusters/{}/allowlist", cluster_id)
@@ -813,6 +856,7 @@ impl CapellaRequest {
             Self::CreateClusterV4 { .. } => HttpVerb::Post,
             Self::CreateProject { .. } => HttpVerb::Post,
             Self::CreateUser { .. } => HttpVerb::Post,
+            Self::CredentialsCreateV4 { .. } => HttpVerb::Post,
             Self::DeleteAllowListEntry { .. } => HttpVerb::Delete,
             Self::DeleteBucket { .. } => HttpVerb::Delete,
             Self::DeleteClusterV4 { .. } => HttpVerb::Delete,
@@ -847,6 +891,7 @@ impl CapellaRequest {
             Self::CreateClusterV4 { payload, .. } => Some(payload.as_bytes().into()),
             Self::CreateProject { payload, .. } => Some(payload.as_bytes().into()),
             Self::CreateUser { payload, .. } => Some(payload.as_bytes().into()),
+            Self::CredentialsCreateV4 { payload, .. } => Some(payload.as_bytes().into()),
             Self::DeleteAllowListEntry { payload, .. } => Some(payload.as_bytes().into()),
             Self::DeleteBucket { payload, .. } => Some(payload.as_bytes().into()),
             Self::LoadSampleBucketV4 { payload, .. } => Some(payload.as_bytes().into()),

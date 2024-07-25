@@ -1,10 +1,9 @@
 //! The `buckets get` command fetches buckets from the server.
-
 use crate::state::{RemoteCapellaOrganization, State};
 
 use crate::cli::buckets_builder::{BucketSettings, JSONBucketSettings};
 use crate::cli::util::{
-    cluster_id_from_conn_str, cluster_identifiers_from, find_org_id, find_project_id,
+    cluster_from_conn_str, cluster_identifiers_from, find_org_id, find_project_id,
     get_active_cluster, NuValueMap,
 };
 use crate::client::{HttpResponse, ManagementRequest};
@@ -175,7 +174,7 @@ pub fn get_capella_bucket(
         org_id.clone(),
     )?;
 
-    let cluster_id = cluster_id_from_conn_str(
+    let json_cluster = cluster_from_conn_str(
         identifier.clone(),
         ctrl_c.clone(),
         cluster.hostnames().clone(),
@@ -190,7 +189,7 @@ pub fn get_capella_bucket(
         .get_bucket(
             org_id,
             project_id,
-            cluster_id,
+            json_cluster.id(),
             bucket_name,
             deadline,
             ctrl_c,

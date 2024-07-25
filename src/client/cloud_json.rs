@@ -390,3 +390,27 @@ impl Bucket {
         self.durability_level.clone()
     }
 }
+
+#[derive(Debug, Serialize)]
+pub(crate) struct CredentialsCreateRequest {
+    name: String,
+    password: String,
+    access: Vec<Access>,
+}
+
+#[derive(Debug, Serialize)]
+struct Access {
+    privileges: Vec<String>,
+}
+
+impl CredentialsCreateRequest {
+    pub fn new(name: String, password: String) -> Self {
+        Self {
+            name,
+            password,
+            access: vec![Access {
+                privileges: vec!["write".to_string()],
+            }],
+        }
+    }
+}
