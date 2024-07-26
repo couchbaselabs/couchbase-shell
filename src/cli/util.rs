@@ -1,5 +1,3 @@
-use super::cloud_json::JSONCloudsOrganizationsResponse;
-use crate::cli::cloud_json::{JSONCloudClustersV4Response, JSONCloudsProjectsResponse};
 use crate::cli::error::CBShellError::{
     GenericError, MustNotBeCapella, ProjectNotFound, UnexpectedResponseStatus,
 };
@@ -8,6 +6,8 @@ use crate::cli::error::{
     malformed_response_error, no_active_bucket_error, unexpected_status_code_error,
 };
 use crate::cli::CBShellError::ClusterNotFound;
+use crate::client::cloud_json::JSONCloudsOrganizationsResponse;
+use crate::client::cloud_json::JSONCloudsProjectsResponse;
 use crate::client::{CapellaClient, CapellaRequest, HttpResponse};
 use crate::state::State;
 use crate::{RemoteCluster, RemoteClusterType};
@@ -299,7 +299,7 @@ pub fn validate_is_not_cloud(
 
 // We take a conn_string instead of name since cluster local identfiers can differ from names of
 // clusters
-pub(crate) fn find_cluster_id(
+pub(crate) fn cluster_id_from_conn_str(
     identifier: String,
     ctrl_c: Arc<AtomicBool>,
     hostnames: Vec<String>,
@@ -310,25 +310,10 @@ pub(crate) fn find_cluster_id(
     project_id: String,
 ) -> Result<String, ShellError> {
     let response = client
-        .capella_request(
-            CapellaRequest::GetClustersV4 { org_id, project_id },
-            deadline,
-            ctrl_c,
-        )
+        .get_clusters(org_id, project_id, deadline, ctrl_c)
         .map_err(|e| client_error_to_shell_error(e, span))?;
-    if response.status() != 200 {
-        return Err(UnexpectedResponseStatus {
-            status_code: response.status(),
-            message: response.content().to_string(),
-            span,
-        }
-        .into());
-    }
 
-    let content: JSONCloudClustersV4Response = serde_json::from_str(response.content())
-        .map_err(|e| deserialize_error(e.to_string(), span))?;
-
-    for c in content.items() {
+    for c in response.items() {
         for conn_str in hostnames.clone() {
             if c.connection_string().contains(conn_str.as_str()) {
                 return Ok(c.id().to_string());

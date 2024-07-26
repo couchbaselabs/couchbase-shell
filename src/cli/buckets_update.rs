@@ -1,15 +1,15 @@
 use crate::cli::buckets_builder::{BucketSettings, DurabilityLevel};
-use crate::cli::buckets_get::{check_response, get_capella_bucket, get_server_bucket};
+use crate::cli::buckets_get::{get_capella_bucket, get_server_bucket};
 use crate::cli::error::{client_error_to_shell_error, generic_error, serialize_error};
+use crate::cli::unexpected_status_code_error;
 use crate::cli::util::{
-    cluster_identifiers_from, find_cluster_id, find_org_id, find_project_id, get_active_cluster,
+    cluster_id_from_conn_str, cluster_identifiers_from, find_org_id, find_project_id,
+    get_active_cluster,
 };
-use crate::client::{CapellaRequest, HttpResponse, ManagementRequest};
+use crate::client::ManagementRequest;
 use crate::remote_cluster::RemoteCluster;
 use crate::remote_cluster::RemoteClusterType::Provisioned;
 use crate::state::{RemoteCapellaOrganization, State};
-use base64::prelude::BASE64_STANDARD;
-use base64::Engine;
 use log::debug;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
@@ -149,7 +149,7 @@ fn buckets_update(
             span,
         )?;
 
-        let response = if active_cluster.cluster_type() == Provisioned {
+        if active_cluster.cluster_type() == Provisioned {
             let org = if let Some(cluster_org) = active_cluster.capella_org() {
                 guard.get_capella_org(cluster_org)
             } else {
@@ -168,8 +168,6 @@ fn buckets_update(
         } else {
             update_server_bucket(settings, active_cluster, ctrl_c.clone(), span)
         }?;
-
-        check_response(&response, name.clone(), span)?;
     }
 
     Ok(PipelineData::empty())
@@ -180,12 +178,12 @@ fn update_server_bucket(
     cluster: &RemoteCluster,
     ctrl_c: Arc<AtomicBool>,
     span: Span,
-) -> Result<HttpResponse, ShellError> {
+) -> Result<(), ShellError> {
     let form = settings.as_form();
     let payload =
         serde_urlencoded::to_string(form).map_err(|e| serialize_error(e.to_string(), span))?;
 
-    cluster
+    let response = cluster
         .cluster()
         .http_client()
         .management_request(
@@ -196,7 +194,16 @@ fn update_server_bucket(
             Instant::now().add(cluster.timeouts().management_timeout()),
             ctrl_c.clone(),
         )
-        .map_err(|e| client_error_to_shell_error(e, span))
+        .map_err(|e| client_error_to_shell_error(e, span))?;
+
+    if response.status() != 200 {
+        return Err(unexpected_status_code_error(
+            response.status(),
+            response.content(),
+            span,
+        ));
+    }
+    Ok(())
 }
 
 fn update_capella_bucket(
@@ -207,7 +214,7 @@ fn update_capella_bucket(
     settings: BucketSettings,
     ctrl_c: Arc<AtomicBool>,
     span: Span,
-) -> Result<HttpResponse, ShellError> {
+) -> Result<(), ShellError> {
     let client = org.client();
     let deadline = Instant::now().add(org.timeout());
 
@@ -222,7 +229,7 @@ fn update_capella_bucket(
         org_id.clone(),
     )?;
 
-    let cluster_id = find_cluster_id(
+    let cluster_id = cluster_id_from_conn_str(
         identifier.clone(),
         ctrl_c.clone(),
         cluster.hostnames().clone(),
@@ -236,16 +243,14 @@ fn update_capella_bucket(
     let json = settings.as_json();
 
     client
-        .capella_request(
-            CapellaRequest::UpdateBucketV4 {
-                org_id,
-                project_id,
-                cluster_id,
-                bucket_id: BASE64_STANDARD.encode(settings.name()),
-                payload: serde_json::to_string(&json).unwrap(),
-            },
+        .update_bucket(
+            org_id,
+            project_id,
+            cluster_id,
+            settings.name().into(),
+            serde_json::to_string(&json).unwrap(),
             deadline,
-            ctrl_c.clone(),
+            ctrl_c,
         )
         .map_err(|e| client_error_to_shell_error(e, span))
 }

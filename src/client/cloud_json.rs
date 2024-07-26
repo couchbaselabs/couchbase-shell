@@ -56,12 +56,12 @@ pub(crate) struct JSONCloudClustersV4Response {
 }
 
 impl JSONCloudClustersV4Response {
-    pub fn items(&self) -> &Vec<JSONCloudsClustersV4ResponseItem> {
-        self.data.as_ref()
+    pub fn items(&self) -> Vec<JSONCloudsClustersV4ResponseItem> {
+        self.data.clone()
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct JSONCloudsClustersV4ResponseItem {
     id: String,
@@ -80,7 +80,7 @@ pub(crate) struct JSONCloudsClustersV4ResponseItem {
     cmek_id: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub(crate) struct CloudProvider {
     #[serde(rename(serialize = "type"))]
     #[serde(alias = "type")]
@@ -138,7 +138,7 @@ impl TryFrom<&str> for Provider {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub(crate) struct CouchbaseServer {
     version: String,
 }
@@ -149,7 +149,7 @@ impl CouchbaseServer {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct AuditData {
     created_by: String,
@@ -287,20 +287,20 @@ impl JSONCloudCreateClusterRequestV4 {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub(crate) struct Support {
     plan: String,
     timezone: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub(crate) struct Availability {
     #[serde(rename(serialize = "type"))]
     #[serde(alias = "type")]
     availability_type: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ServiceGroup {
     node: Node,
@@ -310,19 +310,19 @@ pub(crate) struct ServiceGroup {
     services: Option<Vec<String>>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub(crate) struct Node {
     compute: Compute,
     disk: Disk,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub(crate) struct Compute {
     cpu: i32,
     ram: i32,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Disk {
     #[serde(rename(serialize = "type"))]

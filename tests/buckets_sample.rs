@@ -33,8 +33,7 @@ fn import_sample_invalid_sample() {
         let json = sandbox.parse_out_to_json(out.out).unwrap();
 
         assert_eq!("", out.err);
-        assert!(json["status"].to_string().contains("failure - Sample"));
-        assert!(json["status"].to_string().contains("not a valid sample"));
+        assert!(json["status"].to_string().contains("Invalid sample bucket"));
     });
 }
 

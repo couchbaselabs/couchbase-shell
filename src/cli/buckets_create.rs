@@ -3,9 +3,10 @@ use crate::cli::error::{
     client_error_to_shell_error, generic_error, serialize_error, unexpected_status_code_error,
 };
 use crate::cli::util::{
-    cluster_identifiers_from, find_cluster_id, find_org_id, find_project_id, get_active_cluster,
+    cluster_id_from_conn_str, cluster_identifiers_from, find_org_id, find_project_id,
+    get_active_cluster,
 };
-use crate::client::{CapellaRequest, HttpResponse, ManagementRequest};
+use crate::client::ManagementRequest;
 use crate::remote_cluster::RemoteCluster;
 use crate::remote_cluster::RemoteClusterType::Provisioned;
 use crate::state::{RemoteCapellaOrganization, State};
@@ -160,7 +161,7 @@ fn buckets_create(
             .validate(active_cluster.cluster_type() == Provisioned)
             .map_err(|e| generic_error("Invalid argument", e.to_string(), span))?;
 
-        let response = if active_cluster.cluster_type() == Provisioned {
+        if active_cluster.cluster_type() == Provisioned {
             let org = if let Some(cluster_org) = active_cluster.capella_org() {
                 guard.get_capella_org(cluster_org)
             } else {
@@ -177,27 +178,14 @@ fn buckets_create(
                 serde_json::to_string(&json).unwrap(),
                 ctrl_c.clone(),
                 span,
-            )?
+            )
         } else {
             let form = settings.as_form();
             let payload = serde_urlencoded::to_string(&form)
                 .map_err(|e| serialize_error(e.to_string(), span))?;
 
-            create_server_bucket(payload, active_cluster, span, ctrl_c.clone())?
-        };
-
-        match response.status() {
-            200 => {}
-            201 => {}
-            202 => {}
-            _ => {
-                return Err(unexpected_status_code_error(
-                    response.status(),
-                    response.content(),
-                    span,
-                ));
-            }
-        }
+            create_server_bucket(payload, active_cluster, span, ctrl_c.clone())
+        }?;
     }
 
     Ok(PipelineData::empty())
@@ -208,8 +196,8 @@ pub fn create_server_bucket(
     cluster: &RemoteCluster,
     span: Span,
     ctrl_c: Arc<AtomicBool>,
-) -> Result<HttpResponse, ShellError> {
-    cluster
+) -> Result<(), ShellError> {
+    let response = cluster
         .cluster()
         .http_client()
         .management_request(
@@ -217,7 +205,17 @@ pub fn create_server_bucket(
             Instant::now().add(cluster.timeouts().management_timeout()),
             ctrl_c.clone(),
         )
-        .map_err(|e| client_error_to_shell_error(e, span))
+        .map_err(|e| client_error_to_shell_error(e, span))?;
+
+    if response.status() != 202 {
+        return Err(unexpected_status_code_error(
+            response.status(),
+            response.content(),
+            span,
+        ));
+    }
+
+    Ok(())
 }
 
 pub fn create_capella_bucket(
@@ -228,7 +226,7 @@ pub fn create_capella_bucket(
     payload: String,
     ctrl_c: Arc<AtomicBool>,
     span: Span,
-) -> Result<HttpResponse, ShellError> {
+) -> Result<(), ShellError> {
     let client = org.client();
     let deadline = Instant::now().add(org.timeout());
 
@@ -243,7 +241,7 @@ pub fn create_capella_bucket(
         org_id.clone(),
     )?;
 
-    let cluster_id = find_cluster_id(
+    let cluster_id = cluster_id_from_conn_str(
         identifier.clone(),
         ctrl_c.clone(),
         cluster.hostnames().clone(),
@@ -255,15 +253,6 @@ pub fn create_capella_bucket(
     )?;
 
     client
-        .capella_request(
-            CapellaRequest::CreateBucketV4 {
-                org_id,
-                project_id,
-                cluster_id,
-                payload,
-            },
-            deadline,
-            ctrl_c.clone(),
-        )
+        .create_bucket(org_id, project_id, cluster_id, payload, deadline, ctrl_c)
         .map_err(|e| client_error_to_shell_error(e, span))
 }

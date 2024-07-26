@@ -1,14 +1,13 @@
 //! The `buckets get` command fetches buckets from the server.
 
 use crate::state::{RemoteCapellaOrganization, State};
-use base64::prelude::*;
 
 use crate::cli::buckets_builder::{BucketSettings, JSONBucketSettings};
 use crate::cli::util::{
-    cluster_identifiers_from, find_cluster_id, find_org_id, find_project_id, get_active_cluster,
-    NuValueMap,
+    cluster_id_from_conn_str, cluster_identifiers_from, find_org_id, find_project_id,
+    get_active_cluster, NuValueMap,
 };
-use crate::client::{CapellaRequest, HttpResponse, ManagementRequest};
+use crate::client::{HttpResponse, ManagementRequest};
 use log::debug;
 use std::convert::TryFrom;
 use std::ops::Add;
@@ -16,7 +15,6 @@ use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
-use crate::cli::cloud_json::JSONCloudsBucketsV4ResponseItem;
 use crate::cli::error::{
     bucket_not_found_error, client_error_to_shell_error, deserialize_error,
     malformed_response_error, unexpected_status_code_error,
@@ -159,7 +157,7 @@ pub fn get_capella_bucket(
     org: &RemoteCapellaOrganization,
     project: String,
     cluster: &RemoteCluster,
-    bucket: String,
+    bucket_name: String,
     identifier: String,
     ctrl_c: Arc<AtomicBool>,
     span: Span,
@@ -177,7 +175,7 @@ pub fn get_capella_bucket(
         org_id.clone(),
     )?;
 
-    let cluster_id = find_cluster_id(
+    let cluster_id = cluster_id_from_conn_str(
         identifier.clone(),
         ctrl_c.clone(),
         cluster.hostnames().clone(),
@@ -188,28 +186,21 @@ pub fn get_capella_bucket(
         project_id.clone(),
     )?;
 
-    let response = client
-        .capella_request(
-            CapellaRequest::GetBucketV4 {
-                org_id,
-                project_id,
-                cluster_id,
-                bucket_id: BASE64_STANDARD.encode(bucket.clone()),
-            },
+    let bucket = client
+        .get_bucket(
+            org_id,
+            project_id,
+            cluster_id,
+            bucket_name,
             deadline,
-            ctrl_c.clone(),
+            ctrl_c,
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
-    check_response(&response, bucket.clone(), span)?;
-
-    let json: JSONCloudsBucketsV4ResponseItem = serde_json::from_str(response.content())
-        .map_err(|e| deserialize_error(e.to_string(), span))?;
-
-    BucketSettings::try_from(json).map_err(|e| {
+    BucketSettings::try_from(&bucket).map_err(|e| {
         malformed_response_error(
             "Could not parse bucket settings",
-            format!("Error: {}, response content: {:?}", e, response.content()),
+            format!("Error: {}, bucket: {:?}", e, bucket),
             span,
         )
     })

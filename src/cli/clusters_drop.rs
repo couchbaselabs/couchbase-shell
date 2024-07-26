@@ -1,11 +1,10 @@
-use crate::client::CapellaRequest;
 use crate::state::State;
 use log::debug;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
-use crate::cli::error::{client_error_to_shell_error, unexpected_status_code_error};
+use crate::cli::error::client_error_to_shell_error;
 use crate::cli::util::{find_org_id, find_project_id};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
@@ -91,7 +90,7 @@ fn clusters_drop(
     )?;
 
     let cluster = client
-        .find_cluster(
+        .get_cluster(
             name,
             org_id.clone(),
             project_id.clone(),
@@ -100,24 +99,9 @@ fn clusters_drop(
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
-    let response = client
-        .capella_request(
-            CapellaRequest::DeleteClusterV4 {
-                org_id,
-                project_id,
-                cluster_id: cluster.id(),
-            },
-            deadline,
-            ctrl_c,
-        )
+    client
+        .delete_cluster(org_id, project_id, cluster.id(), deadline, ctrl_c)
         .map_err(|e| client_error_to_shell_error(e, span))?;
-    if response.status() != 202 {
-        return Err(unexpected_status_code_error(
-            response.status(),
-            response.content(),
-            span,
-        ));
-    };
 
     Ok(PipelineData::empty())
 }

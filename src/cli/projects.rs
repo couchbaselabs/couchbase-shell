@@ -1,16 +1,12 @@
-use crate::cli::cloud_json::JSONCloudsProjectsResponse;
 use crate::cli::util::find_org_id;
 use crate::cli::util::NuValueMap;
-use crate::client::CapellaRequest;
 use crate::state::State;
 use log::debug;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
-use crate::cli::error::{
-    client_error_to_shell_error, deserialize_error, unexpected_status_code_error,
-};
+use crate::cli::error::client_error_to_shell_error;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, IntoPipelineData, PipelineData, ShellError, Signature, Value};
@@ -69,22 +65,12 @@ fn projects(
 
     let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
 
-    let response = client
-        .capella_request(CapellaRequest::GetProjects { org_id }, deadline, ctrl_c)
+    let projects = client
+        .get_projects(org_id, deadline, ctrl_c)
         .map_err(|e| client_error_to_shell_error(e, span))?;
-    if response.status() != 200 {
-        return Err(unexpected_status_code_error(
-            response.status(),
-            response.content(),
-            span,
-        ));
-    };
-
-    let content: JSONCloudsProjectsResponse = serde_json::from_str(response.content())
-        .map_err(|e| deserialize_error(e.to_string(), span))?;
 
     let mut results = vec![];
-    for project in content.items() {
+    for project in projects.items() {
         let mut collected = NuValueMap::default();
         collected.add_string("name", project.name(), span);
         collected.add_string("id", project.id(), span);

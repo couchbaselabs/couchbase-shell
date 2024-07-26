@@ -1,14 +1,10 @@
-use crate::cli::cloud_json::JSONCloudsClustersV4ResponseItem;
-use crate::client::CapellaRequest;
 use crate::state::State;
 use log::debug;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
-use crate::cli::error::{
-    client_error_to_shell_error, deserialize_error, unexpected_status_code_error,
-};
+use crate::cli::error::client_error_to_shell_error;
 use crate::cli::util::{convert_json_value_to_nu_value, find_org_id, find_project_id, NuValueMap};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
@@ -93,7 +89,7 @@ fn clusters_get(
     )?;
 
     let cluster = client
-        .find_cluster(
+        .get_cluster(
             name,
             org_id.clone(),
             project_id.clone(),
@@ -101,26 +97,6 @@ fn clusters_get(
             ctrl_c.clone(),
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
-    let response = client
-        .capella_request(
-            CapellaRequest::GetClusterV4 {
-                org_id,
-                project_id: project_id.clone(),
-                cluster_id: cluster.id(),
-            },
-            deadline,
-            ctrl_c,
-        )
-        .map_err(|e| client_error_to_shell_error(e, span))?;
-    if response.status() != 200 {
-        return Err(unexpected_status_code_error(
-            response.status(),
-            response.content(),
-            span,
-        ));
-    };
-    let cluster: JSONCloudsClustersV4ResponseItem = serde_json::from_str(response.content())
-        .map_err(|e| deserialize_error(e.to_string(), span))?;
 
     let mut collected = NuValueMap::default();
     collected.add_string("name", cluster.name(), span);

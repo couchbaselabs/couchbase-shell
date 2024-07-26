@@ -18,7 +18,6 @@ mod buckets_update;
 mod cbenv_managed;
 mod cbenv_register;
 mod cbenv_unregister;
-mod cloud_json;
 mod clusters;
 mod clusters_create;
 mod clusters_drop;

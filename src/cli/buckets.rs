@@ -1,9 +1,10 @@
 use crate::cli::buckets_builder::{BucketSettings, JSONBucketSettings};
 use crate::cli::buckets_get::bucket_to_nu_value;
 use crate::cli::util::{
-    cluster_identifiers_from, find_cluster_id, find_org_id, find_project_id, get_active_cluster,
+    cluster_id_from_conn_str, cluster_identifiers_from, find_org_id, find_project_id,
+    get_active_cluster,
 };
-use crate::client::{CapellaRequest, ManagementRequest};
+use crate::client::ManagementRequest;
 use crate::state::{RemoteCapellaOrganization, State};
 use log::debug;
 use std::convert::TryFrom;
@@ -12,7 +13,6 @@ use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
-use crate::cli::cloud_json::JSONCloudBucketsV4Response;
 use crate::cli::error::{
     client_error_to_shell_error, deserialize_error, malformed_response_error,
     unexpected_status_code_error,
@@ -186,7 +186,7 @@ pub fn get_capella_buckets(
         org_id.clone(),
     )?;
 
-    let cluster_id = find_cluster_id(
+    let cluster_id = cluster_id_from_conn_str(
         identifier.clone(),
         ctrl_c.clone(),
         cluster.hostnames().clone(),
@@ -197,38 +197,18 @@ pub fn get_capella_buckets(
         project_id.clone(),
     )?;
 
-    let response = client
-        .capella_request(
-            CapellaRequest::GetBucketsV4 {
-                org_id,
-                project_id,
-                cluster_id,
-            },
-            deadline,
-            ctrl_c.clone(),
-        )
+    let buckets = client
+        .get_buckets(org_id, project_id, cluster_id, deadline, ctrl_c)
         .map_err(|e| client_error_to_shell_error(e, span))?;
-
-    if response.status() != 200 {
-        return Err(unexpected_status_code_error(
-            response.status(),
-            response.content(),
-            span,
-        ));
-    }
-
-    let content: JSONCloudBucketsV4Response = serde_json::from_str(response.content())
-        .map_err(|e| deserialize_error(e.to_string(), span))?;
-
-    let mut buckets: Vec<BucketSettings> = vec![];
-    for bucket in content.items() {
-        buckets.push(BucketSettings::try_from(bucket).map_err(|e| {
+    let mut buckets_settings: Vec<BucketSettings> = vec![];
+    for bucket in buckets.items() {
+        buckets_settings.push(BucketSettings::try_from(&bucket).map_err(|e| {
             malformed_response_error(
                 "Could not parse bucket settings",
-                format!("Error: {}, response content: {}", e, response.content()),
+                format!("Error: {}, bucket settings: {:?}", e, bucket),
                 span,
             )
         })?);
     }
-    Ok(buckets)
+    Ok(buckets_settings)
 }
