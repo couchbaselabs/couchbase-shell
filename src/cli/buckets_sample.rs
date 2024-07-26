@@ -1,9 +1,9 @@
 use crate::cli::error::client_error_to_shell_error;
 use crate::cli::util::{
-    cluster_identifiers_from, find_cluster_id, find_org_id, find_project_id, get_active_cluster,
-    NuValueMap,
+    cluster_id_from_conn_str, cluster_identifiers_from, find_org_id, find_project_id,
+    get_active_cluster, NuValueMap,
 };
-use crate::client::{CapellaRequest, HttpResponse, ManagementRequest};
+use crate::client::{ClientError, ManagementRequest};
 use crate::remote_cluster::RemoteCluster;
 use crate::remote_cluster::RemoteClusterType::Provisioned;
 use crate::state::{RemoteCapellaOrganization, State};
@@ -83,7 +83,7 @@ fn load_sample_bucket(
     for identifier in cluster_identifiers {
         let cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
-        let response = if cluster.cluster_type() == Provisioned {
+        let result = if cluster.cluster_type() == Provisioned {
             let org = if let Some(cluster_org) = cluster.capella_org() {
                 guard.get_capella_org(cluster_org)
             } else {
@@ -95,73 +95,24 @@ fn load_sample_bucket(
                 guard.active_project()?,
                 cluster,
                 identifier.clone(),
-                format!("{{\"name\": \"{}\"}}", bucket_name.clone()),
+                bucket_name.clone(),
                 ctrl_c.clone(),
                 span,
             )
         } else {
             load_sever_sample(cluster, bucket_name.clone(), ctrl_c.clone(), span)
-        }?;
+        };
 
         let mut collected = NuValueMap::default();
         collected.add_string("cluster", identifier.clone(), span);
         collected.add_string("sample", bucket_name.clone(), span);
 
-        match response.status() {
-            201 | 202 => {
+        match result {
+            Ok(_) => {
                 collected.add_string("status", "success", span);
             }
-            // Couchbase server returns 400 for invalid/not-found and already loaded sample
-            400 => {
-                if response.content().contains("already loaded") {
-                    collected.add_string(
-                        "status",
-                        format!(
-                            "failure - Sample bucket {} is already loaded.",
-                            bucket_name.clone()
-                        ),
-                        span,
-                    );
-                } else if response.content().contains("not a valid sample") {
-                    collected.add_string(
-                        "status",
-                        format!(
-                            "failure - Sample {} is not a valid sample.",
-                            bucket_name.clone()
-                        ),
-                        span,
-                    );
-                } else {
-                    collected.add_string(
-                        "status",
-                        format!(
-                            "failure - unexpected error occurred: {}",
-                            response.content()
-                        ),
-                        span,
-                    );
-                }
-            }
-            // Capella v4 API returns 422 for invalid/not-found sample
-            422 => {
-                collected.add_string(
-                    "status",
-                    format!(
-                        "failure - Sample {} is not a valid sample.",
-                        bucket_name.clone()
-                    ),
-                    span,
-                );
-            }
-            _ => {
-                collected.add_string(
-                    "status",
-                    format!(
-                        "failure - unexpected error occurred: {}",
-                        response.content()
-                    ),
-                    span,
-                );
+            Err(e) => {
+                collected.add_string("status", format!("failure - {}", e), span);
             }
         }
 
@@ -180,10 +131,10 @@ fn load_capella_sample(
     project: String,
     cluster: &RemoteCluster,
     identifier: String,
-    payload: String,
+    sample: String,
     ctrl_c: Arc<AtomicBool>,
     span: Span,
-) -> Result<HttpResponse, ShellError> {
+) -> Result<(), ShellError> {
     let client = org.client();
     let deadline = Instant::now().add(org.timeout());
 
@@ -198,7 +149,7 @@ fn load_capella_sample(
         org_id.clone(),
     )?;
 
-    let cluster_id = find_cluster_id(
+    let cluster_id = cluster_id_from_conn_str(
         identifier.clone(),
         ctrl_c.clone(),
         cluster.hostnames().clone(),
@@ -210,13 +161,11 @@ fn load_capella_sample(
     )?;
 
     client
-        .capella_request(
-            CapellaRequest::LoadSampleBucketV4 {
-                org_id,
-                project_id,
-                cluster_id,
-                payload,
-            },
+        .load_sample_bucket(
+            org_id,
+            project_id,
+            cluster_id,
+            sample,
             deadline,
             ctrl_c.clone(),
         )
@@ -225,19 +174,40 @@ fn load_capella_sample(
 
 fn load_sever_sample(
     cluster: &RemoteCluster,
-    name: String,
+    sample: String,
     ctrl_c: Arc<AtomicBool>,
     span: Span,
-) -> Result<HttpResponse, ShellError> {
-    cluster
+) -> Result<(), ShellError> {
+    let response = cluster
         .cluster()
         .http_client()
         .management_request(
             ManagementRequest::LoadSampleBucket {
-                name: format!("[\"{}\"]", name),
+                name: format!("[\"{}\"]", sample),
             },
             Instant::now().add(cluster.timeouts().management_timeout()),
             ctrl_c,
         )
-        .map_err(|e| client_error_to_shell_error(e, span))
+        .map_err(|e| client_error_to_shell_error(e, span))?;
+
+    match response.status() {
+        202 => Ok(()),
+        400 => {
+            if response.content().contains("already loaded") {
+                Err(ClientError::SampleAlreadyLoaded { sample })
+            } else if response.content().contains("not a valid sample") {
+                Err(ClientError::InvalidSample { sample })
+            } else {
+                Err(ClientError::RequestFailed {
+                    reason: Some(response.content().into()),
+                    key: None,
+                })
+            }
+        }
+        _ => Err(ClientError::RequestFailed {
+            reason: Some(response.content().into()),
+            key: None,
+        }),
+    }
+    .map_err(|e| client_error_to_shell_error(e, span))
 }

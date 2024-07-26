@@ -1,13 +1,16 @@
 use crate::cli::CtrlcFuture;
+use crate::client::cloud_json::{
+    JSONCloudBucketsV4Response, JSONCloudClustersV4Response, JSONCloudsBucketsV4ResponseItem,
+    JSONCloudsClustersV4ResponseItem, JSONCloudsOrganizationsResponse, JSONCloudsProjectsResponse,
+};
 use crate::client::error::ClientError;
 use crate::client::http_handler::{HttpResponse, HttpVerb};
 use crate::client::Endpoint;
+use base64::prelude::BASE64_STANDARD;
 use base64::{engine::general_purpose, Engine as _};
 use hmac::{Hmac, Mac};
 use log::debug;
 use reqwest::Client;
-use serde::Deserialize;
-use serde_json::Value;
 use sha2::Sha256;
 use std::ops::Sub;
 use std::sync::atomic::AtomicBool;
@@ -18,21 +21,6 @@ use tokio::{select, time::Instant};
 
 const CLOUD_URL: &str = "https://cloudapi.cloud.couchbase.com";
 pub const CAPELLA_SRV_SUFFIX: &str = "cloud.couchbase.com";
-
-#[derive(Debug, Deserialize)]
-pub struct LimitedClusterSummary {
-    id: String,
-    name: String,
-}
-
-impl LimitedClusterSummary {
-    pub fn id(&self) -> String {
-        self.id.clone()
-    }
-    pub fn name(&self) -> String {
-        self.name.clone()
-    }
-}
 
 pub struct CapellaClient {
     secret_key: String,
@@ -160,49 +148,6 @@ impl CapellaClient {
         self.http_do(HttpVerb::Put, path, payload, deadline, ctrl_c)
     }
 
-    pub fn find_cluster(
-        &self,
-        cluster_name: String,
-        org_id: String,
-        project_id: String,
-        deadline: Instant,
-        ctrl_c: Arc<AtomicBool>,
-    ) -> Result<LimitedClusterSummary, ClientError> {
-        let request = CapellaRequest::GetClustersV4 { org_id, project_id };
-        let (content, status) = self.http_get(request.path().as_str(), deadline, ctrl_c)?;
-
-        if status != 200 {
-            return Err(ClientError::RequestFailed {
-                reason: Some(content),
-                key: None,
-            });
-        }
-
-        let resp: Value = serde_json::from_str(content.as_str())?;
-        let items = match resp.get("data") {
-            Some(i) => i,
-            None => {
-                return Err(ClientError::RequestFailed {
-                    reason: Some(
-                        "Get clusters response payload unexpected format, missing data".to_string(),
-                    ),
-                    key: None,
-                })
-            }
-        };
-
-        let clusters: Vec<LimitedClusterSummary> =
-            serde_json::from_str(items.to_string().as_str())?;
-
-        for c in clusters {
-            if c.name() == cluster_name {
-                return Ok(c);
-            }
-        }
-
-        Err(ClientError::CapellaClusterNotFound { name: cluster_name })
-    }
-
     pub fn capella_request(
         &self,
         request: CapellaRequest,
@@ -227,6 +172,345 @@ impl CapellaClient {
             status,
             Endpoint::new(CLOUD_URL.to_string(), 443),
         ))
+    }
+
+    pub fn get_organizations(
+        &self,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<JSONCloudsOrganizationsResponse, ClientError> {
+        let request = CapellaRequest::GetOrganizations {};
+        let response = self.capella_request(request, deadline, ctrl_c)?;
+
+        if response.status() != 200 {
+            return Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            });
+        };
+
+        let resp: JSONCloudsOrganizationsResponse = serde_json::from_str(response.content())?;
+        Ok(resp)
+    }
+
+    pub fn get_projects(
+        &self,
+        org_id: String,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<JSONCloudsProjectsResponse, ClientError> {
+        let request = CapellaRequest::GetProjects { org_id };
+        let response = self.capella_request(request, deadline, ctrl_c)?;
+
+        if response.status() != 200 {
+            return Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            });
+        };
+
+        let resp: JSONCloudsProjectsResponse = serde_json::from_str(response.content())?;
+        Ok(resp)
+    }
+
+    pub fn create_project(
+        &self,
+        org_id: String,
+        payload: String,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<(), ClientError> {
+        let request = CapellaRequest::CreateProject { org_id, payload };
+        let response = self.capella_request(request, deadline, ctrl_c)?;
+
+        if response.status() != 201 {
+            return Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            });
+        };
+
+        Ok(())
+    }
+
+    pub fn delete_project(
+        &self,
+        org_id: String,
+        project_id: String,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<(), ClientError> {
+        let request = CapellaRequest::DeleteProject { org_id, project_id };
+        let response = self.capella_request(request, deadline, ctrl_c)?;
+
+        if response.status() != 204 {
+            return Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            });
+        };
+
+        Ok(())
+    }
+
+    pub fn get_cluster(
+        &self,
+        cluster_name: String,
+        org_id: String,
+        project_id: String,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<JSONCloudsClustersV4ResponseItem, ClientError> {
+        let request = CapellaRequest::GetClustersV4 { org_id, project_id };
+        let response = self.capella_request(request, deadline, ctrl_c)?;
+
+        if response.status() != 200 {
+            return Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            });
+        }
+
+        let resp: JSONCloudClustersV4Response = serde_json::from_str(response.content())?;
+
+        for c in resp.items() {
+            if c.name() == cluster_name {
+                return Ok(c);
+            }
+        }
+
+        Err(ClientError::CapellaClusterNotFound { name: cluster_name })
+    }
+
+    pub fn get_clusters(
+        &self,
+        org_id: String,
+        project_id: String,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<JSONCloudClustersV4Response, ClientError> {
+        let request = CapellaRequest::GetClustersV4 { org_id, project_id };
+        let response = self.capella_request(request, deadline, ctrl_c)?;
+
+        if response.status() != 200 {
+            return Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            });
+        }
+
+        let resp: JSONCloudClustersV4Response = serde_json::from_str(response.content())?;
+        Ok(resp)
+    }
+
+    pub fn create_cluster(
+        &self,
+        org_id: String,
+        project_id: String,
+        payload: String,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<(), ClientError> {
+        let request = CapellaRequest::CreateClusterV4 {
+            org_id,
+            project_id,
+            payload,
+        };
+        let response = self.capella_request(request, deadline, ctrl_c)?;
+
+        if response.status() != 202 {
+            return Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            });
+        }
+        Ok(())
+    }
+
+    pub fn delete_cluster(
+        &self,
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<(), ClientError> {
+        let request = CapellaRequest::DeleteClusterV4 {
+            org_id,
+            project_id,
+            cluster_id,
+        };
+        let response = self.capella_request(request, deadline, ctrl_c)?;
+
+        if response.status() != 202 {
+            return Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            });
+        }
+        Ok(())
+    }
+
+    pub fn get_bucket(
+        &self,
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+        bucket: String,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<JSONCloudsBucketsV4ResponseItem, ClientError> {
+        let request = CapellaRequest::GetBucketV4 {
+            org_id,
+            project_id,
+            cluster_id,
+            bucket_id: BASE64_STANDARD.encode(bucket),
+        };
+        let response = self.capella_request(request, deadline, ctrl_c)?;
+
+        if response.status() != 200 {
+            return Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            });
+        }
+
+        let resp: JSONCloudsBucketsV4ResponseItem = serde_json::from_str(response.content())?;
+        Ok(resp)
+    }
+
+    pub fn get_buckets(
+        &self,
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<JSONCloudBucketsV4Response, ClientError> {
+        let request = CapellaRequest::GetBucketsV4 {
+            org_id,
+            project_id,
+            cluster_id,
+        };
+        let response = self.capella_request(request, deadline, ctrl_c)?;
+
+        if response.status() != 200 {
+            return Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            });
+        }
+
+        let resp: JSONCloudBucketsV4Response = serde_json::from_str(response.content())?;
+        Ok(resp)
+    }
+
+    pub fn create_bucket(
+        &self,
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+        payload: String,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<(), ClientError> {
+        let request = CapellaRequest::CreateBucketV4 {
+            org_id,
+            project_id,
+            cluster_id,
+            payload,
+        };
+        let response = self.capella_request(request, deadline, ctrl_c)?;
+
+        if response.status() != 201 {
+            return Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            });
+        }
+        Ok(())
+    }
+
+    pub fn delete_bucket(
+        &self,
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+        bucket: String,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<(), ClientError> {
+        let request = CapellaRequest::DropBucketV4 {
+            org_id,
+            project_id,
+            cluster_id,
+            bucket_id: BASE64_STANDARD.encode(bucket),
+        };
+        let response = self.capella_request(request, deadline, ctrl_c)?;
+
+        if response.status() != 204 {
+            return Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            });
+        }
+        Ok(())
+    }
+
+    pub fn update_bucket(
+        &self,
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+        bucket: String,
+        payload: String,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<(), ClientError> {
+        let request = CapellaRequest::UpdateBucketV4 {
+            org_id,
+            project_id,
+            cluster_id,
+            bucket_id: BASE64_STANDARD.encode(bucket),
+            payload,
+        };
+        let response = self.capella_request(request, deadline, ctrl_c)?;
+
+        if response.status() != 204 {
+            return Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            });
+        }
+        Ok(())
+    }
+
+    pub fn load_sample_bucket(
+        &self,
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+        sample: String,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<(), ClientError> {
+        let request = CapellaRequest::LoadSampleBucketV4 {
+            org_id,
+            project_id,
+            cluster_id,
+            payload: format!("{{\"name\": \"{}\"}}", sample.clone()),
+        };
+        let response = self.capella_request(request, deadline, ctrl_c)?;
+
+        // TODO - need to add handling for sample already loaded once AV-82577 is complete
+        match response.status() {
+            201 => Ok(()),
+            422 => Err(ClientError::InvalidSample { sample }),
+            _ => Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            }),
+        }
     }
 }
 

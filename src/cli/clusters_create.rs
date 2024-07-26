@@ -1,5 +1,4 @@
-use crate::cli::cloud_json::{JSONCloudCreateClusterRequestV4, Provider};
-use crate::client::CapellaRequest;
+use crate::client::cloud_json::{JSONCloudCreateClusterRequestV4, Provider};
 use crate::state::State;
 use log::{debug, info};
 use std::convert::TryFrom;
@@ -7,9 +6,7 @@ use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
-use crate::cli::error::{
-    client_error_to_shell_error, serialize_error, unexpected_status_code_error,
-};
+use crate::cli::error::{client_error_to_shell_error, serialize_error};
 use crate::cli::util::{find_org_id, find_project_id};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
@@ -152,25 +149,11 @@ fn clusters_create(
         org_id.clone(),
     )?;
 
-    let response = client
-        .capella_request(
-            CapellaRequest::CreateClusterV4 {
-                org_id,
-                project_id,
-                payload: serde_json::to_string(&definition)
-                    .map_err(|e| serialize_error(e.to_string(), span))?,
-            },
-            deadline,
-            ctrl_c,
-        )
+    let payload =
+        serde_json::to_string(&definition).map_err(|e| serialize_error(e.to_string(), span))?;
+    client
+        .create_cluster(org_id, project_id, payload, deadline, ctrl_c)
         .map_err(|e| client_error_to_shell_error(e, span))?;
-    if response.status() != 202 {
-        return Err(unexpected_status_code_error(
-            response.status(),
-            response.content(),
-            span,
-        ));
-    };
 
     Ok(PipelineData::empty())
 }

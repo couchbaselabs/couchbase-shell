@@ -88,6 +88,12 @@ pub enum ClientError {
         key: String,
         path: String,
     },
+    InvalidSample {
+        sample: String,
+    },
+    SampleAlreadyLoaded {
+        sample: String,
+    },
 }
 
 impl ClientError {
@@ -150,6 +156,8 @@ impl ClientError {
             }
             Self::KVCouldNotConnect { .. } => "Could not establish kv connection".to_string(),
             Self::PathNotFound { .. } => "Path not found".to_string(),
+            Self::InvalidSample { .. } => "Invalid sample bucket".to_string(),
+            Self::SampleAlreadyLoaded { .. } => "Sample bucket already loaded".to_string(),
         }
     }
 
@@ -205,7 +213,13 @@ impl ClientError {
                 format!("could not connect to {}: {}", address, reason)
             }
             Self::PathNotFound { key, path } => {
-                format!("Path {} was not found in doc with key {}", path, key).to_string()
+                format!("Path {} was not found in doc with key {}", path, key)
+            }
+            Self::InvalidSample { sample } => {
+                format!("Sample {} is not a valid sample", sample)
+            }
+            Self::SampleAlreadyLoaded { sample} => {
+                format!("Sample bucket {} is already loaded", sample)
             }
         }
     }

@@ -1,15 +1,13 @@
 //! The `buckets get` command fetches buckets from the server.
-use crate::cli::buckets_get::check_response;
 use crate::cli::error::client_error_to_shell_error;
 use crate::cli::util::{
-    cluster_identifiers_from, find_cluster_id, find_org_id, find_project_id, get_active_cluster,
+    cluster_id_from_conn_str, cluster_identifiers_from, find_org_id, find_project_id,
+    get_active_cluster,
 };
-use crate::client::{CapellaRequest, HttpResponse, ManagementRequest};
+use crate::client::{ClientError, ManagementRequest};
 use crate::remote_cluster::RemoteCluster;
 use crate::remote_cluster::RemoteClusterType::Provisioned;
 use crate::state::{RemoteCapellaOrganization, State};
-use base64::prelude::BASE64_STANDARD;
-use base64::Engine;
 use log::debug;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
@@ -82,7 +80,7 @@ fn buckets_drop(
     for identifier in cluster_identifiers {
         let cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
-        let response = if cluster.cluster_type() == Provisioned {
+        if cluster.cluster_type() == Provisioned {
             let org = if let Some(cluster_org) = cluster.capella_org() {
                 guard.get_capella_org(cluster_org)
             } else {
@@ -101,8 +99,6 @@ fn buckets_drop(
         } else {
             drop_server_bucket(cluster, name.clone(), ctrl_c.clone(), span)
         }?;
-
-        check_response(&response, name.clone(), span)?;
     }
 
     Ok(PipelineData::empty())
@@ -113,8 +109,8 @@ fn drop_server_bucket(
     name: String,
     ctrl_c: Arc<AtomicBool>,
     span: Span,
-) -> Result<HttpResponse, ShellError> {
-    cluster
+) -> Result<(), ShellError> {
+    let response = cluster
         .cluster()
         .http_client()
         .management_request(
@@ -122,7 +118,16 @@ fn drop_server_bucket(
             Instant::now().add(cluster.timeouts().management_timeout()),
             ctrl_c.clone(),
         )
-        .map_err(|e| client_error_to_shell_error(e, span))
+        .map_err(|e| client_error_to_shell_error(e, span))?;
+
+    if response.status() != 200 {
+        Err(ClientError::RequestFailed {
+            reason: Some(response.content().into()),
+            key: None,
+        })
+        .map_err(|e| client_error_to_shell_error(e, span))?;
+    }
+    Ok(())
 }
 
 fn drop_capella_bucket(
@@ -133,7 +138,7 @@ fn drop_capella_bucket(
     identifier: String,
     ctrl_c: Arc<AtomicBool>,
     span: Span,
-) -> Result<HttpResponse, ShellError> {
+) -> Result<(), ShellError> {
     let client = org.client();
     let deadline = Instant::now().add(org.timeout());
 
@@ -147,7 +152,7 @@ fn drop_capella_bucket(
         org_id.clone(),
     )?;
 
-    let cluster_id = find_cluster_id(
+    let cluster_id = cluster_id_from_conn_str(
         identifier.clone(),
         ctrl_c.clone(),
         cluster.hostnames().clone(),
@@ -159,13 +164,11 @@ fn drop_capella_bucket(
     )?;
 
     client
-        .capella_request(
-            CapellaRequest::DropBucketV4 {
-                org_id,
-                project_id,
-                cluster_id,
-                bucket_id: BASE64_STANDARD.encode(bucket.clone()),
-            },
+        .delete_bucket(
+            org_id,
+            project_id,
+            cluster_id,
+            bucket,
             deadline,
             ctrl_c.clone(),
         )

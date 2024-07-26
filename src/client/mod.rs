@@ -20,6 +20,7 @@ extern crate utilities;
 mod bedrock_client;
 mod capella_ca;
 mod cloud;
+pub mod cloud_json;
 mod codec;
 mod crc;
 mod error;

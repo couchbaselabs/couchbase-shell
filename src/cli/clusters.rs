@@ -1,9 +1,5 @@
-use crate::cli::cloud_json::JSONCloudClustersV4Response;
-use crate::cli::error::{
-    client_error_to_shell_error, deserialize_error, unexpected_status_code_error,
-};
+use crate::cli::error::client_error_to_shell_error;
 use crate::cli::util::{convert_json_value_to_nu_value, find_org_id, find_project_id, NuValueMap};
-use crate::client::CapellaRequest;
 use crate::state::State;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
@@ -88,26 +84,12 @@ fn clusters(
         org_id.clone(),
     )?;
 
-    let response = client
-        .capella_request(
-            CapellaRequest::GetClustersV4 { org_id, project_id },
-            deadline,
-            ctrl_c,
-        )
+    let clusters = client
+        .get_clusters(org_id, project_id, deadline, ctrl_c)
         .map_err(|e| client_error_to_shell_error(e, span))?;
-    if response.status() != 200 {
-        return Err(unexpected_status_code_error(
-            response.status(),
-            response.content(),
-            span,
-        ));
-    };
-
-    let content: JSONCloudClustersV4Response = serde_json::from_str(response.content())
-        .map_err(|e| deserialize_error(e.to_string(), span))?;
 
     let mut results = vec![];
-    for cluster in content.items() {
+    for cluster in clusters.items() {
         let mut collected = NuValueMap::default();
         collected.add_string("name", cluster.name(), span);
         collected.add_string("id", cluster.id(), span);
