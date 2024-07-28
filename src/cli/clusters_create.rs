@@ -6,8 +6,14 @@ use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+use crate::cli::created_cluster_not_registered;
 use crate::cli::error::{client_error_to_shell_error, serialize_error};
 use crate::cli::util::{find_org_id, find_project_id};
+use crate::client::RustTlsConfig;
+use crate::config::DEFAULT_KV_BATCH_SIZE;
+use crate::remote_cluster::{
+    ClusterTimeouts, RemoteCluster, RemoteClusterResources, RemoteClusterType,
+};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -126,16 +132,19 @@ fn clusters_create(
         }
     };
 
-    let capella = call.get_flag(engine_state, stack, "capella")?;
+    let capella: Option<String> = call.get_flag(engine_state, stack, "capella")?;
 
     debug!("Running clusters create for {:?}", definition);
 
-    let guard = state.lock().unwrap();
-    let control = if let Some(c) = capella {
-        guard.get_capella_org(c)
+    let mut guard = state.lock().unwrap();
+    let (control, org_name) = if let Some(c) = capella {
+        (guard.get_capella_org(c.clone())?, c)
     } else {
-        guard.active_capella_org()
-    }?;
+        (
+            guard.active_capella_org()?,
+            guard.active_capella_org_name().unwrap(),
+        )
+    };
     let client = control.client();
     let deadline = Instant::now().add(control.timeout());
 
@@ -152,8 +161,39 @@ fn clusters_create(
     let payload =
         serde_json::to_string(&definition).map_err(|e| serialize_error(e.to_string(), span))?;
     client
-        .create_cluster(org_id, project_id, payload, deadline, ctrl_c)
+        .create_cluster(
+            org_id.clone(),
+            project_id.clone(),
+            payload,
+            deadline,
+            ctrl_c.clone(),
+        )
         .map_err(|e| client_error_to_shell_error(e, span))?;
+
+    let cluster_json = client
+        .get_cluster(definition.name(), org_id, project_id, deadline, ctrl_c)
+        .map_err(|e| created_cluster_not_registered(e.message()))?;
+
+    let tls_config =
+        RustTlsConfig::new(true, None).map_err(|e| created_cluster_not_registered(e.message()))?;
+
+    let cluster = RemoteCluster::new(
+        RemoteClusterResources {
+            hostnames: vec![cluster_json.connection_string()],
+            username: "".to_string(),
+            password: "".to_string(),
+            active_bucket: None,
+            active_scope: None,
+            active_collection: None,
+            display_name: cluster_json.name().into(),
+        },
+        Some(tls_config),
+        ClusterTimeouts::default(),
+        Some(org_name),
+        DEFAULT_KV_BATCH_SIZE,
+        RemoteClusterType::Provisioned,
+    );
+    guard.add_cluster(cluster_json.name(), cluster)?;
 
     Ok(PipelineData::empty())
 }

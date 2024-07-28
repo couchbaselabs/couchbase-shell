@@ -222,6 +222,10 @@ impl ClusterCreateRequest {
             cmek_id: None,
         }
     }
+
+    pub fn name(&self) -> String {
+        self.name.clone()
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

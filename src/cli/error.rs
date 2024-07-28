@@ -171,6 +171,9 @@ pub enum CBShellError {
     LLMApiKeyMissing {
         provider: String,
     },
+    CreatedClusterNotRegistered {
+        inner_error: String,
+    },
 }
 
 impl From<CBShellError> for ShellError {
@@ -258,6 +261,10 @@ impl From<CBShellError> for ShellError {
             }
             CBShellError::LLMApiKeyMissing {provider} => {
                 spanned_shell_error(format!("api_key required to use {} models", provider), Some("Define an api_key in the config/credentials file".to_string()), None)
+            }
+            CBShellError::CreatedClusterNotRegistered {inner_error} => {
+                spanned_shell_error(format!("Cluster created but not registered for use with the shell: {}", inner_error),
+                                    Some("To perform data operations against the cluster add it to the config file or register it manually using `cb-env register`".into()), None)
             }
         }
     }
@@ -388,4 +395,8 @@ pub fn analytics_error(
 
 pub fn client_error_to_shell_error(error: ClientError, span: Span) -> ShellError {
     generic_error(error.message(), error.expanded_message(), span)
+}
+
+pub fn created_cluster_not_registered(inner_error: String) -> ShellError {
+    CBShellError::CreatedClusterNotRegistered { inner_error }.into()
 }
