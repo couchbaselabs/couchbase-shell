@@ -6,8 +6,7 @@ use crate::cli::error::{
     malformed_response_error, no_active_bucket_error, unexpected_status_code_error,
 };
 use crate::cli::CBShellError::ClusterNotFound;
-use crate::client::cloud_json::JSONCloudsOrganizationsResponse;
-use crate::client::cloud_json::JSONCloudsProjectsResponse;
+use crate::client::cloud_json::{OrganizationsResponse, ProjectsResponse};
 use crate::client::{CapellaClient, CapellaRequest, HttpResponse};
 use crate::state::State;
 use crate::{RemoteCluster, RemoteClusterType};
@@ -343,7 +342,7 @@ pub(crate) fn find_project_id(
         }
         .into());
     }
-    let content: JSONCloudsProjectsResponse = serde_json::from_str(response.content())
+    let content: ProjectsResponse = serde_json::from_str(response.content())
         .map_err(|e| deserialize_error(e.to_string(), span))?;
 
     for p in content.items() {
@@ -372,7 +371,7 @@ pub(crate) fn find_org_id(
         }
         .into());
     }
-    let content: JSONCloudsOrganizationsResponse = serde_json::from_str(response.content())
+    let content: OrganizationsResponse = serde_json::from_str(response.content())
         .map_err(|e| deserialize_error(e.to_string(), span))?;
 
     let org = content.items().first().unwrap().id();

@@ -1,7 +1,6 @@
 use crate::cli::CtrlcFuture;
 use crate::client::cloud_json::{
-    JSONCloudBucketsV4Response, JSONCloudClustersV4Response, JSONCloudsBucketsV4ResponseItem,
-    JSONCloudsClustersV4ResponseItem, JSONCloudsOrganizationsResponse, JSONCloudsProjectsResponse,
+    Bucket, BucketsResponse, Cluster, ClustersResponse, OrganizationsResponse, ProjectsResponse,
 };
 use crate::client::error::ClientError;
 use crate::client::http_handler::{HttpResponse, HttpVerb};
@@ -178,7 +177,7 @@ impl CapellaClient {
         &self,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
-    ) -> Result<JSONCloudsOrganizationsResponse, ClientError> {
+    ) -> Result<OrganizationsResponse, ClientError> {
         let request = CapellaRequest::GetOrganizations {};
         let response = self.capella_request(request, deadline, ctrl_c)?;
 
@@ -189,7 +188,7 @@ impl CapellaClient {
             });
         };
 
-        let resp: JSONCloudsOrganizationsResponse = serde_json::from_str(response.content())?;
+        let resp: OrganizationsResponse = serde_json::from_str(response.content())?;
         Ok(resp)
     }
 
@@ -198,7 +197,7 @@ impl CapellaClient {
         org_id: String,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
-    ) -> Result<JSONCloudsProjectsResponse, ClientError> {
+    ) -> Result<ProjectsResponse, ClientError> {
         let request = CapellaRequest::GetProjects { org_id };
         let response = self.capella_request(request, deadline, ctrl_c)?;
 
@@ -209,18 +208,21 @@ impl CapellaClient {
             });
         };
 
-        let resp: JSONCloudsProjectsResponse = serde_json::from_str(response.content())?;
+        let resp: ProjectsResponse = serde_json::from_str(response.content())?;
         Ok(resp)
     }
 
     pub fn create_project(
         &self,
         org_id: String,
-        payload: String,
+        name: String,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
-        let request = CapellaRequest::CreateProject { org_id, payload };
+        let request = CapellaRequest::CreateProject {
+            org_id,
+            payload: format!("{{\"name\": \"{}\"}}", name),
+        };
         let response = self.capella_request(request, deadline, ctrl_c)?;
 
         if response.status() != 201 {
@@ -260,7 +262,7 @@ impl CapellaClient {
         project_id: String,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
-    ) -> Result<JSONCloudsClustersV4ResponseItem, ClientError> {
+    ) -> Result<Cluster, ClientError> {
         let request = CapellaRequest::GetClustersV4 { org_id, project_id };
         let response = self.capella_request(request, deadline, ctrl_c)?;
 
@@ -271,7 +273,7 @@ impl CapellaClient {
             });
         }
 
-        let resp: JSONCloudClustersV4Response = serde_json::from_str(response.content())?;
+        let resp: ClustersResponse = serde_json::from_str(response.content())?;
 
         for c in resp.items() {
             if c.name() == cluster_name {
@@ -288,7 +290,7 @@ impl CapellaClient {
         project_id: String,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
-    ) -> Result<JSONCloudClustersV4Response, ClientError> {
+    ) -> Result<ClustersResponse, ClientError> {
         let request = CapellaRequest::GetClustersV4 { org_id, project_id };
         let response = self.capella_request(request, deadline, ctrl_c)?;
 
@@ -299,7 +301,7 @@ impl CapellaClient {
             });
         }
 
-        let resp: JSONCloudClustersV4Response = serde_json::from_str(response.content())?;
+        let resp: ClustersResponse = serde_json::from_str(response.content())?;
         Ok(resp)
     }
 
@@ -359,7 +361,7 @@ impl CapellaClient {
         bucket: String,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
-    ) -> Result<JSONCloudsBucketsV4ResponseItem, ClientError> {
+    ) -> Result<Bucket, ClientError> {
         let request = CapellaRequest::GetBucketV4 {
             org_id,
             project_id,
@@ -375,7 +377,7 @@ impl CapellaClient {
             });
         }
 
-        let resp: JSONCloudsBucketsV4ResponseItem = serde_json::from_str(response.content())?;
+        let resp: Bucket = serde_json::from_str(response.content())?;
         Ok(resp)
     }
 
@@ -386,7 +388,7 @@ impl CapellaClient {
         cluster_id: String,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
-    ) -> Result<JSONCloudBucketsV4Response, ClientError> {
+    ) -> Result<BucketsResponse, ClientError> {
         let request = CapellaRequest::GetBucketsV4 {
             org_id,
             project_id,
@@ -401,7 +403,7 @@ impl CapellaClient {
             });
         }
 
-        let resp: JSONCloudBucketsV4Response = serde_json::from_str(response.content())?;
+        let resp: BucketsResponse = serde_json::from_str(response.content())?;
         Ok(resp)
     }
 
