@@ -1,4 +1,4 @@
-use crate::client::cloud_json::{JSONCloudCreateClusterRequestV4, Provider};
+use crate::client::cloud_json::{ClusterCreateRequest, Provider};
 use crate::state::State;
 use log::{debug, info};
 use std::convert::TryFrom;
@@ -110,7 +110,7 @@ fn clusters_create(
                 });
 
             let version = call.get_flag(engine_state, stack, "version")?;
-            JSONCloudCreateClusterRequestV4::new(name, provider, version, nodes)
+            ClusterCreateRequest::new(name, provider, version, nodes)
         }
         Value::String { val, .. } => {
             serde_json::from_str(val.as_str()).map_err(|e| serialize_error(e.to_string(), span))?

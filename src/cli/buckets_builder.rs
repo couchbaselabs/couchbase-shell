@@ -1,4 +1,4 @@
-use crate::client::cloud_json::JSONCloudsBucketsV4ResponseItem;
+use crate::client::cloud_json::Bucket;
 use serde_derive::Deserialize;
 use std::convert::TryFrom;
 use std::fmt;
@@ -314,10 +314,10 @@ impl TryFrom<JSONBucketSettings> for BucketSettings {
     }
 }
 
-impl TryFrom<&JSONCloudsBucketsV4ResponseItem> for BucketSettings {
+impl TryFrom<&Bucket> for BucketSettings {
     type Error = BuilderError;
 
-    fn try_from(settings: &JSONCloudsBucketsV4ResponseItem) -> Result<Self, Self::Error> {
+    fn try_from(settings: &Bucket) -> Result<Self, Self::Error> {
         Ok(BucketSettings {
             name: settings.name(),
             ram_quota_mb: settings.ram_quota(),
