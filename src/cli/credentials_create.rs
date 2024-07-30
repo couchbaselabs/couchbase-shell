@@ -31,7 +31,7 @@ impl Command for crate::cli::CredentialsCreate {
     }
 
     fn usage(&self) -> &str {
-        "Creates a new cluster on the active Capella organization"
+        "Creates credentials on a Capella cluster"
     }
 
     fn run(
@@ -94,7 +94,7 @@ fn credentials_create(
             project_id.clone(),
         )?;
 
-        if json_cluster.state() != "healthy".to_string() {
+        if json_cluster.state() != "healthy" {
             return Err(ShellError::GenericError {
                 error: "Cannot create credentials until cluster state is healthy".to_string(),
                 msg: "".to_string(),
@@ -131,7 +131,7 @@ fn credentials_create(
             }
         };
 
-        let payload = CredentialsCreateRequest::new(name.clone(), password.clone().into());
+        let payload = CredentialsCreateRequest::new(name.clone(), password.clone());
 
         client
             .create_credentials(
