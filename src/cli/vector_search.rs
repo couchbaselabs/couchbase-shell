@@ -74,7 +74,7 @@ impl Command for VectorSearch {
     }
 
     fn usage(&self) -> &str {
-        "Performs a search query"
+        "Performs a vector search query"
     }
 
     fn run(

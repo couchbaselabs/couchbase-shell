@@ -71,7 +71,7 @@ impl Command for VectorEnrichDoc {
             .named(
                 "vectorField",
                 SyntaxShape::String,
-                "the name of the field into which the embedding is written, defaults to fieldVector".to_string(),
+                "the name of the field into which the embedding is written".to_string(),
                 None,
             )
             .category(Category::Custom("couchbase".to_string()))
