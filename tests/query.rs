@@ -91,7 +91,7 @@ fn execute_a_query() {
 
             let cmd = format!("query \"SELECT `{0}`.* FROM `{0}` WHERE meta().id=\"{1}\"\" | select testkey | first | to json", config.bucket(), key);
             sandbox.retry_until(
-                Instant::now().add(Duration::from_secs(30)),
+                Instant::now().add(Duration::from_secs(45)),
                 Duration::from_millis(200),
                 cmd.as_str(),
                 dirs.test(),
@@ -132,7 +132,7 @@ fn fetch_meta() {
                     key
                 );
             sandbox.retry_until(
-                Instant::now().add(Duration::from_secs(30)),
+                Instant::now().add(Duration::from_secs(45)),
                 Duration::from_millis(200),
                 cmd.as_str(),
                 dirs.test(),

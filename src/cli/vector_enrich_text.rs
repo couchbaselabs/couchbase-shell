@@ -68,7 +68,7 @@ impl Command for VectorEnrichText {
     }
 
     fn usage(&self) -> &str {
-        "Chunks text and generates vector indexable json documents on the chunks"
+        "Generates embeddings from text using the active llm"
     }
 
     fn run(
