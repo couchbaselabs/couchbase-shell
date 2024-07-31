@@ -1,5 +1,5 @@
 
-def build_collection_prompt [] {
+export def build_collection_prompt [] {
     let content = (cb-env)
     let user = $"($content | get display_name)"
     let cluster = $"($content | get cluster)"
@@ -8,8 +8,7 @@ def build_collection_prompt [] {
     let collection = $"($content | get collection)"
     let cluster_type = $"($content | get cluster_type)"
 
-    let bucket_prompt =
-    let bucket_name = if $bucket == "" {
+    let bucket_prompt = if $bucket == "" {
         ""
     } else {
         ' in ' + ($bucket)
@@ -37,12 +36,4 @@ def build_collection_prompt [] {
 "
 
     $prompt
-}
-
-$env.PROMPT_COMMAND = {build_collection_prompt}
-
-$env.PROMPT_COMMAND_RIGHT = ""
-
-$env.config = {
-    show_banner: false
 }

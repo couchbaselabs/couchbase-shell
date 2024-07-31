@@ -68,7 +68,8 @@
 <li><a href="#_removing">4.5.3. Removing</a></li>
 </ul>
 </li>
-<li><a href="#_version">4.6. <code>version</code></a></li>
+<li><a href="#_subdoc_get">4.6. <code>subdoc get</code></a></li>
+<li><a href="#_version">4.7. <code>version</code></a></li>
 </ul>
 </li>
 <li><a href="#_reference">5. Reference</a>
@@ -1323,7 +1324,83 @@ This behavior can be customized through the <code>--id-column</code> flag.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_version">4.6. <code>version</code></h3>
+<h3 id="_subdoc_get">4.6. <code>subdoc get</code></h3>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; subdoc get --help
+Fetches the value of the provided path in the specified document through the data service
+
+Usage:
+  &gt; subdoc get {flags} &lt;path&gt; (id)
+
+Flags:
+  -h, --help - Display the help message for this command
+  --id-column &lt;String&gt; - the name of the id column if used with an input stream
+  --bucket &lt;String&gt; - the name of the bucket
+  --scope &lt;String&gt; - the name of the scope
+  --collection &lt;String&gt; - the name of the collection
+  --clusters &lt;String&gt; - the clusters which should be contacted
+  --batch-size &lt;Number&gt; - the maximum number of items to batch send at a time
+  -e, --halt-on-error - halt on any errors
+
+Parameters:
+  path &lt;any&gt;: the path(s) to be fetched from the documents
+  id &lt;string&gt;: the document id (optional)</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>It can be used to retrieve a field from a single document:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Administrator 🏠 cluster in 🗄 travel-sample._default._default
+&gt; subdoc get address landmark_10019
+╭───┬────────────────┬─────────────────────────────┬─────────────────────┬───────┬─────────╮
+│ # │       id       │           content           │         cas         │ error │ cluster │
+├───┼────────────────┼─────────────────────────────┼─────────────────────┼───────┼─────────┤
+│ 0 │ landmark_10019 │ Prince Arthur Road, ME4 4UG │ 1722410659053961216 │       │ local   │
+╰───┴────────────────┴─────────────────────────────┴─────────────────────┴───────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Or similarly to the <code>doc</code> commands a stream of ids can be provided:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Administrator 🏠 cluster in 🗄 travel-sample._default._default
+&gt; [landmark_10019 landmark_10020] | subdoc get address
+╭───┬────────────────┬─────────────────────────────┬─────────────────────┬───────┬─────────╮
+│ # │       id       │           content           │         cas         │ error │ cluster │
+├───┼────────────────┼─────────────────────────────┼─────────────────────┼───────┼─────────┤
+│ 0 │ landmark_10019 │ Prince Arthur Road, ME4 4UG │ 1722410659053961216 │       │ local   │
+│ 1 │ landmark_10020 │ 4 High Street, ME7 1BB      │ 1722410654151999488 │       │ local   │
+╰───┴────────────────┴─────────────────────────────┴─────────────────────┴───────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The path parameter can be a list, allowing retrieval of multiple fields in one or more docs:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Administrator 🏠 cluster in 🗄 travel-sample._default._default
+&gt; [landmark_10019 landmark_10020] | subdoc get [name, address]
+╭───┬────────────────┬───────────────────────────────────────────┬─────────────────────┬───────┬─────────╮
+│ # │       id       │                  content                  │         cas         │ error │ cluster │
+├───┼────────────────┼───────────────────────────────────────────┼─────────────────────┼───────┼─────────┤
+│ 0 │ landmark_10019 │ ╭─────────┬─────────────────────────────╮ │ 1722410659053961216 │       │ local   │
+│   │                │ │ name    │ Royal Engineers Museum      │ │                     │       │         │
+│   │                │ │ address │ Prince Arthur Road, ME4 4UG │ │                     │       │         │
+│   │                │ ╰─────────┴─────────────────────────────╯ │                     │       │         │
+│ 1 │ landmark_10020 │ ╭─────────┬────────────────────────╮      │ 1722410654151999488 │       │ local   │
+│   │                │ │ name    │ Hollywood Bowl         │      │                     │       │         │
+│   │                │ │ address │ 4 High Street, ME7 1BB │      │                     │       │         │
+│   │                │ ╰─────────┴────────────────────────╯      │                     │       │         │
+╰───┴────────────────┴───────────────────────────────────────────┴─────────────────────┴───────┴─────────╯</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_version">4.7. <code>version</code></h3>
 <div class="paragraph">
 <p>The <code>version</code> command lists the version of the couchbase shell.</p>
 </div>
@@ -2108,7 +2185,7 @@ As our versioning continues to track the underlying Nushell minor version this h
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-07-17 06:49:22 UTC
+Last updated 2024-07-31 08:32:03 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
