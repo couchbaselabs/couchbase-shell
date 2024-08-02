@@ -37,7 +37,7 @@ image::mac-binary-unsigned.png[macOS Warning,600]
 
 === Connecting to a Cluster
 
-The first time that you run `./cbsh` you will receive a prompt asking if you'd like to create a config file.
+The first time that you run `./cbsh` you will receive a prompt asking if you'd like to create a <<_the_config_dotfiles, config file>>.
 If you choose yes then the shell will provide you with a series of prompts to provide information about your default cluster.
 If you choose no then it will try to connect to `localhost` using the `Administrator` username and the `password` password.
 
@@ -68,14 +68,49 @@ As a quick sanity check, list the nodes in the cluster:
 ╰───┴───────────┴────────────────┴─────────┴──────────────────────────┴───────────────────────┴───────────────────────────┴──────────────┴─────────────┴─────────╯
 ```
 
-Or if you have the `travel-sample` bucket installed you can switch to it and then fetch a document:
+To start experimenting with data operations load some sample data onto the cluster:
 
 ```
->  doc get airline_10 --bucket travel-sample
+👤 Administrator 🏠 default
+> buckets load-sample travel-sample
+╭───┬─────────┬───────────────┬─────────╮
+│ # │ cluster │    sample     │ status  │
+├───┼─────────┼───────────────┼─────────┤
+│ 0 │ local   │ travel-sample │ success │
+╰───┴─────────┴───────────────┴─────────╯
+```
+
+Now you can try running n1ql queries using the <<_query,query>> command.
+
+```
+👤 Administrator 🏠 default
+> query "SELECT * FROM `travel-sample`.inventory.airline LIMIT 1"
+╭───┬──────────────────────────────┬─────────╮
+│ # │           airline            │ cluster │
+├───┼──────────────────────────────┼─────────┤
+│ 0 │ ╭──────────┬───────────────╮ │ local   │
+│   │ │ id       │ 10            │ │         │
+│   │ │ type     │ airline       │ │         │
+│   │ │ name     │ 40-Mile Air   │ │         │
+│   │ │ iata     │ Q5            │ │         │
+│   │ │ icao     │ MLA           │ │         │
+│   │ │ callsign │ MILE-AIR      │ │         │
+│   │ │ country  │ United States │ │         │
+│   │ ╰──────────┴───────────────╯ │         │
+╰───┴──────────────────────────────┴─────────╯
+```
+
+Or you can get documents by switching to the travel sample bucket with <<_cb_env_and_the_environment,cb-env>> and using <<_reading,doc_get>>:
+
+```
+👤 Administrator 🏠 default
+> cb-env bucket travel-sample
+👤 Administrator 🏠 default in 🗄 travel-sample._default._default
+> doc get airline_10
 ╭───┬────────────┬──────────────────────────────┬─────────────────────┬───────┬─────────╮
 │ # │     id     │           content            │         cas         │ error │ cluster │
 ├───┼────────────┼──────────────────────────────┼─────────────────────┼───────┼─────────┤
-│ 0 │ airline_10 │ ╭──────────┬───────────────╮ │ 1712321628975398912 │       │ default │
+│ 0 │ airline_10 │ ╭──────────┬───────────────╮ │ 1722587332136927232 │       │ local   │
 │   │            │ │ id       │ 10            │ │                     │       │         │
 │   │            │ │ type     │ airline       │ │                     │       │         │
 │   │            │ │ name     │ 40-Mile Air   │ │                     │       │         │
@@ -89,7 +124,19 @@ Or if you have the `travel-sample` bucket installed you can switch to it and the
 
 === The config dotfiles
 
-Connecting to a single cluster through the command line is nice when you are starting out, but later on you will likely either connect to the same cluster all the time or even to a multitude of them. To help with this, you can create a `.cbsh` dot folder in your home directory and place a `config` file in it that the shell will read on startup.
+Connecting to a single cluster through the command line is nice when you are starting out, but later on you will likely either connect to the same cluster all the time or even to a multitude of them.
+To help with this, you can create a config file to hold your cluster details that the shell will read on startup.
+
+The config file must be called `config` and be placed in a `.cbsh` dot file either in your home directory or in the directory from which the shell is being run.
+If you want to change the path of the directory where the config file is held this can be done with the `config-dir` flag when the shell is run:
+
+```
+> ls ~/config_file
+config
+> ./cbsh --config-dir ~/config_file
+```
+
+Note that even when the path to the directory containing the config file is given using this flag, the file containing the cluster information must still be called `config`.
 
 The downloaded zip contains an example already, but here is a small sample config to help you get started as well:
 
@@ -109,10 +156,20 @@ connstr = "10.143.200.101"
 default-bucket = "myapp"
 username = "user"
 password = "pass"
+capella-organization = "my-org"
+
+[[capella-organization]]
+identifier = "my-org"
+access-key = "get-your-own"
+secret-key = "get-your-own"
+default-project = "default"
 ```
 
 This will register two clusters, one called `local` and one called `remote`.
-The file format is `toml` in case you wonder.
 Now when you start the shell, it will connect to `local` automatically and you are all set.
+Changing between registered clusters is done using <<_cb_env_cluster,cb-env cluster>>.
 
-Please check out the reference section on additional parameters you can set as well as how to move the credentials to a separate `credentials` file in case you want to share your config with other people and they do not use the same credentials.
+The config also registers a Capella organization which is associated with the cluster "remote" using the "capella-organization" field, see <<_cb_env_projectcapella_organization,cb-env organizations>> for more details.
+A config file can be created with just a capella-organization then the shell can be used to <<link_to_recipe,create and register >> a cluster for use.
+
+Please check out the <<_reference, reference section>> on additional parameters you can set as well as how to move the credentials to a separate `credentials` file in case you want to share your config with other people and they do not use the same credentials.

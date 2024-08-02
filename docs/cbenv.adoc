@@ -3,23 +3,24 @@
 
 Whilst multiple clusters can be registered at the same time, there is only ever one cluster (at most) active.
 The same is true for buckets, scopes, and collections.
-When a resource is active then it used as the default to run commands against (this can be overridden on a per command basis).
+When a resource is active it is used as the default to run commands against (this can be overridden on a <<_per_command_execution_environments,per command>> basis).
 
-You can run the `cb-env` command, which will tell you which resources are currently active (you are also able to tell from the prompt):
-
+The `cb-env` command will tell you which resources are currently active (you are also able to tell from the <<_the_prompt_explained,prompt>>):
 ```
 > cb-env
-╭──────────────┬─────────────╮
-│ username     │ charlie     │
-│ display_name │ Charlie     │
-│ cluster      │ capella     │
-│ bucket       │ default     │
-│ scope        │ inventory   │
-│ collection   │ hotel       │
-│ cluster_type │ provisioned │
-╰──────────────┴─────────────╯
+╭──────────────────────┬──────────────╮
+│ username             │ charlie      │
+│ display_name         │ Charlie      │
+│ cluster              │ capella      │
+│ bucket               │ default      │
+│ scope                │ inventory    │
+│ collection           │ hotel        │
+│ cluster_type         │ provisioned  │
+│ capella-organization │ couchbase    │
+│ capella-project      │ Charlie work │
+│ llm                  │ Gemini       │
+╰──────────────────────┴──────────────╯
 ```
-
 If you were to now run a command then we would be running it:
 
 * As the user "charlie"
@@ -30,8 +31,7 @@ If you were to now run a command then we would be running it:
 
 Note that `display_name` is the name that appears in your shell prompt and is not used by commands.
 
-You can also change the active resources with the `cb-env` command.
-
+You can also change the active resources with the cb-env command.
 ```
 > cb-env -h
 Modify the default execution environment of commands
@@ -57,23 +57,165 @@ Flags:
   --timeouts - show default execution environment for timeouts
 ```
 
-For example if you change the active bucket both the output of `cb-env` and the prompt will reflect the changes:
+=== `cb-env cluster`
+
+This command is used to change the active cluster. The change of cluster will be reflected in the output of `cb-env` and the prompt:
 
 ```
+👤 Charlie 🏠 capella
+> cb-env cluster local
 👤 Charlie 🏠 local
-> cb-env bucket beer-sample
-👤 Charlie 🏠 local in 🗄 beer-sample._default._default
 > cb-env
 ╭──────────────┬───────────────╮
 │ username     │ charlie       │
 │ display_name │ Charlie       │
-│ cluster      │ capella       │
-│ bucket       │ beer-sample   │
+│ cluster      │ local         │
+│ bucket       │               │
 │ scope        │               │
 │ collection   │               │
-│ cluster_type │ provisioned   │
+│ cluster_type │ other         │
 ╰──────────────┴───────────────╯
 ```
+Notice that when you are connected to a locally running (non-Capella) cluster then the capella specific fields (project and capella organization) will not appear.
+
+When changing the cluster the shell will return an error if a cluster with the given identifier is not registered:
+```
+> cb-env cluster unregistered
+Error:   × The cluster named unregistered is not known
+```
+
+To register a new cluster for use either add it to the <<_the_config_dotfiles,config file>> or use the <<_cb_env_register,cb-env register>> command.
+
+=== `cb-env bucket/scope/collection`
+
+The `cb-env bucket`, `cb-env scope` and `cb-env collection` commands are used to set the active bucket/scope/collection respectively.
+When changing the bucket/scope/collection the change will be reflected in the <<_the_prompt_explained,prompt>> and the output of the <<_cb_env_and_the_environment,cb-env>> command:
+
+```
+👤 Charlie 🏠 local
+> cb-env bucket travel-sample
+👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+> cb-env scope inventory
+👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+> cb-env collection landmark
+👤 Charlie 🏠 local in 🗄 travel-sample.inventory.landmark
+>
+```
+
+Note that when we set an active bucket the scope and collection are set to the `_default` scope and collection.
+
+When a "higher level" entity is changed the "lower level" entities are returned to this default setting:
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample.inventory.landmarks
+> cb-env scope some_scope
+👤 Charlie 🏠 local in 🗄 travel-sample.some_scope._default
+> cb-env bucket some_bucket
+👤 Charlie 🏠 local in 🗄 some_bucket._default._default
+>
+```
+
+Setting the scope resets the collection and setting the bucket will reset both the scope and collection.
+It is important to remember that these commands do not validate the existence of resources when the environment is changed.
+Setting the active bucket/scope/collection to one that doesn't exist will only have an impact when you try and perform operations against it.
+
+[options="nowrap"]
+```
+👤 Charlie 🏠 local
+> cb-env bucket not-a-real-bucket
+👤 Charlie 🏠 local in 🗄 not-a-real-bucket._default._default
+> doc get test_doc
+╭───┬────┬─────────┬─────┬──────────────────────────────────────────────────────────────────────────────┬─────────╮
+│ # │ id │ content │ cas │                                    error                                     │ cluster │
+├───┼────┼─────────┼─────┼──────────────────────────────────────────────────────────────────────────────┼─────────┤
+│ 0 │    │         │   0 │ Failed to load cluster config: bucket 'not-a-real-bucket' could not be found │ local   │
+╰───┴────┴─────────┴─────┴──────────────────────────────────────────────────────────────────────────────┴─────────╯
+```
+
+Checking that the active environment is correctly set to resources that exist is a good first port of call if things aren't working as expected.
+
+=== `cb-env project/capella-organization`
+
+The highest level entity in Capella is the organization. Within this you have projects which in turn contain clusters.
+Although you can connect to a Capella cluster without it having an <<_the_config_dotfiles,organization registered>> an organization is required to perform management operations: creating/destroying projects/clusters/buckets.
+
+Once we have a registered organization we can set it as active in two ways. Manually, by using the `cb-env capella-organization` command:
+
+```
+> cb-env capella-organization my-org
+```
+
+Or if you switch to an active cluster that has a default Capella organization specified on registration then that org will become active.
+The logic is similar with the active project which can either be changed manually:
+
+```
+👤 Administrator 🏠 local in 🗄 default._default._default
+> cb-env project my-project
+```
+
+Alternatively if the active organization has a default project defined on registration then that default project will become active.
+Similarly to changing active clusters, the `cb-env capella-organization` command will return an error if the named org has not been registered with the shell:
+
+```
+> cb-env capella-organization not-an-org
+Error:   × Organization not registered
+  help: Has the organization not-an-org been registered in the config file?
+```
+
+But the same is not true with projects, so if operations are unexpectedly failing against a Capella cluster, make sure your active project is correctly set.
+
+=== `cb-env register`
+
+```
+> cb-env register --help
+Registers a cluster for use with the shell
+
+Usage:
+  > cb-env register {flags} <identifier> <connstr> <username> <password>
+
+Flags:
+  -h, --help - Display the help message for this command
+  --display_name <String> - the display name to use for the user when this cluster is active
+  --default-bucket <String> - the default bucket to use with this cluster
+  --default-scope <String> - the default scope to use with this cluster
+  --default-collection <String> - the default collection to use with this cluster
+  --tls-enabled <String> - whether or not to enable tls, defaults to true
+  --tls-cert-path <String> - the path to the certificate to use with tls
+  --tls-accept-all-certs <String> - whether or not to accept all certs with tls, defaults to true
+  --save - whether or not to add the cluster to the .cbsh config file, defaults to false
+  --capella-organization <String> - capella organization that this cluster belongs to
+
+Parameters:
+  identifier <string>: the identifier to use for this cluster
+  connstr <string>: the connection string to use for this cluster
+  username <string>: the username to use for this cluster
+  password <string>: the password to use for this cluster
+```
+
+This command registers a new cluster for use with the shell without having to add a `cluster` entry to the <<_the_config_dotfiles,config file>> and restart.
+Note that clusters created through the shell using `clusters create` are automatically registered for use.
+`cb-env register` takes the local identifier for the cluster, connection string, username and password as positional parameters:
+
+```
+👤 Charlie 🏠 remote in ☁️ default._default._default
+> cb-env register new-cluster cb.lcrhwge7pstmolxx.couchbase.com Administrator password
+```
+
+Once registered the new cluster can be seen in the output of `cb-env managed`, and can be set as the active cluster using <<_cb_env_cluster,cb-env cluster>>:
+
+```
+👤 Charlie 🏠 remote in ☁️ default._default._default
+> cb-env managed
+╭───┬────────┬───────┬─────────────┬───────────────┬──────────────────────╮
+│ # │ active │  tls  │ identifier  │   username    │ capella_organization │
+├───┼────────┼───────┼─────────────┼───────────────┼──────────────────────┤
+│ 0 │ false  │ false │ local       │ Administrator │                      │
+│ 1 │ false  │ true  │ new-cluster │ Administrator │                      │
+│ 2 │ true   │ true  │ remote      │ charlie       │ my-org               │
+╰───┴────────┴───────┴─────────────┴───────────────┴──────────────────────╯
+```
+
+Note that by default although tls is enabled the shell will accept all certs. This can be changed with the `--tls-accept-all-certs` flag.
 
 === Per command execution environments
 

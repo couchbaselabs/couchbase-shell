@@ -6,9 +6,12 @@ image::couchbase.svg[Couchbase,200]
 :sectnums:
 :toclevels: 3
 
-Welcome to the Couchbase Shell `cbsh` documentation! If you are new, you will want to start with the <<_quickstart,quickstart>> section and then proceed with the <<_introduction,introduction>>. If you are already familar with the shell, feel free to jump right into the <<_reference,command reference>>.
+Welcome to the Couchbase Shell `cbsh` documentation!
+If you are new, you will want to start with the <<_quickstart,quickstart>> section and then proceed with the <<_introduction,introduction>>.
+If you are already familiar with the shell, feel free to jump right into the <<_couchbase_commands,couchbase commands>>.
 
-_Note that while the project is maintained by Couchbase, it is not covered under the EE support contract. We are providing community support through this bug tracker._
+_Note that while the project is maintained by Couchbase, it is not covered under the EE support contract.
+We are providing community support through this https://github.com/couchbaselabs/couchbase-shell/issues[bug tracker]._
 
 include::quickstart.adoc[]
 
