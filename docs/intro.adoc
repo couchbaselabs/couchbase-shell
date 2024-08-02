@@ -289,7 +289,7 @@ With our data in the correct format we can then upsert:
 ╰───┴───────────┴─────────┴────────┴──────────┴───────────╯
 ```
 
-See the xref:recipes/importing-data.adoc[Importing data recipes] for more information.
+See the <<_importing_data,Importing data recipes>> for more information.
 
 === Exporting Data from the Shell
 
@@ -341,4 +341,4 @@ La Garenne,Agen,France
 Cazaux,Cazaux,France
 ```
 
-See the xref:recipes/exporting-data.adoc[Exporting data recipes] for more information.
+See the <<_exporting_data,Exporting data recipes>> for more information.
