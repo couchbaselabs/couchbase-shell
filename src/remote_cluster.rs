@@ -154,6 +154,14 @@ impl RemoteCluster {
 
     pub fn set_username(&mut self, username: String) {
         self.username = username;
+
+        let mut c = self.cluster.lock().unwrap();
+        *c = Some(Arc::new(Client::new(
+            self.hostnames.clone(),
+            self.username.clone(),
+            self.password.clone(),
+            self.tls_config.clone(),
+        )));
     }
 
     pub fn password(&self) -> &str {
@@ -161,7 +169,14 @@ impl RemoteCluster {
     }
 
     pub fn set_password(&mut self, password: String) {
-        self.password = password
+        self.password = password;
+        let mut c = self.cluster.lock().unwrap();
+        *c = Some(Arc::new(Client::new(
+            self.hostnames.clone(),
+            self.username.clone(),
+            self.password.clone(),
+            self.tls_config.clone(),
+        )));
     }
 
     pub fn tls_config(&self) -> &Option<RustTlsConfig> {
