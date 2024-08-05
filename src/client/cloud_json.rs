@@ -409,7 +409,7 @@ impl CredentialsCreateRequest {
             name,
             password,
             access: vec![Access {
-                privileges: vec!["write".to_string()],
+                privileges: vec!["write".to_string(), "read".to_string()],
             }],
         }
     }
