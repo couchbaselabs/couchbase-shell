@@ -152,16 +152,8 @@ impl RemoteCluster {
         self.username.as_str()
     }
 
-    pub fn set_username(&mut self, username: String) {
-        self.username = username;
-    }
-
     pub fn password(&self) -> &str {
         self.password.as_str()
-    }
-
-    pub fn set_password(&mut self, password: String) {
-        self.password = password
     }
 
     pub fn tls_config(&self) -> &Option<RustTlsConfig> {

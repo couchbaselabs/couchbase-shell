@@ -184,11 +184,6 @@ impl State {
         self.clusters.get(&*active)
     }
 
-    pub fn active_mut_cluster(&mut self) -> Option<&mut RemoteCluster> {
-        let active = self.active.lock().unwrap();
-        self.clusters.get_mut(&*active)
-    }
-
     pub fn tutorial(&self) -> &Tutorial {
         &self.tutorial
     }
