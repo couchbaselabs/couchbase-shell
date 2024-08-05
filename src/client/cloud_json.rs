@@ -404,13 +404,21 @@ struct Access {
 }
 
 impl CredentialsCreateRequest {
-    pub fn new(name: String, password: String) -> Self {
+    pub fn new(name: String, password: String, read: bool, write: bool) -> Self {
+        let mut privileges = vec![];
+
+        if read {
+            privileges.push("read".to_string())
+        }
+
+        if write {
+            privileges.push("write".to_string())
+        }
+
         Self {
             name,
             password,
-            access: vec![Access {
-                privileges: vec!["write".to_string()],
-            }],
+            access: vec![Access { privileges }],
         }
     }
 }
