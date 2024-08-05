@@ -42,10 +42,14 @@
 </li>
 <li><a href="#_cb_env_and_the_environment">3. <code>cb-env</code> and the Environment</a>
 <ul class="sectlevel2">
-<li><a href="#_per_command_execution_environments">3.1. Per command execution environments</a>
+<li><a href="#_cb_env_cluster">3.1. <code>cb-env cluster</code></a></li>
+<li><a href="#_cb_env_bucketscopecollection">3.2. <code>cb-env bucket/scope/collection</code></a></li>
+<li><a href="#_cb_env_projectcapella_organization">3.3. <code>cb-env project/capella-organization</code></a></li>
+<li><a href="#_cb_env_register">3.4. <code>cb-env register</code></a></li>
+<li><a href="#_per_command_execution_environments">3.5. Per command execution environments</a>
 <ul class="sectlevel3">
-<li><a href="#_the_clusters_flag">3.1.1. The <code>--clusters</code> flag</a></li>
-<li><a href="#_the_bucket_scope_collection_flags">3.1.2. The <code>--bucket</code>, <code>--scope</code>, <code>--collection</code> flags</a></li>
+<li><a href="#_the_clusters_flag">3.5.1. The <code>--clusters</code> flag</a></li>
+<li><a href="#_the_bucket_scope_collection_flags">3.5.2. The <code>--bucket</code>, <code>--scope</code>, <code>--collection</code> flags</a></li>
 </ul>
 </li>
 </ul>
@@ -137,10 +141,13 @@
 </div>
 </div>
 <div class="paragraph">
-<p>Welcome to the Couchbase Shell <code>cbsh</code> documentation! If you are new, you will want to start with the <a href="#_quickstart">quickstart</a> section and then proceed with the <a href="#_introduction">introduction</a>. If you are already familar with the shell, feel free to jump right into the <a href="#_reference">command reference</a>.</p>
+<p>Welcome to the Couchbase Shell <code>cbsh</code> documentation!
+If you are new, you will want to start with the <a href="#_quickstart">quickstart</a> section and then proceed with the <a href="#_introduction">introduction</a>.
+If you are already familiar with the shell, feel free to jump right into the <a href="#_couchbase_commands">couchbase commands</a>.</p>
 </div>
 <div class="paragraph">
-<p><em>Note that while the project is maintained by Couchbase, it is not covered under the EE support contract. We are providing community support through this bug tracker.</em></p>
+<p><em>Note that while the project is maintained by Couchbase, it is not covered under the EE support contract.
+We are providing community support through this <a href="https://github.com/couchbaselabs/couchbase-shell/issues">bug tracker</a>.</em></p>
 </div>
 </div>
 </div>
@@ -218,7 +225,7 @@ Next time you run the binary you&#8217;ll get another prompt but then it should 
 <div class="sect2">
 <h3 id="_connecting_to_a_cluster">1.2. Connecting to a Cluster</h3>
 <div class="paragraph">
-<p>The first time that you run <code>./cbsh</code> you will receive a prompt asking if you&#8217;d like to create a config file.
+<p>The first time that you run <code>./cbsh</code> you will receive a prompt asking if you&#8217;d like to create a <a href="#_the_config_dotfiles">config file</a>.
 If you choose yes then the shell will provide you with a series of prompts to provide information about your default cluster.
 If you choose no then it will try to connect to <code>localhost</code> using the <code>Administrator</code> username and the <code>password</code> password.</p>
 </div>
@@ -255,15 +262,54 @@ As a quick sanity check, list the nodes in the cluster:</p>
 </div>
 </div>
 <div class="paragraph">
-<p>Or if you have the <code>travel-sample</code> bucket installed you can switch to it and then fetch a document:</p>
+<p>To start experimenting with data operations load some sample data onto the cluster:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt;  doc get airline_10 --bucket travel-sample
+<pre class="CodeRay highlight"><code>👤 Administrator 🏠 default
+&gt; buckets load-sample travel-sample
+╭───┬─────────┬───────────────┬─────────╮
+│ # │ cluster │    sample     │ status  │
+├───┼─────────┼───────────────┼─────────┤
+│ 0 │ local   │ travel-sample │ success │
+╰───┴─────────┴───────────────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Now you can try running n1ql queries using the <a href="#_query">query</a> command.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Administrator 🏠 default
+&gt; query &quot;SELECT * FROM `travel-sample`.inventory.airline LIMIT 1&quot;
+╭───┬──────────────────────────────┬─────────╮
+│ # │           airline            │ cluster │
+├───┼──────────────────────────────┼─────────┤
+│ 0 │ ╭──────────┬───────────────╮ │ local   │
+│   │ │ id       │ 10            │ │         │
+│   │ │ type     │ airline       │ │         │
+│   │ │ name     │ 40-Mile Air   │ │         │
+│   │ │ iata     │ Q5            │ │         │
+│   │ │ icao     │ MLA           │ │         │
+│   │ │ callsign │ MILE-AIR      │ │         │
+│   │ │ country  │ United States │ │         │
+│   │ ╰──────────┴───────────────╯ │         │
+╰───┴──────────────────────────────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Or you can get documents by switching to the travel sample bucket with <a href="#_cb_env_and_the_environment">cb-env</a> and using <a href="#_reading">doc_get</a>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Administrator 🏠 default
+&gt; cb-env bucket travel-sample
+👤 Administrator 🏠 default in 🗄 travel-sample._default._default
+&gt; doc get airline_10
 ╭───┬────────────┬──────────────────────────────┬─────────────────────┬───────┬─────────╮
 │ # │     id     │           content            │         cas         │ error │ cluster │
 ├───┼────────────┼──────────────────────────────┼─────────────────────┼───────┼─────────┤
-│ 0 │ airline_10 │ ╭──────────┬───────────────╮ │ 1712321628975398912 │       │ default │
+│ 0 │ airline_10 │ ╭──────────┬───────────────╮ │ 1722587332136927232 │       │ local   │
 │   │            │ │ id       │ 10            │ │                     │       │         │
 │   │            │ │ type     │ airline       │ │                     │       │         │
 │   │            │ │ name     │ 40-Mile Air   │ │                     │       │         │
@@ -279,7 +325,22 @@ As a quick sanity check, list the nodes in the cluster:</p>
 <div class="sect2">
 <h3 id="_the_config_dotfiles">1.3. The config dotfiles</h3>
 <div class="paragraph">
-<p>Connecting to a single cluster through the command line is nice when you are starting out, but later on you will likely either connect to the same cluster all the time or even to a multitude of them. To help with this, you can create a <code>.cbsh</code> dot folder in your home directory and place a <code>config</code> file in it that the shell will read on startup.</p>
+<p>Connecting to a single cluster through the command line is nice when you are starting out, but later on you will likely either connect to the same cluster all the time or even to a multitude of them.
+To help with this, you can create a config file to hold your cluster details that the shell will read on startup.</p>
+</div>
+<div class="paragraph">
+<p>The config file must be called <code>config</code> and be placed in a <code>.cbsh</code> dot file either in your home directory or in the directory from which the shell is being run.
+If you want to change the path of the directory where the config file is held this can be done with the <code>config-dir</code> flag when the shell is run:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; ls ~/config_file
+config
+&gt; ./cbsh --config-dir ~/config_file</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Note that even when the path to the directory containing the config file is given using this flag, the file containing the cluster information must still be called <code>config</code>.</p>
 </div>
 <div class="paragraph">
 <p>The downloaded zip contains an example already, but here is a small sample config to help you get started as well:</p>
@@ -300,16 +361,27 @@ identifier = &quot;remote&quot;
 connstr = &quot;10.143.200.101&quot;
 default-bucket = &quot;myapp&quot;
 username = &quot;user&quot;
-password = &quot;pass&quot;</code></pre>
+password = &quot;pass&quot;
+capella-organization = &quot;my-org&quot;
+
+[[capella-organization]]
+identifier = &quot;my-org&quot;
+access-key = &quot;get-your-own&quot;
+secret-key = &quot;get-your-own&quot;
+default-project = &quot;default&quot;</code></pre>
 </div>
 </div>
 <div class="paragraph">
 <p>This will register two clusters, one called <code>local</code> and one called <code>remote</code>.
-The file format is <code>toml</code> in case you wonder.
-Now when you start the shell, it will connect to <code>local</code> automatically and you are all set.</p>
+Now when you start the shell, it will connect to <code>local</code> automatically and you are all set.
+Changing between registered clusters is done using <a href="#_cb_env_cluster">cb-env cluster</a>.</p>
 </div>
 <div class="paragraph">
-<p>Please check out the reference section on additional parameters you can set as well as how to move the credentials to a separate <code>credentials</code> file in case you want to share your config with other people and they do not use the same credentials.</p>
+<p>The config also registers a Capella organization which is associated with the cluster "remote" using the "capella-organization" field, see <a href="#_cb_env_projectcapella_organization">cb-env organizations</a> for more details.
+A config file can be created with just a capella-organization then the shell can be used to <a href="#link_to_recipe">create and register </a> a cluster for use.</p>
+</div>
+<div class="paragraph">
+<p>Please check out the <a href="#_reference">reference section</a> on additional parameters you can set as well as how to move the credentials to a separate <code>credentials</code> file in case you want to share your config with other people and they do not use the same credentials.</p>
 </div>
 </div>
 </div>
@@ -655,7 +727,7 @@ With our data in the correct format we can then upsert:</p>
 </div>
 </div>
 <div class="paragraph">
-<p>See the <a href="#">Importing data recipes</a> for more information.</p>
+<p>See the <a href="#_importing_data">Importing data recipes</a> for more information.</p>
 </div>
 </div>
 </div>
@@ -719,7 +791,7 @@ Cazaux,Cazaux,France</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>See the <a href="#">Exporting data recipes</a> for more information.</p>
+<p>See the <a href="#_exporting_data">Exporting data recipes</a> for more information.</p>
 </div>
 </div>
 </div>
@@ -730,23 +802,26 @@ Cazaux,Cazaux,France</code></pre>
 <div class="paragraph">
 <p>Whilst multiple clusters can be registered at the same time, there is only ever one cluster (at most) active.
 The same is true for buckets, scopes, and collections.
-When a resource is active then it used as the default to run commands against (this can be overridden on a per command basis).</p>
+When a resource is active it is used as the default to run commands against (this can be overridden on a <a href="#_per_command_execution_environments">per command</a> basis).</p>
 </div>
 <div class="paragraph">
-<p>You can run the <code>cb-env</code> command, which will tell you which resources are currently active (you are also able to tell from the prompt):</p>
+<p>The <code>cb-env</code> command will tell you which resources are currently active (you are also able to tell from the <a href="#_the_prompt_explained">prompt</a>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; cb-env
-╭──────────────┬─────────────╮
-│ username     │ charlie     │
-│ display_name │ Charlie     │
-│ cluster      │ capella     │
-│ bucket       │ default     │
-│ scope        │ inventory   │
-│ collection   │ hotel       │
-│ cluster_type │ provisioned │
-╰──────────────┴─────────────╯</code></pre>
+╭──────────────────────┬──────────────╮
+│ username             │ charlie      │
+│ display_name         │ Charlie      │
+│ cluster              │ capella      │
+│ bucket               │ default      │
+│ scope                │ inventory    │
+│ collection           │ hotel        │
+│ cluster_type         │ provisioned  │
+│ capella-organization │ couchbase    │
+│ capella-project      │ Charlie work │
+│ llm                  │ Gemini       │
+╰──────────────────────┴──────────────╯</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -775,7 +850,7 @@ When a resource is active then it used as the default to run commands against (t
 <p>Note that <code>display_name</code> is the name that appears in your shell prompt and is not used by commands.</p>
 </div>
 <div class="paragraph">
-<p>You can also change the active resources with the <code>cb-env</code> command.</p>
+<p>You can also change the active resources with the cb-env command.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -803,28 +878,201 @@ Flags:
   --timeouts - show default execution environment for timeouts</code></pre>
 </div>
 </div>
+<div class="sect2">
+<h3 id="_cb_env_cluster">3.1. <code>cb-env cluster</code></h3>
 <div class="paragraph">
-<p>For example if you change the active bucket both the output of <code>cb-env</code> and the prompt will reflect the changes:</p>
+<p>This command is used to change the active cluster. The change of cluster will be reflected in the output of <code>cb-env</code> and the prompt:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local
-&gt; cb-env bucket beer-sample
-👤 Charlie 🏠 local in 🗄 beer-sample._default._default
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 capella
+&gt; cb-env cluster local
+👤 Charlie 🏠 local
 &gt; cb-env
 ╭──────────────┬───────────────╮
 │ username     │ charlie       │
 │ display_name │ Charlie       │
-│ cluster      │ capella       │
-│ bucket       │ beer-sample   │
+│ cluster      │ local         │
+│ bucket       │               │
 │ scope        │               │
 │ collection   │               │
-│ cluster_type │ provisioned   │
+│ cluster_type │ other         │
 ╰──────────────┴───────────────╯</code></pre>
 </div>
 </div>
+<div class="paragraph">
+<p>Notice that when you are connected to a locally running (non-Capella) cluster then the capella specific fields (project and capella organization) will not appear.</p>
+</div>
+<div class="paragraph">
+<p>When changing the cluster the shell will return an error if a cluster with the given identifier is not registered:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; cb-env cluster unregistered
+Error:   × The cluster named unregistered is not known</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>To register a new cluster for use either add it to the <a href="#_the_config_dotfiles">config file</a> or use the <a href="#_cb_env_register">cb-env register</a> command.</p>
+</div>
+</div>
 <div class="sect2">
-<h3 id="_per_command_execution_environments">3.1. Per command execution environments</h3>
+<h3 id="_cb_env_bucketscopecollection">3.2. <code>cb-env bucket/scope/collection</code></h3>
+<div class="paragraph">
+<p>The <code>cb-env bucket</code>, <code>cb-env scope</code> and <code>cb-env collection</code> commands are used to set the active bucket/scope/collection respectively.
+When changing the bucket/scope/collection the change will be reflected in the <a href="#_the_prompt_explained">prompt</a> and the output of the <a href="#_cb_env_and_the_environment">cb-env</a> command:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local
+&gt; cb-env bucket travel-sample
+👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+&gt; cb-env scope inventory
+👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+&gt; cb-env collection landmark
+👤 Charlie 🏠 local in 🗄 travel-sample.inventory.landmark
+&gt;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Note that when we set an active bucket the scope and collection are set to the <code>_default</code> scope and collection.</p>
+</div>
+<div class="paragraph">
+<p>When a "higher level" entity is changed the "lower level" entities are returned to this default setting:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample.inventory.landmarks
+&gt; cb-env scope some_scope
+👤 Charlie 🏠 local in 🗄 travel-sample.some_scope._default
+&gt; cb-env bucket some_bucket
+👤 Charlie 🏠 local in 🗄 some_bucket._default._default
+&gt;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Setting the scope resets the collection and setting the bucket will reset both the scope and collection.
+It is important to remember that these commands do not validate the existence of resources when the environment is changed.
+Setting the active bucket/scope/collection to one that doesn&#8217;t exist will only have an impact when you try and perform operations against it.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 local
+&gt; cb-env bucket not-a-real-bucket
+👤 Charlie 🏠 local in 🗄 not-a-real-bucket._default._default
+&gt; doc get test_doc
+╭───┬────┬─────────┬─────┬──────────────────────────────────────────────────────────────────────────────┬─────────╮
+│ # │ id │ content │ cas │                                    error                                     │ cluster │
+├───┼────┼─────────┼─────┼──────────────────────────────────────────────────────────────────────────────┼─────────┤
+│ 0 │    │         │   0 │ Failed to load cluster config: bucket 'not-a-real-bucket' could not be found │ local   │
+╰───┴────┴─────────┴─────┴──────────────────────────────────────────────────────────────────────────────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Checking that the active environment is correctly set to resources that exist is a good first port of call if things aren&#8217;t working as expected.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_cb_env_projectcapella_organization">3.3. <code>cb-env project/capella-organization</code></h3>
+<div class="paragraph">
+<p>The highest level entity in Capella is the organization. Within this you have projects which in turn contain clusters.
+Although you can connect to a Capella cluster without it having an <a href="#_the_config_dotfiles">organization registered</a> an organization is required to perform management operations: creating/destroying projects/clusters/buckets.</p>
+</div>
+<div class="paragraph">
+<p>Once we have a registered organization we can set it as active in two ways. Manually, by using the <code>cb-env capella-organization</code> command:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; cb-env capella-organization my-org</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Or if you switch to an active cluster that has a default Capella organization specified on registration then that org will become active.
+The logic is similar with the active project which can either be changed manually:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Administrator 🏠 local in 🗄 default._default._default
+&gt; cb-env project my-project</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Alternatively if the active organization has a default project defined on registration then that default project will become active.
+Similarly to changing active clusters, the <code>cb-env capella-organization</code> command will return an error if the named org has not been registered with the shell:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; cb-env capella-organization not-an-org
+Error:   × Organization not registered
+  help: Has the organization not-an-org been registered in the config file?</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>But the same is not true with projects, so if operations are unexpectedly failing against a Capella cluster, make sure your active project is correctly set.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_cb_env_register">3.4. <code>cb-env register</code></h3>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; cb-env register --help
+Registers a cluster for use with the shell
+
+Usage:
+  &gt; cb-env register {flags} &lt;identifier&gt; &lt;connstr&gt; &lt;username&gt; &lt;password&gt;
+
+Flags:
+  -h, --help - Display the help message for this command
+  --display_name &lt;String&gt; - the display name to use for the user when this cluster is active
+  --default-bucket &lt;String&gt; - the default bucket to use with this cluster
+  --default-scope &lt;String&gt; - the default scope to use with this cluster
+  --default-collection &lt;String&gt; - the default collection to use with this cluster
+  --tls-enabled &lt;String&gt; - whether or not to enable tls, defaults to true
+  --tls-cert-path &lt;String&gt; - the path to the certificate to use with tls
+  --tls-accept-all-certs &lt;String&gt; - whether or not to accept all certs with tls, defaults to true
+  --save - whether or not to add the cluster to the .cbsh config file, defaults to false
+  --capella-organization &lt;String&gt; - capella organization that this cluster belongs to
+
+Parameters:
+  identifier &lt;string&gt;: the identifier to use for this cluster
+  connstr &lt;string&gt;: the connection string to use for this cluster
+  username &lt;string&gt;: the username to use for this cluster
+  password &lt;string&gt;: the password to use for this cluster</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This command registers a new cluster for use with the shell without having to add a <code>cluster</code> entry to the <a href="#_the_config_dotfiles">config file</a> and restart.
+Note that clusters created through the shell using <code>clusters create</code> are automatically registered for use.
+<code>cb-env register</code> takes the local identifier for the cluster, connection string, username and password as positional parameters:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; cb-env register new-cluster cb.lcrhwge7pstmolxx.couchbase.com Administrator password</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Once registered the new cluster can be seen in the output of <code>cb-env managed</code>, and can be set as the active cluster using <a href="#_cb_env_cluster">cb-env cluster</a>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; cb-env managed
+╭───┬────────┬───────┬─────────────┬───────────────┬──────────────────────╮
+│ # │ active │  tls  │ identifier  │   username    │ capella_organization │
+├───┼────────┼───────┼─────────────┼───────────────┼──────────────────────┤
+│ 0 │ false  │ false │ local       │ Administrator │                      │
+│ 1 │ false  │ true  │ new-cluster │ Administrator │                      │
+│ 2 │ true   │ true  │ remote      │ charlie       │ my-org               │
+╰───┴────────┴───────┴─────────────┴───────────────┴──────────────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Note that by default although tls is enabled the shell will accept all certs. This can be changed with the <code>--tls-accept-all-certs</code> flag.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_per_command_execution_environments">3.5. Per command execution environments</h3>
 <div class="paragraph">
 <p>On many commands you will notice a set of flags which allow you to override the active execution environment.
 Different commands support different flags, depending on the command you can expect to see any of:</p>
@@ -846,7 +1094,7 @@ Different commands support different flags, depending on the command you can exp
 </ul>
 </div>
 <div class="sect3">
-<h4 id="_the_clusters_flag">3.1.1. The <code>--clusters</code> flag</h4>
+<h4 id="_the_clusters_flag">3.5.1. The <code>--clusters</code> flag</h4>
 <div class="paragraph">
 <p>The argument for this flag is an identifier combined with a regular expression.
 So imagine you have three clusters setup with the following names:</p>
@@ -881,7 +1129,7 @@ So imagine you have three clusters setup with the following names:</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_the_bucket_scope_collection_flags">3.1.2. The <code>--bucket</code>, <code>--scope</code>, <code>--collection</code> flags</h4>
+<h4 id="_the_bucket_scope_collection_flags">3.5.2. The <code>--bucket</code>, <code>--scope</code>, <code>--collection</code> flags</h4>
 <div class="paragraph">
 <p>These flags are a little different to the <code>--clusters</code> flag, they are not regular expressions and can only be used to define a single name each.
 Unlike <code>--clusters</code> the name provided to these flags does not have to be already known to Couchbase Shell, they can refer to any bucket, scope, and collection that exist within your active cluster or defined cluster(s).
@@ -1717,7 +1965,7 @@ password = &quot;password&quot;
 <p>Couchbase Shell supports loading data from a variety of formats and sources.</p>
 </div>
 <div class="paragraph">
-<p>The simplest way to import data is using <code>doc import</code> as covered in <a href="../intro.html">Loading data into the shell</a>.
+<p>The simplest way to import data is using <code>doc import</code> as covered in <a href="#_loading_data_into_the_shell">Loading data into the shell</a>.
 These recipes will cover more advanced usecases.</p>
 </div>
 <div class="sect3">
@@ -2407,7 +2655,7 @@ As our versioning continues to track the underlying Nushell minor version this h
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-07-31 12:12:36 UTC
+Last updated 2024-08-05 11:40:28 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
