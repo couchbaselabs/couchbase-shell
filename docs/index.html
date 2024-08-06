@@ -46,10 +46,11 @@
 <li><a href="#_cb_env_bucketscopecollection">3.2. <code>cb-env bucket/scope/collection</code></a></li>
 <li><a href="#_cb_env_projectcapella_organization">3.3. <code>cb-env project/capella-organization</code></a></li>
 <li><a href="#_cb_env_register">3.4. <code>cb-env register</code></a></li>
-<li><a href="#_per_command_execution_environments">3.5. Per command execution environments</a>
+<li><a href="#_cb_env_llm">3.5. <code>cb-env llm</code></a></li>
+<li><a href="#_per_command_execution_environments">3.6. Per command execution environments</a>
 <ul class="sectlevel3">
-<li><a href="#_the_clusters_flag">3.5.1. The <code>--clusters</code> flag</a></li>
-<li><a href="#_the_bucket_scope_collection_flags">3.5.2. The <code>--bucket</code>, <code>--scope</code>, <code>--collection</code> flags</a></li>
+<li><a href="#_the_clusters_flag">3.6.1. The <code>--clusters</code> flag</a></li>
+<li><a href="#_the_bucket_scope_collection_flags">3.6.2. The <code>--bucket</code>, <code>--scope</code>, <code>--collection</code> flags</a></li>
 </ul>
 </li>
 </ul>
@@ -80,7 +81,16 @@
 <li><a href="#_query_indexes">4.7.3. <code>query indexes</code></a></li>
 </ul>
 </li>
-<li><a href="#_version">4.8. <code>version</code></a></li>
+<li><a href="#_vector_commands">4.8. <code>vector</code> commands</a>
+<ul class="sectlevel3">
+<li><a href="#_vector_search">4.8.1. <code>vector search</code></a></li>
+<li><a href="#_vector_create_index">4.8.2. <code>vector create-index</code></a></li>
+<li><a href="#_vector_enrich_doc">4.8.3. <code>vector enrich-doc</code></a></li>
+<li><a href="#_vector_enrich_text">4.8.4. <code>vector enrich-text</code></a></li>
+</ul>
+</li>
+<li><a href="#_ask">4.9. <code>ask</code></a></li>
+<li><a href="#_version">4.10. <code>version</code></a></li>
 </ul>
 </li>
 <li><a href="#_reference">5. Reference</a>
@@ -1072,7 +1082,119 @@ Note that clusters created through the shell using <code>clusters create</code> 
 </div>
 </div>
 <div class="sect2">
-<h3 id="_per_command_execution_environments">3.5. Per command execution environments</h3>
+<h3 id="_cb_env_llm">3.5. <code>cb-env llm</code></h3>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; cb-env llm --help
+Sets the active llm based on its identifier
+
+Usage:
+  &gt; cb-env llm &lt;identifier&gt;
+
+Flags:
+  -h, --help - Display the help message for this command
+
+Parameters:
+  identifier &lt;string&gt;: the identifier of the llm</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This command sets the active llm (large language model), which will be used by the <a href="#_vector_enrich_doc">vector enrich-doc</a>, <a href="#_vector_enrich_text">vector enrich-text</a> and <a href="#_ask">ask</a> commands.</p>
+</div>
+<div class="paragraph">
+<p>To be set as active the llm must be specified in the config file.
+For example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>[[llm]]
+identifier = &quot;OpenAI-small&quot;
+provider = &quot;OpenAI&quot;
+embed_model = &quot;text-embedding-3-small&quot;
+chat_model = &quot;gpt-3.5-turbo&quot;
+api_key = &quot;get-your-own&quot;
+
+[[llm]]
+identifier = &quot;Bedrock-titan&quot;
+provider = &quot;Bedrock&quot;
+embed_model = &quot;amazon.titan-embed-text-v1&quot;
+chat_model = &quot;amazon.titan-text-express-v1&quot;
+
+[[llm]]
+identifier = &quot;Gemini-pro&quot;
+provider = &quot;Gemini&quot;
+embed_model = &quot;text-embedding-004&quot;
+chat_model = &quot;gemini-1.0-pro&quot;
+api_key = &quot;get-your-own&quot;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The currently supported providers are Gemini (Google), Bedrock (AWS) and OpenAI.
+Specifying values other than these for the provider will result in an error when starting the shell.
+Notice that the Bedrock entry does not have an API key, this is because it requires the user to configure an appropriate role using the <a href="https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-role.html">AWS CLI</a>.</p>
+</div>
+<div class="paragraph">
+<p>The <code>embed-model</code> field is the model that will be used to generate embeddings by the <a href="#_vector_enrich_doc">vector enrich-doc</a> and <a href="#_vector_enrich_text">vector enrich-text</a> commands.
+While the <code>chat-model</code> is the model that will be used to answer questions with the <a href="#_ask">ask</a> command.
+These models can be any that the provider&#8217;s API supports, and should be provided in the format given in the provider&#8217;s API docs.</p>
+</div>
+<div class="paragraph">
+<p>The api-keys can also be given separately in the <a href="#_credentials_file_format">credentials file</a>, for example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>[[llm]]
+identifier = &quot;Gemini-pro&quot;
+api_key = &quot;get-your-own&quot;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The identifier must be the same as the entry in the config file for this to work.</p>
+</div>
+<div class="paragraph">
+<p>The active llm can be checked using the <a href="#_cb_env_and_the_environment">cb-env</a> command:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; cb-env
+╭──────────────────────┬───────────────╮
+│ username             │ Administrator │
+│ display_name         │ Charlie       │
+│ cluster              │ remote        │
+│ bucket               │ default       │
+│ scope                │ _default      │
+│ collection           │ _default      │
+│ cluster_type         │ provisioned   │
+│ capella-organization │ my-org        │
+│ llm                  │ Bedrock-titan │
+╰──────────────────────┴───────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>When the active llm is changed using <code>cb-env llm</code> this will be reflected in the output of <code>cb-env</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; cb-env llm Gemini-pro
+👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; cb-env
+╭──────────────────────┬──────────────╮
+│ username             │ Administrator│
+│ display_name         │ Charlie      │
+│ cluster              │ remote       │
+│ bucket               │ default      │
+│ scope                │ _default     │
+│ collection           │ _default     │
+│ cluster_type         │ provisioned  │
+│ capella-organization │ my-org       │
+│ llm                  │ Gemini-pro   │
+╰──────────────────────┴──────────────╯</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_per_command_execution_environments">3.6. Per command execution environments</h3>
 <div class="paragraph">
 <p>On many commands you will notice a set of flags which allow you to override the active execution environment.
 Different commands support different flags, depending on the command you can expect to see any of:</p>
@@ -1094,7 +1216,7 @@ Different commands support different flags, depending on the command you can exp
 </ul>
 </div>
 <div class="sect3">
-<h4 id="_the_clusters_flag">3.5.1. The <code>--clusters</code> flag</h4>
+<h4 id="_the_clusters_flag">3.6.1. The <code>--clusters</code> flag</h4>
 <div class="paragraph">
 <p>The argument for this flag is an identifier combined with a regular expression.
 So imagine you have three clusters setup with the following names:</p>
@@ -1129,7 +1251,7 @@ So imagine you have three clusters setup with the following names:</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_the_bucket_scope_collection_flags">3.5.2. The <code>--bucket</code>, <code>--scope</code>, <code>--collection</code> flags</h4>
+<h4 id="_the_bucket_scope_collection_flags">3.6.2. The <code>--bucket</code>, <code>--scope</code>, <code>--collection</code> flags</h4>
 <div class="paragraph">
 <p>These flags are a little different to the <code>--clusters</code> flag, they are not regular expressions and can only be used to define a single name each.
 Unlike <code>--clusters</code> the name provided to these flags does not have to be already known to Couchbase Shell, they can refer to any bucket, scope, and collection that exist within your active cluster or defined cluster(s).
@@ -1870,7 +1992,664 @@ it was successfully created.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_version">4.8. <code>version</code></h3>
+<h3 id="_vector_commands">4.8. <code>vector</code> commands</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; vector --help
+Commands that support and implement vector search
+
+Usage:
+  &gt; vector
+
+Subcommands:
+  vector create-index - Creates a vector index
+  vector enrich-doc - Enriches given JSON with embeddings of selected field
+  vector enrich-text - Generates embeddings from text using the active llm
+  vector search - Performs a vector search query
+
+Flags:
+  -h, --help - Display the help message for this comma</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The vector commands make it easy to explore the value that vector search can add to your data.</p>
+</div>
+<div class="sect3">
+<h4 id="_vector_search">4.8.1. <code>vector search</code></h4>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; vector search --help
+Performs a vector search query
+
+Usage:
+  &gt; vector search {flags} &lt;index&gt; &lt;field&gt; (vector)
+
+Flags:
+  -h, --help - Display the help message for this command
+  --query &lt;String&gt; - the text to query for using a query string query
+  --clusters &lt;String&gt; - the clusters which should be contacted
+  --neighbors &lt;Int&gt; - number of neighbors returned by vector search (default = 3)
+  --bucket &lt;String&gt; - the name of the bucket
+  --scope &lt;String&gt; - the name of the scope
+
+Parameters:
+  index &lt;string&gt;: the index name
+  field &lt;string&gt;: name of the vector field the index was built on
+  vector &lt;list&lt;float&gt;&gt;: the vector used for searching (optional)</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Performs a vector search against a named vector index.
+Requires a vector to be used as the source of the search which can be supplied in a couple of formats.</p>
+</div>
+<div class="paragraph">
+<p>For example imagine we have the following document stored in our cluster:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>&gt; doc get 10019
+╭───┬───────┬───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┬─────╮
+│ # │  id   │                                                                                                            content                                                                                                            │ ... │
+├───┼───────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼─────┤
+│ 0 │ 10019 │ ╭───────────────┬───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ │ ... │
+│   │       │ │ title         │ Gillingham (Kent)                                                                                                                                                                                         │ │     │
+│   │       │ │ name          │ Royal Engineers Museum                                                                                                                                                                                    │ │     │
+│   │       │ │ alt           │                                                                                                                                                                                                           │ │     │
+│   │       │ │ address       │ Prince Arthur Road, ME4 4UG                                                                                                                                                                               │ │     │
+│   │       │ │ directions    │                                                                                                                                                                                                           │ │     │
+│   │       │ │ phone         │ +44 1634 822839                                                                                                                                                                                           │ │     │
+│   │       │ │ tollfree      │                                                                                                                                                                                                           │ │     │
+│   │       │ │ email         │                                                                                                                                                                                                           │ │     │
+│   │       │ │ url           │ http://www.remuseum.org.uk                                                                                                                                                                                │ │     │
+│   │       │ │ hours         │ Tues - Fri 9.00am to 5.00pm, Sat - Sun 11.30am - 5.00pm                                                                                                                                                   │ │     │
+│   │       │ │ image         │                                                                                                                                                                                                           │ │     │
+│   │       │ │ price         │                                                                                                                                                                                                           │ │     │
+│   │       │ │ content       │ Adult - £6.99 for an Adult ticket that allows you to come back for further visits within a year (children's and concessionary tickets also available). Museum on military engineering and the history of  │ │     │
+│   │       │ │               │ the British Empire. A quite extensive collection that takes about half a day to see. Of most interest to fans of British and military history or civil engineering. The outside collection of tank        │ │     │
+│   │       │ │               │ mounted bridges etc can be seen for free. There is also an extensive series of themed special event weekends, admission to which is included in the cost of the annual ticket.                            │ │     │
+│   │       │ │               │ ╭──────────┬────────────────────╮                                                                                                                                                                         │ │     │
+│   │       │ │ geo           │ │ lat      │ 51.39              │                                                                                                                                                                         │ │     │
+│   │       │ │               │ │ lon      │ 0.54               │                                                                                                                                                                         │ │     │
+│   │       │ │               │ │ accuracy │ RANGE_INTERPOLATED │                                                                                                                                                                         │ │     │
+│   │       │ │               │ ╰──────────┴────────────────────╯                                                                                                                                                                         │ │     │
+│   │       │ │ activity      │ see                                                                                                                                                                                                       │ │     │
+│   │       │ │ type          │ landmark                                                                                                                                                                                                  │ │     │
+│   │       │ │ id            │ 10019                                                                                                                                                                                                     │ │     │
+│   │       │ │ country       │ United Kingdom                                                                                                                                                                                            │ │     │
+│   │       │ │ city          │ Gillingham                                                                                                                                                                                                │ │     │
+│   │       │ │ state         │                                                                                                                                                                                                           │ │     │
+│   │       │ │               │ ╭──────┬───────╮                                                                                                                                                                                          │ │     │
+│   │       │ │ contentVector │ │    0 │  0.03 │                                                                                                                                                                                          │ │     │
+│   │       │ │               │ │  ... │  ...  │                                                                                                                                                                                          │ │     │
+│   │       │ │               │ │ 1023 │ -0.00 │                                                                                                                                                                                          │ │     │
+│   │       │ │               │ ╰──────┴───────╯                                                                                                                                                                                          │ │     │
+│   │       │ ╰───────────────┴───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ │     │
+╰───┴───────┴───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┴─────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The field <code>contentVector</code> contains a vector of dimension 1024 that could be used as the input to a vector search.
+Due to the format of the data returned by <a href="#_reading">doc get</a> we need to <a href="https://www.nushell.sh/commands/docs/flatten.html">flatten</a> to remove the nesting then <a href="https://www.nushell.sh/commands/docs/select.html">select</a> the <code>contentVector</code> field:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; doc get 10019 | flatten | select contentVector
+╭───┬──────────────────╮
+│ # │  contentVector   │
+├───┼──────────────────┤
+│ 0 │ ╭──────┬───────╮ │
+│   │ │    0 │  0.03 │ │
+│   │ │ ...  │  ...  │ │
+│   │ │ 1023 │ -0.00 │ │
+│   │ ╰──────┴───────╯ │
+╰───┴──────────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This can then be piped directly into <code>vector search</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; doc get 10019 | flatten | select contentVector  | vector search landmark-content-index contentVector
+╭───┬───────┬─────────────────────────────────────────┬─────────╮
+│ # │  id   │                  score                  │ cluster │
+├───┼───────┼─────────────────────────────────────────┼─────────┤
+│ 0 │ 10019 │ 340282350000000000000000000000000000000 │ local   │
+│ 1 │ 16379 │ 1.0082568                               │ local   │
+│ 2 │ 33857 │ 0.9897698                               │ local   │
+╰───┴───────┴─────────────────────────────────────────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>We specify <code>contentVector</code> as the final positional parameter to <code>vector search</code> NOT because this is the name of the field that we got our vector from, but because this is name of the field on which the index was created.
+See <a href="#_vector_create_index">vector create-index</a> for further explanation.</p>
+</div>
+<div class="paragraph">
+<p><a href="#_subdoc_get">Subdoc get</a> can also be used to fetch the source vector:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; subdoc get contentVector 10019 | select content | vector search landmark-content-index contentVector
+╭───┬───────┬─────────────────────────────────────────┬─────────╮
+│ # │  id   │                  score                  │ cluster │
+├───┼───────┼─────────────────────────────────────────┼─────────┤
+│ 0 │ 10019 │ 340282350000000000000000000000000000000 │ local   │
+│ 1 │ 16379 │ 1.0082568                               │ local   │
+│ 2 │ 33857 │ 0.9897698                               │ local   │
+╰───┴───────┴─────────────────────────────────────────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Here we don&#8217;t need to flatten and specify the field since the content of the <code>sub doc</code> output already only holds the <code>contentVector</code> field.</p>
+</div>
+<div class="paragraph">
+<p>Another format that is accepted is the output of  <a href="#_vector_enrich_text">vector enrich-text</a> :</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; vector enrich-text &quot;some string&quot; --dimension 1024 | vector search landmark-content-index contentVector
+Embedding batch 1/1
+╭───┬───────┬────────────┬─────────╮
+│ # │  id   │   score    │ cluster │
+├───┼───────┼────────────┼─────────┤
+│ 0 │ 21681 │ 0.7402005  │ local   │
+│ 1 │ 21682 │ 0.73517126 │ local   │
+│ 2 │ 6073  │ 0.70910853 │ local   │
+╰───┴───────┴────────────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Note the <code>--dimension</code> flag used here, the vector provided as the source of the search must match the dimension of the vectors on which the index was <a href="#_vector_create_index">created</a> else you will get no results.</p>
+</div>
+<div class="paragraph">
+<p>Finally if you just have a plain vector that is a list of floats this can be passed in as a final positional parameter:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; let vector = [0.1 0.2 0.3 0.4]
+&gt; vector search vector-index fieldName $vector</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The vector here only has a dimension of 4 which is unrealistically low, but it is used for illustrative purposes.</p>
+</div>
+<div class="paragraph">
+<p>The output of the search is a table containing the IDs of the <code>n</code> (specified by the <code>--neighbours</code> flag) documents with the most similar vector in the field named.
+The similarity of vectors is calculated using the metric specified on <a href="#_vector_create_index">index creation</a>.</p>
+</div>
+<div class="paragraph">
+<p>To see the contents of the documents identified in the table simply pipe the output of vector search into a <a href="#_reading">doc get</a> command.
+If only interested in a particular field then the <a href="#_subdoc_get">subdoc get</a> command will also work in the same way:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Administrator 🏠 local in ☁️ default._default._default
+&gt; vector search landmark-content-index contentVector $vector | subdoc get address
+╭───┬───────┬───────────────────────────────────────┬─────────────────────┬───────┬─────────╮
+│ # │  id   │                content                │         cas         │ error │ cluster │
+├───┼───────┼───────────────────────────────────────┼─────────────────────┼───────┼─────────┤
+│ 0 │ 11956 │ Hornchurch Road, Hornchurch, RM11 1JU │ 1722871671832641536 │       │ local   │
+│ 1 │ 25284 │ 4040 Twiggs St                        │ 1722871685304025088 │       │ local   │
+│ 2 │ 7744  │ Grandstand Road                       │ 1722871709487202304 │       │ local   │
+╰───┴───────┴───────────────────────────────────────┴─────────────────────┴───────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The environment is important when using the <code>vector search</code> command as the fully qualified index name is constructed from the active bucket and scope.
+The above command will be trying to use the index <code>default._default.landmark-content-index</code>.
+If the index was created against a different bucket/scope then you will get an index not found error.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+&gt; vector search landmark-content-index contentVector $vector
+Error:   × Unexpected status code
+   ╭─[entry #4:1:1]
+ 1 │ vector search landmark-content-index contentVector $vector
+   · ──────┬──────
+   ·       ╰──
+   ╰────
+  help: Unexpected status code: 400, body: {&quot;error&quot;:&quot;rest_auth: preparePerms, err: index not found&quot;,&quot;request&quot;:{&quot;ctl&quot;:{&quot;timeout&quot;:75000},&quot;knn&quot;:[{&quot;field&quot;:&quot;contentVector&quot;,&quot;k&quot;:3,&quot;vector&quot;:
+  ...</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>If you want to use an index that was created against a different bucket/scope to those that are active, this can be done with the <code>--bucket</code> and <code>--scope</code> flags.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+&gt; vector search landmark-content-index contentVector $vector --bucket default --scope _default
+╭───┬───────┬─────────────────────────────────────────┬─────────╮
+│ # │  id   │                  score                  │ cluster │
+├───┼───────┼─────────────────────────────────────────┼─────────┤
+│ 0 │ 10019 │ 340282350000000000000000000000000000000 │ local   │
+│ 1 │ 16379 │ 1.0082568                               │ local   │
+│ 2 │ 33857 │ 0.9897698                               │ local   │
+╰───┴───────┴─────────────────────────────────────────┴─────────╯</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_vector_create_index">4.8.2. <code>vector create-index</code></h4>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; vector create-index --help
+Creates a vector index
+
+Usage:
+  &gt; vector create-index {flags} &lt;name&gt; &lt;field&gt; &lt;dimension&gt;
+
+Flags:
+  -h, --help - Display the help message for this command
+  --similarity-metric &lt;String&gt; - metric used to calculate vector similarity - defaults to l2_norm
+  --clusters &lt;String&gt; - the clusters which should be contacted
+  --bucket &lt;String&gt; - the name of the bucket
+  --scope &lt;String&gt; - the name of the scope
+  --collection &lt;String&gt; - the name of the collection
+
+Parameters:
+  name &lt;string&gt;: the index name
+  field &lt;string&gt;: name of the vector field to build the index on
+  dimension &lt;int&gt;: the dimension of the vectors the index will be built on</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Creates a vector index against the active bucket/scope or the bucket/scope specified with the corresponding flags.
+For example the following will create an index over documents in the bucket <code>default</code> and the scope <code>_default</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Administrator 🏠 remote in ☁️ default._default._default
+&gt; vector create-index new-vector-index fieldName 1024</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Any documents located elsewhere will not be indexed, and a vector search performed with this index will not find them.
+If the documents to be indexed were stored elsewhere then the environment would need to be changed with <code>cb-env bucket/scope</code> or the bucket and scope could be passed in with the appropriate flags.</p>
+</div>
+<div class="paragraph">
+<p>The field parameter is the name of the field in the documents that contains the vector, and the dimension (length of the vector) parameter must match that of the vectors contained in the named field.
+Imagine there are documents with the following structure in the bucket <code>users</code> and scope <code>embeddedUsers</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>{
+    &quot;name&quot;: &quot;my-name&quot;,
+    &quot;e-mail&quot;: &quot;shell-user@couchbase.com&quot;,
+    &quot;description&quot;: &quot;A rich textual description of the user.&quot;,
+    &quot;descriptionEmbedding&quot;: [0.0178287, 0.123098, -0.0189239, 1.109238],
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In this example the descriptionEmbedding is the result of using a large language model to generate an embedding from the description field.
+The dimension of the vector (4) is unrealistically low but it&#8217;s been chosen for illustrative purposes.
+To create an index over such documents in order to find users with similar descriptions the command would be:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Administrator 🏠 remote in ☁️ users.embeddedUsers._default
+&gt; vector create-index user-description-index descriptionEmbedding 4
+
+or
+
+👤 Administrator 🏠 remote in ☁️ default._default._default
+&gt; vector create-index user-description-index descriptionEmbedding 4 --bucket users --scope embeddedUsers</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In the first example the create command is run from within the bucket and scope that the documents are stored in.
+Whereas in the latter the environment values need to be overwritten with the <code>--bucket</code> and <code>--scope</code> flags to correctly create the index.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_vector_enrich_doc">4.8.3. <code>vector enrich-doc</code></h4>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; vector enrich-doc --help
+Enriches given JSON with embeddings of selected field
+
+Usage:
+  &gt; vector enrich-doc {flags} &lt;field&gt;
+
+Flags:
+  -h, --help - Display the help message for this command
+  --model &lt;String&gt; - the model to generate the embeddings with
+  --dimension &lt;Int&gt; - dimension of the resulting embeddings
+  --maxTokens &lt;Int&gt; - the token per minute limit for the provider/model
+  --id-column &lt;String&gt; - the name of the id column if used with an input stream
+  --vectorField &lt;String&gt; - the name of the field into which the embedding is written, defaults to fieldVector
+
+Parameters:
+  field &lt;string&gt;: the field from which the vector is generated</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This command "enriches" an existing json document by generating an embedding using the <a href="#_cb_env_llm">active llm</a> from a named field and storing it in a new field in the same document.</p>
+</div>
+<div class="paragraph">
+<p>For example take one of the documents from the travel sample data set:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>&gt; doc get landmark_10019
+╭───┬────────────────┬────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┬─────╮
+│ # │       id       │                                                                                                        content                                                                                                         │ ... │
+├───┼────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼─────┤
+│ 0 │ landmark_10019 │ ╭────────────┬───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ │ ... │
+│   │                │ │ title      │ Gillingham (Kent)                                                                                                                                                                                     │ │     │
+│   │                │ │ name       │ Royal Engineers Museum                                                                                                                                                                                │ │     │
+│   │                │ │ alt        │                                                                                                                                                                                                       │ │     │
+│   │                │ │ address    │ Prince Arthur Road, ME4 4UG                                                                                                                                                                           │ │     │
+│   │                │ │ directions │                                                                                                                                                                                                       │ │     │
+│   │                │ │ phone      │ +44 1634 822839                                                                                                                                                                                       │ │     │
+│   │                │ │ tollfree   │                                                                                                                                                                                                       │ │     │
+│   │                │ │ email      │                                                                                                                                                                                                       │ │     │
+│   │                │ │ url        │ http://www.remuseum.org.uk                                                                                                                                                                            │ │     │
+│   │                │ │ hours      │ Tues - Fri 9.00am to 5.00pm, Sat - Sun 11.30am - 5.00pm                                                                                                                                               │ │     │
+│   │                │ │ image      │                                                                                                                                                                                                       │ │     │
+│   │                │ │ price      │                                                                                                                                                                                                       │ │     │
+│   │                │ │ content    │ Adult - £6.99 for an Adult ticket that allows you to come back for further visits within a year (children's and concessionary tickets also available). Museum on military engineering and the history │ │     │
+│   │                │ │            │  of the British Empire. A quite extensive collection that takes about half a day to see. Of most interest to fans of British and military history or civil engineering. The outside collection of     │ │     │
+│   │                │ │            │ tank mounted bridges etc can be seen for free. There is also an extensive series of themed special event weekends, admission to which is included in the cost of the annual ticket.                   │ │     │
+│   │                │ │            │ ╭──────────┬────────────────────╮                                                                                                                                                                     │ │     │
+│   │                │ │ geo        │ │ lat      │ 51.39              │                                                                                                                                                                     │ │     │
+│   │                │ │            │ │ lon      │ 0.54               │                                                                                                                                                                     │ │     │
+│   │                │ │            │ │ accuracy │ RANGE_INTERPOLATED │                                                                                                                                                                     │ │     │
+│   │                │ │            │ ╰──────────┴────────────────────╯                                                                                                                                                                     │ │     │
+│   │                │ │ activity   │ see                                                                                                                                                                                                   │ │     │
+│   │                │ │ type       │ landmark                                                                                                                                                                                              │ │     │
+│   │                │ │ id         │ 10019                                                                                                                                                                                                 │ │     │
+│   │                │ │ country    │ United Kingdom                                                                                                                                                                                        │ │     │
+│   │                │ │ city       │ Gillingham                                                                                                                                                                                            │ │     │
+│   │                │ │ state      │                                                                                                                                                                                                       │ │     │
+│   │                │ ╰────────────┴───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ │     │
+╰───┴────────────────┴────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┴─────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>We can use the content field to generate an embedding, and the result will be a new document that is the same as the original, with a new field containing the vector that is the result of the embedding:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>&gt; doc get landmark_10019 | select content | vector enrich-doc content
+Embedding batch 1/1
+╭───┬───────┬───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ # │  id   │                                                                                                                content                                                                                                                │
+├───┼───────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 0 │ 10019 │ ╭───────────────┬───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ │
+│   │       │ │ title         │ Gillingham (Kent)                                                                                                                                                                                                 │ │
+│   │       │ │ name          │ Royal Engineers Museum                                                                                                                                                                                            │ │
+│   │       │ │ alt           │                                                                                                                                                                                                                   │ │
+│   │       │ │ address       │ Prince Arthur Road, ME4 4UG                                                                                                                                                                                       │ │
+│   │       │ │ directions    │                                                                                                                                                                                                                   │ │
+│   │       │ │ phone         │ +44 1634 822839                                                                                                                                                                                                   │ │
+│   │       │ │ tollfree      │                                                                                                                                                                                                                   │ │
+│   │       │ │ email         │                                                                                                                                                                                                                   │ │
+│   │       │ │ url           │ http://www.remuseum.org.uk                                                                                                                                                                                        │ │
+│   │       │ │ hours         │ Tues - Fri 9.00am to 5.00pm, Sat - Sun 11.30am - 5.00pm                                                                                                                                                           │ │
+│   │       │ │ image         │                                                                                                                                                                                                                   │ │
+│   │       │ │ price         │                                                                                                                                                                                                                   │ │
+│   │       │ │ content       │ Adult - £6.99 for an Adult ticket that allows you to come back for further visits within a year (children's and concessionary tickets also available). Museum on military engineering and the history of the      │ │
+│   │       │ │               │ British Empire. A quite extensive collection that takes about half a day to see. Of most interest to fans of British and military history or civil engineering. The outside collection of tank mounted bridges    │ │
+│   │       │ │               │ etc can be seen for free. There is also an extensive series of themed special event weekends, admission to which is included in the cost of the annual ticket.                                                    │ │
+│   │       │ │               │ ╭──────────┬────────────────────╮                                                                                                                                                                                 │ │
+│   │       │ │ geo           │ │ lat      │ 51.39              │                                                                                                                                                                                 │ │
+│   │       │ │               │ │ lon      │ 0.54               │                                                                                                                                                                                 │ │
+│   │       │ │               │ │ accuracy │ RANGE_INTERPOLATED │                                                                                                                                                                                 │ │
+│   │       │ │               │ ╰──────────┴────────────────────╯                                                                                                                                                                                 │ │
+│   │       │ │ activity      │ see                                                                                                                                                                                                               │ │
+│   │       │ │ type          │ landmark                                                                                                                                                                                                          │ │
+│   │       │ │ id            │ 10019                                                                                                                                                                                                             │ │
+│   │       │ │ country       │ United Kingdom                                                                                                                                                                                                    │ │
+│   │       │ │ city          │ Gillingham                                                                                                                                                                                                        │ │
+│   │       │ │ state         │                                                                                                                                                                                                                   │ │
+│   │       │ │               │ ╭──────┬───────╮                                                                                                                                                                                                  │ │
+│   │       │ │ contentVector │ │    0 │  0.02 │                                                                                                                                                                                                  │ │
+│   │       │ │               │ │  ... │   ... │                                                                                                                                                                                                  │ │
+│   │       │ │               │ │ 1535 │ -0.01 │                                                                                                                                                                                                  │ │
+│   │       │ │               │ ╰──────┴───────╯                                                                                                                                                                                                  │ │
+│   │       │ ╰───────────────┴───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ │
+╰───┴───────┴───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The resulting document is the same as the original, but with a new field <code>contentVector</code> which contains the result of embedding the content field with the <a href="#_cb_env_llm">active llm</a>.
+The name of the field that the embedding will be written to will default to the name of the original field with "Vector" appended.
+This default behaviour can be overwritten with the <code>vectorField</code> flag.
+The resulting document is formatted with an id and content column which allows it to be piped into a <code>doc upsert</code> command to store it in the connected couchbase cluster.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; doc get landmark_10019 | select content | vector enrich-doc content | doc upsert
+Embedding batch 1/1
+╭───┬───────────┬─────────┬────────┬──────────┬─────────╮
+│ # │ processed │ success │ failed │ failures │ cluster │
+├───┼───────────┼─────────┼────────┼──────────┼─────────┤
+│ 0 │         1 │       1 │      0 │          │ local   │
+╰───┴───────────┴─────────┴────────┴──────────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><code>vector enrich-doc</code> can enrich more than one document at a time.
+To repeat what we have done above on all the landmark documents we can get all the docs using a query and pipe the result directly into the <code>enrich-doc</code> command:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; query &quot;SELECT * FROM `travel-sample` WHERE type = 'landmark'&quot; | vector enrich-doc content</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_vector_enrich_text">4.8.4. <code>vector enrich-text</code></h4>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; vector enrich-text --help
+Generates embeddings from text using the active llm
+
+Usage:
+  &gt; vector enrich-text {flags} (text)
+
+Flags:
+  -h, --help - Display the help message for this command
+  --model &lt;String&gt; - the model to generate the embeddings with
+  --chunk &lt;Int&gt; - length of the data chunks to embed (default 1024)
+  --dimension &lt;Int&gt; - dimension of the resulting embeddings
+  --maxTokens &lt;Int&gt; - the token per minute limit for the provider/model
+
+Parameters:
+  text &lt;string&gt;: the text to be embedded (optional)</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This command generates and embedding from the input using the <a href="#_cb_env_llm">active_llm</a> text and outputs a json document containing the source text and the embedding.</p>
+</div>
+<div class="paragraph">
+<p>It can be used directly on strings, which can be passed in as a positional parameter:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; vector enrich-text &quot;some string&quot; --dimension 5
+Embedding batch 1/1
+╭───┬───────────────┬────────────────────────────╮
+│ # │      id       │          content           │
+├───┼───────────────┼────────────────────────────┤
+│ 0 │ vector-c9e02c │ ╭────────┬───────────────╮ │
+│   │               │ │ text   │ some string   │ │
+│   │               │ │        │ ╭───┬───────╮ │ │
+│   │               │ │ vector │ │ 0 │  0.31 │ │ │
+│   │               │ │        │ │ 1 │ -0.61 │ │ │
+│   │               │ │        │ │ 2 │ -0.21 │ │ │
+│   │               │ │        │ │ 3 │ -0.59 │ │ │
+│   │               │ │        │ │ 4 │ -0.38 │ │ │
+│   │               │ │        │ ╰───┴───────╯ │ │
+│   │               │ ╰────────┴───────────────╯ │
+╰───┴───────────────┴────────────────────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Or piped directly in:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; &quot;some string&quot; | vector enrich-text --dimension 5
+Embedding batch 1/1
+╭───┬───────────────┬────────────────────────────╮
+│ # │      id       │          content           │
+├───┼───────────────┼────────────────────────────┤
+│ 0 │ vector-a269a7 │ ╭────────┬───────────────╮ │
+│   │               │ │ text   │ some string   │ │
+│   │               │ │        │ ╭───┬───────╮ │ │
+│   │               │ │ vector │ │ 0 │  0.31 │ │ │
+│   │               │ │        │ │ 1 │ -0.61 │ │ │
+│   │               │ │        │ │ 2 │ -0.21 │ │ │
+│   │               │ │        │ │ 3 │ -0.59 │ │ │
+│   │               │ │        │ │ 4 │ -0.38 │ │ │
+│   │               │ │        │ ╰───┴───────╯ │ │
+│   │               │ ╰────────┴───────────────╯ │
+╰───┴───────────────┴────────────────────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Note that the dimension used here (5) is unrealistically low, but has just been chosen for illustrative purposes.</p>
+</div>
+<div class="paragraph">
+<p>The output is in a format that means it can be piped directly into a <code>doc upsert</code> command to upsert it into the cluster:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; &quot;some string&quot; | vector enrich-text --dimension 5 | doc upsert
+Embedding batch 1/1
+╭───┬───────────┬─────────┬────────┬──────────┬─────────╮
+│ # │ processed │ success │ failed │ failures │ cluster │
+├───┼───────────┼─────────┼────────┼──────────┼─────────┤
+│ 0 │         1 │       1 │      0 │          │ local   │
+╰───┴───────────┴─────────┴────────┴──────────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Or the output can be piped directly into <code>vector search</code> to find indexed docs with a similar vector.
+This makes <code>vector enrich-text</code> a very easy way to experiment with similarity search using strings.
+See <a href="#_vector_search">vector search</a> for an example of this.</p>
+</div>
+<div class="paragraph">
+<p><code>vector enrich-text</code> can also be used on larger chunks of text to produce multiple <code>vector docs</code> at once.
+For example say you have a text file called <code>some-text.txt</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; open some-text.txt | vector enrich-text | doc upsert
+Embedding batch 1/1
+╭───┬───────────┬─────────┬────────┬──────────┬─────────╮
+│ # │ processed │ success │ failed │ failures │ cluster │
+├───┼───────────┼─────────┼────────┼──────────┼─────────┤
+│ 0 │        92 │      92 │      0 │          │ local   │
+╰───┴───────────┴─────────┴────────┴──────────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>When used on larger amounts of text <code>vector enrich-text</code> will split it into chunks of length 1024 by default, the length of the chunks can be changed with the <code>--chunks</code> flag.
+In this example the contents of <code>some-text.txt</code> was split into 92 chunks, resulting in 92 <code>vector docs</code> that were then upserted into the connected cluster.</p>
+</div>
+<div class="paragraph">
+<p>Finally if you have a set of files within a directory that you want to generate <code>vector docs</code> from then you can list the files in the current directory with <code>ls</code> and pipe this list into <code>vector enrich-text</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; ls | vector enrich-text | doc upsert
+Embedding batch 1/1
+╭───┬───────────┬─────────┬────────┬──────────┬─────────╮
+│ # │ processed │ success │ failed │ failures │ cluster │
+├───┼───────────┼─────────┼────────┼──────────┼─────────┤
+│ 0 │       278 │     278 │      0 │          │ local   │
+╰───┴───────────┴─────────┴────────┴──────────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Here <code>vector enrich-text</code> will read each file, chunk the contents, retrieve the embeddings then generate the <code>vector docs</code>.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_ask">4.9. <code>ask</code></h3>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; ask --help
+Asks a connected LLM a question, optionally enhanced with context
+
+Usage:
+  &gt; ask {flags} &lt;question&gt; (context)
+
+Flags:
+  -h, --help - Display the help message for this command
+  --model &lt;String&gt; - the chat model to ask the question
+
+Parameters:
+  question &lt;string&gt;: the question to be asked
+  context &lt;any&gt;: table of strings used as context for the question (optional)</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><code>ask</code> can be used to ask a question of the <a href="#_cb_env_llm">active large language model</a>.
+It can be used to answer a standalone question:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; ask &quot;What is my favourite color&quot;
+I'm sorry, but as an assistant, I don't have access to personal information about you, such as your favorite color. If you'd like to share it with me, I'd be happy to remember it for future reference!</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Or context can be provided for the question as a list of strings.
+Either as a positional parameter:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; ask &quot;What is my favourite color&quot; [&quot;My favourite color is blue&quot;]
+Your favourite color is blue.</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This context can also be piped into the command which allows us to ask questions about docs in our database:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+&gt; subdoc get content landmark_10019 | select content | ask &quot;How much does it cost to go here?&quot;
+The admission price for an adult ticket is £6.99, which allows you to come back for further visits within a year. There are also tickets available for children and concessionary rates. Additionally, there is a collection of tank-mounted bridges and other outside attractions that can be seen for free. Special event weekends are included in the cost of the annual ticket.</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Since the context can be a list we can also use <code>ask</code> to summarize the results from various documents:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+&gt; [landmark_10019 landmark_10020] | subdoc get content | select content | ask &quot;what activities can I do at these places?&quot;
+At the museum on military engineering and the history of the British Empire, you can explore various exhibits related to British and military history, as well as civil engineering. Activities may include:
+
+1. Viewing exhibits on military equipment, vehicles, weapons, and uniforms.
+2. Learning about the history of the British Empire and its impact on world events.
+3. Participating in guided tours to gain more in-depth knowledge.
+4. Attending special event weekends with themed activities and demonstrations.
+5. Exploring the outside collection of tank-mounted bridges and other military hardware.
+
+At the new restaurant, you can enjoy the following activities:
+
+1. Dining on a menu that features burgers and ribs.
+2. Appreciating the Hollywood-style decor and ambiance.
+3. Socializing with friends or family in a lively atmosphere.
+4. Trying out new dishes or drinks from the restaurant's menu.
+5. Relaxing and unwinding in a cozy setting after a day of exploring or sightseeing.</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The answering of questions with supplied context can be used to easily implement <a href="#_rag_recipe">simple RAG</a>.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_version">4.10. <code>version</code></h3>
 <div class="paragraph">
 <p>The <code>version</code> command lists the version of the couchbase shell.</p>
 </div>
@@ -2655,7 +3434,7 @@ As our versioning continues to track the underlying Nushell minor version this h
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-08-05 11:40:28 UTC
+Last updated 2024-08-06 13:12:20 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
