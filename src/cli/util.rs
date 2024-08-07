@@ -10,7 +10,7 @@ use crate::cli::CBShellError::ClusterNotFound;
 use crate::client::cloud_json::{Cluster, OrganizationsResponse, ProjectsResponse};
 use crate::client::{CapellaClient, CapellaRequest, HttpResponse};
 use crate::state::State;
-use crate::{RemoteCluster, RemoteClusterType};
+use crate::{read_input, RemoteCluster, RemoteClusterType};
 use nu_engine::CallExt;
 use nu_protocol::ast::{Call, PathMember};
 use nu_protocol::engine::{EngineState, Stack};
@@ -460,6 +460,25 @@ pub fn get_active_cluster<'a>(
         Some(c) => Ok(c),
         None => Err(cluster_not_found_error(identifier, span)),
     }
+}
+
+pub fn get_username_and_password() -> Result<(String, String), ShellError> {
+    println!("Please enter username:");
+    let username = match read_input() {
+        Some(user) => user,
+        None => {
+            return Err(generic_error("Username required", None, None));
+        }
+    };
+
+    let password = match rpassword::prompt_password("Password: ") {
+        Ok(p) => p,
+        Err(_) => {
+            return Err(generic_error("Password required", None, None));
+        }
+    };
+
+    Ok((username, password))
 }
 
 #[cfg(test)]
