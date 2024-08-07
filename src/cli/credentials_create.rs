@@ -1,7 +1,8 @@
-use crate::cli::util::{cluster_from_conn_str, find_org_id, find_project_id};
+use crate::cli::util::{
+    cluster_from_conn_str, find_org_id, find_project_id, get_username_and_password,
+};
 use crate::cli::{client_error_to_shell_error, generic_error, no_active_cluster_error};
 use crate::client::cloud_json::CredentialsCreateRequest;
-use crate::read_input;
 use crate::state::State;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -102,20 +103,7 @@ fn credentials_create(
             ));
         }
 
-        println!("Please enter username:");
-        let name = match read_input() {
-            Some(user) => user,
-            None => {
-                return Err(generic_error("Username required", None, None));
-            }
-        };
-
-        let password = match rpassword::prompt_password("Password: ") {
-            Ok(p) => p,
-            Err(_) => {
-                return Err(generic_error("Password required", None, None));
-            }
-        };
+        let (name, password) = get_username_and_password()?;
 
         let payload = CredentialsCreateRequest::new(name.clone(), password.clone());
 
