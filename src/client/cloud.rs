@@ -540,10 +540,42 @@ impl CapellaClient {
             }),
         }
     }
+
+    pub fn allow_ip_address(
+        &self,
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+        address: String,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<(), ClientError> {
+        let request = CapellaRequest::AllowIPAddress {
+            org_id,
+            project_id,
+            cluster_id,
+            payload: format!("{{\"cidr\": \"{}\"}}", address.clone()),
+        };
+        let response = self.capella_request(request, deadline, ctrl_c)?;
+
+        match response.status() {
+            201 => Ok(()),
+            _ => Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            }),
+        }
+    }
 }
 
 #[allow(dead_code)]
 pub enum CapellaRequest {
+    AllowIPAddress {
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+        payload: String,
+    },
     CreateAllowListEntry {
         cluster_id: String,
         payload: String,
@@ -675,6 +707,17 @@ pub enum CapellaRequest {
 impl CapellaRequest {
     pub fn path(&self) -> String {
         match self {
+            Self::AllowIPAddress {
+                org_id,
+                project_id,
+                cluster_id,
+                ..
+            } => {
+                format!(
+                    "/v4/organizations/{}/projects/{}/clusters/{}/allowedcidrs",
+                    org_id, project_id, cluster_id
+                )
+            }
             Self::CreateAllowListEntry { cluster_id, .. } => {
                 format!("/v2/clusters/{}/allowlist", cluster_id)
             }
@@ -849,6 +892,7 @@ impl CapellaRequest {
 
     pub fn verb(&self) -> HttpVerb {
         match self {
+            Self::AllowIPAddress { .. } => HttpVerb::Post,
             Self::CreateAllowListEntry { .. } => HttpVerb::Post,
             Self::CreateBucket { .. } => HttpVerb::Post,
             Self::CreateBucketV4 { .. } => HttpVerb::Post,
@@ -884,6 +928,7 @@ impl CapellaRequest {
 
     pub fn payload(&self) -> Option<Vec<u8>> {
         match self {
+            Self::AllowIPAddress { payload, .. } => Some(payload.as_bytes().into()),
             Self::CreateAllowListEntry { payload, .. } => Some(payload.as_bytes().into()),
             Self::CreateBucket { payload, .. } => Some(payload.as_bytes().into()),
             Self::CreateBucketV4 { payload, .. } => Some(payload.as_bytes().into()),
