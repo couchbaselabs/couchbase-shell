@@ -154,15 +154,8 @@ fn clusters_register(
         .collect::<Vec<String>>();
     let tls_config = if tls_enabled {
         Some(
-            RustTlsConfig::new(tls_accept_all_certs, cert_path).map_err(|e| {
-                ShellError::GenericError {
-                    error: e.message(),
-                    msg: "".to_string(),
-                    span: call.head.into(),
-                    help: Some(e.expanded_message()),
-                    inner: Vec::new(),
-                }
-            })?,
+            RustTlsConfig::new(tls_accept_all_certs, cert_path)
+                .map_err(|e| generic_error(e.message(), e.expanded_message(), None))?,
         )
     } else {
         None
