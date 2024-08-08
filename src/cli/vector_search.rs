@@ -1,4 +1,5 @@
 use crate::cli::error::{client_error_to_shell_error, unexpected_status_code_error};
+use crate::cli::generic_error;
 use crate::cli::util::namespace_from_args;
 use crate::cli::util::{cluster_identifiers_from, get_active_cluster, NuValueMap};
 use crate::client::VectorSearchQueryRequest;
@@ -8,7 +9,7 @@ use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
-    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+    Category, Example, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
 };
 use serde_derive::Deserialize;
 use serde_json::json;
@@ -86,6 +87,26 @@ impl Command for VectorSearch {
     ) -> Result<PipelineData, ShellError> {
         run(self.state.clone(), engine_state, stack, call, input)
     }
+
+    fn examples(&self) -> Vec<Example> {
+        vec![
+            Example {
+            description: "Source vector fetched using 'doc get'",
+            example: "doc get 10019 | flatten | select contentVector  | vector search landmark-content-index contentVector",
+            result: None,
+        },
+        Example {
+            description: "Source vector fetched using 'subdoc get'",
+            example: "subdoc get contentVector 10019 | select content | vector search landmark-content-index contentVector",
+            result: None,
+        },
+        Example{
+             description: "Plain source vector as positional parameter",
+             example: "vector search vector-index fieldName [0.1 0.2 0.3 0.4]",
+             result: None,
+         },
+        ]
+    }
 }
 
 fn run(
@@ -103,15 +124,8 @@ fn run(
         Value::List { vals, .. } => {
             let rec = match vals[0].as_record() {
                 Ok(r) => r,
-                Err(e) => {
-                    return Err(ShellError::GenericError {
-                        error: "Please supply vector or output from `vector enrich-text`"
-                            .to_string(),
-                        msg: "".to_string(),
-                        span: None,
-                        help: None,
-                        inner: vec![e],
-                    });
+                Err(_) => {
+                    return Err(failed_to_parse_input_vector_error());
                 }
             };
 
@@ -133,15 +147,8 @@ fn run(
                 // Input is vector from doc get or query
                 let list = match rec.get_index(0).unwrap().1.as_list() {
                     Ok(l) => l,
-                    Err(e) => {
-                        return Err(ShellError::GenericError {
-                            error: "Please supply vector or output from `vector enrich-text`"
-                                .to_string(),
-                            msg: "".to_string(),
-                            span: None,
-                            help: None,
-                            inner: vec![e],
-                        });
+                    Err(_) => {
+                        return Err(failed_to_parse_input_vector_error());
                     }
                 };
                 vector = list.iter().map(|e| e.as_float().unwrap() as f32).collect();
@@ -157,23 +164,11 @@ fn run(
                     .map(|e| e.as_float().unwrap() as f32)
                     .collect();
             } else {
-                return Err(ShellError::GenericError {
-                    error: "Please supply vector or output from `vector enrich-text`".to_string(),
-                    msg: "".to_string(),
-                    span: None,
-                    help: None,
-                    inner: Vec::new(),
-                });
+                return Err(failed_to_parse_input_vector_error());
             }
         }
         _ => {
-            return Err(ShellError::GenericError {
-                error: "Please supply vector or output from `vector enrich-text`".to_string(),
-                msg: "".to_string(),
-                span: None,
-                help: None,
-                inner: Vec::new(),
-            });
+            return Err(failed_to_parse_input_vector_error());
         }
     }
 
@@ -277,4 +272,13 @@ struct SearchResultHit {
 #[derive(Debug, Deserialize)]
 struct SearchResultData {
     hits: Vec<SearchResultHit>,
+}
+
+fn failed_to_parse_input_vector_error() -> ShellError {
+    generic_error(
+        "Could not parse input vector",
+        "Piped input must be correctly formatted, run 'vector search --help' for examples"
+            .to_string(),
+        None,
+    )
 }

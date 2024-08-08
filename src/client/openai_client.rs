@@ -1,4 +1,4 @@
-use crate::cli::llm_api_key_missing;
+use crate::cli::{generic_error, llm_api_key_missing};
 use async_openai::types::{
     ChatCompletionRequestMessage, ChatCompletionRequestSystemMessageArgs,
     ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequestArgs,
@@ -115,13 +115,7 @@ impl OpenAIClient {
                         format!("failed to execute request: {:?}", e)
                     }
                 };
-                return Err(ShellError::GenericError {
-                    error: msg,
-                    msg: "".to_string(),
-                    span: None,
-                    help: None,
-                    inner: Vec::new(),
-                });
+                return Err(generic_error(msg, None, None));
             }
         };
 
@@ -184,13 +178,11 @@ impl OpenAIClient {
         let answer = match response {
             Ok(r) => r.choices[0].message.content.as_ref().unwrap().to_string(),
             Err(e) => {
-                return Err(ShellError::GenericError {
-                    error: format!("failed to execute request: {}", e),
-                    msg: "".to_string(),
-                    span: None,
-                    help: None,
-                    inner: Vec::new(),
-                })
+                return Err(generic_error(
+                    format!("failed to execute request: {}", e),
+                    None,
+                    None,
+                ));
             }
         };
 

@@ -1,10 +1,11 @@
 use crate::cli::error::CBShellError::{
-    GenericError, MustNotBeCapella, ProjectNotFound, UnexpectedResponseStatus,
+    MustNotBeCapella, ProjectNotFound, UnexpectedResponseStatus,
 };
 use crate::cli::error::{
     client_error_to_shell_error, cluster_not_found_error, deserialize_error,
     malformed_response_error, no_active_bucket_error, unexpected_status_code_error,
 };
+use crate::cli::generic_error;
 use crate::cli::CBShellError::ClusterNotFound;
 use crate::client::cloud_json::{Cluster, OrganizationsResponse, ProjectsResponse};
 use crate::client::{CapellaClient, CapellaRequest, HttpResponse};
@@ -91,15 +92,14 @@ pub fn convert_json_value_to_nu_value(
                     internal_span: span,
                 }
             } else {
-                return Err(GenericError {
-                    message: format!(
+                return Err(generic_error(
+                    format!(
                         "Unexpected numeric value, cannot convert {} into i64 or f64",
                         n
                     ),
-                    help: None,
-                    span: Some(span),
-                }
-                .into());
+                    None,
+                    None,
+                ));
             }
         }
         serde_json::Value::String(val) => Value::String {
@@ -151,12 +151,11 @@ pub fn convert_nu_value_to_json_value(
             if let Some(num) = serde_json::Number::from_f64(*val) {
                 serde_json::Value::Number(num)
             } else {
-                return Err(GenericError {
-                    message: format!("Unexpected numeric value, cannot convert {} from f64", val),
-                    help: None,
-                    span: Some(span),
-                }
-                .into());
+                return Err(generic_error(
+                    format!("Unexpected numeric value, cannot convert {} from f64", val),
+                    None,
+                    None,
+                ));
             }
         }
         Value::Int { val, .. } => serde_json::Value::Number(serde_json::Number::from(*val)),
@@ -229,12 +228,11 @@ pub fn cluster_identifiers_from(
     let re = match Regex::new(identifier_arg.as_str()) {
         Ok(v) => v,
         Err(e) => {
-            return Err(GenericError {
-                message: e.to_string(),
-                help: Some("Failed to parse identifier used for specifying clusters".to_string()),
-                span: Some(args.head),
-            }
-            .into());
+            return Err(generic_error(
+                e.to_string(),
+                "Failed to parse identifier used for specifying clusters".to_string(),
+                args.head,
+            ));
         }
     };
     let clusters: Vec<String> = state
