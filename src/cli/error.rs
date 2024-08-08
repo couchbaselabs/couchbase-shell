@@ -171,6 +171,8 @@ pub enum CBShellError {
     LLMApiKeyMissing {
         provider: String,
     },
+    NoLLMConfigured {},
+    EmbedModelMissing {},
 }
 
 impl From<CBShellError> for ShellError {
@@ -254,10 +256,17 @@ impl From<CBShellError> for ShellError {
                 spanned_shell_error(error_reason.to_string(), help, span)
             }
             CBShellError::OrganizationNotRegistered {name} => {
-                spanned_shell_error("Organization not registered".to_string(), Some(format!("Has the organization {} been registered in the config file?", name)), None)
+                spanned_shell_error("Organization not registered".to_string(), format!("Has the organization {} been registered in the config file?", name), None)
             }
             CBShellError::LLMApiKeyMissing {provider} => {
-                spanned_shell_error(format!("api_key required to use {} models", provider), Some("Define an api_key in the config/credentials file".to_string()), None)
+                spanned_shell_error(format!("api_key required to use {} models", provider), "Define an api_key in the config/credentials file".to_string(), None)
+            }
+            CBShellError::NoLLMConfigured {} => {
+                spanned_shell_error("no llm defined in config file", "Check the docs at couchbase.sh for examples".to_string(), None)
+            }
+            CBShellError::EmbedModelMissing {} => {
+                spanned_shell_error("no embed model provided", "supply the embed_model in the config file or using the --model flag"
+                    .to_string(), None)
             }
         }
     }
@@ -330,6 +339,14 @@ pub fn llm_api_key_missing(provider: String) -> ShellError {
     CBShellError::LLMApiKeyMissing { provider }.into()
 }
 
+pub fn no_llm_configured() -> ShellError {
+    CBShellError::NoLLMConfigured {}.into()
+}
+
+pub fn embed_model_missing() -> ShellError {
+    CBShellError::EmbedModelMissing {}.into()
+}
+
 pub fn malformed_response_error(
     message: impl Into<String>,
     response: String,
@@ -346,12 +363,12 @@ pub fn malformed_response_error(
 pub fn generic_error(
     message: impl Into<String>,
     help: impl Into<Option<String>>,
-    span: Span,
+    span: impl Into<Option<Span>>,
 ) -> ShellError {
     CBShellError::GenericError {
         message: message.into(),
         help: help.into(),
-        span: Some(span),
+        span: span.into(),
     }
     .into()
 }

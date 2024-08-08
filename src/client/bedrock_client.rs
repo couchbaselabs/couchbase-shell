@@ -1,3 +1,4 @@
+use crate::cli::generic_error;
 use aws_sdk_bedrockruntime::operation::invoke_model::InvokeModelError;
 use aws_sdk_bedrockruntime::primitives::Blob;
 use nu_protocol::ShellError;
@@ -59,15 +60,11 @@ impl BedrockClient {
                 Err(e) => {
                     match e {
                         aws_smithy_runtime_api::client::result::SdkError::DispatchFailure(_) => {
-                            return Err(ShellError::GenericError {
-                                error: "failed to dispatch Bedrock embedding request".to_string(),
-                                msg: "".to_string(),
-                                span: None,
-                                help: Some(
-                                    "check aws credentials are correctly configured".to_string(),
-                                ),
-                                inner: Vec::new(),
-                            });
+                            return Err(generic_error(
+                                "Failed to dispatch Bedrock embedding request",
+                                "Check AWS credentials are correctly configured".to_string(),
+                                None,
+                            ));
                         }
                         aws_smithy_runtime_api::client::result::SdkError::ServiceError(err) => {
                             let (err_msg, help) = match err.err() {
@@ -87,25 +84,14 @@ impl BedrockClient {
                                     (format!("unexpected error returned from Bedrock API: {:?}", err.err()), None)
                                 }
                             };
-                            return Err(ShellError::GenericError {
-                                error: err_msg,
-                                msg: "".to_string(),
-                                span: None,
-                                help,
-                                inner: Vec::new(),
-                            });
+                            return Err(generic_error(err_msg, help, None));
                         }
                         _ => {
-                            return Err(ShellError::GenericError {
-                                error: format!(
-                                    "unexpected error returned from Bedrock API: {:?}",
-                                    e
-                                ),
-                                msg: "".to_string(),
-                                span: None,
-                                help: None,
-                                inner: Vec::new(),
-                            });
+                            return Err(generic_error(
+                                format!("unexpected error returned from Bedrock API: {:?}", e),
+                                None,
+                                None,
+                            ));
                         }
                     };
                 }
@@ -155,13 +141,11 @@ impl BedrockClient {
         {
             Ok(r) => r,
             Err(e) => {
-                return Err(ShellError::GenericError {
-                    error: format!("error returned from Bedrock API: {:?}", e),
-                    msg: "".to_string(),
-                    span: None,
-                    help: Some("Please supply AWS SDK config and credentials in ~/.aws/config and ~/.aws/credentials files".to_string()),
-                    inner: Vec::new(),
-                });
+                return Err(generic_error(format!(
+                    "error returned from Bedrock API: {:?}", e),
+                    "Please supply AWS SDK config and credentials in ~/.aws/config and ~/.aws/credentials files".to_string(),
+                    None
+                ));
             }
         };
 
@@ -169,13 +153,11 @@ impl BedrockClient {
         let ans: AskResponse = serde_json::from_slice(bytes).unwrap();
 
         if ans.results.is_empty() {
-            return Err(ShellError::GenericError {
-                error: "no answer contained in the response".to_string(),
-                msg: "".to_string(),
-                span: None,
-                help: None,
-                inner: Vec::new(),
-            });
+            return Err(generic_error(
+                "no answer contained in the response",
+                None,
+                None,
+            ));
         }
 
         let answer = if ans.results[0].completion_reason == "LENGTH" {

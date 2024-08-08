@@ -1,10 +1,10 @@
-use crate::cli::llm_api_key_missing;
+use crate::cli::{generic_error, llm_api_key_missing};
 use bytes::Bytes;
 use log::info;
 use nu_protocol::ShellError;
 use reqwest::Response;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{json, Error};
 use tokio::{select, time::sleep, time::Duration};
 
 pub struct GeminiClient {
@@ -96,13 +96,11 @@ impl GeminiClient {
 
             if let Some(d) = dim {
                 if d == 0 {
-                    return Err(ShellError::GenericError {
-                        error: "Embedding dimension must be greater than 0".to_string(),
-                        msg: "".to_string(),
-                        span: None,
-                        help: None,
-                        inner: vec![],
-                    });
+                    return Err(generic_error(
+                        "Invalid embedding dimension",
+                        "The dimension for embeddings must be greater than zero.".to_string(),
+                        None,
+                    ));
                 }
                 request["outputDimensionality"] = d.into()
             };
@@ -116,13 +114,7 @@ impl GeminiClient {
         let embd: EmbeddingResponse = match serde_json::from_slice(&bytes) {
             Ok(e) => e,
             Err(e) => {
-                return Err(ShellError::GenericError {
-                    error: format!("could not parse Gemini response: {}", e),
-                    msg: "".to_string(),
-                    span: None,
-                    help: None,
-                    inner: vec![],
-                })
+                return Err(failed_to_parse_response_error(e));
             }
         };
 
@@ -170,13 +162,7 @@ impl GeminiClient {
         let ans: AskResponse = match serde_json::from_slice(&bytes) {
             Ok(a) => a,
             Err(e) => {
-                return Err(ShellError::GenericError {
-                    error: format!("could not parse Gemini response: {}", e),
-                    msg: "".to_string(),
-                    span: None,
-                    help: None,
-                    inner: vec![],
-                })
+                return Err(failed_to_parse_response_error(e));
             }
         };
 
@@ -205,24 +191,16 @@ async fn read_response(res: Response) -> Result<Bytes, ShellError> {
     let bytes = match res.bytes().await {
         Ok(b) => b,
         Err(e) => {
-            return Err(ShellError::GenericError {
-                error: format!("could not read response body: {}", e),
-                msg: "".to_string(),
-                span: None,
-                help: None,
-                inner: vec![],
-            })
+            return Err(generic_error(
+                format!("could not read response body: {}", e),
+                None,
+                None,
+            ));
         }
     };
 
     if status != 200 {
-        return Err(ShellError::GenericError {
-            error: error_message(bytes),
-            msg: "".to_string(),
-            span: None,
-            help: None,
-            inner: vec![],
-        });
+        return Err(generic_error(error_message(bytes), None, None));
     };
 
     Ok(bytes)
@@ -237,13 +215,11 @@ where
     let body = match serde_json::to_string(&json_body) {
         Ok(b) => b,
         Err(e) => {
-            return Err(ShellError::GenericError {
-                error: "could not create embedding request".to_string(),
-                msg: e.to_string(),
-                span: None,
-                help: None,
-                inner: vec![],
-            })
+            return Err(generic_error(
+                format!("Could not create embedding request: {}", e),
+                None,
+                None,
+            ));
         }
     };
 
@@ -252,23 +228,11 @@ where
         match res {
             Ok(r) => Ok(r),
             Err(e) =>
-                 Err(ShellError::GenericError {
-                    error: "could not post ask request".to_string(),
-                    msg: e.to_string(),
-                    span: None,
-                    help: None,
-                    inner: vec![],
-            })
+                Err(generic_error(format!("Could not post ask request: {}", e), None, None))
             }
         },
         () =  sleep(Duration::from_secs(30)) =>
-                Err(ShellError::GenericError {
-                    error: "ask request timed out".to_string(),
-                    msg: "".to_string(),
-                    span: None,
-                    help: None,
-                    inner: vec![]
-                }),
+            Err(generic_error("Ask request timed out", None, None)),
     } {
         Ok(r) => r,
         Err(e) => return Err(e),
@@ -321,4 +285,12 @@ struct Candidate {
 struct Content {
     parts: Vec<Text>,
     // role: String,
+}
+
+fn failed_to_parse_response_error(e: Error) -> ShellError {
+    generic_error(
+        format!("could not parse Gemini response: {}", e),
+        None,
+        None,
+    )
 }

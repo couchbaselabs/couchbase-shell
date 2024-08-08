@@ -1,5 +1,7 @@
 use crate::cli::util::{cluster_identifiers_from, get_active_cluster, namespace_from_args};
-use crate::cli::{client_error_to_shell_error, deserialize_error, unexpected_status_code_error};
+use crate::cli::{
+    client_error_to_shell_error, deserialize_error, generic_error, unexpected_status_code_error,
+};
 use crate::client::ManagementRequest;
 use crate::remote_cluster::RemoteCluster;
 use crate::state::State;
@@ -171,15 +173,11 @@ impl TryFrom<&str> for SimilarityMetric {
         match alias {
             "l2_norm" => Ok(SimilarityMetric::L2Norm),
             "dot_product" => Ok(SimilarityMetric::DotProduct),
-            _ => Err(ShellError::GenericError {
-                error: "invalid similarity metric".to_string(),
-                msg: "".to_string(),
-                span: None,
-                help: Some(
-                    "The supported similarity metrics are 'l2_norm' and 'dot_product'".into(),
-                ),
-                inner: vec![],
-            }),
+            _ => Err(generic_error(
+                "Invalid similarity metric",
+                "The supported similarity metrics are 'l2_norm' and 'dot_product'".to_string(),
+                None,
+            )),
         }
     }
 }
@@ -204,13 +202,11 @@ fn get_bucket_uuid(
         .map_err(|e| deserialize_error(e.to_string(), span))?;
     match content.get("uuid") {
         Some(id) => Ok(id.as_str().unwrap().to_string()),
-        None => Err(ShellError::GenericError {
-            error: "Could not retrieve bucket uuid from config".to_string(),
-            msg: "".to_string(),
-            span: None,
-            help: None,
-            inner: vec![],
-        }),
+        None => Err(generic_error(
+            "Could not retrieve bucket uuid from config",
+            None,
+            None,
+        )),
     }
 }
 

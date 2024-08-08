@@ -1,6 +1,9 @@
 use crate::client::{CapellaClient, Endpoint};
 
-use crate::cli::{no_active_project_error, organization_not_registered};
+use crate::cli::{
+    embed_model_missing, generic_error, no_active_project_error, no_llm_configured,
+    organization_not_registered,
+};
 use crate::tutorial::Tutorial;
 use crate::RemoteCluster;
 use lazy_static::__Deref;
@@ -119,13 +122,11 @@ impl State {
 
     pub fn add_cluster(&mut self, alias: String, cluster: RemoteCluster) -> Result<(), ShellError> {
         if self.clusters.contains_key(alias.as_str()) {
-            return Err(ShellError::GenericError {
-                error: format!("Identifier {} is already registered to a cluster", alias),
-                msg: "".to_string(),
-                span: None,
-                help: None,
-                inner: Vec::new(),
-            });
+            return Err(generic_error(
+                format!("Identifier {} is already registered to a cluster", alias),
+                "Cluster identifiers must be unique, use 'cb-env managed' to check which ones are already in use".to_string(),
+                None
+            ));
         }
         self.clusters.insert(alias, cluster);
         Ok(())
@@ -200,13 +201,11 @@ impl State {
         let active = match self.active_capella_org_name() {
             Some(a) => a,
             None => {
-                return Err(ShellError::GenericError {
-                    error: "No active Capella organization set".to_string(),
-                    msg: "".to_string(),
-                    span: None,
-                    help: None,
-                    inner: Vec::new(),
-                })
+                return Err(generic_error(
+                    "No active Capella org",
+                    "Check the docs in couchbase.sh for examples of registering an organization in the config file".to_string(),
+                    None
+                ));
             }
         };
 
@@ -287,6 +286,16 @@ impl State {
             None => None,
         };
         active_llm
+    }
+
+    pub fn active_embed_model(&self) -> Result<String, ShellError> {
+        match self.active_llm() {
+            Some(m) => match m.embed_model() {
+                Some(m) => Ok(m),
+                None => Err(embed_model_missing()),
+            },
+            None => Err(no_llm_configured()),
+        }
     }
 
     pub fn set_active_llm(&self, active: String) -> Result<(), ShellError> {

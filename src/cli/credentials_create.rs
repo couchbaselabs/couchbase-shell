@@ -1,5 +1,5 @@
 use crate::cli::util::{cluster_from_conn_str, find_org_id, find_project_id};
-use crate::cli::{client_error_to_shell_error, no_active_cluster_error};
+use crate::cli::{client_error_to_shell_error, generic_error, no_active_cluster_error};
 use crate::client::cloud_json::CredentialsCreateRequest;
 use crate::read_input;
 use crate::state::State;
@@ -118,13 +118,11 @@ fn credentials_create(
     )?;
 
     if json_cluster.state() != "healthy" {
-        return Err(ShellError::GenericError {
-            error: "Cannot create credentials until cluster state is healthy".to_string(),
-            msg: "".to_string(),
-            span: None,
-            help: None,
-            inner: vec![],
-        });
+        return Err(generic_error(
+            "Cluster not healthy",
+            "Cannot create credentials until cluster is healthy. Check the status of the cluster with 'clusters get'".to_string(),
+            span
+        ));
     }
 
     let (name, password) = if use_registered {
@@ -137,26 +135,14 @@ fn credentials_create(
         let name = match read_input() {
             Some(user) => user,
             None => {
-                return Err(ShellError::GenericError {
-                    error: "Username required".to_string(),
-                    msg: "".to_string(),
-                    span: None,
-                    help: None,
-                    inner: vec![],
-                })
+                return Err(generic_error("Username required", None, None));
             }
         };
 
         let password = match rpassword::prompt_password("Password: ") {
             Ok(p) => p,
             Err(_) => {
-                return Err(ShellError::GenericError {
-                    error: "Password required".to_string(),
-                    msg: "".to_string(),
-                    span: None,
-                    help: None,
-                    inner: vec![],
-                });
+                return Err(generic_error("Password required", None, None));
             }
         };
         (name, password)
