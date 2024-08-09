@@ -17,13 +17,15 @@ use crate::cli::error::{
     client_error_to_shell_error, deserialize_error, malformed_response_error, query_error,
     QueryErrorReason,
 };
+use crate::cli::generic_error;
 use crate::RemoteCluster;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::Value::Nothing;
 use nu_protocol::{
-    Category, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape, Value,
+    Category, Example, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape,
+    Value,
 };
 
 #[derive(Clone)]
@@ -87,6 +89,26 @@ impl Command for Query {
     ) -> Result<PipelineData, ShellError> {
         query(self.state.clone(), engine_state, stack, call, input)
     }
+
+    fn examples(&self) -> Vec<Example> {
+        vec![
+            Example {
+                description: "Run a basic query",
+                example: " query \"SELECT * FROM `travel-sample` WHERE type = 'landmark'\"",
+                result: None,
+            },
+            Example {
+                description:  "Pass query parameters as an object",
+                example: "query \"SELECT airline FROM `travel-sample`.inventory.route WHERE sourceairport = $aval AND distance > $dval\" --params {aval: LAX dval: 13000}",
+                result: None,
+            },
+            Example {
+                description:  "Pass query parameters as a list",
+                example: "query \"SELECT airline FROM `travel-sample`.inventory.route WHERE sourceairport = $1 AND distance > $2\" --params [LAX 13000]",
+                result: None,
+            }
+        ]
+    }
 }
 
 fn query(
@@ -109,13 +131,11 @@ fn query(
                 Value::Record { .. } => Some(convert_nu_value_to_json_value(&p, span).unwrap()),
                 Value::List { .. } => Some(convert_nu_value_to_json_value(&p, span).unwrap()),
                 _ => {
-                    return Err(ShellError::GenericError {
-                        error: "Parameters must be a list or JSON object ".to_string(),
-                        msg: "".to_string(),
-                        span: None,
-                        help: None,
-                        inner: vec![],
-                    });
+                    return Err(generic_error(
+                        "Parameters must be a list or JSON object",
+                        "Run 'query --help' to see examples".to_string(),
+                        None,
+                    ));
                 }
             },
             None => None,

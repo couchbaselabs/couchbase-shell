@@ -1,3 +1,4 @@
+use crate::cli::generic_error;
 use lazy_static::lazy_static;
 use nu_protocol::ShellError;
 use std::collections::HashMap;
@@ -46,13 +47,14 @@ impl Tutorial {
         let index = match STEPS_ORDER.iter().position(|&s| s == name) {
             Some(i) => i,
             None => {
-                return Err(ShellError::GenericError {
-                    error: "invalid tutorial step".to_string(),
-                    msg: format!("{} is not a valid tutorial step", name),
-                    span: None,
-                    help: None,
-                    inner: Vec::new(),
-                });
+                return Err(generic_error(
+                    format!("{} is not a valid tutorial step", name),
+                    Some(format!(
+                        "Valid tutorial steps are: {:?}",
+                        STEPS_ORDER.iter().as_slice()
+                    )),
+                    None,
+                ));
             }
         };
         let mut current_step = self.current_step.lock().unwrap();

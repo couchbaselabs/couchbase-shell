@@ -107,7 +107,7 @@ impl Command for SubDocGet {
             },
             Example{
                 description: "Fetches address field from multiple documents with IDs from the previous command",
-                example: "[landmark_10019, landmark_10020] | subdoc get address",
+                example: "[landmark_10019 landmark_10020] | subdoc get address",
                 result: None
             },
         ]
@@ -135,13 +135,11 @@ fn run_subdoc_lookup(
             .map(|s| s.as_str().unwrap().to_string())
             .collect(),
         _ => {
-            return Err(ShellError::GenericError {
-                error: "Please supply field(s) as shown in the examples".to_string(),
-                msg: "".to_string(),
-                span: None,
-                help: None,
-                inner: Vec::new(),
-            });
+            return Err(generic_error(
+                "Field(s) must be a string or list",
+                "Run 'subdoc get --help' to see examples".to_string(),
+                None,
+            ));
         }
     };
 
