@@ -2,10 +2,10 @@ use crate::state::State;
 use log::debug;
 use std::time::SystemTime;
 
-use crate::client::LLMClients;
+use crate::client::{ClientError, LLMClients};
 use crate::CtrlcFuture;
-use nu_protocol::Example;
 use nu_protocol::Record;
+use nu_protocol::{Example, Span};
 use nu_utils::SharedCow;
 use std::str;
 use std::sync::{Arc, Mutex};
@@ -14,6 +14,7 @@ use tokio::select;
 
 use nu_engine::CallExt;
 
+use crate::cli::{client_error_to_shell_error, generic_error};
 use nu_protocol::ast::Call;
 use nu_protocol::engine::Command;
 use nu_protocol::engine::{EngineState, Stack};
@@ -140,33 +141,7 @@ fn vector_enrich_doc(
         Some(m) => m,
         None => {
             let guard = state.lock().unwrap();
-            let model = match guard.active_llm() {
-                Some(m) => match m.embed_model() {
-                    Some(m) => m,
-                    None => {
-                        return Err(ShellError::GenericError {
-                            error: "no embed model provided".to_string(),
-                            msg: "".to_string(),
-                            span: Some(span),
-                            help: Some(
-                                "supply the embed_model in the config file or using the --model flag"
-                                    .to_string(),
-                            ),
-                            inner: Vec::new(),
-                        });
-                    }
-                },
-                None => {
-                    return Err(ShellError::GenericError {
-                        error: "no llm defined in config file".to_string(),
-                        msg: "".to_string(),
-                        span: Some(span),
-                        help: None,
-                        inner: Vec::new(),
-                    });
-                }
-            };
-            model
+            guard.active_embed_model()?
         }
     };
 
@@ -184,53 +159,19 @@ fn vector_enrich_doc(
                 // Read each record from the list of records
                 let rec = match v.as_record() {
                     Ok(r) => r,
-                    Err(e) => {
-                        return Err(ShellError::GenericError {
-                            error: "Could not parse input from query".to_string(),
-                            msg: "".to_string(),
-                            span: None,
-                            help: None,
-                            inner: vec![e],
-                        });
+                    Err(_) => {
+                        return Err(could_not_parse_input_error(span));
                     }
                 };
 
                 let doc_json = match rec.get_index(0).unwrap().1.as_record() {
                     Ok(r) => r,
-                    Err(e) => {
-                        return Err(ShellError::GenericError {
-                            error: "Could not parse input from query".to_string(),
-                            msg: "".to_string(),
-                            span: None,
-                            help: None,
-                            inner: vec![e],
-                        });
+                    Err(_) => {
+                        return Err(could_not_parse_input_error(span));
                     }
                 };
 
-                let content = match doc_json.get(field.clone()) {
-                    Some(c) => match c.as_str() {
-                        Ok(s) => s.to_string(),
-                        Err(e) => {
-                            return Err(ShellError::GenericError {
-                                error: "The field to embed must be a string".to_string(),
-                                msg: "".to_string(),
-                                span: None,
-                                help: None,
-                                inner: vec![e],
-                            });
-                        }
-                    },
-                    None => {
-                        return Err(ShellError::GenericError {
-                            error: format!("The field '{}' must be present in input record", field),
-                            msg: "".to_string(),
-                            span: None,
-                            help: None,
-                            inner: vec![],
-                        });
-                    }
-                };
+                let content = read_from_field(doc_json, field.clone(), span)?;
 
                 //The API will return an error on empty strings
                 if !content.is_empty() {
@@ -240,41 +181,12 @@ fn vector_enrich_doc(
             }
         }
         Value::Record { val, .. } => {
-            let content = match val.get(field.clone()) {
-                Some(c) => match c.as_str() {
-                    Ok(s) => s.to_string(),
-                    Err(e) => {
-                        return Err(ShellError::GenericError {
-                            error: "The field to embed must be a string".to_string(),
-                            msg: "".to_string(),
-                            span: None,
-                            help: None,
-                            inner: vec![e],
-                        });
-                    }
-                },
-                None => {
-                    return Err(ShellError::GenericError {
-                        error: format!("The field '{}' must be present in input record", field),
-                        msg: "".to_string(),
-                        span: None,
-                        help: None,
-                        inner: Vec::new(),
-                    });
-                }
-            };
-
+            let content = read_from_field(&val.clone().into_owned(), field.clone(), span)?;
             field_contents.push(content);
             input_records.push(val.into_owned());
         }
         _ => {
-            return Err(ShellError::GenericError {
-                error: "Piped input must a json doc or a list of json docs".to_string(),
-                msg: "".to_string(),
-                span: None,
-                help: None,
-                inner: Vec::new(),
-            });
+            return Err(could_not_parse_input_error(span));
         }
     };
 
@@ -292,29 +204,15 @@ fn vector_enrich_doc(
         let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
         let ctrl_c_fut = CtrlcFuture::new(ctrl_c);
         let rt = Runtime::new().unwrap();
-        let embeddings = match rt.block_on(async {
+        let embeddings = rt.block_on(async {
             select! {
                 result = client.embed(batch, dim, model.clone()) => {
-                    match result {
-                        Ok(r) => Ok(r),
-                        Err(e)  => Err(e)
-                    }
+                    result
                 },
                 () = ctrl_c_fut =>
-                Err(ShellError::GenericError{
-                error: "Request cancelled".to_string(),
-                    msg: "".to_string(),
-                    span: None,
-                    help: None,
-                    inner: Vec::new(),
-            }),
+               Err(client_error_to_shell_error(ClientError::Cancelled{key: None}, span)),
             }
-        }) {
-            Ok(r) => r,
-            Err(e) => {
-                return Err(e);
-            }
-        };
+        })?;
 
         for (i, _) in batch.iter().enumerate() {
             input_records[count].insert(
@@ -336,23 +234,19 @@ fn vector_enrich_doc(
                     Value::String { val, .. } => val.clone(),
                     Value::Int { val, .. } => val.to_string(),
                     _ => {
-                        return Err(ShellError::GenericError {
-                            error: "Contents of ID columns must be Int or String".to_string(),
-                            msg: "".to_string(),
-                            span: None,
-                            help: None,
-                            inner: vec![],
-                        });
+                        return Err(generic_error(
+                            "Contents of 'id' column must be Int or String",
+                            "A different column can be used as the id of the resulting docs with the '--id-column' flag".to_string(),
+                            None
+                        ));
                     }
                 },
                 None => {
-                    return Err(ShellError::GenericError{
-                            error: "Could not locate 'id' field in docs, if not called 'id' specify using --id-column".to_string(),
-                            msg: "".to_string(),
-                            span: None,
-                            help: None,
-                            inner: vec![],
-                    });
+                    return Err(generic_error(
+                        "No 'id' field in docs",
+                        "An 'id' field is required to use as the IDs for the created docs, if not called 'id' specify using --id-column".to_string(),
+                        None
+                    ));
                 }
             };
 
@@ -390,4 +284,38 @@ fn vector_enrich_doc(
         vals: records,
     }
     .into_pipeline_data())
+}
+
+fn read_from_field(doc: &Record, field: String, span: Span) -> Result<String, ShellError> {
+    match doc.get(field.clone()) {
+        Some(c) => match c.as_str() {
+            Ok(s) => Ok(s.to_string()),
+            Err(_) => Err(field_contents_not_string_error(field.clone(), span)),
+        },
+        None => Err(field_missing_error(field.clone(), span)),
+    }
+}
+
+fn could_not_parse_input_error(span: Span) -> ShellError {
+    generic_error(
+        "Could not parse piped input",
+        "Piped input must be a json doc, or a list of json docs. Run  'vector enrich-doc --help' for examples".to_string(),
+        span
+    )
+}
+
+fn field_missing_error(field: String, span: Span) -> ShellError {
+    generic_error(
+        format!("Field {} not found in input docs", field.clone()),
+        "Remove 'vector enrich-doc', re-run pipeline and check docs contain the field".to_string(),
+        span,
+    )
+}
+
+fn field_contents_not_string_error(field: String, span: Span) -> ShellError {
+    generic_error(
+        "Could not convert field contents to string",
+        format!("Does the field {} contain a string?", field),
+        span,
+    )
 }

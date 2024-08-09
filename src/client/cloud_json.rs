@@ -1,3 +1,4 @@
+use crate::cli::generic_error;
 use nu_protocol::ShellError;
 use serde_derive::{Deserialize, Serialize};
 use std::convert::TryFrom;
@@ -131,13 +132,11 @@ impl TryFrom<&str> for Provider {
             "aws" => Ok(Provider::Aws),
             "gcp" => Ok(Provider::Gcp),
             "azure" => Ok(Provider::Azure),
-            _ => Err(ShellError::GenericError {
-                error: "invalid cloud provider".to_string(),
-                msg: "".to_string(),
-                span: None,
-                help: Some("The supported providers are 'aws', 'gcp' and 'azure'".into()),
-                inner: vec![],
-            }),
+            _ => Err(generic_error(
+                "Unsupported cloud provider",
+                "The supported providers are 'aws', 'gcp' and 'azure'".to_string(),
+                None,
+            )),
         }
     }
 }
