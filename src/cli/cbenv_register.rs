@@ -4,6 +4,7 @@ use std::fs;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use crate::cli::error::generic_error;
+use crate::cli::util::get_username_and_password;
 use crate::{
     ClusterTimeouts, RemoteCluster, RemoteClusterResources, RemoteClusterType, RustTlsConfig,
 };
@@ -40,16 +41,6 @@ impl Command for CbEnvRegister {
                 "connstr",
                 SyntaxShape::String,
                 "the connection string to use for this cluster",
-            )
-            .required(
-                "username",
-                SyntaxShape::String,
-                "the username to use for this cluster",
-            )
-            .required(
-                "password",
-                SyntaxShape::String,
-                "the password to use for this cluster",
             )
             .named(
                 "display_name",
@@ -132,8 +123,6 @@ fn clusters_register(
     let identifier: String = call.req(engine_state, stack, 0)?;
 
     let conn_string: String = call.req(engine_state, stack, 1)?;
-    let username = call.req(engine_state, stack, 2)?;
-    let password = call.req(engine_state, stack, 3)?;
     let bucket = call.get_flag(engine_state, stack, "default-bucket")?;
     let scope = call.get_flag(engine_state, stack, "default-scope")?;
     let collection = call.get_flag(engine_state, stack, "default-collection")?;
@@ -154,19 +143,15 @@ fn clusters_register(
         .collect::<Vec<String>>();
     let tls_config = if tls_enabled {
         Some(
-            RustTlsConfig::new(tls_accept_all_certs, cert_path).map_err(|e| {
-                ShellError::GenericError {
-                    error: e.message(),
-                    msg: "".to_string(),
-                    span: call.head.into(),
-                    help: Some(e.expanded_message()),
-                    inner: Vec::new(),
-                }
-            })?,
+            RustTlsConfig::new(tls_accept_all_certs, cert_path)
+                .map_err(|e| generic_error(e.message(), e.expanded_message(), None))?,
         )
     } else {
         None
     };
+
+    let (username, password) = get_username_and_password()?;
+
     let cluster = RemoteCluster::new(
         RemoteClusterResources {
             hostnames: hostnames.clone(),

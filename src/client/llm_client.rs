@@ -1,3 +1,4 @@
+use crate::cli::no_llm_configured;
 use crate::client::bedrock_client::BedrockClient;
 use crate::client::gemini_client::GeminiClient;
 use crate::client::openai_client::OpenAIClient;
@@ -54,13 +55,7 @@ impl LLMClients {
         let (provider, api_key) = match guard.active_llm() {
             Some(llm) => (llm.provider(), llm.api_key()),
             None => {
-                return Err(ShellError::GenericError {
-                    error: "no llm config specified in config file".to_string(),
-                    msg: "".to_string(),
-                    span: None,
-                    help: None,
-                    inner: Vec::new(),
-                });
+                return Err(no_llm_configured());
             }
         };
 

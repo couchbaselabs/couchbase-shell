@@ -1,8 +1,8 @@
 use crate::state::State;
 use crate::CtrlcFuture;
 use log::debug;
-use nu_protocol::Example;
 use nu_protocol::Record;
+use nu_protocol::{Example, Span};
 use std::fs;
 use std::str;
 use std::sync::{Arc, Mutex};
@@ -11,7 +11,8 @@ use tokio::runtime::Runtime;
 use tokio::select;
 use uuid::Uuid;
 
-use crate::client::LLMClients;
+use crate::cli::{client_error_to_shell_error, generic_error};
+use crate::client::{ClientError, LLMClients};
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::Command;
@@ -126,33 +127,7 @@ fn vector_enrich_text(
         Some(m) => m,
         None => {
             let guard = state.lock().unwrap();
-            let model = match guard.active_llm() {
-                Some(m) => match m.embed_model() {
-                    Some(m) => m,
-                    None => {
-                        return Err(ShellError::GenericError {
-                            error: "no embed model provided".to_string(),
-                            msg: "".to_string(),
-                            span: Some(span),
-                            help: Some(
-                                "supply the embed_model in the config file or using the --model flag"
-                                    .to_string(),
-                            ),
-                            inner: Vec::new(),
-                        });
-                    }
-                },
-                None => {
-                    return Err(ShellError::GenericError {
-                        error: "no llm defined in config file".to_string(),
-                        msg: "".to_string(),
-                        span: Some(span),
-                        help: None,
-                        inner: Vec::new(),
-                    });
-                }
-            };
-            model
+            guard.active_embed_model()?
         }
     };
 
@@ -170,29 +145,15 @@ fn vector_enrich_text(
         let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
         let ctrl_c_fut = CtrlcFuture::new(ctrl_c);
         let rt = Runtime::new().unwrap();
-        let embeddings = match rt.block_on(async {
+        let embeddings = rt.block_on(async {
             select! {
                 result = client.embed(batch, dim, model.clone()) => {
-                    match result {
-                        Ok(r) => Ok(r),
-                        Err(e) => Err(e)
-                    }
+                    result
                 },
                 () = ctrl_c_fut =>
-                     Err(ShellError::GenericError{
-                   error: "Request cancelled".to_string(),
-                    msg: "".to_string(),
-                    span: None,
-                    help: None,
-                    inner: Vec::new(),
-            }),
+                    Err(client_error_to_shell_error(ClientError::Cancelled{key: None}, span)),
             }
-        }) {
-            Ok(r) => r,
-            Err(e) => {
-                return Err(e);
-            }
-        };
+        })?;
 
         for (i, chunk) in batch.iter().enumerate() {
             let vector = embeddings[i]
@@ -271,40 +232,27 @@ fn chunks_from_input(
             for v in vals {
                 let rec = match v.as_record() {
                     Ok(r) => r,
-                    Err(e) => {
-                        return Err(ShellError::GenericError {
-                            error: "Could not parse list of files".to_string(),
-                            msg: "".to_string(),
-                            span: None,
-                            help: None,
-                            inner: vec![e],
-                        });
+                    Err(_) => {
+                        return Err(could_not_parse_files_error(span));
                     }
                 };
 
                 let file = match rec.get("name") {
                     Some(f) => f.as_str().unwrap(),
                     None => {
-                        return Err(ShellError::GenericError {
-                            error: "Could not parse list of files".to_string(),
-                            msg: "".to_string(),
-                            span: None,
-                            help: None,
-                            inner: Vec::new(),
-                        });
+                        return Err(could_not_parse_files_error(span));
                     }
                 };
 
                 let contents = match fs::read_to_string(file) {
                     Ok(c) => c,
                     Err(e) => {
-                        return Err(ShellError::GenericError {
-                            error: format!("Error parsing fimsg: le {}: {}", file, e),
-                            msg: "".to_string(),
-                            span: None,
-                            help: None,
-                            inner: Vec::new(),
-                        })
+                        return Err(generic_error(
+                            format!("Error parsing file {}: {}", file, e),
+                            "Does the shell have access to the file, and does it contain text?"
+                                .to_string(),
+                            span,
+                        ));
                     }
                 };
 
@@ -319,25 +267,13 @@ fn chunks_from_input(
             let text: String = match call.opt(engine_state, stack, 0)? {
                 Some(t) => t,
                 None => {
-                    return Err(ShellError::GenericError {
-                        error: "Please supply source text as shown in examples`".to_string(),
-                        msg: "".to_string(),
-                        span: None,
-                        help: None,
-                        inner: Vec::new(),
-                    });
+                    return Err(source_text_missing_error(span));
                 }
             };
             chunks = chunk_text(text, chunk_len);
         }
         _ => {
-            return Err(ShellError::GenericError {
-                error: "Please supply source text as shown in examples`".to_string(),
-                msg: "".to_string(),
-                span: None,
-                help: None,
-                inner: Vec::new(),
-            });
+            return Err(source_text_missing_error(span));
         }
     };
 
@@ -358,4 +294,21 @@ fn chunk_text(text: String, chunk_len: usize) -> Vec<String> {
         pos += len;
     }
     chunks
+}
+
+fn could_not_parse_files_error(span: Span) -> ShellError {
+    generic_error(
+        "Could not parse list of files",
+        "Piped input must be text or output of 'ls', run 'vector enrich-text --help' for examples"
+            .to_string(),
+        span,
+    )
+}
+
+fn source_text_missing_error(span: Span) -> ShellError {
+    generic_error(
+        "No source text provided",
+        "Run 'vector enrich-text --help' for examples".to_string(),
+        span,
+    )
 }
