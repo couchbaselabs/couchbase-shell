@@ -124,8 +124,8 @@ fn run(
         Value::List { vals, .. } => {
             let rec = match vals[0].as_record() {
                 Ok(r) => r,
-                Err(_) => {
-                    return Err(failed_to_parse_input_vector_error());
+                Err(e) => {
+                    return Err(failed_to_parse_input_vector_error(e.to_string()));
                 }
             };
 
@@ -134,41 +134,34 @@ fn run(
                 let id = rec.get("id").unwrap().as_str().unwrap();
                 if id.len() > 6 && id[..6] == *"vector" {
                     let content = rec.get("content").unwrap().as_record().unwrap();
-                    vector = content
-                        .get("vector")
-                        .unwrap()
-                        .as_list()
-                        .unwrap()
-                        .iter()
-                        .map(|e| e.as_float().unwrap() as f32)
-                        .collect();
+                    // Safe to unwrap here since we established "vector" field is present
+                    vector = input_to_vector(content.get("vector").unwrap())?;
                 }
             } else {
                 // Input is vector from doc get or query
-                let list = match rec.get_index(0).unwrap().1.as_list() {
-                    Ok(l) => l,
-                    Err(_) => {
-                        return Err(failed_to_parse_input_vector_error());
-                    }
-                };
-                vector = list.iter().map(|e| e.as_float().unwrap() as f32).collect();
+                if let Some(input_vector) = rec.get_index(0) {
+                    vector = input_to_vector(input_vector.1)?;
+                } else {
+                    return Err(failed_to_parse_input_vector_error(
+                        "input is empty".to_string(),
+                    ));
+                }
             }
         }
         Value::Nothing { internal_span: _ } => {
             let vec: Option<Value> = call.opt(engine_state, stack, 2)?;
             if let Some(v) = vec {
-                vector = v
-                    .as_list()
-                    .unwrap()
-                    .iter()
-                    .map(|e| e.as_float().unwrap() as f32)
-                    .collect();
+                vector = input_to_vector(&v)?;
             } else {
-                return Err(failed_to_parse_input_vector_error());
+                return Err(failed_to_parse_input_vector_error(
+                    "no vector provided".to_string(),
+                ));
             }
         }
         _ => {
-            return Err(failed_to_parse_input_vector_error());
+            return Err(failed_to_parse_input_vector_error(
+                "piped input not a list".to_string(),
+            ));
         }
     }
 
@@ -274,9 +267,25 @@ struct SearchResultData {
     hits: Vec<SearchResultHit>,
 }
 
-fn failed_to_parse_input_vector_error() -> ShellError {
+fn input_to_vector(content: &Value) -> Result<Vec<f32>, ShellError> {
+    let list = match content.as_list() {
+        Ok(l) => l,
+        Err(e) => return Err(failed_to_parse_input_vector_error(e.to_string())),
+    };
+    let result: Vec<f64> = match list
+        .iter()
+        .map(|e| e.as_float())
+        .collect::<Result<Vec<f64>, ShellError>>()
+    {
+        Ok(res) => res,
+        Err(e) => return Err(failed_to_parse_input_vector_error(e.to_string())),
+    };
+    Ok(result.iter().map(|f| *f as f32).collect())
+}
+
+fn failed_to_parse_input_vector_error(inner: String) -> ShellError {
     generic_error(
-        "Could not parse input vector",
+        format!("Could not parse input vector: {}", inner),
         "Piped input must be correctly formatted, run 'vector search --help' for examples"
             .to_string(),
         None,
