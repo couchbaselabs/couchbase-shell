@@ -69,7 +69,7 @@ fn clusters_drop(
 
     debug!("Running clusters drop for {}", &name);
 
-    let guard = state.lock().unwrap();
+    let mut guard = state.lock().unwrap();
     let control = if let Some(c) = capella {
         guard.get_capella_org(c)
     } else {
@@ -102,6 +102,18 @@ fn clusters_drop(
     client
         .delete_cluster(org_id, project_id, cluster.id(), deadline, ctrl_c)
         .map_err(|e| client_error_to_shell_error(e, span))?;
+
+    let identifier = {
+        guard
+            .clusters()
+            .iter()
+            .find(|c| c.1.hostnames().contains(&cluster.connection_string()))
+            .map(|registered| registered.0.clone())
+    };
+
+    if let Some(id) = identifier {
+        guard.remove_cluster(id);
+    }
 
     Ok(PipelineData::empty())
 }
