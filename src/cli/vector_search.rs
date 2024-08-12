@@ -130,10 +130,20 @@ fn run(
             };
 
             if rec.contains("id") && rec.contains("content") {
-                // Input is from vector enrich-text
-                let id = rec.get("id").unwrap().as_str().unwrap();
+                let id = rec
+                    .get("id")
+                    .unwrap()
+                    .as_str()
+                    .map_err(|e| failed_to_parse_input_vector_error(e.to_string()))?;
+
                 if id.len() > 6 && id[..6] == *"vector" {
-                    let content = rec.get("content").unwrap().as_record().unwrap();
+                    // Input is from vector enrich-text
+                    let content = rec
+                        .get("content")
+                        .unwrap()
+                        .as_record()
+                        .map_err(|e| failed_to_parse_input_vector_error(e.to_string()))?;
+
                     // Safe to unwrap here since we established "vector" field is present
                     vector = input_to_vector(content.get("vector").unwrap())?;
                 }
@@ -154,7 +164,7 @@ fn run(
                 vector = input_to_vector(&v)?;
             } else {
                 return Err(failed_to_parse_input_vector_error(
-                    "no vector provided".to_string(),
+                    "source vector missing".to_string(),
                 ));
             }
         }

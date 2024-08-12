@@ -194,7 +194,6 @@ pub fn get_bucket_or_active(
 
 #[derive(Debug, Deserialize)]
 pub struct ManifestCollection {
-    pub uid: String,
     pub name: String,
     #[serde(rename = "maxTTL")]
     pub max_expiry: i64,
@@ -202,13 +201,11 @@ pub struct ManifestCollection {
 
 #[derive(Debug, Deserialize)]
 pub struct ManifestScope {
-    pub uid: String,
     pub name: String,
     pub collections: Vec<ManifestCollection>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Manifest {
-    pub uid: String,
     pub scopes: Vec<ManifestScope>,
 }
