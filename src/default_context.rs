@@ -1,6 +1,7 @@
 use nu_cli::add_cli_context;
 use nu_cmd_extra::*;
 use nu_cmd_lang::*;
+use nu_cmd_plugin::*;
 use nu_command::*;
 use nu_protocol::engine::{EngineState, StateWorkingSet};
 
@@ -235,19 +236,23 @@ pub fn create_default_context() -> EngineState {
         // Platform, from nu_command
         bind_command! {
             Ansi,
+            AnsiLink,
             AnsiStrip,
             Clear,
             Du,
             Input,
+            InputList,
+            InputListen,
+            IsTerminal,
             Kill,
             Sleep,
             TermSize,
+            Whoami
         };
 
         // Date, from nu_command
         bind_command! {
             Date,
-            DateFormat,
             DateHumanize,
             DateListTimezones,
             DateNow,
@@ -302,10 +307,12 @@ pub fn create_default_context() -> EngineState {
             Into,
             IntoBool,
             IntoBinary,
+            IntoCellPath,
             IntoDatetime,
-            IntoFloat,
             IntoDuration,
+            IntoFloat,
             IntoFilesize,
+            IntoGlob,
             IntoInt,
             IntoRecord,
             IntoString,
@@ -391,6 +398,49 @@ pub fn create_default_context() -> EngineState {
         bind_command! {
             IsAdmin,
         };
+
+        // Bytes, from nu_command {
+        bind_command! {
+            Bytes,
+            BytesAdd,
+            BytesAt,
+            BytesBuild,
+            BytesCollect,
+            BytesEndsWith,
+            BytesIndexOf,
+            BytesLen,
+            BytesRemove,
+            BytesReplace,
+            BytesReverse,
+            BytesStartsWith
+        }
+
+        //Debug, from nu_command
+        bind_command! {
+            Ast,
+            Debug,
+            DebugInfo,
+            DebugProfile,
+            Explain,
+            Inspect,
+            Metadata,
+            MetadataSet,
+            TimeIt,
+            View,
+            ViewFiles,
+            ViewSource,
+            ViewSpan,
+        }
+
+        //Plugin, from nu_command
+        bind_command! {
+            PluginCommand,
+            PluginAdd,
+            PluginList,
+            PluginRm,
+            PluginStop,
+            PluginUse,
+        }
 
         working_set.render()
     };

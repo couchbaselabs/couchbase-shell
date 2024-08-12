@@ -1178,6 +1178,7 @@ dependencies = [
  "nu-cmd-base",
  "nu-cmd-extra",
  "nu-cmd-lang",
+ "nu-cmd-plugin",
  "nu-command",
  "nu-engine",
  "nu-explore",
@@ -2968,6 +2969,19 @@ dependencies = [
  "nu-protocol",
  "nu-utils",
  "shadow-rs",
+]
+
+[[package]]
+name = "nu-cmd-plugin"
+version = "0.95.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "db48d9d12a6bdb9c126dfd031345a466d027fc972f0a9b3a28782597d1a7922d"
+dependencies = [
+ "itertools 0.12.1",
+ "nu-engine",
+ "nu-path",
+ "nu-plugin-engine",
+ "nu-protocol",
 ]
 
 [[package]]
