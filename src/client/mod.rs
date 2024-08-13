@@ -1,5 +1,5 @@
+pub use crate::client::cloud::CapellaClient;
 pub use crate::client::cloud::CAPELLA_SRV_SUFFIX;
-pub use crate::client::cloud::{CapellaClient, CapellaRequest};
 pub use crate::client::error::ClientError;
 pub use crate::client::http_client::{
     AnalyticsQueryRequest, Endpoint, HTTPClient, ManagementRequest, QueryRequest,

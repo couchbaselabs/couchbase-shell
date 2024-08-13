@@ -85,7 +85,7 @@ fn clusters(
     )?;
 
     let clusters = client
-        .get_clusters(org_id, project_id, deadline, ctrl_c)
+        .list_clusters(org_id, project_id, deadline, ctrl_c)
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
     let mut results = vec![];

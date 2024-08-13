@@ -1,14 +1,12 @@
-use crate::cli::error::CBShellError::{
-    MustNotBeCapella, ProjectNotFound, UnexpectedResponseStatus,
-};
+use crate::cli::error::CBShellError::{MustNotBeCapella, ProjectNotFound};
 use crate::cli::error::{
-    client_error_to_shell_error, cluster_not_found_error, deserialize_error,
-    malformed_response_error, no_active_bucket_error, unexpected_status_code_error,
+    client_error_to_shell_error, cluster_not_found_error, malformed_response_error,
+    no_active_bucket_error, unexpected_status_code_error,
 };
 use crate::cli::generic_error;
 use crate::cli::CBShellError::ClusterNotFound;
-use crate::client::cloud_json::{Cluster, OrganizationsResponse, ProjectsResponse};
-use crate::client::{CapellaClient, CapellaRequest, HttpResponse};
+use crate::client::cloud_json::Cluster;
+use crate::client::{CapellaClient, HttpResponse};
 use crate::state::State;
 use crate::{read_input, RemoteCluster, RemoteClusterType};
 use nu_engine::CallExt;
@@ -307,7 +305,7 @@ pub(crate) fn cluster_from_conn_str(
     project_id: String,
 ) -> Result<Cluster, ShellError> {
     let response = client
-        .get_clusters(org_id, project_id, deadline, ctrl_c)
+        .list_clusters(org_id, project_id, deadline, ctrl_c)
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
     for c in response.items() {
@@ -329,21 +327,11 @@ pub(crate) fn find_project_id(
     span: Span,
     org_id: String,
 ) -> Result<String, ShellError> {
-    let response = client
-        .capella_request(CapellaRequest::GetProjects { org_id }, deadline, ctrl_c)
+    let projects = client
+        .list_projects(org_id, deadline, ctrl_c)
         .map_err(|e| client_error_to_shell_error(e, span))?;
-    if response.status() != 200 {
-        return Err(UnexpectedResponseStatus {
-            status_code: response.status(),
-            message: response.content().to_string(),
-            span,
-        }
-        .into());
-    }
-    let content: ProjectsResponse = serde_json::from_str(response.content())
-        .map_err(|e| deserialize_error(e.to_string(), span))?;
 
-    for p in content.items() {
+    for p in projects.items() {
         if p.name() == name.clone() {
             return Ok(p.id().to_string());
         }
@@ -358,22 +346,16 @@ pub(crate) fn find_org_id(
     deadline: Instant,
     span: Span,
 ) -> Result<String, ShellError> {
-    let response = client
-        .capella_request(CapellaRequest::GetOrganizations {}, deadline, ctrl_c)
+    let orgs = client
+        .list_organizations(deadline, ctrl_c.clone())
         .map_err(|e| client_error_to_shell_error(e, span))?;
-    if response.status() != 200 {
-        return Err(UnexpectedResponseStatus {
-            status_code: response.status(),
-            message: response.content().to_string(),
-            span,
-        }
-        .into());
-    }
-    let content: OrganizationsResponse = serde_json::from_str(response.content())
-        .map_err(|e| deserialize_error(e.to_string(), span))?;
 
-    let org = content.items().first().unwrap().id();
-    Ok(org.to_string())
+    let org_id = match orgs.items().first() {
+        Some(org) => org.id(),
+        None => return Err(generic_error("No organizations in response", None, None)),
+    };
+
+    Ok(org_id.to_string())
 }
 
 // duration_to_golang_string creates a golang formatted string to use with timeouts. Unlike Golang

@@ -198,7 +198,7 @@ pub fn get_capella_buckets(
     )?;
 
     let buckets = client
-        .get_buckets(org_id, project_id, json_cluster.id(), deadline, ctrl_c)
+        .list_buckets(org_id, project_id, json_cluster.id(), deadline, ctrl_c)
         .map_err(|e| client_error_to_shell_error(e, span))?;
     let mut buckets_settings: Vec<BucketSettings> = vec![];
     for bucket in buckets.items() {
