@@ -68,7 +68,7 @@ fn organizations(
 
         let deadline = Instant::now().add(org.timeout());
         let orgs = client
-            .get_organizations(deadline, ctrl_c.clone())
+            .list_organizations(deadline, ctrl_c.clone())
             .map_err(|e| client_error_to_shell_error(e, span))?;
 
         for org in orgs.items() {

@@ -66,7 +66,7 @@ fn projects(
     let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
 
     let projects = client
-        .get_projects(org_id, deadline, ctrl_c)
+        .list_projects(org_id, deadline, ctrl_c)
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
     let mut results = vec![];

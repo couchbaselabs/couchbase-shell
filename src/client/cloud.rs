@@ -173,12 +173,12 @@ impl CapellaClient {
         ))
     }
 
-    pub fn get_organizations(
+    pub fn list_organizations(
         &self,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<OrganizationsResponse, ClientError> {
-        let request = CapellaRequest::GetOrganizations {};
+        let request = CapellaRequest::OrganizationList {};
         let response = self.capella_request(request, deadline, ctrl_c)?;
 
         if response.status() != 200 {
@@ -192,13 +192,13 @@ impl CapellaClient {
         Ok(resp)
     }
 
-    pub fn get_projects(
+    pub fn list_projects(
         &self,
         org_id: String,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<ProjectsResponse, ClientError> {
-        let request = CapellaRequest::GetProjects { org_id };
+        let request = CapellaRequest::ProjectList { org_id };
         let response = self.capella_request(request, deadline, ctrl_c)?;
 
         if response.status() != 200 {
@@ -219,7 +219,7 @@ impl CapellaClient {
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
-        let request = CapellaRequest::CreateProject {
+        let request = CapellaRequest::ProjectCreate {
             org_id,
             payload: format!("{{\"name\": \"{}\"}}", name),
         };
@@ -242,7 +242,7 @@ impl CapellaClient {
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
-        let request = CapellaRequest::DeleteProject { org_id, project_id };
+        let request = CapellaRequest::ProjectDelete { org_id, project_id };
         let response = self.capella_request(request, deadline, ctrl_c)?;
 
         if response.status() != 204 {
@@ -263,7 +263,7 @@ impl CapellaClient {
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<Cluster, ClientError> {
-        let request = CapellaRequest::GetClustersV4 { org_id, project_id };
+        let request = CapellaRequest::ClusterList { org_id, project_id };
         let response = self.capella_request(request, deadline, ctrl_c)?;
 
         if response.status() != 200 {
@@ -284,14 +284,14 @@ impl CapellaClient {
         Err(ClientError::CapellaClusterNotFound { name: cluster_name })
     }
 
-    pub fn get_clusters(
+    pub fn list_clusters(
         &self,
         org_id: String,
         project_id: String,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<ClustersResponse, ClientError> {
-        let request = CapellaRequest::GetClustersV4 { org_id, project_id };
+        let request = CapellaRequest::ClusterList { org_id, project_id };
         let response = self.capella_request(request, deadline, ctrl_c)?;
 
         if response.status() != 200 {
@@ -313,7 +313,7 @@ impl CapellaClient {
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
-        let request = CapellaRequest::CreateClusterV4 {
+        let request = CapellaRequest::ClusterCreate {
             org_id,
             project_id,
             payload,
@@ -337,7 +337,7 @@ impl CapellaClient {
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
-        let request = CapellaRequest::DeleteClusterV4 {
+        let request = CapellaRequest::ClusterDelete {
             org_id,
             project_id,
             cluster_id,
@@ -362,7 +362,7 @@ impl CapellaClient {
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
-        let request = CapellaRequest::CredentialsCreateV4 {
+        let request = CapellaRequest::CredentialsCreate {
             org_id,
             project_id,
             cluster_id,
@@ -388,7 +388,7 @@ impl CapellaClient {
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<Bucket, ClientError> {
-        let request = CapellaRequest::GetBucketV4 {
+        let request = CapellaRequest::BucketGet {
             org_id,
             project_id,
             cluster_id,
@@ -407,7 +407,7 @@ impl CapellaClient {
         Ok(resp)
     }
 
-    pub fn get_buckets(
+    pub fn list_buckets(
         &self,
         org_id: String,
         project_id: String,
@@ -415,7 +415,7 @@ impl CapellaClient {
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<BucketsResponse, ClientError> {
-        let request = CapellaRequest::GetBucketsV4 {
+        let request = CapellaRequest::BucketList {
             org_id,
             project_id,
             cluster_id,
@@ -442,7 +442,7 @@ impl CapellaClient {
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
-        let request = CapellaRequest::CreateBucketV4 {
+        let request = CapellaRequest::BucketCreate {
             org_id,
             project_id,
             cluster_id,
@@ -468,7 +468,7 @@ impl CapellaClient {
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
-        let request = CapellaRequest::DropBucketV4 {
+        let request = CapellaRequest::BucketDelete {
             org_id,
             project_id,
             cluster_id,
@@ -495,7 +495,7 @@ impl CapellaClient {
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
-        let request = CapellaRequest::UpdateBucketV4 {
+        let request = CapellaRequest::BucketUpdate {
             org_id,
             project_id,
             cluster_id,
@@ -522,7 +522,7 @@ impl CapellaClient {
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
-        let request = CapellaRequest::LoadSampleBucketV4 {
+        let request = CapellaRequest::BucketLoadSample {
             org_id,
             project_id,
             cluster_id,
@@ -544,130 +544,77 @@ impl CapellaClient {
 
 #[allow(dead_code)]
 pub enum CapellaRequest {
-    CreateAllowListEntry {
-        cluster_id: String,
+    OrganizationList,
+    ProjectCreate {
+        org_id: String,
         payload: String,
     },
-    CreateBucket {
-        cluster_id: String,
+    ProjectDelete {
+        org_id: String,
+        project_id: String,
+    },
+    ProjectList {
+        org_id: String,
+    },
+    ClusterCreate {
+        org_id: String,
+        project_id: String,
         payload: String,
     },
-    CreateBucketV4 {
+    ClusterDelete {
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+    },
+    ClusterGet {
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+    },
+    ClusterList {
+        org_id: String,
+        project_id: String,
+    },
+    BucketCreate {
         org_id: String,
         project_id: String,
         cluster_id: String,
         payload: String,
     },
-    CreateCluster {
-        payload: String,
-    },
-    CreateClusterV4 {
-        org_id: String,
-        project_id: String,
-        payload: String,
-    },
-    CreateProject {
-        org_id: String,
-        payload: String,
-    },
-    CreateUser {
-        cluster_id: String,
-        payload: String,
-    },
-    CredentialsCreateV4 {
-        org_id: String,
-        project_id: String,
-        cluster_id: String,
-        payload: String,
-    },
-    DeleteAllowListEntry {
-        cluster_id: String,
-        payload: String,
-    },
-    DeleteBucket {
-        cluster_id: String,
-        payload: String,
-    },
-    DeleteClusterV4 {
-        org_id: String,
-        project_id: String,
-        cluster_id: String,
-    },
-    DeleteProject {
-        org_id: String,
-        project_id: String,
-    },
-    DeleteUser {
-        cluster_id: String,
-        username: String,
-    },
-    DropBucketV4 {
+    BucketDelete {
         org_id: String,
         project_id: String,
         cluster_id: String,
         bucket_id: String,
     },
-    // GetAPIStatus,
-    GetAllowList {
-        cluster_id: String,
-    },
-    GetBuckets {
-        cluster_id: String,
-    },
-    GetBucketV4 {
+    BucketGet {
         org_id: String,
         project_id: String,
         cluster_id: String,
         bucket_id: String,
     },
-    GetBucketsV4 {
+    BucketList {
         org_id: String,
         project_id: String,
         cluster_id: String,
     },
-    GetClouds,
-    GetCluster {
-        cluster_id: String,
-    },
-    GetClusterHealth {
-        cluster_id: String,
-    },
-    GetClustersV4 {
-        org_id: String,
-        project_id: String,
-    },
-    GetClusterV4 {
-        org_id: String,
-        project_id: String,
-        cluster_id: String,
-    },
-    GetOrganizations,
-    GetProjects {
-        org_id: String,
-    },
-    GetUsers {
-        cluster_id: String,
-    },
-    LoadSampleBucketV4 {
+    BucketLoadSample {
         org_id: String,
         project_id: String,
         cluster_id: String,
         payload: String,
     },
-    UpdateBucket {
-        cluster_id: String,
-        payload: String,
-    },
-    UpdateBucketV4 {
+    BucketUpdate {
         org_id: String,
         project_id: String,
         cluster_id: String,
         bucket_id: String,
         payload: String,
     },
-    UpdateUser {
+    CredentialsCreate {
+        org_id: String,
+        project_id: String,
         cluster_id: String,
-        username: String,
         payload: String,
     },
 }
@@ -675,25 +622,17 @@ pub enum CapellaRequest {
 impl CapellaRequest {
     pub fn path(&self) -> String {
         match self {
-            Self::CreateAllowListEntry { cluster_id, .. } => {
-                format!("/v2/clusters/{}/allowlist", cluster_id)
+            Self::OrganizationList => "/v4/organizations".into(),
+            Self::ProjectDelete { org_id, project_id } => {
+                format!("/v4/organizations/{}/projects/{}", org_id, project_id)
             }
-            Self::CreateBucket { cluster_id, .. } => {
-                format!("/v2/clusters/{}/buckets", cluster_id)
+            Self::ProjectCreate { org_id, .. } => {
+                format!("/v4/organizations/{}/projects", org_id)
             }
-            Self::CreateBucketV4 {
-                org_id,
-                project_id,
-                cluster_id,
-                ..
-            } => {
-                format!(
-                    "/v4/organizations/{}/projects/{}/clusters/{}/buckets",
-                    org_id, project_id, cluster_id
-                )
+            Self::ProjectList { org_id } => {
+                format!("/v4/organizations/{}/projects?perPage=100", org_id)
             }
-            Self::CreateCluster { .. } => "/v2/clusters".into(),
-            Self::CreateClusterV4 {
+            Self::ClusterCreate {
                 org_id, project_id, ..
             } => {
                 format!(
@@ -701,30 +640,7 @@ impl CapellaRequest {
                     org_id, project_id
                 )
             }
-            Self::CreateProject { org_id, .. } => {
-                format!("/v4/organizations/{}/projects", org_id)
-            }
-            Self::CreateUser { cluster_id, .. } => {
-                format!("/v2/clusters/{}/users", cluster_id)
-            }
-            Self::CredentialsCreateV4 {
-                org_id,
-                project_id,
-                cluster_id,
-                ..
-            } => {
-                format!(
-                    "/v4/organizations/{}/projects/{}/clusters/{}/users",
-                    org_id, project_id, cluster_id
-                )
-            }
-            Self::DeleteAllowListEntry { cluster_id, .. } => {
-                format!("/v2/clusters/{}/allowlist", cluster_id)
-            }
-            Self::DeleteBucket { cluster_id, .. } => {
-                format!("/v2/clusters/{}/buckets", cluster_id)
-            }
-            Self::DeleteClusterV4 {
+            Self::ClusterDelete {
                 org_id,
                 project_id,
                 cluster_id,
@@ -734,16 +650,34 @@ impl CapellaRequest {
                     org_id, project_id, cluster_id
                 )
             }
-            Self::DeleteProject { org_id, project_id } => {
-                format!("/v4/organizations/{}/projects/{}", org_id, project_id)
-            }
-            Self::DeleteUser {
+            Self::ClusterGet {
+                org_id,
+                project_id,
                 cluster_id,
-                username,
             } => {
-                format!("/v2/clusters/{}/users/{}", cluster_id, username)
+                format!(
+                    "/v4/organizations/{}/projects/{}/clusters/{}",
+                    org_id, project_id, cluster_id
+                )
             }
-            Self::DropBucketV4 {
+            Self::ClusterList { org_id, project_id } => {
+                format!(
+                    "/v4/organizations/{}/projects/{}/clusters",
+                    org_id, project_id
+                )
+            }
+            Self::BucketCreate {
+                org_id,
+                project_id,
+                cluster_id,
+                ..
+            } => {
+                format!(
+                    "/v4/organizations/{}/projects/{}/clusters/{}/buckets",
+                    org_id, project_id, cluster_id
+                )
+            }
+            Self::BucketDelete {
                 org_id,
                 project_id,
                 cluster_id,
@@ -754,13 +688,7 @@ impl CapellaRequest {
                     org_id, project_id, cluster_id, bucket_id
                 )
             }
-            Self::GetAllowList { cluster_id } => {
-                format!("/v2/clusters/{}/allowlist", cluster_id)
-            }
-            Self::GetBuckets { cluster_id } => {
-                format!("/v2/clusters/{}/buckets", cluster_id)
-            }
-            Self::GetBucketV4 {
+            Self::BucketGet {
                 org_id,
                 project_id,
                 cluster_id,
@@ -771,7 +699,7 @@ impl CapellaRequest {
                     org_id, project_id, cluster_id, bucket_id
                 )
             }
-            Self::GetBucketsV4 {
+            Self::BucketList {
                 org_id,
                 project_id,
                 cluster_id,
@@ -781,37 +709,7 @@ impl CapellaRequest {
                     org_id, project_id, cluster_id
                 )
             }
-            Self::GetClouds => "/v2/clouds".into(),
-            Self::GetClusterHealth { cluster_id } => {
-                format!("/v2/clusters/{}/health", cluster_id)
-            }
-            Self::GetCluster { cluster_id } => {
-                format!("/v2/clusters/{}", cluster_id)
-            }
-            Self::GetClustersV4 { org_id, project_id } => {
-                format!(
-                    "/v4/organizations/{}/projects/{}/clusters",
-                    org_id, project_id
-                )
-            }
-            Self::GetClusterV4 {
-                org_id,
-                project_id,
-                cluster_id,
-            } => {
-                format!(
-                    "/v4/organizations/{}/projects/{}/clusters/{}",
-                    org_id, project_id, cluster_id
-                )
-            }
-            Self::GetOrganizations => "/v4/organizations".into(),
-            Self::GetProjects { org_id } => {
-                format!("/v4/organizations/{}/projects?perPage=100", org_id)
-            }
-            Self::GetUsers { cluster_id } => {
-                format!("/v2/clusters/{}/users", cluster_id)
-            }
-            Self::LoadSampleBucketV4 {
+            Self::BucketLoadSample {
                 org_id,
                 project_id,
                 cluster_id,
@@ -822,10 +720,7 @@ impl CapellaRequest {
                     org_id, project_id, cluster_id
                 )
             }
-            Self::UpdateBucket { cluster_id, .. } => {
-                format!("/v2/clusters/{}/buckets", cluster_id)
-            }
-            Self::UpdateBucketV4 {
+            Self::BucketUpdate {
                 org_id,
                 project_id,
                 cluster_id,
@@ -837,67 +732,48 @@ impl CapellaRequest {
                     org_id, project_id, cluster_id, bucket_id
                 )
             }
-            Self::UpdateUser {
+            Self::CredentialsCreate {
+                org_id,
+                project_id,
                 cluster_id,
-                username,
                 ..
             } => {
-                format!("/v2/clusters/{}/users/{}", cluster_id, username)
+                format!(
+                    "/v4/organizations/{}/projects/{}/clusters/{}/users",
+                    org_id, project_id, cluster_id
+                )
             }
         }
     }
 
     pub fn verb(&self) -> HttpVerb {
         match self {
-            Self::CreateAllowListEntry { .. } => HttpVerb::Post,
-            Self::CreateBucket { .. } => HttpVerb::Post,
-            Self::CreateBucketV4 { .. } => HttpVerb::Post,
-            Self::CreateCluster { .. } => HttpVerb::Post,
-            Self::CreateClusterV4 { .. } => HttpVerb::Post,
-            Self::CreateProject { .. } => HttpVerb::Post,
-            Self::CreateUser { .. } => HttpVerb::Post,
-            Self::CredentialsCreateV4 { .. } => HttpVerb::Post,
-            Self::DeleteAllowListEntry { .. } => HttpVerb::Delete,
-            Self::DeleteBucket { .. } => HttpVerb::Delete,
-            Self::DeleteClusterV4 { .. } => HttpVerb::Delete,
-            Self::DeleteProject { .. } => HttpVerb::Delete,
-            Self::DeleteUser { .. } => HttpVerb::Delete,
-            Self::DropBucketV4 { .. } => HttpVerb::Delete,
-            Self::GetAllowList { .. } => HttpVerb::Get,
-            Self::GetBuckets { .. } => HttpVerb::Get,
-            Self::GetBucketV4 { .. } => HttpVerb::Get,
-            Self::GetBucketsV4 { .. } => HttpVerb::Get,
-            Self::GetClouds => HttpVerb::Get,
-            Self::GetClusterHealth { .. } => HttpVerb::Get,
-            Self::GetCluster { .. } => HttpVerb::Get,
-            Self::GetClustersV4 { .. } => HttpVerb::Get,
-            Self::GetClusterV4 { .. } => HttpVerb::Get,
-            Self::GetOrganizations => HttpVerb::Get,
-            Self::GetProjects { .. } => HttpVerb::Get,
-            Self::GetUsers { .. } => HttpVerb::Get,
-            Self::LoadSampleBucketV4 { .. } => HttpVerb::Post,
-            Self::UpdateBucket { .. } => HttpVerb::Put,
-            Self::UpdateBucketV4 { .. } => HttpVerb::Put,
-            Self::UpdateUser { .. } => HttpVerb::Put,
+            Self::OrganizationList => HttpVerb::Get,
+            Self::ProjectCreate { .. } => HttpVerb::Post,
+            Self::ProjectDelete { .. } => HttpVerb::Delete,
+            Self::ProjectList { .. } => HttpVerb::Get,
+            Self::ClusterCreate { .. } => HttpVerb::Post,
+            Self::ClusterDelete { .. } => HttpVerb::Delete,
+            Self::ClusterGet { .. } => HttpVerb::Get,
+            Self::ClusterList { .. } => HttpVerb::Get,
+            Self::BucketCreate { .. } => HttpVerb::Post,
+            Self::BucketDelete { .. } => HttpVerb::Delete,
+            Self::BucketGet { .. } => HttpVerb::Get,
+            Self::BucketLoadSample { .. } => HttpVerb::Post,
+            Self::BucketList { .. } => HttpVerb::Get,
+            Self::BucketUpdate { .. } => HttpVerb::Put,
+            Self::CredentialsCreate { .. } => HttpVerb::Post,
         }
     }
 
     pub fn payload(&self) -> Option<Vec<u8>> {
         match self {
-            Self::CreateAllowListEntry { payload, .. } => Some(payload.as_bytes().into()),
-            Self::CreateBucket { payload, .. } => Some(payload.as_bytes().into()),
-            Self::CreateBucketV4 { payload, .. } => Some(payload.as_bytes().into()),
-            Self::CreateCluster { payload, .. } => Some(payload.as_bytes().into()),
-            Self::CreateClusterV4 { payload, .. } => Some(payload.as_bytes().into()),
-            Self::CreateProject { payload, .. } => Some(payload.as_bytes().into()),
-            Self::CreateUser { payload, .. } => Some(payload.as_bytes().into()),
-            Self::CredentialsCreateV4 { payload, .. } => Some(payload.as_bytes().into()),
-            Self::DeleteAllowListEntry { payload, .. } => Some(payload.as_bytes().into()),
-            Self::DeleteBucket { payload, .. } => Some(payload.as_bytes().into()),
-            Self::LoadSampleBucketV4 { payload, .. } => Some(payload.as_bytes().into()),
-            Self::UpdateBucket { payload, .. } => Some(payload.as_bytes().into()),
-            Self::UpdateBucketV4 { payload, .. } => Some(payload.as_bytes().into()),
-            Self::UpdateUser { payload, .. } => Some(payload.as_bytes().into()),
+            Self::ProjectCreate { payload, .. } => Some(payload.as_bytes().into()),
+            Self::ClusterCreate { payload, .. } => Some(payload.as_bytes().into()),
+            Self::BucketCreate { payload, .. } => Some(payload.as_bytes().into()),
+            Self::BucketLoadSample { payload, .. } => Some(payload.as_bytes().into()),
+            Self::BucketUpdate { payload, .. } => Some(payload.as_bytes().into()),
+            Self::CredentialsCreate { payload, .. } => Some(payload.as_bytes().into()),
             _ => None,
         }
     }
