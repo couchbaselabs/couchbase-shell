@@ -1,17 +1,16 @@
-use crate::cli::doc_upsert::run_kv_mutations;
+use crate::cli::doc_upsert::{id_from_value, run_kv_mutations};
+use crate::cli::error::serialize_error;
+use crate::cli::util::convert_nu_value_to_json_value;
 use crate::client::KeyValueRequest;
 use crate::state::State;
 use nu_command::Open;
 use nu_engine::CallExt;
-use std::sync::{Arc, Mutex};
-
-use crate::cli::error::serialize_error;
-use crate::cli::util::convert_nu_value_to_json_value;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
 };
+use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
 pub struct DocImport {
@@ -120,7 +119,7 @@ fn run_import(
                 let mut content = serde_json::Map::new();
                 for (k, v) in val.iter() {
                     if k.clone() == id_column {
-                        id = v.as_str().ok();
+                        id = id_from_value(v, span);
                     }
 
                     content.insert(k.clone(), convert_nu_value_to_json_value(v, span).ok()?);

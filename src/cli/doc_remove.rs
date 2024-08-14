@@ -85,11 +85,11 @@ impl Command for DocRemove {
         call: &Call,
         input: PipelineData,
     ) -> Result<PipelineData, ShellError> {
-        run_get(self.state.clone(), engine_state, stack, call, input)
+        run_remove(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn run_get(
+fn run_remove(
     state: Arc<Mutex<State>>,
     engine_state: &EngineState,
     stack: &mut Stack,

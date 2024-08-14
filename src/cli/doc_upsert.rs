@@ -10,6 +10,7 @@ use crate::state::State;
 use crate::RemoteCluster;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
+use log::info;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -164,7 +165,7 @@ pub(crate) fn run_kv_store_ops(
             let mut content = None;
             for (k, v) in val.iter() {
                 if k.clone() == id_column {
-                    id = v.as_str().ok();
+                    id = id_from_value(v, span);
                 }
                 if k.clone() == content_column {
                     content = convert_nu_value_to_json_value(v, span).ok();
@@ -196,6 +197,20 @@ pub(crate) fn run_kv_store_ops(
         all_items,
         req_builder,
     )
+}
+
+pub fn id_from_value(v: &Value, span: Span) -> Option<String> {
+    match v {
+        Value::String { val, .. } => Some(val.clone()),
+        Value::Int { val, .. } => Some(val.to_string()),
+        _ => {
+            info!(
+                "Skipping doc with id '{}' as id is not an int or string",
+                convert_nu_value_to_json_value(v, span).unwrap_or("error parsing id".into())
+            );
+            None
+        }
+    }
 }
 
 pub fn run_kv_mutations(
