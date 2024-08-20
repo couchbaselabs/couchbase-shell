@@ -102,12 +102,12 @@ impl Command for VectorEnrichDoc {
             Example {
                 description:
                     "Fetch a single doc with id '12345' and enrich the field named 'description'",
-                example: "doc get 12345 | select content | vector enrich-doc description --model models/text-embedding-004",
+                example: "doc get 12345 | vector enrich-doc description --model models/text-embedding-004",
                 result: None,
             },
             Example {
                 description: "Fetch and enrich all landmark documents from travel sample and upload the results to couchabase",
-                example: "query  'SELECT * FROM `travel-sample` WHERE type = \"landmark\"' | select content | vector enrich-doc content --model amazon.titan-embed-text-v1 | doc upsert",
+                example: "query  'SELECT meta().id, * FROM `travel-sample` WHERE type = \"landmark\"' | vector enrich-doc content --model amazon.titan-embed-text-v1 | doc upsert",
                 result: None,
             },
         ]
@@ -127,6 +127,7 @@ fn vector_enrich_doc(
 
     let mut field_contents: Vec<String> = vec![];
     let mut input_records: Vec<nu_protocol::Record> = vec![];
+    let mut input_ids: Vec<String> = vec![];
 
     let max_tokens: Option<usize> = call.get_flag::<usize>(engine_state, stack, "maxTokens")?;
 
@@ -164,11 +165,54 @@ fn vector_enrich_doc(
                     }
                 };
 
-                let doc_json = match rec.get_index(0).unwrap().1.as_record() {
-                    Ok(r) => r,
-                    Err(_) => {
-                        return Err(could_not_parse_input_error(span));
+                // Check if the input is from a doc get
+                let (doc_json, id) = if rec.contains("id")
+                    && rec.contains("content")
+                    && rec.contains("cas")
+                    && rec.contains("error")
+                    && rec.contains("cluster")
+                {
+                    // error is either Nothing which will result in an empty string or an error string
+                    // in either case the double unwrap here is safe
+                    let err = rec.get("error").unwrap().as_str().unwrap();
+                    if !err.is_empty() {
+                        return Err(generic_error(
+                            format!("error from doc get input: {}", err),
+                            None,
+                            None,
+                        ));
                     }
+
+                    (
+                        //Safe to unwrap as we have validated the presence of these cols in the record
+                        rec.get("content").unwrap().as_record()?,
+                        rec.get("id").unwrap().as_str()?.to_string(),
+                    )
+                } else {
+                    // Else piped input is from a query, which needs to contain 3 columns, one to be used as the ID, one holding the json doc and finally one with the cluster
+                    if rec.len() != 3 {
+                        return Err(generic_error(
+                            "input incorrectly formatted",
+                            "Run 'vector enrich-doc --help' for examples with input from 'doc get' and 'query'".to_string(),
+                            None
+                        ));
+                    }
+
+                    let id = read_id(rec, id_column.clone())?;
+
+                    // No need to check this is set after loop, since we know there are 3 columns one will not be id or cluster
+                    let mut content_column = "".to_string();
+                    for column in rec.columns() {
+                        if column != "cluster" && *column != id_column {
+                            content_column = column.clone();
+                        }
+                    }
+
+                    let res = match rec.get(content_column).unwrap().as_record() {
+                        Ok(r) => Ok(r),
+                        Err(_) => Err(could_not_parse_input_error(span)),
+                    }?;
+                    (res, id)
                 };
 
                 let content = read_from_field(doc_json, field.clone(), span)?;
@@ -177,13 +221,17 @@ fn vector_enrich_doc(
                 if !content.is_empty() {
                     field_contents.push(content);
                     input_records.push(doc_json.clone());
+                    input_ids.push(id);
                 }
             }
         }
         Value::Record { val, .. } => {
             let content = read_from_field(&val.clone().into_owned(), field.clone(), span)?;
+            let id = read_id(&val, id_column)?;
+
             field_contents.push(content);
             input_records.push(val.into_owned());
+            input_ids.push(id);
         }
         _ => {
             return Err(could_not_parse_input_error(span));
@@ -229,31 +277,10 @@ fn vector_enrich_doc(
                 },
             );
 
-            let id = match input_records[count].get(id_column.clone()) {
-                Some(id) => match id {
-                    Value::String { val, .. } => val.clone(),
-                    Value::Int { val, .. } => val.to_string(),
-                    _ => {
-                        return Err(generic_error(
-                            "Contents of 'id' column must be Int or String",
-                            "A different column can be used as the id of the resulting docs with the '--id-column' flag".to_string(),
-                            None
-                        ));
-                    }
-                },
-                None => {
-                    return Err(generic_error(
-                        "No 'id' field in docs",
-                        "An 'id' field is required to use as the IDs for the created docs, if not called 'id' specify using --id-column".to_string(),
-                        None
-                    ));
-                }
-            };
-
             let cols = vec!["id".to_string(), "content".to_string()];
             let vals = vec![
                 Value::String {
-                    val: id,
+                    val: input_ids[count].clone(),
                     internal_span: span,
                 },
                 Value::Record {
@@ -293,6 +320,29 @@ fn read_from_field(doc: &Record, field: String, span: Span) -> Result<String, Sh
             Err(_) => Err(field_contents_not_string_error(field.clone(), span)),
         },
         None => Err(field_missing_error(field.clone(), span)),
+    }
+}
+
+fn read_id(rec: &Record, id_column: String) -> Result<String, ShellError> {
+    match rec.get(id_column.clone()) {
+        Some(id) => match id {
+            Value::String { val, .. } => Ok(val.clone()),
+            Value::Int { val, .. } => Ok(val.to_string()),
+            _ => {
+                 Err(generic_error(
+                    "Contents of 'id' column must be Int or String",
+                    "A different column can be used as the id of the resulting docs with the '--id-column' flag".to_string(),
+                    None
+                ))
+            }
+        },
+        None => {
+             Err(generic_error(
+                "No 'id' field in input",
+                "An 'id' field is required to use as the IDs for the created docs, if not called 'id' specify using --id-column".to_string(),
+                None
+            ))
+        }
     }
 }
 
