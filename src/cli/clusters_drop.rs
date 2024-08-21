@@ -36,6 +36,12 @@ impl Command for ClustersDrop {
                 "the Capella organization to use",
                 None,
             )
+            .named(
+                "project",
+                SyntaxShape::String,
+                "the Capella project to use",
+                None,
+            )
             .category(Category::Custom("couchbase".to_string()))
     }
 
@@ -76,13 +82,17 @@ fn clusters_drop(
         guard.active_capella_org()
     }?;
 
+    let project = call
+        .get_flag(engine_state, stack, "project")?
+        .map_or_else(|| guard.active_project(), Ok)?;
+
     let client = control.client();
     let deadline = Instant::now().add(control.timeout());
 
     let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
     let project_id = find_project_id(
         ctrl_c.clone(),
-        guard.active_project()?,
+        project,
         &client,
         deadline,
         span,
