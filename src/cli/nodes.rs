@@ -1,6 +1,4 @@
-use crate::cli::util::{
-    cluster_identifiers_from, get_active_cluster, validate_is_not_cloud, NuValueMap,
-};
+use crate::cli::util::{cluster_identifiers_from, get_active_cluster, NuValueMap};
 use crate::state::State;
 
 use crate::client::ManagementRequest;
@@ -13,6 +11,7 @@ use tokio::time::Instant;
 use crate::cli::error::{
     client_error_to_shell_error, serialize_error, unexpected_status_code_error,
 };
+use crate::remote_cluster::RemoteClusterType::Provisioned;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value};
@@ -73,8 +72,6 @@ fn nodes(
     let mut nodes = vec![];
     for identifier in cluster_identifiers {
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
-        validate_is_not_cloud(active_cluster, "nodes", span)?;
-
         let response = active_cluster
             .cluster()
             .http_client()
@@ -124,7 +121,11 @@ fn nodes(
                 collected.add_string("os", n.os, call.head);
                 collected.add_i64("memory_total", n.memory_total as i64, call.head);
                 collected.add_i64("memory_free", n.memory_free as i64, call.head);
-                collected.add_bool("capella", false, call.head);
+                collected.add_bool(
+                    "capella",
+                    active_cluster.cluster_type() == Provisioned,
+                    call.head,
+                );
 
                 collected.into_value(call.head)
             })
