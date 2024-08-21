@@ -44,6 +44,7 @@ impl ProjectsResponse {
 pub(crate) struct Project {
     id: String,
     name: String,
+    audit: AuditData,
 }
 
 impl Project {
@@ -52,6 +53,18 @@ impl Project {
     }
     pub fn name(&self) -> &str {
         &self.name
+    }
+    pub fn created_by(&self) -> &str {
+        &self.audit.created_by
+    }
+    pub fn created_at(&self) -> &str {
+        &self.audit.created_at
+    }
+    pub fn modified_by(&self) -> &str {
+        &self.audit.modified_by
+    }
+    pub fn modified_at(&self) -> &str {
+        &self.audit.modified_at
     }
 }
 

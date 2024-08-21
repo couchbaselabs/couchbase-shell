@@ -2,6 +2,7 @@ use crate::cli::util::find_org_id;
 use crate::cli::util::NuValueMap;
 use crate::state::State;
 use log::debug;
+use nu_engine::CallExt;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
@@ -28,7 +29,9 @@ impl Command for Projects {
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("projects").category(Category::Custom("couchbase".to_string()))
+        Signature::build("projects")
+            .category(Category::Custom("couchbase".to_string()))
+            .switch("audit", "display audit data for the projects", None)
     }
 
     fn usage(&self) -> &str {
@@ -49,12 +52,13 @@ impl Command for Projects {
 fn projects(
     state: Arc<Mutex<State>>,
     engine_state: &EngineState,
-    _stack: &mut Stack,
+    stack: &mut Stack,
     call: &Call,
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
     let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let audit = call.has_flag(engine_state, stack, "audit")?;
 
     debug!("Running projects");
 
@@ -74,6 +78,14 @@ fn projects(
         let mut collected = NuValueMap::default();
         collected.add_string("name", project.name(), span);
         collected.add_string("id", project.id(), span);
+
+        if audit {
+            collected.add_string("created by", project.created_by(), span);
+            collected.add_string("created at", project.created_at(), span);
+            collected.add_string("modified by", project.modified_by(), span);
+            collected.add_string("modified at", project.modified_at(), span);
+        }
+
         results.push(collected.into_value(span))
     }
 
