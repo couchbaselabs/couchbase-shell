@@ -444,21 +444,35 @@ pub fn get_active_cluster<'a>(
     }
 }
 
-pub fn get_username_and_password() -> Result<(String, String), ShellError> {
-    println!("Please enter username:");
-    let username = match read_input() {
-        Some(user) => user,
-        None => {
-            return Err(generic_error("Username required", None, None));
-        }
-    };
+pub fn get_username_and_password(
+    user_flag: Option<String>,
+    password_flag: Option<String>,
+) -> Result<(String, String), ShellError> {
+    let username = user_flag.map_or_else(
+        || {
+            println!("Please enter username:");
+            read_input().ok_or_else(|| generic_error("Username required", None, None))
+        },
+        Ok,
+    )?;
 
-    let password = match rpassword::prompt_password("Password: ") {
-        Ok(p) => p,
-        Err(_) => {
-            return Err(generic_error("Password required", None, None));
-        }
-    };
+    let password = password_flag.map_or_else(
+        || match rpassword::prompt_password("Password: ") {
+            Ok(p) => {
+                if p.is_empty() {
+                    Err(generic_error("Password required", None, None))
+                } else {
+                    Ok(p)
+                }
+            }
+            Err(e) => Err(generic_error(
+                format!("Failed to parse password: {}", e),
+                None,
+                None,
+            )),
+        },
+        Ok,
+    )?;
 
     Ok((username, password))
 }
