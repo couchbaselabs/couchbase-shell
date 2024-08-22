@@ -213,17 +213,17 @@ fn try_config_from_path(mut path: PathBuf) -> Option<ShellConfig> {
     }
 }
 
-fn try_credentials_from_dot_path(mut path: PathBuf) -> Option<StandaloneCredentialsConfig> {
+fn try_credentials_from_dot_path(mut path: PathBuf) -> Option<CredentialsFromFile> {
     path.push(".cbsh");
     try_credentials_from_path(path)
 }
 
-fn try_credentials_from_path(mut path: PathBuf) -> Option<StandaloneCredentialsConfig> {
+fn try_credentials_from_path(mut path: PathBuf) -> Option<CredentialsFromFile> {
     path.push("credentials");
 
     let read = fs::read_to_string(&path);
     match read {
-        Ok(r) => Some(StandaloneCredentialsConfig::from_str(&r)),
+        Ok(r) => Some(CredentialsFromFile::from_str(&r)),
         Err(e) => {
             debug!("Could not locate {:?} because of {:?}", path, e);
             None
@@ -681,22 +681,22 @@ impl Default for ClusterTlsConfig {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct StandaloneCredentialsConfig {
+pub struct CredentialsFromFile {
     #[allow(dead_code)]
     version: usize,
     /// Note: clusters is kept for backwards compatibility and convenience
     #[serde(alias = "cluster", default)]
     #[serde(alias = "clusters")]
-    clusters: Vec<StandaloneClusterCredentials>,
+    clusters: Vec<ClusterCredentialsFromFile>,
 
     #[serde(alias = "capella-organization", default)]
-    capella_orgs: Vec<StandaloneOrganizationCredentials>,
+    capella_orgs: Vec<OrganizationCredentialsFromFile>,
 
     #[serde(alias = "llm", default)]
     llms: Vec<LLMCredentials>,
 }
 
-impl StandaloneCredentialsConfig {
+impl CredentialsFromFile {
     /// Builds the config from a raw input string.
     pub fn from_str(input: &str) -> Self {
         // Note: ideally this propagates up into a central error handling facility,
@@ -711,7 +711,7 @@ impl StandaloneCredentialsConfig {
     }
 }
 
-impl Default for StandaloneCredentialsConfig {
+impl Default for CredentialsFromFile {
     fn default() -> Self {
         Self {
             clusters: vec![],
@@ -723,7 +723,7 @@ impl Default for StandaloneCredentialsConfig {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct StandaloneOrganizationCredentials {
+pub struct OrganizationCredentialsFromFile {
     identifier: String,
     #[serde(default)]
     #[serde(rename(deserialize = "access-key", serialize = "access-key"))]
@@ -733,20 +733,20 @@ pub struct StandaloneOrganizationCredentials {
     secret_key: String,
 }
 
-impl StandaloneOrganizationCredentials {
+impl OrganizationCredentialsFromFile {
     fn identifier(&self) -> String {
         self.identifier.clone()
     }
 }
 
 #[derive(Debug, Deserialize)]
-pub struct StandaloneClusterCredentials {
+pub struct ClusterCredentialsFromFile {
     identifier: String,
     username: Option<String>,
     password: Option<String>,
 }
 
-impl StandaloneClusterCredentials {
+impl ClusterCredentialsFromFile {
     fn identifier(&self) -> &str {
         self.identifier.as_ref()
     }
