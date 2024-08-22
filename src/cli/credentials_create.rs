@@ -132,7 +132,7 @@ fn credentials_create(
             active_cluster.password().to_string(),
         )
     } else {
-        get_username_and_password()?
+        get_username_and_password(None, None)?
     };
 
     let payload = CredentialsCreateRequest::new(name.clone(), password.clone(), read, write);

@@ -43,6 +43,18 @@ impl Command for CbEnvRegister {
                 "the connection string to use for this cluster",
             )
             .named(
+                "username",
+                SyntaxShape::String,
+                "the username to use for the registered cluster",
+                None,
+            )
+            .named(
+                "password",
+                SyntaxShape::String,
+                "the password to use with the registered cluster",
+                None,
+            )
+            .named(
                 "display_name",
                 SyntaxShape::String,
                 "the display name to use for the user when this cluster is active",
@@ -150,7 +162,10 @@ fn clusters_register(
         None
     };
 
-    let (username, password) = get_username_and_password()?;
+    let username_flag = call.get_flag(engine_state, stack, "username")?;
+    let password_flag = call.get_flag(engine_state, stack, "password")?;
+
+    let (username, password) = get_username_and_password(username_flag, password_flag)?;
 
     let cluster = RemoteCluster::new(
         RemoteClusterResources {
