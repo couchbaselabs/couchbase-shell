@@ -89,14 +89,17 @@ impl ShellConfig {
             }
 
             for value in config.capella_orgs_mut() {
+                let identifier = value.identifier().to_owned();
                 let config_credentials = value.credentials_mut();
 
                 for cred in &standalone.capella_orgs {
-                    if config_credentials.secret_key.is_empty() && !cred.secret_key.is_empty() {
-                        config_credentials.secret_key = cred.secret_key.clone()
-                    }
-                    if config_credentials.access_key.is_empty() && !cred.access_key.is_empty() {
-                        config_credentials.access_key = cred.access_key.clone()
+                    if cred.identifier() == identifier {
+                        if config_credentials.secret_key.is_empty() && !cred.secret_key.is_empty() {
+                            config_credentials.secret_key = cred.secret_key.clone()
+                        }
+                        if config_credentials.access_key.is_empty() && !cred.access_key.is_empty() {
+                            config_credentials.access_key = cred.access_key.clone()
+                        }
                     }
                 }
             }
@@ -232,7 +235,7 @@ fn try_credentials_from_path(mut path: PathBuf) -> Option<StandaloneCredentialsC
 pub struct CapellaOrganizationConfig {
     identifier: String,
     #[serde(flatten)]
-    credentials: CapellaOrganizationCredentials,
+    credentials: OrganizationCredentials,
     #[serde(default)]
     #[serde(
         rename(deserialize = "management-timeout", serialize = "management-timeout"),
@@ -253,7 +256,7 @@ impl CapellaOrganizationConfig {
     ) -> Self {
         Self {
             identifier,
-            credentials: CapellaOrganizationCredentials {
+            credentials: OrganizationCredentials {
                 access_key,
                 secret_key,
             },
@@ -277,7 +280,7 @@ impl CapellaOrganizationConfig {
         self.default_project.as_ref().cloned()
     }
 
-    pub fn credentials_mut(&mut self) -> &mut CapellaOrganizationCredentials {
+    pub fn credentials_mut(&mut self) -> &mut OrganizationCredentials {
         &mut self.credentials
     }
 }
@@ -529,7 +532,7 @@ impl From<(String, &RemoteCluster)> for ClusterConfig {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct CapellaOrganizationCredentials {
+pub struct OrganizationCredentials {
     #[serde(default)]
     #[serde(rename(deserialize = "access-key", serialize = "access-key"))]
     access_key: String,
@@ -538,7 +541,7 @@ pub struct CapellaOrganizationCredentials {
     secret_key: String,
 }
 
-impl CapellaOrganizationCredentials {}
+impl OrganizationCredentials {}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ClusterCredentials {
@@ -687,7 +690,7 @@ pub struct StandaloneCredentialsConfig {
     clusters: Vec<StandaloneClusterCredentials>,
 
     #[serde(alias = "capella-organization", default)]
-    capella_orgs: Vec<CapellaOrganizationCredentials>,
+    capella_orgs: Vec<StandaloneOrganizationCredentials>,
 
     #[serde(alias = "llm", default)]
     llms: Vec<LLMCredentials>,
@@ -716,6 +719,23 @@ impl Default for StandaloneCredentialsConfig {
             capella_orgs: vec![],
             llms: vec![],
         }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct StandaloneOrganizationCredentials {
+    identifier: String,
+    #[serde(default)]
+    #[serde(rename(deserialize = "access-key", serialize = "access-key"))]
+    access_key: String,
+    #[serde(default)]
+    #[serde(rename(deserialize = "secret-key", serialize = "secret-key"))]
+    secret_key: String,
+}
+
+impl StandaloneOrganizationCredentials {
+    fn identifier(&self) -> String {
+        self.identifier.clone()
     }
 }
 
