@@ -7,6 +7,7 @@ use crate::state::State;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::SyntaxShape;
 use nu_protocol::{Category, PipelineData, ShellError, Signature};
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
@@ -33,6 +34,18 @@ impl Command for crate::cli::CredentialsCreate {
             .category(Category::Custom("couchbase".to_string()))
             .switch("read", "enable read access", None)
             .switch("write", "enable write access", None)
+            .named(
+                "username",
+                SyntaxShape::String,
+                "the username to use for the registered cluster",
+                None,
+            )
+            .named(
+                "password",
+                SyntaxShape::String,
+                "the password to use with the registered cluster",
+                None,
+            )
             .switch(
                 "registered",
                 "create credentials with the username/password the active cluster was registered with",
@@ -132,7 +145,9 @@ fn credentials_create(
             active_cluster.password().to_string(),
         )
     } else {
-        get_username_and_password(None, None)?
+        let username_flag = call.get_flag(engine_state, stack, "username")?;
+        let password_flag = call.get_flag(engine_state, stack, "password")?;
+        get_username_and_password(username_flag, password_flag)?
     };
 
     let payload = CredentialsCreateRequest::new(name.clone(), password.clone(), read, write);
