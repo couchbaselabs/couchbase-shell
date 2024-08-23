@@ -1,14 +1,14 @@
 use crate::cli::util::{
-    cluster_from_conn_str, find_org_id, find_project_id, get_username_and_password,
+    cluster_from_conn_str, cluster_identifiers_from, find_org_id, find_project_id,
+    get_active_cluster, get_username_and_password,
 };
-use crate::cli::{client_error_to_shell_error, generic_error, no_active_cluster_error};
+use crate::cli::{client_error_to_shell_error, generic_error};
 use crate::client::cloud_json::CredentialsCreateRequest;
 use crate::state::State;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::SyntaxShape;
-use nu_protocol::{Category, PipelineData, ShellError, Signature};
+use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
@@ -50,7 +50,12 @@ impl Command for crate::cli::CredentialsCreate {
                 "registered",
                 "create credentials with the username/password the active cluster was registered with",
                 None,
-            )
+            ) .named(
+            "clusters",
+            SyntaxShape::String,
+            "the clusters which should be contacted",
+            None,
+        )
     }
 
     fn usage(&self) -> &str {
@@ -92,72 +97,71 @@ fn credentials_create(
         });
     }
 
+    let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let guard = state.lock().unwrap();
-    let active_cluster = match guard.active_cluster() {
-        Some(c) => c,
-        None => {
-            return Err(no_active_cluster_error(span));
-        }
-    };
 
-    let org = guard.named_or_active_org(active_cluster.capella_org())?;
+    for identifier in cluster_identifiers {
+        let cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
-    let client = org.client();
-    let deadline = Instant::now().add(org.timeout());
+        let org = guard.named_or_active_org(cluster.capella_org())?;
 
-    let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
+        let client = org.client();
+        let deadline = Instant::now().add(org.timeout());
 
-    let project_id = find_project_id(
-        ctrl_c.clone(),
-        guard.named_or_active_project(active_cluster.project())?,
-        &client,
-        deadline,
-        span,
-        org_id.clone(),
-    )?;
+        let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
 
-    let json_cluster = cluster_from_conn_str(
-        active_cluster.display_name().unwrap_or("".to_string()),
-        ctrl_c.clone(),
-        active_cluster.hostnames().clone(),
-        &client,
-        deadline,
-        span,
-        org_id.clone(),
-        project_id.clone(),
-    )?;
-
-    if json_cluster.state() != "healthy" {
-        return Err(generic_error(
-            "Cluster not healthy",
-            "Cannot create credentials until cluster is healthy. Check the status of the cluster with 'clusters get'".to_string(),
-            span
-        ));
-    }
-
-    let (name, password) = if use_registered {
-        (
-            active_cluster.username().to_string(),
-            active_cluster.password().to_string(),
-        )
-    } else {
-        let username_flag = call.get_flag(engine_state, stack, "username")?;
-        let password_flag = call.get_flag(engine_state, stack, "password")?;
-        get_username_and_password(username_flag, password_flag)?
-    };
-
-    let payload = CredentialsCreateRequest::new(name.clone(), password.clone(), read, write);
-
-    client
-        .create_credentials(
-            org_id,
-            project_id,
-            json_cluster.id(),
-            serde_json::to_string(&payload).unwrap(),
+        let project_id = find_project_id(
+            ctrl_c.clone(),
+            guard.active_project().unwrap(),
+            &client,
             deadline,
-            ctrl_c,
-        )
-        .map_err(|e| client_error_to_shell_error(e, span))?;
+            span,
+            org_id.clone(),
+        )?;
+
+        let json_cluster = cluster_from_conn_str(
+            identifier,
+            ctrl_c.clone(),
+            cluster.hostnames().clone(),
+            &client,
+            deadline,
+            span,
+            org_id.clone(),
+            project_id.clone(),
+        )?;
+
+        if json_cluster.state() != "healthy" {
+            return Err(generic_error(
+                "Cluster not healthy",
+                "Cannot create credentials until cluster is healthy. Check the status of the cluster with 'clusters get'".to_string(),
+                span
+            ));
+        }
+
+        let (name, password) = if use_registered {
+            (
+                cluster.username().to_string(),
+                cluster.password().to_string(),
+            )
+        } else {
+            let username_flag = call.get_flag(engine_state, stack, "username")?;
+            let password_flag = call.get_flag(engine_state, stack, "password")?;
+            get_username_and_password(username_flag, password_flag)?
+        };
+
+        let payload = CredentialsCreateRequest::new(name.clone(), password.clone(), read, write);
+
+        client
+            .create_credentials(
+                org_id,
+                project_id,
+                json_cluster.id(),
+                serde_json::to_string(&payload).unwrap(),
+                deadline,
+                ctrl_c.clone(),
+            )
+            .map_err(|e| client_error_to_shell_error(e, span))?;
+    }
 
     Ok(PipelineData::empty())
 }
