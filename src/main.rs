@@ -147,6 +147,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // load_standard_library(&mut context).unwrap();
 
     if let Some(c) = opt.command {
+        context.generate_nu_constant();
         add_plugin_file(&mut context, None, CBSHELL_FOLDER);
         let opts = EvaluateCommandsOpts {
             table_mode: None,
@@ -159,6 +160,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     if let Some(filepath) = opt.script {
+        context.generate_nu_constant();
         add_plugin_file(&mut context, None, CBSHELL_FOLDER);
         nu_cli::evaluate_file(filepath, &args_to_script, &mut context, &mut stack, input)
             .expect("Failed to run script");
