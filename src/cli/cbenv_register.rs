@@ -107,6 +107,12 @@ impl Command for CbEnvRegister {
                 "capella organization that this cluster belongs to",
                 None,
             )
+            .named(
+                "project",
+                SyntaxShape::String,
+                "project that this cluster belongs to",
+                None,
+            )
             .category(Category::Custom("couchbase".to_string()))
     }
 
@@ -147,6 +153,7 @@ fn clusters_register(
     let cert_path = call.get_flag(engine_state, stack, "tls-cert-path")?;
     let save = call.get_flag(engine_state, stack, "save")?.unwrap_or(false);
     let capella = call.get_flag(engine_state, stack, "capella-organization")?;
+    let project = call.get_flag(engine_state, stack, "project")?;
     let display_name = call.get_flag(engine_state, stack, "display-name")?;
 
     let hostnames = conn_string
@@ -180,6 +187,7 @@ fn clusters_register(
         tls_config,
         ClusterTimeouts::default(),
         capella,
+        project,
         DEFAULT_KV_BATCH_SIZE,
         RemoteClusterType::from(hostnames),
     );

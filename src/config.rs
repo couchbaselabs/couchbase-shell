@@ -385,6 +385,7 @@ impl ClusterConfigBuilder {
             tls: self.tls.unwrap_or_default(),
             kv_batch_size: None,
             capella_org: None,
+            project: None,
             cluster_type: None,
         }
     }
@@ -414,12 +415,13 @@ pub struct ClusterConfig {
     #[serde(rename(deserialize = "kv-batch-size", serialize = "kv-batch-size"))]
     kv_batch_size: Option<u32>,
 
-    #[serde(default)]
     #[serde(rename(
         deserialize = "capella-organization",
         serialize = "capella-organization"
     ))]
     capella_org: Option<String>,
+
+    project: Option<String>,
 
     #[serde(rename(deserialize = "type"))]
     cluster_type: Option<RemoteClusterType>,
@@ -474,6 +476,9 @@ impl ClusterConfig {
     pub fn cloud_org(&self) -> Option<String> {
         self.capella_org.clone()
     }
+    pub fn project(&self) -> Option<String> {
+        self.project.clone()
+    }
     pub fn kv_batch_size(&self) -> Option<u32> {
         self.kv_batch_size
     }
@@ -523,6 +528,7 @@ impl From<(String, &RemoteCluster)> for ClusterConfig {
                 password: Some(cluster.1.password().to_string()),
             },
             capella_org: cloud,
+            project: cluster.1.project(),
             kv_batch_size: Some(cluster.1.kv_batch_size()),
             display_name: cluster.1.display_name(),
             // This is a config option for dev ony so we won't want to write to file

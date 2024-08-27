@@ -120,15 +120,11 @@ fn buckets_update(
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
         let mut settings = if active_cluster.cluster_type() == Provisioned {
-            let org = if let Some(cluster_org) = active_cluster.capella_org() {
-                guard.get_capella_org(cluster_org)
-            } else {
-                guard.active_capella_org()
-            }?;
+            let org = guard.named_or_active_org(active_cluster.capella_org())?;
 
             get_capella_bucket(
                 org,
-                guard.active_project()?,
+                guard.named_or_active_project(active_cluster.project())?,
                 active_cluster,
                 name.clone(),
                 identifier.clone(),
@@ -150,15 +146,11 @@ fn buckets_update(
         )?;
 
         if active_cluster.cluster_type() == Provisioned {
-            let org = if let Some(cluster_org) = active_cluster.capella_org() {
-                guard.get_capella_org(cluster_org)
-            } else {
-                guard.active_capella_org()
-            }?;
+            let org = guard.named_or_active_org(active_cluster.capella_org())?;
 
             update_capella_bucket(
                 org,
-                guard.active_project()?,
+                guard.named_or_active_project(active_cluster.project())?,
                 active_cluster,
                 identifier.clone(),
                 settings,

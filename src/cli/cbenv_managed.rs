@@ -66,6 +66,7 @@ fn clusters(
                 v.capella_org().unwrap_or_default(),
                 span,
             );
+            collected.add_string("project", v.project().unwrap_or_default(), span);
             collected.into_value(span)
         })
         .collect::<Vec<_>>();

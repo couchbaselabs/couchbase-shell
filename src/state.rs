@@ -197,6 +197,17 @@ impl State {
         &self.capella_orgs
     }
 
+    pub fn named_or_active_org(
+        &self,
+        organization: Option<String>,
+    ) -> Result<&RemoteCapellaOrganization, ShellError> {
+        if let Some(org) = organization {
+            self.get_capella_org(org)
+        } else {
+            self.active_capella_org()
+        }
+    }
+
     pub fn active_capella_org(&self) -> Result<&RemoteCapellaOrganization, ShellError> {
         let active = match self.active_capella_org_name() {
             Some(a) => a,
@@ -241,6 +252,14 @@ impl State {
             Ok(c)
         } else {
             Err(organization_not_registered(identifier))
+        }
+    }
+
+    pub fn named_or_active_project(&self, project: Option<String>) -> Result<String, ShellError> {
+        if let Some(proj) = project {
+            Ok(proj)
+        } else {
+            self.active_project()
         }
     }
 

@@ -162,17 +162,12 @@ fn buckets_create(
             .map_err(|e| generic_error("Invalid argument", e.to_string(), span))?;
 
         if active_cluster.cluster_type() == Provisioned {
-            let org = if let Some(cluster_org) = active_cluster.capella_org() {
-                guard.get_capella_org(cluster_org)
-            } else {
-                guard.active_capella_org()
-            }?;
-
+            let org = guard.named_or_active_org(active_cluster.capella_org())?;
             let json = settings.as_json();
 
             create_capella_bucket(
                 org,
-                guard.active_project()?,
+                guard.named_or_active_project(active_cluster.project())?,
                 active_cluster,
                 identifier.clone(),
                 serde_json::to_string(&json).unwrap(),
