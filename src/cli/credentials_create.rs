@@ -43,7 +43,7 @@ impl Command for crate::cli::CredentialsCreate {
             .named(
                 "password",
                 SyntaxShape::String,
-                "the password to use with the registered cluster",
+                "the password to use for the registered cluster",
                 None,
             )
             .switch(
