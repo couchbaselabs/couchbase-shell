@@ -104,6 +104,8 @@ pub fn create_default_context() -> EngineState {
             GroupBy,
             Headers,
             Insert,
+            IsEmpty,
+            IsNotEmpty,
             Items,
             Join,
             SplitBy,
