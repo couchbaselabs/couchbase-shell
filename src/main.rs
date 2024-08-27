@@ -355,6 +355,7 @@ fn remote_cluster_from_opts(opt: CliOptions, password: Option<String>) -> Remote
         tls_config,
         ClusterTimeouts::default(),
         None,
+        None,
         DEFAULT_KV_BATCH_SIZE,
         cluster_type,
     )
@@ -639,6 +640,7 @@ fn make_state(
                     transaction_timeout,
                 ),
                 v.cloud_org(),
+                v.project(),
                 kv_batch_size,
                 v.cluster_type().unwrap_or(cluster_type),
             );

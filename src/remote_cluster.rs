@@ -65,6 +65,7 @@ pub struct RemoteCluster {
     tls_config: Option<RustTlsConfig>,
     timeouts: Mutex<ClusterTimeouts>,
     capella_org: Option<String>,
+    project: Option<String>,
     kv_batch_size: u32,
     cluster_type: RemoteClusterType,
     display_name: Option<String>,
@@ -77,6 +78,7 @@ impl RemoteCluster {
         tls_config: Option<RustTlsConfig>,
         timeouts: ClusterTimeouts,
         capella_org: Option<String>,
+        project: Option<String>,
         kv_batch_size: u32,
         cluster_type: RemoteClusterType,
     ) -> Self {
@@ -91,6 +93,7 @@ impl RemoteCluster {
             tls_config,
             timeouts: Mutex::new(timeouts),
             capella_org,
+            project,
             kv_batch_size,
             cluster_type,
             display_name: resources.display_name,
@@ -172,6 +175,10 @@ impl RemoteCluster {
 
     pub fn capella_org(&self) -> Option<String> {
         self.capella_org.clone()
+    }
+
+    pub fn project(&self) -> Option<String> {
+        self.project.clone()
     }
 
     pub fn kv_batch_size(&self) -> u32 {

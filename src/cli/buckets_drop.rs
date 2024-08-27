@@ -81,15 +81,11 @@ fn buckets_drop(
         let cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
         if cluster.cluster_type() == Provisioned {
-            let org = if let Some(cluster_org) = cluster.capella_org() {
-                guard.get_capella_org(cluster_org)
-            } else {
-                guard.active_capella_org()
-            }?;
+            let org = guard.named_or_active_org(cluster.capella_org())?;
 
             drop_capella_bucket(
                 org,
-                guard.active_project()?,
+                guard.named_or_active_project(cluster.project())?,
                 cluster,
                 name.clone(),
                 identifier.clone(),

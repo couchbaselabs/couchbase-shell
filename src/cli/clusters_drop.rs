@@ -76,15 +76,10 @@ fn clusters_drop(
     debug!("Running clusters drop for {}", &name);
 
     let mut guard = state.lock().unwrap();
-    let control = if let Some(c) = capella {
-        guard.get_capella_org(c)
-    } else {
-        guard.active_capella_org()
-    }?;
+    let control = guard.named_or_active_org(capella)?;
 
-    let project = call
-        .get_flag(engine_state, stack, "project")?
-        .map_or_else(|| guard.active_project(), Ok)?;
+    let project =
+        guard.named_or_active_project(call.get_flag(engine_state, stack, "project")?)?;
 
     let client = control.client();
     let deadline = Instant::now().add(control.timeout());

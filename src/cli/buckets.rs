@@ -87,17 +87,13 @@ fn buckets_get_all(
         let cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
         let (buckets, is_cloud) = if cluster.cluster_type() == Provisioned {
-            let org = if let Some(cluster_org) = cluster.capella_org() {
-                guard.get_capella_org(cluster_org)
-            } else {
-                guard.active_capella_org()
-            }?;
+            let org = guard.named_or_active_org(cluster.capella_org())?;
 
             (
                 get_capella_buckets(
                     identifier.clone(),
                     org,
-                    guard.active_project()?,
+                    guard.named_or_active_project(cluster.project())?,
                     cluster,
                     ctrl_c.clone(),
                     span,

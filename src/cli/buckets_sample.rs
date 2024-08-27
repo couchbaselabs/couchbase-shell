@@ -84,15 +84,11 @@ fn load_sample_bucket(
         let cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
         let result = if cluster.cluster_type() == Provisioned {
-            let org = if let Some(cluster_org) = cluster.capella_org() {
-                guard.get_capella_org(cluster_org)
-            } else {
-                guard.active_capella_org()
-            }?;
+            let org = guard.named_or_active_org(cluster.capella_org())?;
 
             load_capella_sample(
                 org,
-                guard.active_project()?,
+                guard.named_or_active_project(cluster.project())?,
                 cluster,
                 identifier.clone(),
                 bucket_name.clone(),
