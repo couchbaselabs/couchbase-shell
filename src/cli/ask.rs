@@ -44,6 +44,12 @@ impl Command for Ask {
                 "the chat model to ask the question",
                 None,
             )
+            .named(
+                "prompt",
+                SyntaxShape::String,
+                "the prompt used by the model",
+                None,
+            )
             .category(Category::Custom("couchbase".to_string()))
     }
 
@@ -87,6 +93,7 @@ pub fn ask(
     let span = call.head;
 
     let question: String = call.req(engine_state, stack, 0)?;
+    let prompt_template: Option<String> = call.get_flag(engine_state, stack, "prompt")?;
     let context: Vec<String> = match call.opt(engine_state, stack, 1)? {
         Some(ctx) => ctx,
         None => {
@@ -176,7 +183,7 @@ pub fn ask(
     let rt = Runtime::new().unwrap();
     let answer = match rt.block_on(async {
         select! {
-            answer = client.ask(question.clone(), context.clone(), model) => {
+            answer = client.ask(question.clone(), prompt_template.clone(), context.clone(), model) => {
                 match answer {
                     Ok(a) => Ok(a),
                     Err(e) => Err(e),
