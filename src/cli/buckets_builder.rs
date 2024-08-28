@@ -369,9 +369,7 @@ impl BucketSettings {
             self.durability_level.to_string().into(),
         );
 
-        if self.num_replicas > 0 {
-            json.insert("replicas".into(), self.num_replicas.into());
-        };
+        json.insert("replicas".into(), self.num_replicas.into());
 
         json
     }
