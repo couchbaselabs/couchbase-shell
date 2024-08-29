@@ -1,8 +1,12 @@
-use crate::cli::util::{cluster_identifiers_from, get_active_cluster};
+use crate::cli::util::{
+    cluster_from_conn_str, cluster_identifiers_from, find_org_id, find_project_id,
+    get_active_cluster,
+};
 use crate::client::ManagementRequest;
-use crate::state::State;
+use crate::state::{RemoteCapellaOrganization, State};
 use log::debug;
 use std::ops::Add;
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
@@ -10,11 +14,12 @@ use crate::cli::collections::get_bucket_or_active;
 use crate::cli::error::{
     client_error_to_shell_error, serialize_error, unexpected_status_code_error,
 };
+use crate::remote_cluster::RemoteCluster;
+use crate::remote_cluster::RemoteClusterType::Provisioned;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::Value::Nothing;
-use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
+use nu_protocol::{Category, PipelineData, ShellError, Signature, Span, SyntaxShape};
 
 #[derive(Clone)]
 pub struct ScopesCreate {
@@ -90,36 +95,108 @@ fn run(
             &scope, &bucket
         );
 
-        let form = vec![("name", scope.clone())];
-        let payload =
-            serde_urlencoded::to_string(&form).map_err(|e| serialize_error(e.to_string(), span))?;
-        let response = active_cluster
-            .cluster()
-            .http_client()
-            .management_request(
-                ManagementRequest::CreateScope { payload, bucket },
-                Instant::now().add(active_cluster.timeouts().management_timeout()),
+        if active_cluster.cluster_type() == Provisioned {
+            create_capella_scope(
+                guard.named_or_active_org(active_cluster.capella_org())?,
+                guard.named_or_active_project(active_cluster.project())?,
+                active_cluster,
+                identifier.clone(),
+                bucket.clone(),
+                scope.clone(),
                 ctrl_c.clone(),
+                span,
             )
-            .map_err(|e| client_error_to_shell_error(e, span))?;
-
-        match response.status() {
-            200 => {}
-            202 => {}
-            _ => {
-                return Err(unexpected_status_code_error(
-                    response.status(),
-                    response.content(),
-                    span,
-                ));
-            }
-        }
+        } else {
+            create_server_scope(
+                active_cluster,
+                bucket.clone(),
+                scope.clone(),
+                ctrl_c.clone(),
+                span,
+            )
+        }?;
     }
 
-    Ok(PipelineData::Value(
-        Nothing {
-            internal_span: span,
-        },
-        None,
-    ))
+    Ok(PipelineData::empty())
+}
+
+fn create_capella_scope(
+    org: &RemoteCapellaOrganization,
+    project: String,
+    cluster: &RemoteCluster,
+    identifier: String,
+    bucket: String,
+    name: String,
+    ctrl_c: Arc<AtomicBool>,
+    span: Span,
+) -> Result<(), ShellError> {
+    let client = org.client();
+    let deadline = Instant::now().add(org.timeout());
+
+    let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
+
+    let project_id = find_project_id(
+        ctrl_c.clone(),
+        project,
+        &client,
+        deadline,
+        span,
+        org_id.clone(),
+    )?;
+
+    let json_cluster = cluster_from_conn_str(
+        identifier.clone(),
+        ctrl_c.clone(),
+        cluster.hostnames().clone(),
+        &client,
+        deadline,
+        span,
+        org_id.clone(),
+        project_id.clone(),
+    )?;
+
+    client
+        .create_scope(
+            org_id,
+            project_id,
+            json_cluster.id(),
+            bucket,
+            name,
+            deadline,
+            ctrl_c,
+        )
+        .map_err(|e| client_error_to_shell_error(e, span))
+}
+
+fn create_server_scope(
+    cluster: &RemoteCluster,
+    bucket: String,
+    scope: String,
+    ctrl_c: Arc<AtomicBool>,
+    span: Span,
+) -> Result<(), ShellError> {
+    let form = vec![("name", scope.clone())];
+    let payload =
+        serde_urlencoded::to_string(form).map_err(|e| serialize_error(e.to_string(), span))?;
+    let response = cluster
+        .cluster()
+        .http_client()
+        .management_request(
+            ManagementRequest::CreateScope { payload, bucket },
+            Instant::now().add(cluster.timeouts().management_timeout()),
+            ctrl_c.clone(),
+        )
+        .map_err(|e| client_error_to_shell_error(e, span))?;
+
+    match response.status() {
+        200 => Ok(()),
+        202 => Ok(()),
+        _ => {
+            return Err(unexpected_status_code_error(
+                response.status(),
+                response.content(),
+                span,
+            ));
+        }
+    }
 }

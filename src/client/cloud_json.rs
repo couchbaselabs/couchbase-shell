@@ -434,3 +434,25 @@ impl CredentialsCreateRequest {
         }
     }
 }
+
+#[derive(Debug, Deserialize)]
+pub struct ScopesResponse {
+    scopes: Vec<Scope>,
+}
+
+impl ScopesResponse {
+    pub fn scopes(&self) -> Vec<Scope> {
+        self.scopes.clone()
+    }
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct Scope {
+    name: String,
+}
+
+impl Scope {
+    pub fn name(&self) -> String {
+        self.name.clone()
+    }
+}
