@@ -395,19 +395,20 @@ impl CBPlayground {
             Some(c) => c,
         };
         Self::setup("wait_for_scope", Some(config), None, |dirs, sandbox| {
-            let cmd = r#"collections | select scope collection | to json"#;
+            let cmd = format!(
+                "collections --scope {} | select collection | to json",
+                scope_name
+            );
             sandbox.retry_until(
                 Instant::now().add(Duration::from_secs(30)),
                 Duration::from_millis(200),
-                cmd,
+                cmd.as_str(),
                 dirs.test(),
                 RetryExpectations::ExpectOut,
                 |json| -> TestResult<bool> {
                     for item in json.as_array().unwrap() {
-                        if item["scope"] == scope_name {
-                            if item["collection"] == collection_name {
-                                return Ok(true);
-                            }
+                        if item["collection"] == collection_name {
+                            return Ok(true);
                         }
                     }
 

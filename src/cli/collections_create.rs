@@ -1,23 +1,28 @@
 //! The `collections get` command fetches all of the collection names from the server.
 
-use crate::cli::util::{cluster_identifiers_from, get_active_cluster};
+use crate::cli::util::{
+    cluster_from_conn_str, cluster_identifiers_from, find_org_id, find_project_id,
+    get_active_cluster,
+};
 use crate::client::ManagementRequest::CreateCollection;
-use crate::state::State;
+use crate::state::{RemoteCapellaOrganization, State};
 use log::debug;
 use std::ops::Add;
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
-use crate::cli::collections::get_bucket_or_active;
+use crate::cli::collections::{get_bucket_or_active, get_scope_or_active};
 use crate::cli::error::{
-    client_error_to_shell_error, no_active_scope_error, serialize_error,
-    unexpected_status_code_error,
+    client_error_to_shell_error, serialize_error, unexpected_status_code_error,
 };
+use crate::client::cloud_json::Collection;
+use crate::remote_cluster::RemoteCluster;
+use crate::remote_cluster::RemoteClusterType::Provisioned;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::Value::Nothing;
-use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
+use nu_protocol::{Category, PipelineData, ShellError, Signature, Span, SyntaxShape};
 
 #[derive(Clone)]
 pub struct CollectionsCreate {
@@ -96,61 +101,136 @@ fn collections_create(
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
         let bucket = get_bucket_or_active(active_cluster, engine_state, stack, call)?;
-
-        let scope_name = match call.get_flag(engine_state, stack, "scope")? {
-            Some(name) => name,
-            None => match active_cluster.active_scope() {
-                Some(s) => s,
-                None => {
-                    return Err(no_active_scope_error(span));
-                }
-            },
-        };
+        let scope = get_scope_or_active(active_cluster, engine_state, stack, call)?;
 
         debug!(
             "Running collections create for {:?} on bucket {:?}, scope {:?}",
-            &collection, &bucket, &scope_name
+            &collection, &bucket, &scope
         );
 
-        let mut form = vec![("name", collection.clone())];
-        if expiry > 0 {
-            form.push(("maxTTL", expiry.to_string()));
-        }
-
-        let form_encoded =
-            serde_urlencoded::to_string(&form).map_err(|e| serialize_error(e.to_string(), span))?;
-
-        let response = active_cluster
-            .cluster()
-            .http_client()
-            .management_request(
-                CreateCollection {
-                    scope: scope_name,
-                    bucket,
-                    payload: form_encoded,
-                },
-                Instant::now().add(active_cluster.timeouts().management_timeout()),
+        if active_cluster.cluster_type() == Provisioned {
+            create_capella_collection(
+                guard.named_or_active_org(active_cluster.capella_org())?,
+                guard.named_or_active_project(active_cluster.project())?,
+                active_cluster,
+                bucket.clone(),
+                scope.clone(),
+                collection.clone(),
+                expiry,
+                identifier.clone(),
                 ctrl_c.clone(),
+                span,
             )
-            .map_err(|e| client_error_to_shell_error(e, span))?;
-
-        match response.status() {
-            200 => {}
-            202 => {}
-            _ => {
-                return Err(unexpected_status_code_error(
-                    response.status(),
-                    response.content(),
-                    span,
-                ));
-            }
-        }
+        } else {
+            create_server_collection(
+                active_cluster,
+                scope.clone(),
+                bucket.clone(),
+                collection.clone(),
+                expiry,
+                ctrl_c.clone(),
+                span,
+            )
+        }?
     }
 
-    Ok(PipelineData::Value(
-        Nothing {
-            internal_span: span,
-        },
-        None,
-    ))
+    Ok(PipelineData::empty())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn create_capella_collection(
+    org: &RemoteCapellaOrganization,
+    project: String,
+    cluster: &RemoteCluster,
+    bucket: String,
+    scope: String,
+    collection: String,
+    expiry: i64,
+    identifier: String,
+    ctrl_c: Arc<AtomicBool>,
+    span: Span,
+) -> Result<(), ShellError> {
+    let client = org.client();
+    let deadline = Instant::now().add(org.timeout());
+
+    let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
+
+    let project_id = find_project_id(
+        ctrl_c.clone(),
+        project,
+        &client,
+        deadline,
+        span,
+        org_id.clone(),
+    )?;
+
+    let json_cluster = cluster_from_conn_str(
+        identifier.clone(),
+        ctrl_c.clone(),
+        cluster.hostnames().clone(),
+        &client,
+        deadline,
+        span,
+        org_id.clone(),
+        project_id.clone(),
+    )?;
+
+    let payload = serde_json::to_string(&Collection::new(collection, expiry)).unwrap();
+
+    client
+        .create_collection(
+            org_id,
+            project_id,
+            json_cluster.id(),
+            bucket,
+            scope,
+            payload,
+            deadline,
+            ctrl_c,
+        )
+        .map_err(|e| client_error_to_shell_error(e, span))
+}
+
+fn create_server_collection(
+    cluster: &RemoteCluster,
+    scope: String,
+    bucket: String,
+    collection: String,
+    expiry: i64,
+    ctrl_c: Arc<AtomicBool>,
+    span: Span,
+) -> Result<(), ShellError> {
+    let mut form = vec![("name", collection.clone())];
+    if expiry > 0 {
+        form.push(("maxTTL", expiry.to_string()));
+    }
+
+    let form_encoded =
+        serde_urlencoded::to_string(&form).map_err(|e| serialize_error(e.to_string(), span))?;
+
+    let response = cluster
+        .cluster()
+        .http_client()
+        .management_request(
+            CreateCollection {
+                scope,
+                bucket,
+                payload: form_encoded,
+            },
+            Instant::now().add(cluster.timeouts().management_timeout()),
+            ctrl_c.clone(),
+        )
+        .map_err(|e| client_error_to_shell_error(e, span))?;
+
+    match response.status() {
+        200 => Ok(()),
+        202 => Ok(()),
+        _ => {
+            return Err(unexpected_status_code_error(
+                response.status(),
+                response.content(),
+                span,
+            ));
+        }
+    }
 }
