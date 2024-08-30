@@ -403,6 +403,38 @@ impl Bucket {
     }
 }
 
+#[derive(Debug, Deserialize)]
+pub struct CollectionsResponse {
+    data: Vec<Collection>,
+}
+
+impl CollectionsResponse {
+    pub fn items(self) -> Vec<Collection> {
+        self.data
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct Collection {
+    name: String,
+    #[serde(rename = "maxTTL")]
+    max_expiry: i64,
+}
+
+impl Collection {
+    pub fn new(name: String, max_expiry: i64) -> Collection {
+        Collection { name, max_expiry }
+    }
+
+    pub fn name(&self) -> String {
+        self.name.clone()
+    }
+
+    pub fn max_expiry(&self) -> i64 {
+        self.max_expiry
+    }
+}
+
 #[derive(Debug, Serialize)]
 pub(crate) struct CredentialsCreateRequest {
     name: String,

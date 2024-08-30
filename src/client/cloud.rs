@@ -1,7 +1,7 @@
 use crate::cli::CtrlcFuture;
 use crate::client::cloud_json::{
-    Bucket, BucketsResponse, Cluster, ClustersResponse, OrganizationsResponse, ProjectsResponse,
-    ScopesResponse,
+    Bucket, BucketsResponse, Cluster, ClustersResponse, CollectionsResponse, OrganizationsResponse,
+    ProjectsResponse, ScopesResponse,
 };
 use crate::client::error::ClientError;
 use crate::client::http_handler::{HttpResponse, HttpVerb};
@@ -596,13 +596,107 @@ impl CapellaClient {
         Ok(resp)
     }
 
+    #[allow(clippy::too_many_arguments)]
+    pub fn create_collection(
+        &self,
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+        bucket: String,
+        scope: String,
+        payload: String,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<(), ClientError> {
+        let request = CapellaRequest::CollectionCreate {
+            org_id,
+            project_id,
+            cluster_id,
+            bucket_id: BASE64_STANDARD.encode(bucket),
+            scope,
+            payload,
+        };
+        let response = self.capella_request(request, deadline, ctrl_c)?;
+
+        if response.status() != 201 {
+            return Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            });
+        }
+
+        Ok(())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn delete_collection(
+        &self,
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+        bucket: String,
+        scope: String,
+        collection: String,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<(), ClientError> {
+        let request = CapellaRequest::CollectionDelete {
+            org_id,
+            project_id,
+            cluster_id,
+            bucket_id: BASE64_STANDARD.encode(bucket),
+            scope,
+            collection,
+        };
+        let response = self.capella_request(request, deadline, ctrl_c)?;
+
+        if response.status() != 204 {
+            return Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            });
+        }
+
+        Ok(())
+    }
+
+    pub fn list_collections(
+        &self,
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+        bucket: String,
+        scope: String,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<CollectionsResponse, ClientError> {
+        let request = CapellaRequest::CollectionList {
+            org_id,
+            project_id,
+            cluster_id,
+            bucket_id: BASE64_STANDARD.encode(bucket),
+            scope,
+        };
+        let response = self.capella_request(request, deadline, ctrl_c)?;
+
+        if response.status() != 200 {
+            return Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            });
+        }
+
+        let resp: CollectionsResponse = serde_json::from_str(response.content())?;
+        Ok(resp)
+    }
+
     pub fn create_scope(
         &self,
         org_id: String,
         project_id: String,
         cluster_id: String,
         bucket: String,
-        scope_name: String,
+        scope: String,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
@@ -611,7 +705,7 @@ impl CapellaClient {
             project_id,
             cluster_id,
             bucket_id: BASE64_STANDARD.encode(bucket),
-            payload: format!("{{\"name\": \"{}\"}}", scope_name),
+            payload: format!("{{\"name\": \"{}\"}}", scope),
         };
         let response = self.capella_request(request, deadline, ctrl_c)?;
 
@@ -631,7 +725,7 @@ impl CapellaClient {
         project_id: String,
         cluster_id: String,
         bucket: String,
-        scope_name: String,
+        scope: String,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
@@ -640,7 +734,7 @@ impl CapellaClient {
             project_id,
             cluster_id,
             bucket_id: BASE64_STANDARD.encode(bucket),
-            scope_name,
+            scope,
         };
         let response = self.capella_request(request, deadline, ctrl_c)?;
 
@@ -742,13 +836,36 @@ pub enum CapellaRequest {
         project_id: String,
         cluster_id: String,
         bucket_id: String,
-        scope_name: String,
+        scope: String,
     },
     ScopeList {
         org_id: String,
         project_id: String,
         cluster_id: String,
         bucket_id: String,
+    },
+    CollectionCreate {
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+        bucket_id: String,
+        scope: String,
+        payload: String,
+    },
+    CollectionDelete {
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+        bucket_id: String,
+        scope: String,
+        collection: String,
+    },
+    CollectionList {
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+        bucket_id: String,
+        scope: String,
     },
     CredentialsCreate {
         org_id: String,
@@ -899,11 +1016,11 @@ impl CapellaRequest {
                 project_id,
                 cluster_id,
                 bucket_id,
-                scope_name,
+                scope,
             } => {
                 format!(
                     "/v4/organizations/{}/projects/{}/clusters/{}/buckets/{}/scopes/{}",
-                    org_id, project_id, cluster_id, bucket_id, scope_name
+                    org_id, project_id, cluster_id, bucket_id, scope
                 )
             }
             Self::ScopeList {
@@ -914,7 +1031,45 @@ impl CapellaRequest {
             } => {
                 format!(
                     "/v4/organizations/{}/projects/{}/clusters/{}/buckets/{}/scopes",
-                    org_id, project_id, cluster_id, bucket_id
+                    org_id, project_id, cluster_id, bucket_id,
+                )
+            }
+            Self::CollectionCreate {
+                org_id,
+                project_id,
+                cluster_id,
+                bucket_id,
+                scope,
+                ..
+            } => {
+                format!(
+                    "/v4/organizations/{}/projects/{}/clusters/{}/buckets/{}/scopes/{}/collections",
+                    org_id, project_id, cluster_id, bucket_id, scope
+                )
+            }
+            Self::CollectionDelete {
+                org_id,
+                project_id,
+                cluster_id,
+                bucket_id,
+                scope,
+                collection,
+            } => {
+                format!(
+                    "/v4/organizations/{}/projects/{}/clusters/{}/buckets/{}/scopes/{}/collections/{}",
+                    org_id, project_id, cluster_id, bucket_id, scope, collection
+                )
+            }
+            Self::CollectionList {
+                org_id,
+                project_id,
+                cluster_id,
+                bucket_id,
+                scope,
+            } => {
+                format!(
+                    "/v4/organizations/{}/projects/{}/clusters/{}/buckets/{}/scopes/{}/collections",
+                    org_id, project_id, cluster_id, bucket_id, scope
                 )
             }
             Self::CredentialsCreate {
@@ -951,6 +1106,9 @@ impl CapellaRequest {
             Self::ScopeCreate { .. } => HttpVerb::Post,
             Self::ScopeDelete { .. } => HttpVerb::Delete,
             Self::ScopeList { .. } => HttpVerb::Get,
+            Self::CollectionCreate { .. } => HttpVerb::Post,
+            Self::CollectionDelete { .. } => HttpVerb::Delete,
+            Self::CollectionList { .. } => HttpVerb::Get,
             Self::CredentialsCreate { .. } => HttpVerb::Post,
         }
     }
@@ -964,6 +1122,7 @@ impl CapellaRequest {
             Self::BucketUpdate { payload, .. } => Some(payload.as_bytes().into()),
             Self::AllowIPAddress { payload, .. } => Some(payload.as_bytes().into()),
             Self::ScopeCreate { payload, .. } => Some(payload.as_bytes().into()),
+            Self::CollectionCreate { payload, .. } => Some(payload.as_bytes().into()),
             Self::CredentialsCreate { payload, .. } => Some(payload.as_bytes().into()),
             _ => None,
         }
