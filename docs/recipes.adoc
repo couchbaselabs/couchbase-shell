@@ -3,7 +3,9 @@
 :sectnums:
 
 Welcome to the recipes section of the Couchbase Shell `cbsh` documentation.
-Here you can find some examples of the more complicated tasks that can be performed using `cbsh`.
+Here you can find how powerful tasks can be performed by a combination of pipelined statements using `cbsh`.
+
+include::recipes/register_cluster.adoc[]
 
 include::recipes/managing_multiple_clusters.adoc[]
 

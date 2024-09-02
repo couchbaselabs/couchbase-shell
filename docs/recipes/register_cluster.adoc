@@ -1,0 +1,81 @@
+== Register clusters
+
+Before CBShell can be used to perform data operations on a cluster, the cluster must be registered with the shell.
+Cluster registration can be done through the https://couchbase.sh/docs/#_the_config_dotfiles[config file], or using https://couchbase.sh/docs/#_cb_env_register[cb-env register].
+This recipe shows how to register all the healthy clusters in the active https://couchbase.sh/docs/#_the_config_dotfiles[registered organization].
+
+First we need to get a list of all the healthy clusters, along with the projects to which they belong:
+
+[options="nowrap"]
+```
+> let $healthy_clusters = ( projects | get name | each { |proj| clusters --project $proj | each {|clstr| if $clstr.state == "healthy" { [[project, cluster]; [$proj $clstr.name]] }}} | flatten | flatten)
+```
+
+The `projects` command lists all the projects in the active Capella organization.
+Then we get the name column and iterate over https://www.nushell.sh/commands/docs/each.html[each] of the project names, getting all of the clusters in each project with the `clusters` command.
+For each cluster retrieved we check that the status is healthy, since we only want to register the healthy clusters, and if healthy we add to our results https://www.nushell.sh/book/working_with_tables.html[table].
+Once we have done this we can check the value stored in the `$healthy_clusters` table:
+
+```
+> $healthy_clusters
+╭───┬────────────────────────────────┬─────────────────────────────╮
+│ # │            project             │           cluster           │
+├───┼────────────────────────────────┼─────────────────────────────┤
+│ 0 │ Couchbase Shell                │ diagonalrolandcarlbackhouse │
+│ 1 │ Couchbase Shell                │ smartvladimirvapnik         │
+│ 2 │ !!!!!!!-Shared-Project-!!!!!!! │ gentlejimgray               │
+│ 3 │ !!!!!!!-Shared-Project-!!!!!!! │ navyadmiralgracehopper      │
+│ 4 │ !!!!!!!-Shared-Project-!!!!!!! │ properdanjurafsky           │
+╰───┴────────────────────────────────┴─────────────────────────────╯
+```
+
+A registered cluster requires a username and password which we will set using nushell https://www.nushell.sh/book/variables.html[variables]:
+
+```
+> let $username = Administrator
+> let $password = AaWBdOsUgM123!
+```
+
+With these set we are ready to register all the healthy clusters:
+
+[options="nowrap"]
+```
+> $healthy_clusters | each {|it| clusters get $it.cluster --project $it.project | cb-env register $in.name $in."connection string" --project $it.project --username $username --password $password
+```
+
+For each of the healthy clusters we do a `clusters get`, using the project column to overwrite the https://couchbase.sh/docs/#_cb_env_projectcapella_organization[active project].
+The output of each `clusters get` is piped into  https://couchbase.sh/docs/#_cb_env_register[cb-env register] where we use the fetched cluster name and connection string along with the project from healthy clusters and the username/password created earlier.
+Once this command has finished use `cb-env managed` to check that the registered clusters have been appropriately updated:
+
+[options="nowrap"]
+```
+> cb-env managed
+╭───┬────────┬───────┬─────────────────────────────┬───────────────┬──────────────────────┬────────────────────────────────╮
+│ # │ active │  tls  │         identifier          │   username    │ capella_organization │            project             │
+├───┼────────┼───────┼─────────────────────────────┼───────────────┼──────────────────────┼────────────────────────────────┤
+│ 0 │ false  │ true  │ diagonalrolandcarlbackhouse │ Administrator │                      │ Couchbase Shell                │
+│ 1 │ false  │ true  │ smartvladimirvapnik         │ Administrator │                      │ Couchbase Shell                │
+│ 2 │ false  │ true  │ properdanjurafsky           │ Administrator │                      │ !!!!!!!-Shared-Project-!!!!!!! │
+│ 3 │ false  │ true  │ gentlejimgray               │ Administrator │                      │ !!!!!!!-Shared-Project-!!!!!!! │
+│ 4 │ false  │ true  │ navyadmiralgracehopper      │ Administrator │                      │ !!!!!!!-Shared-Project-!!!!!!! │
+╰───┴────────┴───────┴─────────────────────────────┴───────────────┴──────────────────────┴────────────────────────────────╯
+```
+
+The next stage is to allow the credentials we have registered with the shell to be used against each of the clusters, this is done using the `credentials create` command:
+
+```
+> credentials create --read --write --registered --clusters .*
+```
+
+This creates read/write credentials on all of the registered clusters that match the https://couchbase.sh/docs/#_the_clusters_flag[--clusters] regex using the username and password with which the clusters were registered to the shell.
+Finally we need the cluster to allow requests from our IP address, this can be done as follows:
+
+```
+> curl ipconfig.me | allow ip --clusters .*
+```
+
+The curl command returns our IP address, which we then pipe into `allow ip` and this is run against all of the registered clusters again.
+Now all of the healthy clusters are registered and ready to use through the shell.
+
+
+
