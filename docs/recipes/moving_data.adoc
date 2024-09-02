@@ -1,0 +1,213 @@
+== Moving data between clusters
+
+CBShell allows data to be moved between clusters, along with buckets, scopes and collections.
+Imagine you have 2 clusters, one self-managed (named local) and a Capella cluster called remote:
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+> cb-env managed
+╭───┬────────┬───────┬────────────┬───────────────┬──────────────────────┬─────────────────╮
+│ # │ active │  tls  │ identifier │   username    │ capella_organization │     project     │
+├───┼────────┼───────┼────────────┼───────────────┼──────────────────────┼─────────────────┤
+│ 0 │ false  │ true  │ remote     │ Administrator │ my-org               │ CBShell Testing │
+│ 1 │ true   │ false │ local      │ Administrator │                      │                 │
+╰───┴────────┴───────┴────────────┴───────────────┴──────────────────────┴─────────────────╯
+```
+
+The `remote` cluster is empty while `local` contains two buckets with scopes and collections containing data:
+
+[options="nowrap"]
+```
+👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+> buckets
+╭───┬─────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬───────┬────────────╮
+│ # │ cluster │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ cloud │ max_expiry │
+├───┼─────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼───────┼────────────┤
+│ 0 │ local   │ beer-sample   │ couchbase │        1 │ none                 │ 200.0 MiB │ false         │ false │          0 │
+│ 1 │ local   │ travel-sample │ couchbase │        1 │ none                 │ 200.0 MiB │ false         │ false │          0 │
+╰───┴─────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴───────┴────────────╯
+```
+
+The first thing to do is to recreate all of the buckets that we have on the `local` cluster on the `remote` cluster:
+
+```
+> buckets | each {|in| buckets create $in.name ($in.ram_quota / 1MB | into int)  --clusters remote --replicas 1}
+```
+
+Here we simply get all of the buckets, then iterate over the list with https://www.nushell.sh/commands/docs/each.html[each] and create buckets with the same name and ram quota, specifying the `remote` cluster with the https://couchbase.sh/docs/#_the_clusters_flag[--clusters] flag.
+Since the value for the ram quote is returned in bytes from `buckets` we convert it to MiB by dividing by nushell's 1MB https://www.nushell.sh/book/types_of_data.html#file-sizes[FileSize] datatype.
+We can check that this has worked by running the `buckets` command against the remote cluster:
+
+[options="nowrap"]
+```
+👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+> buckets --clusters remote
+╭───┬─────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬───────┬────────────╮
+│ # │ cluster │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ cloud │ max_expiry │
+├───┼─────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼───────┼────────────┤
+│ 0 │ remote  │ beer-sample   │ couchbase │        1 │ none                 │ 209.0 MiB │ false         │ true  │          0 │
+│ 1 │ remote  │ travel-sample │ couchbase │        1 │ none                 │ 209.0 MiB │ false         │ true  │          0 │
+╰───┴─────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴───────┴────────────╯
+```
+
+Next we need to create all of the scopes within these buckets.
+First we get all the buckets again on the `local` cluster, then for each of the buckets we get the scopes:
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+> buckets | each {|bckt| scopes --bucket $bckt.name | where scope not-in [_default _system] | get scope}
+╭───┬─────────────────────────╮
+│ 0 │ ╭───┬───────╮           │
+│   │ │ 0 │ Cafes │           │
+│   │ ╰───┴───────╯           │
+│ 1 │ ╭───┬─────────────────╮ │
+│   │ │ 0 │ inventory       │ │
+│   │ │ 1 │ tenant_agent_00 │ │
+│   │ │ 2 │ tenant_agent_01 │ │
+│   │ │ 3 │ tenant_agent_02 │ │
+│   │ │ 4 │ tenant_agent_03 │ │
+│   │ │ 5 │ tenant_agent_04 │ │
+│   │ ╰───┴─────────────────╯ │
+╰───┴─────────────────────────╯
+```
+
+Here we iterate over each of the buckets and call `scopes` with the `--bucket` flag to get the scopes from each of them.
+Then we use  https://www.nushell.sh/commands/docs/where.html[where] and https://www.nushell.sh/book/operators.html[not-in] operators to filter out the `_default` and `_system` scopes, since these are empty.
+Note for the purposes of this demo we have moved the data in beer-sample out of the default scope and collection into the Cafes scope and Breweries collection.
+
+Now that we have listed all the scopes in the buckets, we can amended the previous command to use `scopes create` to create the scopes on the remote cluster:
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+> buckets | each {|bckt| scopes --bucket $bckt.name | where scope not-in [_default _system] | get scope | each {|scp| scopes create $scp --clusters remote --bucket $bckt.name}}
+```
+
+Here we have run the same command to list all the scopes, then for each scope we create one of the same name in the corresponding bucket on the `remote` cluster.
+
+The final step is to do the same with the collections:
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+> buckets | each {|bckt| scopes --bucket $bckt.name | where scope not-in [_default _system] | get scope | each {|scp| collections --scope $scp --bucket $bckt.name | get collection | each {|col| collections create $col --bucket $bckt.name --scope $scp --clusters remote}}}
+```
+
+Here we have fetched the `buckets`, and for each bucket fetched the `scopes` and finally for each of the scopes we have fetched the `collections`.
+Then for each of the collections in a bucket/scope we re-create it on the remote cluster in the corresponding buckets/scope.
+
+Before we copy our data over to our new collections we also want to migrate our indexes across.
+The first step to doing this is to list all of the index definitions on the `local` cluster as follows:
+
+[options="nowrap"]
+```
+👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+> query indexes --definitions | where name != '#primary'
+╭────┬───────────────┬───────────┬────────────┬───────────────────────────────────────┬────────┬──────────────┬──────────┬────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┬─────╮
+│  # │    bucket     │   scope   │ collection │                 name                  │ status │ storage_mode │ replicas │                                                     definition                                                     │ ... │
+├────┼───────────────┼───────────┼────────────┼───────────────────────────────────────┼────────┼──────────────┼──────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼─────┤
+│  0 │ beer-sample   │ _default  │ _default   │ beer_primary                          │ Ready  │ plasma       │        0 │ CREATE PRIMARY INDEX `beer_primary` ON `beer-sample` WITH {  "defer_build":true }                                  │ ... │
+│  1 │ travel-sample │ _default  │ _default   │ def_airportname                       │ Ready  │ plasma       │        0 │ CREATE INDEX `def_airportname` ON `travel-sample`(`airportname`) WITH {  "defer_build":true }                      │ ... │
+│ .. │      ...      │    ...    │     ...    │                  ...                  │   ...  │      ...     │    ...   │                                                         ...                                                        │ ... │
+│ 23 │ travel-sample │ _default  │ _default   │ def_type                              │ Ready  │ plasma       │        0 │ CREATE INDEX `def_type` ON `travel-sample`(`type`) WITH {  "defer_build":true }                                    │ ... │
+╰────┴───────────────┴───────────┴────────────┴───────────────────────────────────────┴────────┴──────────────┴──────────┴────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┴─────╯
+```
+
+Here we use https://couchbase.sh/docs/#_query_commands[query] with the definitions flag to fetch all of the query definitions on the active cluster.
+Then we have used `where` to filter out all of the primary indexes as these were already created when we created the buckets on the Capella cluster.
+
+Now we can https://www.nushell.sh/commands/docs/select.html[select] the definition column and iterate over the definitions, using `query` to re-create the indexes on the `remote` cluster:
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+> query indexes --definitions | where name != '#primary' | get definition | each {|def| query $def --clusters remote}
+```
+
+The final step is to copy the data from each bucket/scope/collection from the `local` cluster into the corresponding bucket/scope/collection on the `remote` cluster:
+
+```
+> buckets | each {|bckt| scopes --bucket $bckt.name | where scope not-in [_default _system] | get scope | each {|scp| collections --scope $scp --bucket $bckt.name | get collection | each {|col| "SELECT meta().id, * FROM `" + $bckt.name + "`." + $scp + "." + $col | query $in | if $in != null {$in | reject cluster | rename id content | doc upsert --bucket $bckt.name --scope $scp --collection $col --clusters remote}}}}
+```
+
+Here we have the same nested `each` loops that get the scopes for each bucket then the collections contained within each scope.
+We then use the bucket/scope and collection to construct a query:
+
+```
+"SELECT meta().id, * FROM `" + $bckt.name + "`." + $scp + "." + $col
+```
+
+So when the bucket is `travel-sample` the scope `inventory` and the collection `airline` the above will give:
+
+```
+"SELECT meta().id, * FROM `travel-sample`.inventory.airline"
+```
+
+We run each of these queries using the `query` command, and pipe the output into the final section of our command:
+
+```
+if $in != null {$in | reject cluster | rename id content | doc upsert --bucket $bckt.name --scope $scp --collection $col --clusters remote}
+```
+
+To understand what we are doing here you need to know what format the data being output by our queries is in.
+If the query run is the example given above then the output will look like this:
+
+```
+╭─────┬───────────────┬────────────────────────────────────────────────────────┬─────────╮
+│   # │      id       │                        airline                         │ cluster │
+├─────┼───────────────┼────────────────────────────────────────────────────────┼─────────┤
+│   0 │ airline_10    │ ╭──────────┬───────────────╮                           │ local   │
+│     │               │ │ id       │ 10            │                           │         │
+│     │               │ │ type     │ airline       │                           │         │
+│     │               │ │ name     │ 40-Mile Air   │                           │         │
+│     │               │ │ iata     │ Q5            │                           │         │
+│     │               │ │ icao     │ MLA           │                           │         │
+│     │               │ │ callsign │ MILE-AIR      │                           │         │
+│     │               │ │ country  │ United States │                           │         │
+│     │               │ ╰──────────┴───────────────╯                           │         │
+│ ... │      ...      │                           ...                          │   ...   │
+│ 186 │ airline_9833  │ ╭──────────┬───────────────╮                           │ local   │
+│     │               │ │ id       │ 9833          │                           │         │
+│     │               │ │ type     │ airline       │                           │         │
+│     │               │ │ name     │ Epic Holiday  │                           │         │
+│     │               │ │ iata     │ FA            │                           │         │
+│     │               │ │ icao     │ 4AA           │                           │         │
+│     │               │ │ callsign │ Epic          │                           │         │
+│     │               │ │ country  │ United States │                           │         │
+│     │               │ ╰──────────┴───────────────╯                           │         │
+╰─────┴───────────────┴────────────────────────────────────────────────────────┴─────────╯
+```
+
+Before we can insert this into out `remote` cluster using https://couchbase.sh/docs/#_mutating[doc upsert] we need it to be correctly https://couchbase.sh/docs/#_a_note_on_data_format[formatted].
+But before we try to reformat any of the data we make sure that the query not returned null with `if $in != null` since trying to manipulate a null value will return an error.
+The formatting required is to drop the cluster column which we do using https://www.nushell.sh/commands/docs/reject.html[reject] then rename the column named after the collection, in this case `airline` to `content` which we do using https://www.nushell.sh/commands/docs/rename.html[rename].
+After the formatting has been applied to the above example it would become:
+
+```
+╭─────┬───────────────┬────────────────────────────────────────────────────────╮
+│   # │      id       │                        content                         │
+├─────┼───────────────┼────────────────────────────────────────────────────────┤
+│   0 │ airline_10    │ ╭──────────┬───────────────╮                           │
+│     │               │ │ id       │ 10            │                           │
+│     │               │ │ type     │ airline       │                           │
+│     │               │ │ name     │ 40-Mile Air   │                           │
+│     │               │ │ iata     │ Q5            │                           │
+│     │               │ │ icao     │ MLA           │                           │
+│     │               │ │ callsign │ MILE-AIR      │                           │
+│     │               │ │ country  │ United States │                           │
+│     │               │ ╰──────────┴───────────────╯                           │
+│ ... │      ...      │                           ...                          │
+│ 186 │ airline_9833  │ ╭──────────┬───────────────╮                           │
+│     │               │ │ id       │ 9833          │                           │
+│     │               │ │ type     │ airline       │                           │
+│     │               │ │ name     │ Epic Holiday  │                           │
+│     │               │ │ iata     │ FA            │                           │
+│     │               │ │ icao     │ 4AA           │                           │
+│     │               │ │ callsign │ Epic          │                           │
+│     │               │ │ country  │ United States │                           │
+│     │               │ ╰──────────┴───────────────╯                           │
+╰─────┴───────────────┴────────────────────────────────────────────────────────╯
+```
+
+Now that our data is correctly formatted it can be piped into `doc upsert` and using the appropriate flags upserted into the corresponding bucket/scope/collection on our `remote` cluster.
+
+
+
+
