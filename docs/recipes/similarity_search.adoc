@@ -1,7 +1,7 @@
 == Similarity Search
 
-The <<_vector_commands, vector commands>> can be used to enrich your existing data and allow you to experiment with the value that similarity search can add.
-Before you can follow this recipe you'll need to <<_cb_env_llm,configure a llm>> for use with the shell.
+The https://couchbase.sh/docs/#_vector_commands[vector commands] can be used to enrich your existing data and allow you to experiment with the value that similarity search can add.
+Before you can follow this recipe you'll need to https://couchbase.sh/docs/#_cb_env_llm[configure a llm] for use with the shell.
 
 Next you'll need a set of data, for this example we'll be using the travel-sample data set that you can load with:
 
@@ -25,11 +25,11 @@ Embedding batch 3/3
 ╰───┴───────────┴─────────┴────────┴──────────┴─────────╯
 ```
 
-Here we have used <<_query, query>> to get all the landmark doc ids and bodies.
-Then we have enriched all of these with the embedding generated from the `content` field, see <<_vector_enrich_doc, vector enrich-doc>> for details.
-Finally we pipe the output directly into <<_mutating, doc upsert>> to overwrite the original landmark documents with our enriched versions.
+Here we have used https://couchbase.sh/docs/#_query_commands[query] to get all the landmark doc ids and bodies.
+Then we have enriched all of these with the embedding generated from the `content` field, see https://couchbase.sh/docs/#_vector_enrich_doc[vector enrich-doc] for details.
+Finally we pipe the output directly into https://couchbase.sh/docs/#_mutating[doc upsert] to overwrite the original landmark documents with our enriched versions.
 
-Now that we have a set of docs containing vectors we can create a vector index over them using <<_vector_create_index, vector create-index>>:
+Now that we have a set of docs containing vectors we can create a vector index over them using https://couchbase.sh/docs/#_vector_create_index[vector create-index]:
 
 ```
 👤 Charlie 🏠 remote in ☁️ travel-sample._default._default
@@ -37,7 +37,7 @@ Now that we have a set of docs containing vectors we can create a vector index o
 ```
 
 Once the index has finished building we can use it to perform similarity searches over all of the contentVector fields.
-This is done using the <<_vector_search, vector search>> command as follows:
+This is done using the https://couchbase.sh/docs/#_vector_search[vector search] command as follows:
 
 [options="nowrap"]
 ```
@@ -54,7 +54,7 @@ This is done using the <<_vector_search, vector search>> command as follows:
 ╰───┴────────────────┴─────────────────────────────────────────┴─────────╯
 ```
 
-Here we have used <<_subdoc_get, subdoc get>> to get the contentVector field from `landmark_10019`, which is why the most similar result is `landmark_10019` the vector is the same.
+Here we have used https://couchbase.sh/docs/#_subdoc_get[subdoc get] to get the contentVector field from `landmark_10019`, which is why the most similar result is `landmark_10019`: the vector is the same.
 Once we have this list of results from the vector search we can use the ids to inspect the source documents:
 
 [options="nowrap"]
@@ -98,10 +98,10 @@ Once we have this list of results from the vector search we can use the ids to i
 ╰───┴────────────────┴──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┴─────╯
 ```
 
-Here we could have used <<_reading, doc get>> to get the whole of the documents, but to keep things tidy we've used another `subdoc get` to retrieved the name, address and content fields.
+Here we could have used https://couchbase.sh/docs/#_reading[doc get] to get the whole of the documents, but to keep things tidy we've used another `subdoc get` to retrieved the name, address and content fields.
 As you can see by examining the results they all have semantically similar content fields.
 
-Another way that CBShell can be used to generate embeddings is from plain text with <<_vector_enrich_text, vector enrich-text>>:
+Another way that CBShell can be used to generate embeddings is from plain text with https://couchbase.sh/docs/#_vector_enrich_text[vector enrich-text]:
 
 [options="nowrap"]
 ```
@@ -122,4 +122,4 @@ Embedding batch 1/1
 
 Here we have done another similarity search using the same index, but our source vector is the result of embedding the phrase "physical exercise".
 One important detail to remeber is that the embedding generated from `vector enrich-text` must have the same dimension as those over which the index was created, otherwise `vector search` will return no results.
-See <<_vector_enrich-text, vector enrich-text>> for how to specify the dimension of the generated embeddings.
+See https://couchbase.sh/docs/#_vector_enrich_text[vector enrich-text] for how to specify the dimension of the generated embeddings.

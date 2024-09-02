@@ -1,0 +1,148 @@
+== Managing multiple clusters
+
+CBShell is a powerful tool that can be used to interact with fleets comprised of a mix of self-managed and Capella clusters.
+Say we have the following four clusters registered with CBShell:
+
+```
+👤 Charlie 🏠 obligingfaronmoller in ☁️ default._default._default
+> cb-env managed
+╭───┬────────┬───────┬────────────┬───────────────┬──────────────────────┬─────────────────╮
+│ # │ active │  tls  │ identifier │   username    │ capella_organization │     project     │
+├───┼────────┼───────┼────────────┼───────────────┼──────────────────────┼─────────────────┤
+│ 0 │ false  │ true  │ systemtest │ Administrator │ my-org               │ CBShell Testing │
+│ 1 │ false  │ false │ localdev   │ Administrator │                      │                 │
+│ 2 │ false  │ true  │ prod       │ Administrator │ my-org               │ CBShell Testing │
+│ 3 │ true   │ true  │ ci         │ Administrator │ my-org               │ CBShell Testing │
+╰───┴────────┴───────┴────────────┴───────────────┴──────────────────────┴─────────────────╯
+```
+
+There is one self-managed cluster (localdev) and three Capella clusters.
+Imagine that we want to perform some general health checks on this set of clusters, a good starting point is the https://couchbase.sh/docs/#_listing_nodes[nodes] command with the https://couchbase.sh/docs/#_working_with_clusters[clusters] flag.
+
+[options="nowrap"]
+```
+👤 Charlie 🏠 localdev in 🗄 travel-sample._default._default
+> nodes --clusters *
+╭────┬─────────────────────────┬─────────────────────────────────────────────────────────────┬─────────┬──────────────────────────┬───────────────────────┬───────────────────────────┬──────────────┬─────────────┬─────╮
+│  # │         cluster         │                                       hostname              │ status  │         services         │        version        │            os             │ memory_total │ memory_free │ ... │
+├────┼─────────────────────────┼─────────────────────────────────────────────────────────────┼─────────┼──────────────────────────┼───────────────────────┼───────────────────────────┼──────────────┼─────────────┼─────┤
+│  0 │ localdev                │ 192.168.107.128:8091                                        │ healthy │ search,indexing,kv,query │ 7.6.2-3505-enterprise │ aarch64-unknown-linux-gnu │   6201221120 │  2841657344 │ ... │
+│  1 │ localdev                │ 192.168.107.129:8091                                        │ healthy │ search,indexing,kv,query │ 7.6.2-3505-enterprise │ aarch64-unknown-linux-gnu │   6201221120 │  2842959872 │ ... │
+│  2 │ localdev                │ 192.168.107.130:8091                                        │ healthy │ search,indexing,kv,query │ 7.6.2-3505-enterprise │ aarch64-unknown-linux-gnu │   6201221120 │  2843160576 │ ... │
+│  3 │ prod                    │ svc-dqi-node-001.lhb4l06lajhydwmk.cloud.couchbase.com:8091  │ healthy │ indexing,kv,query        │ 7.6.2-3721-enterprise │ x86_64-pc-linux-gnu       │  16776548352 │ 15518982144 │ ... │
+│  4 │ prod                    │ svc-dqi-node-002.lhb4l06lajhydwmk.cloud.couchbase.com:8091  │ healthy │ indexing,kv,query        │ 7.6.2-3721-enterprise │ x86_64-pc-linux-gnu       │  16776548352 │ 15518420992 │ ... │
+│  5 │ prod                    │ svc-dqi-node-003.lhb4l06lajhydwmk.cloud.couchbase.com:8091  │ healthy │ indexing,kv,query        │ 7.6.2-3721-enterprise │ x86_64-pc-linux-gnu       │  16776544256 │ 15501099008 │ ... │
+│  6 │ ci                      │ svc-dqi-node-001.fwplhqyopu9pgolq.cloud.couchbase.com:8091  │ healthy │ indexing,kv,query        │ 7.6.2-3721-enterprise │ x86_64-pc-linux-gnu       │  16277504000 │ 14538944512 │ ... │
+│  7 │ ci                      │ svc-dqi-node-002.fwplhqyopu9pgolq.cloud.couchbase.com:8091  │ healthy │ indexing,kv,query        │ 7.6.2-3721-enterprise │ x86_64-pc-linux-gnu       │  16277504000 │ 14559510528 │ ... │
+│  8 │ ci                      │ svc-dqi-node-003.fwplhqyopu9pgolq.cloud.couchbase.com:8091  │ healthy │ indexing,kv,query        │ 7.6.2-3721-enterprise │ x86_64-pc-linux-gnu       │  16277504000 │ 14565412864 │ ... │
+│  9 │ systemtest              │ svc-dqi-node-001.lyl8kbhzdovyqhv.cloud.couchbase.com:8091   │ healthy │ indexing,kv,query        │ 7.6.2-3721-enterprise │ x86_64-pc-linux-gnu       │  16766582784 │ 15491842048 │ ... │
+╰────┴─────────────────────────┴─────────────────────────────────────────────────────────────┴─────────┴──────────────────────────┴───────────────────────┴───────────────────────────┴──────────────┴─────────────┴─────╯
+```
+
+This gives us plenty of information, but sometimes it can be a bit difficult to read.
+We can make things much easier with some simple reformatting.
+To focus on the free memory that each cluster has, we can https://www.nushell.sh/commands/docs/select.html[select] just the relevant columns:
+
+```
+👤 Charlie 🏠 localdev in 🗄 travel-sample._default._default
+> nodes --clusters * | select cluster memory_free
+╭────┬────────────┬─────────────╮
+│  # │  cluster   │ memory_free │
+├────┼────────────┼─────────────┤
+│  0 │ localdev   │  2841657344 │
+│  1 │ localdev   │  2842959872 │
+│  2 │ localdev   │  2843160576 │
+│  3 │ prod       │ 15518982144 │
+│  4 │ prod       │ 15518420992 │
+│  5 │ prod       │ 15501099008 │
+│  6 │ ci         │ 14538944512 │
+│  7 │ ci         │ 14559510528 │
+│  8 │ ci         │ 14565412864 │
+│  9 │ systemtest │ 15491842048 │
+╰────┴────────────┴─────────────╯
+```
+
+We can reformat the tables to make the the data more readable, but nushell's understanding of various data types allows us to reformat the values within the table.
+For example we could convert the `memory_free` values from bytes to gigabytes:
+
+[options="nowrap"]
+```
+👤 Charlie 🏠 localdev in 🗄 travel-sample._default._default
+> nodes --clusters * | each {|n| $n | update memory_free ($n.memory_free * 1B)} | select cluster memory_free
+╭───┬─────────────┬─────────────╮
+│  # │  cluster   │ memory_free │
+├───┼─────────────┼─────────────┤
+│ 0 │ localdev    │     2.6 GiB │
+│ 1 │ localdev    │     2.6 GiB │
+│ 2 │ localdev    │     2.6 GiB │
+│ 3 │ prod        │    14.5 GiB │
+│ 4 │ prod        │    14.5 GiB │
+│ 5 │ prod        │    14.4 GiB │
+│ 6 │ ci          │    13.5 GiB │
+│ 7 │ ci          │    13.6 GiB │
+│ 8 │ ci          │    13.6 GiB │
+│ 9 │ systemtest  │    14.4 GiB │
+╰───┴─────────────┴─────────────╯
+```
+
+We do this by iterating over each node and https://www.nushell.sh/commands/docs/update.html[updating] the value in the `memory_free` column by multiplying the current value by nushell's inbuilt https://www.nushell.sh/book/types_of_data.html#file-sizes[File Size] datatype.
+
+We can take this one step further and use the values returned to calculate new metrics about our clusters.
+When performing a healthcheck it's be useful to know the memory utilization for each cluster.
+There are two columns that can be used to calculate this: `memory_free` and `memory_total`.
+
+[options="nowrap"]
+```
+👤 Charlie 🏠 localdev in 🗄 travel-sample._default._default
+>  nodes --clusters * | each {|n| $n | insert utilization ((($n.memory_total - $n.memory_free) / $n.memory_total) * 100 ) } | select cluster utilization | sort-by utilization --reverse
+╭───┬────────────┬─────────────╮
+│ # │  cluster   │ utilization │
+├───┼────────────┼─────────────┤
+│ 0 │ localdev   │       54.32 │
+│ 1 │ localdev   │       54.32 │
+│ 2 │ localdev   │       54.28 │
+│ 3 │ ci         │       10.71 │
+│ 4 │ ci         │       10.60 │
+│ 5 │ ci         │       10.50 │
+│ 6 │ prod       │        7.61 │
+│ 7 │ systemtest │        7.59 │
+│ 8 │ prod       │        7.52 │
+│ 9 │ prod       │        7.49 │
+╰───┴────────────┴─────────────╯
+```
+
+For https://www.nushell.sh/commands/docs/each.html[each] of the nodes we add a new column called utilization and we calculate the percentage disk used with:
+
+```
+(($n.memory_total - $n.memory_free) / $n.memory_total) * 100
+```
+
+Finally we https://www.nushell.sh/commands/docs/sort-by.html[sort-by] descending utilization.
+
+Now that we understand the resources being used by our cluster we can use this information to aid us when deploying a new bucket.
+Imagine that we want to create a 1GB bucket on any one of our clusters.
+We can use `nodes` to find the cluster with the most free memory and create the bucket there:
+
+[options="nowrap"]
+```
+👤 Charlie 🏠 localdev in 🗄 travel-sample._default._default
+> nodes --clusters * | sort-by memory_free --reverse | first | get cluster | buckets create BigBucket 1000 --clusters $in
+```
+
+Here we have fetched the nodes for all the registered clusters, sorted by the descending amount of `memory_free` and got the cluster name.
+Then we pipe the cluster name into `buckets create` command, using `$in` to access the piped value, and since no error is returned it is a success.
+To double check the success and see where our bucket was created we can do:
+
+[options="nowrap"]
+```
+👤 Charlie 🏠 localdev in 🗄 travel-sample._default._default
+> buckets --clusters a* | where name == "BigBucket"
+╭───┬─────────┬───────────┬───────────┬──────────┬──────────────────────┬────────────┬───────────────┬───────┬────────────╮
+│ # │ cluster │   name    │   type    │ replicas │ min_durability_level │ ram_quota  │ flush_enabled │ cloud │ max_expiry │
+├───┼─────────┼───────────┼───────────┼──────────┼──────────────────────┼────────────┼───────────────┼───────┼────────────┤
+│ 0 │ prod    │ BigBucket │ couchbase │        1 │ none                 │ 1000.0 MiB │ false         │ true  │          0 │
+╰───┴─────────┴───────────┴───────────┴──────────┴──────────────────────┴────────────┴───────────────┴───────┴────────────╯
+```
+
+
+
