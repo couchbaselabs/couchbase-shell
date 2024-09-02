@@ -9,11 +9,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Get build container
-        id: adocbuild
+      - name: Build index page
+        id: adocbuild_index
         uses: tonynv/asciidoctor-action@master
         with:
           program: "asciidoctor -D docs -r ./docs/lib/cb-docinfoprocessor.rb -a toc=left -a toclevels=4 -a source-highlighter=coderay -a stylesheet=couchbase.css -a linkcss=true docs/index.adoc"
+      - name: Build recipes page
+        id: adocbuild_recipe
+        uses: tonynv/asciidoctor-action@master
+        with:
+          program: "asciidoctor -D docs -r ./docs/lib/cb-docinfoprocessor.rb -a toc=left -a toclevels=4 -a source-highlighter=coderay -a stylesheet=couchbase.css -a linkcss=true docs/recipes.adoc"
       - name: Print execution time
         run: echo "Time ${{ steps.adocbuild.outputs.time }}"
       - name: Deploy docs to ghpages

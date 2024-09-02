@@ -1,9 +1,10 @@
-== Recipes
+= Recipes
 
-include::recipes/importing-data.adoc[]
+:sectnums:
 
-include::recipes/exporting-data.adoc[]
-
-include::recipes/useful-snippets.adoc[]
+Welcome to the recipes section of the Couchbase Shell `cbsh` documentation.
+Here you can find some examples of the more complicated tasks that can be performed using `cbsh`.
 
 include::recipes/similarity_search.adoc[]
+
+include::recipes/useful-snippets.adoc[]

@@ -1,4 +1,4 @@
-=== Similarity Search
+== Similarity Search
 
 The <<_vector_commands, vector commands>> can be used to enrich your existing data and allow you to experiment with the value that similarity search can add.
 Before you can follow this recipe you'll need to <<_cb_env_llm,configure a llm>> for use with the shell.
