@@ -23,6 +23,8 @@ include::commands.adoc[]
 
 include::reference.adoc[]
 
-include::recipes.adoc[]
+include::importing-data.adoc[]
+
+include::exporting-data.adoc[]
 
 include::release_notes.adoc[]
