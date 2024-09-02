@@ -7,6 +7,8 @@ Here you can find some examples of the more complicated tasks that can be perfor
 
 include::recipes/managing_multiple_clusters.adoc[]
 
+include::recipes/moving_data.adoc[]
+
 include::recipes/similarity_search.adoc[]
 
 include::recipes/simple_rag.adoc[]
