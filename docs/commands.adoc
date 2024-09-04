@@ -669,6 +669,7 @@ Requires a vector to be used as the source of the search which can be supplied i
 For example imagine we have the following document stored in our cluster:
 
 [options="nowrap"]
+```
 > doc get landmark_10019
 ╭───┬────────────────┬───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┬─────╮
 │ # │       id       │                                                                                                      content                                                                                                      │ ... │

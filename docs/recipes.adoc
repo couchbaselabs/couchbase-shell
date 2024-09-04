@@ -9,4 +9,6 @@ include::recipes/managing_multiple_clusters.adoc[]
 
 include::recipes/similarity_search.adoc[]
 
+include::recipes/simple_rag.adoc[]
+
 include::recipes/useful-snippets.adoc[]
