@@ -104,11 +104,7 @@ fn allow_ip(
     for identifier in cluster_identifiers {
         let cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
-        let org = if let Some(cluster_org) = cluster.capella_org() {
-            guard.get_capella_org(cluster_org)
-        } else {
-            guard.active_capella_org()
-        }?;
+        let org = guard.named_or_active_org(cluster.capella_org())?;
 
         let client = org.client();
         let deadline = Instant::now().add(org.timeout());
@@ -117,7 +113,7 @@ fn allow_ip(
 
         let project_id = find_project_id(
             ctrl_c.clone(),
-            guard.active_project().unwrap(),
+            guard.named_or_active_project(cluster.project())?,
             &client,
             deadline,
             span,
