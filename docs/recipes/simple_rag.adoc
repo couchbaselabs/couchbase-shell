@@ -1,0 +1,178 @@
+== Simple RAG
+
+Couchbase Shell's https://couchbase.sh/docs/#_vector_commands[vector commands] along with https://couchbase.sh/docs/#_ask[ask] can be used to implement simple Retrieval Augmented Generation, more commonly know as RAG.
+In this process similarity search is used over chunks of a larger body of text to contextualise questions sent to a Large Language model to improve the answers given.
+For this demo we will use a text version of the Couchbase Shell docs as the source text for our chunks of data we have this stored locally as a text file.
+
+```
+👤 Charlie 🏠 remote in 🗄 RagChunks._default._default
+> ls
+╭───┬──────────────────────────┬──────┬───────────┬────────────────╮
+│ # │           name           │ type │   size    │    modified    │
+├───┼──────────────────────────┼──────┼───────────┼────────────────┤
+│ 0 │ Couchbase_Shell_Docs.txt │ file │ 210.9 KiB │ 39 seconds ago │
+╰───┴──────────────────────────┴──────┴───────────┴────────────────╯
+```
+
+First we need to split the file into chunks, and generating an embedding from all of the chunks.
+Fortunately https://couchbase.sh/docs/#_vector_enrich_text[vector enrich-text] can do all of this for us.
+It can takes the output of `ls` as input and read one or more text documents, before chunking them and generating embeddings using the https://couchbase.sh/docs/#_cb_env_llm[registered llm].
+
+```
+👤 Charlie 🏠 remote in 🗄 RagChunks._default._default
+> ls | vector enrich-text | first
+Embedding batch 1/1
+╭─────────┬─────────────────────────────────────────────────────────────────╮
+│ id      │ vector-18fe29                                                   │
+│         │ ╭────────┬────────────────────────────────────────────────────╮ │
+│ content │ │ text   │ META TAG (title): Couchbase Shell Documentation    │ │
+│         │ │        │                                                    │ │
+│         │ │        │ Couchbase Shell Documentation                      │ │
+│         │ │        │                                                    │ │
+│         │ │        │ (c) Copyright 2021, All Rights Reserved            │ │
+│         │ │        │                                                    │ │
+│         │ │        │ Table of Contents                                  │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 1. Quickstart                                    │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 1.1. Installation                                │ │
+│         │ │        │ • 1.2. Connecting to a Cluster                     │ │
+│         │ │        │ • 1.3. The config dotfiles                         │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 2. Introduction                                  │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 2.1. Navigating the Shell                        │ │
+│         │ │        │ • 2.2. Getting Help                                │ │
+│         │ │        │ • 2.3. The Prompt explained                        │ │
+│         │ │        │ • 2.4. Loading Data into the Shell                 │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 2.4.1. Doc import                                │ │
+│         │ │        │ • 2.4.2. Manual import                             │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 2.5. Exporting Data from the Shell               │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 3. cb-env and the Environment                    │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 3.1. cb-env cluster                              │ │
+│         │ │        │ • 3.2. cb-env bucket/scope/collection              │ │
+│         │ │        │ • 3.3. cb-env project/capella-organization         │ │
+│         │ │        │ • 3.4. cb-env register                             │ │
+│         │ │        │ • 3.5. cb-env llm                                  │ │
+│         │ │        │ • 3.6. Per command execution environments          │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 3.6.1. The --clusters flag                       │ │
+│         │ │        │ • 3.6.2. The --bucket, --scope, --collection flags │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 4. Couchbase Commands                            │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 4.1. Working with clusters                       │ │
+│         │ │        │ • 4.2. Working with buckets                        │ │
+│         │ │        │ • 4.3. Working with scopes and collections         │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 4.3.1. Scopes                                    │ │
+│         │ │        │ • 4.3.2. Collections                               │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 4.4. Listing nodes                               │ │
+│         │ │        │ • 4.5. Reading and Writing `doc`uments             │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 4.5.1. Reading                                   │ │
+│         │ │        │ • 4.5.2. Mutating                                  │ │
+│         │ │        │ • 4.5.3. Remov                                     │ │
+│         │ │        │ ╭──────┬───────╮                                   │ │
+│         │ │ vector │ │    0 │ -0.00 │                                   │ │
+│         │ │        │ │  ... │  ...  │                                   │ │
+│         │ │        │ │ 1535 │ -0.02 │                                   │ │
+│         │ │        │ ╰──────┴───────╯                                   │ │
+│         │ ╰────────┴────────────────────────────────────────────────────╯ │
+╰─────────┴─────────────────────────────────────────────────────────────────╯
+```
+
+`vector enrich-text` will create a `vector doc` for each of the text chunks, these docs contain the original chunk of text along with the embedding generated from it.
+These docs are https://couchbase.sh/docs/#_a_note_on_data_format[formatted] so that they can be piped directly into https://couchbase.sh/docs/#_mutating[doc upsert] to store them in the active Couchbase Cluster.
+
+```
+👤 Charlie 🏠 remote in ☁️ RagChunks._default._default
+> ls | vector enrich-text | doc upsert
+Embedding batch 1/1
+╭───┬───────────┬─────────┬────────┬──────────┬─────────╮
+│ # │ processed │ success │ failed │ failures │ cluster │
+├───┼───────────┼─────────┼────────┼──────────┼─────────┤
+│ 0 │       152 │     152 │      0 │          │ remote  │
+╰───┴───────────┴─────────┴────────┴──────────┴─────────╯
+```
+
+We can see from the output of `doc upsert` that the 152 vector docs have been successfully uploaded to the active bucket named `RagChunks`.
+Next we use https://couchbase.sh/docs/#_vector_create_index[vector create-index] to create a vector index over our new vector docs:
+
+```
+👤 Charlie 🏠 remote in ☁️ RagChunks._default._default
+> vector create-index cbsh-docs-index vector 1536
+```
+
+See the previous link of a detailed explanation of this command.
+
+Now that we have created and indexed our vector docs we can take a look at the final command we will use: https://couchbase.sh/docs/#_ask[ask].
+If we were to ask the active llm a specific question about one of the vector commands used in this recipe it would give an answer, just not a very good one:
+
+```
+👤 Charlie 🏠 remote in ☁️ RagChunks._default._default
+> ask "How do I use the vector enrich-text command?"
+I'm sorry, but I'm not familiar with a specific command called "vector enrich-text." It's possible that this command is specific to a certain programming language, software, or tool.
+
+If you provide me with more context or details about where you encountered this command, I might be able to help you better. Feel free to share more information so I can assist you accordingly.
+```
+
+However this is to be expected, since the model we are using was trained before these commands existed, so how would it know?
+What we can do is take the question being asked, generate an embedding from it and use that embedding to find some similar chunks in the the documentation:
+
+```
+👤 Charlie 🏠 remote in ☁️ RagChunks._default._default
+> let $question = "How do I use the vector enrich-text command?"
+👤 Charlie 🏠 remote in ☁️ RagChunks._default._default
+> $question | vector enrich-text | vector search cbsh-docs-index vector --neighbors 5
+Embedding batch 1/1
+╭───┬───────────────┬───────────┬─────────╮
+│ # │      id       │   score   │ cluster │
+├───┼───────────────┼───────────┼─────────┤
+│ 0 │ vector-897825 │ 1.4923782 │ remote  │
+│ 1 │ vector-f9fdb3 │ 1.4744251 │ remote  │
+│ 2 │ vector-a10b29 │ 1.457908  │ remote  │
+│ 3 │ vector-260f27 │ 1.3271111 │ remote  │
+│ 4 │ vector-0b01e8 │ 1.3185736 │ remote  │
+╰───┴───────────────┴───────────┴─────────╯
+```
+
+First we store the question in a https://www.nushell.sh/book/variables.html[variable] to avoid typing it repeatedly.
+The we use the question to generate an embedding which we then pipe to https://couchbase.sh/docs/#_vector_search[vector search].
+This returns the vector docs with the most semantically similar chunks to our question.
+
+Using the returned doc ids we can use the https://couchbase.sh/docs/#_subdoc_get[subdoc get] command to retrieve the chunks.
+These chunks can then be piped directly into `ask` where they will be used to contextualise the question:
+
+```
+👤 Charlie 🏠 remote in ☁️ RagChunks._default._default
+> $question | vector enrich-text | vector search cbsh-docs-index vector --neighbors 5 | subdoc get text | select content | ask $question
+Embedding batch 1/1
+To use the `vector enrich-text` command, follow these steps:
+
+1. Open the command-line interface where you can interact with the Couchbase shell.
+
+2. Run the `vector enrich-text` command followed by the text you want to generate embeddings for. Here is the basic structure:
+
+> vector enrich-text "some string"
+
+3. Optionally, you can provide additional flags to customize the behavior of the command. Some of the available flags include:
+   - `--dimension <Int>`: Specify the dimension of the resulting embeddings.
+   - `--model <String>`: Choose the model to generate the embeddings with.
+   - `--maxTokens <Int>`: Set the token per minute limit for the provider/model.
+   - `--vectorField <String>`: Define the name of the field into which the embedding is written.
+
+4. After running the command, you will receive the embeddings generated from the input text as output.
+
+5. You can further process or store these embeddings, for example, by piping the output into another command or action.
+
+Remember to consult the available flags and options for more customization and flexibility when using the `vector enrich-text` command.
+```
+
+This allows `ask` to produce a much more accurate and informative answer using the context it was given.
+Changing the size of the chunks, number og neighbours returned as well as the dimension of the embeddings can all have an impact on the result of RAG, and `cbsh` should help experimenting with these variables quick and easy.
