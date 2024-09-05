@@ -195,7 +195,7 @@ pub struct BucketSettingsBuilder {
     name: String,
     ram_quota_mb: u64,
     flush_enabled: bool,
-    num_replicas: u32,
+    num_replicas: Option<u32>,
     bucket_type: BucketType,
     max_expiry: Duration,
     durability_level: DurabilityLevel,
@@ -207,7 +207,7 @@ impl BucketSettingsBuilder {
             name: name.into(),
             ram_quota_mb: 100,
             flush_enabled: false,
-            num_replicas: 0,
+            num_replicas: None,
             bucket_type: BucketType::Couchbase,
             max_expiry: Duration::from_secs(0),
             durability_level: DurabilityLevel::None,
@@ -225,7 +225,7 @@ impl BucketSettingsBuilder {
     }
 
     pub fn num_replicas(mut self, num_replicas: u32) -> BucketSettingsBuilder {
-        self.num_replicas = num_replicas;
+        self.num_replicas = Some(num_replicas);
         self
     }
 
@@ -265,7 +265,7 @@ pub(crate) struct BucketSettings {
     name: String,
     ram_quota_mb: u64,
     flush_enabled: bool,
-    num_replicas: u32,
+    num_replicas: Option<u32>,
     bucket_type: BucketType,
     max_expiry: Duration,
     durability_level: DurabilityLevel,
@@ -306,7 +306,7 @@ impl TryFrom<JSONBucketSettings> for BucketSettings {
             name: settings.name,
             ram_quota_mb: settings.quota.raw_ram / 1024 / 1024,
             flush_enabled: !settings.controllers.flush.is_empty(),
-            num_replicas: settings.num_replicas,
+            num_replicas: Some(settings.num_replicas),
             bucket_type: BucketType::try_from(settings.bucket_type.as_str())?,
             max_expiry: Duration::from_secs(settings.max_expiry as u64),
             durability_level: DurabilityLevel::try_from(settings.durability_level.as_str())?,
@@ -322,7 +322,7 @@ impl TryFrom<&Bucket> for BucketSettings {
             name: settings.name(),
             ram_quota_mb: settings.ram_quota(),
             flush_enabled: settings.flush(),
-            num_replicas: settings.replicas(),
+            num_replicas: Some(settings.replicas()),
             bucket_type: BucketType::try_from(settings.bucket_type().as_str())?,
             max_expiry: Duration::from_secs(settings.ttl_seconds()),
             durability_level: DurabilityLevel::try_from(settings.durability_level().as_str())?,
@@ -344,7 +344,7 @@ impl BucketSettings {
                     message: "memcached buckets are not supported on Capella clusters".to_string(),
                 });
             }
-            if self.num_replicas > 0 {
+            if self.num_replicas.unwrap_or(0) > 0 {
                 return Err(BuilderError {
                     message: "num replicas cannot be used with memcached buckets".to_string(),
                 });
@@ -369,7 +369,9 @@ impl BucketSettings {
             self.durability_level.to_string().into(),
         );
 
-        json.insert("replicas".into(), self.num_replicas.into());
+        if let Some(replicas) = self.num_replicas {
+            json.insert("replicas".into(), replicas.into());
+        }
 
         json
     }
@@ -392,8 +394,8 @@ impl BucketSettings {
             form.push(("maxTTL", self.max_expiry.as_secs().to_string()));
         }
 
-        if self.num_replicas > 0 {
-            form.push(("replicaNumber", self.num_replicas.to_string()));
+        if let Some(replicas) = self.num_replicas {
+            form.push(("replicaNumber", replicas.to_string()));
         }
 
         form
@@ -411,7 +413,7 @@ impl BucketSettings {
         self.flush_enabled
     }
 
-    pub fn num_replicas(&self) -> u32 {
+    pub fn num_replicas(&self) -> Option<u32> {
         self.num_replicas
     }
 
@@ -436,7 +438,7 @@ impl BucketSettings {
     }
 
     pub fn set_num_replicas(&mut self, num_replicas: u32) {
-        self.num_replicas = num_replicas;
+        self.num_replicas = Some(num_replicas);
     }
 
     pub fn set_max_expiry(&mut self, max_expiry: Duration) {

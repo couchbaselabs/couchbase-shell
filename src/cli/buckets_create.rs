@@ -1,4 +1,6 @@
-use crate::cli::buckets_builder::{BucketSettingsBuilder, BucketType, DurabilityLevel};
+use crate::cli::buckets_builder::{
+    BucketSettings, BucketSettingsBuilder, BucketType, DurabilityLevel,
+};
 use crate::cli::error::{
     client_error_to_shell_error, generic_error, serialize_error, unexpected_status_code_error,
 };
@@ -154,7 +156,7 @@ fn buckets_create(
         builder = builder.max_expiry(Duration::from_secs(e as u64));
     }
 
-    let settings = builder.build();
+    let settings = &mut builder.build();
     for identifier in cluster_identifiers {
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
         settings
@@ -163,14 +165,13 @@ fn buckets_create(
 
         if active_cluster.cluster_type() == Provisioned {
             let org = guard.named_or_active_org(active_cluster.capella_org())?;
-            let json = settings.as_json();
 
             create_capella_bucket(
                 org,
                 guard.named_or_active_project(active_cluster.project())?,
                 active_cluster,
                 identifier.clone(),
-                serde_json::to_string(&json).unwrap(),
+                settings,
                 ctrl_c.clone(),
                 span,
             )
@@ -218,7 +219,7 @@ pub fn create_capella_bucket(
     project: String,
     cluster: &RemoteCluster,
     identifier: String,
-    payload: String,
+    settings: &mut BucketSettings,
     ctrl_c: Arc<AtomicBool>,
     span: Span,
 ) -> Result<(), ShellError> {
@@ -247,12 +248,20 @@ pub fn create_capella_bucket(
         project_id.clone(),
     )?;
 
+    // If we leave num_replicas as empty the API always sets the default to 1 which will fail for
+    // single node clusters where num_replicas must be zero.
+    if settings.num_replicas().is_none() && json_cluster.total_nodes() == 1 {
+        settings.set_num_replicas(0)
+    }
+
+    let json = settings.as_json();
+
     client
         .create_bucket(
             org_id,
             project_id,
             json_cluster.id(),
-            payload,
+            serde_json::to_string(&json).unwrap(),
             deadline,
             ctrl_c,
         )
