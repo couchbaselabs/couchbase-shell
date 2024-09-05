@@ -239,7 +239,7 @@ pub(crate) fn bucket_to_nu_value(
     collected.add_string("cluster", cluster_name, span);
     collected.add_string("name", bucket.name(), span);
     collected.add_string("type", bucket.bucket_type().to_string(), span);
-    collected.add_i64("replicas", bucket.num_replicas() as i64, span);
+    collected.add_i64("replicas", bucket.num_replicas().unwrap() as i64, span);
     collected.add_string(
         "min_durability_level",
         bucket.minimum_durability_level().to_string(),

@@ -98,6 +98,17 @@ pub(crate) struct Cluster {
     cmek_id: Option<String>,
 }
 
+impl Cluster {
+    pub fn total_nodes(&self) -> i32 {
+        let mut total = 0;
+
+        for sg in &self.service_groups {
+            total = sg.num_of_nodes.unwrap() + total;
+        }
+        total
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub(crate) struct CloudProvider {
     #[serde(rename(serialize = "type"))]
