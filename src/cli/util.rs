@@ -38,7 +38,7 @@ pub fn convert_row_to_nu_value(
     v: &serde_json::Value,
     span: Span,
     cluster_identifier: String,
-) -> Result<Value, ShellError> {
+) -> Result<Vec<Value>, ShellError> {
     match v {
         serde_json::Value::Object(o) => {
             let mut cols = vec![];
@@ -53,10 +53,23 @@ pub fn convert_row_to_nu_value(
                 internal_span: span,
             });
 
-            Ok(Value::Record {
+            Ok(vec![Value::Record {
                 val: SharedCow::new(Record::from_raw_cols_vals(cols, vals, span, span).unwrap()),
                 internal_span: span,
-            })
+            }])
+        }
+        serde_json::Value::Array(s) => {
+            let mut results = vec![];
+
+            for v in s {
+                let vals = convert_row_to_nu_value(v, span, cluster_identifier.clone())?;
+
+                for v in vals {
+                    results.push(v);
+                }
+            }
+
+            Ok(results)
         }
         _ => Err(malformed_response_error(
             "row was not an object",

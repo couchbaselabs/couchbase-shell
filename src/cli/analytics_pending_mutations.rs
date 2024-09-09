@@ -98,8 +98,8 @@ fn pending_mutations(
 
         let content: serde_json::Value = serde_json::from_str(response.content())
             .map_err(|e| deserialize_error(e.to_string(), span))?;
-        let converted = convert_row_to_nu_value(&content, span, identifier.clone())?;
-        results.push(converted);
+        let converted = &mut convert_row_to_nu_value(&content, span, identifier.clone())?;
+        results.append(converted);
     }
 
     Ok(Value::List {
