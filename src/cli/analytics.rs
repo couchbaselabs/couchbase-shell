@@ -173,8 +173,8 @@ pub fn do_analytics_query(
 
     let mut results: Vec<Value> = vec![];
     if with_meta {
-        let converted = convert_row_to_nu_value(&content, span, identifier)?;
-        results.push(converted);
+        let converted = &mut convert_row_to_nu_value(&content, span, identifier)?;
+        results.append(converted);
         return Ok(results);
     }
 
@@ -225,7 +225,11 @@ pub fn do_analytics_query(
     } else if let Some(content_results) = content.get("results") {
         if let Some(arr) = content_results.as_array() {
             for result in arr {
-                results.push(convert_row_to_nu_value(result, span, identifier.clone())?);
+                results.append(&mut convert_row_to_nu_value(
+                    result,
+                    span,
+                    identifier.clone(),
+                )?)
             }
         } else {
             return Err(malformed_response_error(

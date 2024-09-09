@@ -228,7 +228,7 @@ pub fn handle_query_response(
     if with_meta {
         let content: serde_json::Value = serde_json::from_str(response.content())
             .map_err(|e| deserialize_error(e.to_string(), span))?;
-        results.push(convert_row_to_nu_value(&content, span, identifier)?);
+        results.append(&mut convert_row_to_nu_value(&content, span, identifier)?);
     } else {
         let content: HashMap<String, serde_json::Value> = serde_json::from_str(response.content())
             .map_err(|e| deserialize_error(e.to_string(), span))?;
@@ -279,8 +279,9 @@ pub fn handle_query_response(
         } else if let Some(content_results) = content.get("results") {
             if let Some(arr) = content_results.as_array() {
                 for result in arr {
-                    results
-                        .push(convert_row_to_nu_value(result, span, identifier.clone()).unwrap());
+                    results.append(
+                        &mut convert_row_to_nu_value(result, span, identifier.clone()).unwrap(),
+                    );
                 }
             } else {
                 return Err(malformed_response_error(
