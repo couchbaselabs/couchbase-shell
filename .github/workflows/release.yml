@@ -1,4 +1,3 @@
-
 on: workflow_dispatch
 
 name: Create Release
@@ -23,7 +22,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        target: [x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu, x86_64-apple-darwin, aarch64-apple-darwin, x86_64-pc-windows-msvc]
+        target: [ x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu, x86_64-apple-darwin, aarch64-apple-darwin, x86_64-pc-windows-msvc ]
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-22.04
@@ -39,90 +38,91 @@ jobs:
       version: ${{ steps.version.outputs.value }}
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: ilammy/setup-nasm@v1
+      - uses: actions/checkout@v3
 
-    - name: Update Rust Toolchain Target
-      run: |
-        echo "targets = ['${{matrix.target}}']" >> rust-toolchain.toml
+      - name: Update Rust Toolchain Target
+        run: |
+          echo "targets = ['${{matrix.target}}']" >> rust-toolchain.toml
 
-    - name: Setup Rust toolchain and cache
-      uses: actions-rust-lang/setup-rust-toolchain@v1.4.3
+      - name: Setup Rust toolchain and cache
+        uses: actions-rust-lang/setup-rust-toolchain@v1.4.3
 
-    - name: Install aarch64-linux gcc
-      run: sudo apt-get update &&  sudo apt-get install gcc-aarch64-linux-gnu -y
-      if: matrix.target == 'aarch64-unknown-linux-gnu'
+      - name: Install aarch64-linux gcc
+        run: sudo apt-get update &&  sudo apt-get install gcc-aarch64-linux-gnu -y
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
 
-    - uses: SebRollen/toml-action@v1.0.1
-      id: version
-      with:
-        file: 'Cargo.toml'
-        field: 'package.version'
+      - uses: SebRollen/toml-action@v1.0.1
+        id: version
+        with:
+          file: 'Cargo.toml'
+          field: 'package.version'
 
-    - name: Build
-      uses: actions-rs/cargo@v1
-      env:
-        CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: 'aarch64-linux-gnu-gcc'
-      with:
-        command: build
-        args: --verbose --release --target ${{ matrix.target }} --features static-link-openssl
-      if: matrix.os == 'ubuntu-22.04'
+      - name: Build
+        uses: actions-rs/cargo@v1
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: 'aarch64-linux-gnu-gcc'
+        with:
+          command: build
+          args: --verbose --release --target ${{ matrix.target }} --features static-link-openssl
+        if: matrix.os == 'ubuntu-22.04'
 
-    - name: Build
-      uses: actions-rs/cargo@v1
-      with:
-        command: build
-        args: --verbose --release --target ${{ matrix.target }}
-      if: matrix.os == 'macos-latest'
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --verbose --release --target ${{ matrix.target }}
+        if: matrix.os == 'macos-latest'
 
-    - name: Build
-      uses: actions-rs/cargo@v1
-      with:
-        command: build
-        args: --verbose --release
-      env:
-        VCPKGRS_DYNAMIC: 1
-        RUSTFLAGS: -Ctarget-feature=+crt-static
-      if: matrix.os == 'windows-latest'
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --verbose --release
+        env:
+          VCPKGRS_DYNAMIC: 1
+          RUSTFLAGS: -Ctarget-feature=+crt-static
+        if: matrix.os == 'windows-latest'
 
-#    - name: Test
-#      uses: actions-rs/cargo@v1
-#      with:
-#        command: test
-#        args: --verbose
+      #    - name: Test
+      #      uses: actions-rs/cargo@v1
+      #      with:
+      #        command: test
+      #        args: --verbose
 
-    - name: Create archive for Linux
-      id: createarchivelinux
-      run: |
-        7z a -ttar -so -an ./target/${{ matrix.target }}/release/${{ env.RELEASE_BIN }} ${{ env.RELEASE_ADDS }} | 7z a -si ${{ env.RELEASE_BIN }}-${{ matrix.target }}.tar.gz
-      if: matrix.os == 'ubuntu-22.04'
+      - name: Create archive for Linux
+        id: createarchivelinux
+        run: |
+          7z a -ttar -so -an ./target/${{ matrix.target }}/release/${{ env.RELEASE_BIN }} ${{ env.RELEASE_ADDS }} | 7z a -si ${{ env.RELEASE_BIN }}-${{ matrix.target }}.tar.gz
+        if: matrix.os == 'ubuntu-22.04'
 
-    - name: Install p7zip
-      # 7Zip not available on MacOS, install p7zip via homebrew.
-      run: brew install p7zip
-      if: matrix.os == 'macos-latest'
+      - name: Install p7zip
+        # 7Zip not available on MacOS, install p7zip via homebrew.
+        run: brew install p7zip
+        if: matrix.os == 'macos-latest'
 
-    - name: Create archive for MacOS
-      id: createarchivemacos
-      run: |
-        7z a -tzip ${{ env.RELEASE_BIN }}-${{ matrix.target }}.zip ./target/${{ matrix.target }}/release/${{ env.RELEASE_BIN }} ${{ env.RELEASE_ADDS }}
-      if: matrix.os == 'macos-latest'
+      - name: Create archive for MacOS
+        id: createarchivemacos
+        run: |
+          7z a -tzip ${{ env.RELEASE_BIN }}-${{ matrix.target }}.zip ./target/${{ matrix.target }}/release/${{ env.RELEASE_BIN }} ${{ env.RELEASE_ADDS }}
+        if: matrix.os == 'macos-latest'
 
-    - name: Create archive for Windows
-      id: createarchivewindows
-      run: |
-        choco install 7zip
-        7z a -tzip ${{ env.RELEASE_BIN }}-${{ matrix.target }}.zip ./target/release/${{ env.RELEASE_BIN_WINDOWS }} ${{ env.RELEASE_ADDS }}
-      if: matrix.os == 'windows-latest'
+      - name: Create archive for Windows
+        id: createarchivewindows
+        run: |
+          choco install 7zip
+          7z a -tzip ${{ env.RELEASE_BIN }}-${{ matrix.target }}.zip ./target/release/${{ env.RELEASE_BIN_WINDOWS }} ${{ env.RELEASE_ADDS }}
+        if: matrix.os == 'windows-latest'
 
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: ${{ env.RELEASE_BIN }}-${{ matrix.target }}
-        path: ${{ env.RELEASE_BIN }}-${{ matrix.target }}*
-        if-no-files-found: error
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.RELEASE_BIN }}-${{ matrix.target }}
+          path: ${{ env.RELEASE_BIN }}-${{ matrix.target }}*
+          if-no-files-found: error
 
   release:
-    needs: [build]
+    needs: [ build ]
     name: Create release
     runs-on: ubuntu-latest
     steps:
