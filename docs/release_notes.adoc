@@ -1,5 +1,25 @@
 == Release Notes
 
+=== 1.0.0 - 2024-09-11
+
+* Nushell pinned to 0.95
+* Added `vector` commands
+* Added support for bucket creation/management on Capella clusters
+* Added support for loading sample data onto Capella clusters
+* Added support for sub doc reads
+* Added integration with large language models from Google, AWS and OpenAI
+* Added support for named and positional query parameters
+* Support document ids being ints for `doc` commands
+* Support no expiry for collections
+* Unset scope/collection when higher level entity changed
+* Supports creation and management of Capella Clusters
+* Added support for credential creation against Capella clusters
+* Added support for creation of allowed CIDRs against Capella clusters
+* Take username and password securely when using `cb-env register`
+* Added support for managing Capella projects
+* Added support for listing Capella organizations
+* Enable use of `$nu` inside scripts and commands passed to cbsh
+
 === 0.75.2 - 2023-04-10
 
 * Updated macos build to not have any dependency on OpenSSL.
