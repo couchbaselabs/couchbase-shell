@@ -1,7 +1,7 @@
 workspace = { members = ["utilities"] }
 [package]
 name = "couchbase-shell"
-version = "0.95.0"
+version = "1.0.0"
 authors = ["Charles Dixon <chvckd@gmail.com>", "Jack Westwood <jack.westwood@couchbase.com>"]
 edition = "2018"
 default-run = "cbsh"
