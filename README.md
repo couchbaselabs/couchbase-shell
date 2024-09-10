@@ -11,11 +11,11 @@ The documentation is available [here](https://couchbase.sh/docs/).
 
 First, download the archive for your operating system.
 
-- Linux: [cbsh-x86_64-unknown-linux-gnu.tar.gz](https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.1/cbsh-x86_64-unknown-linux-gnu.tar.gz)
-- macOS: [cbsh-x86_64-apple-darwin.zip](https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.1/cbsh-x86_64-apple-darwin.zip)
-- Linux aarch64 [cbsh-aarch64-unknown-linux-gnu.tar.gz](https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.1/cbsh-aarch64-unknown-linux-gnu.tar.gz)
-- macOS aarch64: [cbsh-aarch64-apple-darwin.zip](https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.1/cbsh-aarch64-apple-darwin.zip)
-- Windows: [cbsh-x86_64-pc-windows-msvc.zip](https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.1/cbsh-x86_64-pc-windows-msvc.zip)
+- Linux: [cbsh-x86_64-unknown-linux-gnu.tar.gz](https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0/cbsh-x86_64-unknown-linux-gnu.tar.gz)
+- macOS: [cbsh-x86_64-apple-darwin.zip](https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0/cbsh-x86_64-apple-darwin.zip)
+- Linux aarch64 [cbsh-aarch64-unknown-linux-gnu.tar.gz](https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0/cbsh-aarch64-unknown-linux-gnu.tar.gz)
+- macOS aarch64: [cbsh-aarch64-apple-darwin.zip](https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0/cbsh-aarch64-apple-darwin.zip)
+- Windows: [cbsh-x86_64-pc-windows-msvc.zip](https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0/cbsh-x86_64-pc-windows-msvc.zip)
 
 You do not need any extra dependencies to run `cbsh`, it comes "batteries included".
 
@@ -25,7 +25,7 @@ After extracting the archive, run the `cbsh` binary in your terminal.
 
 ```
 ❯ ./cbsh --version
-The Couchbase Shell 0.75.1
+The Couchbase Shell 1.0.0
 ```
 
 ## Basic Usage
@@ -145,7 +145,7 @@ If you just want to use it and don't want to bother compiling all the time, you 
 
 ```
 ❯ cargo install --path .
-  Installing couchbase-shell v0.75.1 (/Users/michaelnitschinger/couchbase/code/rust/couchbase-shell)
+  Installing couchbase-shell v1.0.0 (/Users/michaelnitschinger/couchbase/code/rust/couchbase-shell)
     Updating crates.io index
   Downloaded plist v1.2.1
   Downloaded onig v6.3.0
