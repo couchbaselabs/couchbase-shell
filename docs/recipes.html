@@ -15,11 +15,15 @@
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
 <ul class="sectlevel1">
-<li><a href="#_similarity_search">1. Similarity Search</a></li>
-<li><a href="#_useful_snippets">2. Useful snippets</a>
+<li><a href="#_register_clusters">1. Register clusters</a></li>
+<li><a href="#_managing_multiple_clusters">2. Managing multiple clusters</a></li>
+<li><a href="#_moving_data_between_clusters">3. Moving data between clusters</a></li>
+<li><a href="#_similarity_search">4. Similarity Search</a></li>
+<li><a href="#_simple_rag">5. Simple RAG</a></li>
+<li><a href="#_useful_snippets">6. Useful snippets</a>
 <ul class="sectlevel2">
-<li><a href="#_migrating_scope_and_collection_definitions">2.1. Migrating scope and collection definitions</a></li>
-<li><a href="#_migrating_query_index_definitions">2.2. Migrating query index definitions</a></li>
+<li><a href="#_migrating_scope_and_collection_definitions">6.1. Migrating scope and collection definitions</a></li>
+<li><a href="#_migrating_query_index_definitions">6.2. Migrating query index definitions</a></li>
 </ul>
 </li>
 </ul>
@@ -30,16 +34,518 @@
 <div class="sectionbody">
 <div class="paragraph">
 <p>Welcome to the recipes section of the Couchbase Shell <code>cbsh</code> documentation.
-Here you can find some examples of the more complicated tasks that can be performed using <code>cbsh</code>.</p>
+Here you can find how powerful tasks can be performed by a combination of pipelined statements using <code>cbsh</code>.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_similarity_search">1. Similarity Search</h2>
+<h2 id="_register_clusters">1. Register clusters</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The <a href="#_vector_commands">vector commands</a> can be used to enrich your existing data and allow you to experiment with the value that similarity search can add.
-Before you can follow this recipe you&#8217;ll need to <a href="#_cb_env_llm">configure a llm</a> for use with the shell.</p>
+<p>Before CBShell can be used to perform data operations on a cluster, the cluster must be registered with the shell.
+Cluster registration can be done through the <a href="https://couchbase.sh/docs/#_the_config_dotfiles">config file</a>, or using <a href="https://couchbase.sh/docs/#_cb_env_register">cb-env register</a>.
+This recipe shows how to register all the healthy clusters in the active <a href="https://couchbase.sh/docs/#_the_config_dotfiles">registered organization</a>.</p>
+</div>
+<div class="paragraph">
+<p>First we need to get a list of all the healthy clusters, along with the projects to which they belong:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>&gt; let $healthy_clusters = ( projects | get name | each { |proj| clusters --project $proj | each {|clstr| if $clstr.state == &quot;healthy&quot; { [[project, cluster]; [$proj $clstr.name]] }}} | flatten | flatten)</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>projects</code> command lists all the projects in the active Capella organization.
+Then we get the name column and iterate over <a href="https://www.nushell.sh/commands/docs/each.html">each</a> of the project names, getting all of the clusters in each project with the <code>clusters</code> command.
+For each cluster retrieved we check that the status is healthy, since we only want to register the healthy clusters, and if healthy we add to our results <a href="https://www.nushell.sh/book/working_with_tables.html">table</a>.
+Once we have done this we can check the value stored in the <code>$healthy_clusters</code> table:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; $healthy_clusters
+╭───┬────────────────────────────────┬─────────────────────────────╮
+│ # │            project             │           cluster           │
+├───┼────────────────────────────────┼─────────────────────────────┤
+│ 0 │ Couchbase Shell                │ diagonalrolandcarlbackhouse │
+│ 1 │ Couchbase Shell                │ smartvladimirvapnik         │
+│ 2 │ !!!!!!!-Shared-Project-!!!!!!! │ gentlejimgray               │
+│ 3 │ !!!!!!!-Shared-Project-!!!!!!! │ navyadmiralgracehopper      │
+│ 4 │ !!!!!!!-Shared-Project-!!!!!!! │ properdanjurafsky           │
+╰───┴────────────────────────────────┴─────────────────────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>A registered cluster requires a username and password which we will set using nushell <a href="https://www.nushell.sh/book/variables.html">variables</a>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; let $username = Administrator
+&gt; let $password = AaWBdOsUgM123!</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>With these set we are ready to register all the healthy clusters:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>&gt; $healthy_clusters | each {|it| clusters get $it.cluster --project $it.project | cb-env register $in.name $in.&quot;connection string&quot; --project $it.project --username $username --password $password</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>For each of the healthy clusters we do a <code>clusters get</code>, using the project column to overwrite the <a href="https://couchbase.sh/docs/#_cb_env_projectcapella_organization">active project</a>.
+The output of each <code>clusters get</code> is piped into  <a href="https://couchbase.sh/docs/#_cb_env_register">cb-env register</a> where we use the fetched cluster name and connection string along with the project from healthy clusters and the username/password created earlier.
+Once this command has finished use <code>cb-env managed</code> to check that the registered clusters have been appropriately updated:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>&gt; cb-env managed
+╭───┬────────┬───────┬─────────────────────────────┬───────────────┬──────────────────────┬────────────────────────────────╮
+│ # │ active │  tls  │         identifier          │   username    │ capella_organization │            project             │
+├───┼────────┼───────┼─────────────────────────────┼───────────────┼──────────────────────┼────────────────────────────────┤
+│ 0 │ false  │ true  │ diagonalrolandcarlbackhouse │ Administrator │                      │ Couchbase Shell                │
+│ 1 │ false  │ true  │ smartvladimirvapnik         │ Administrator │                      │ Couchbase Shell                │
+│ 2 │ false  │ true  │ properdanjurafsky           │ Administrator │                      │ !!!!!!!-Shared-Project-!!!!!!! │
+│ 3 │ false  │ true  │ gentlejimgray               │ Administrator │                      │ !!!!!!!-Shared-Project-!!!!!!! │
+│ 4 │ false  │ true  │ navyadmiralgracehopper      │ Administrator │                      │ !!!!!!!-Shared-Project-!!!!!!! │
+╰───┴────────┴───────┴─────────────────────────────┴───────────────┴──────────────────────┴────────────────────────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The next stage is to allow the credentials we have registered with the shell to be used against each of the clusters, this is done using the <code>credentials create</code> command:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; credentials create --read --write --registered --clusters .*</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This creates read/write credentials on all of the registered clusters that match the <a href="https://couchbase.sh/docs/#_the_clusters_flag">--clusters</a> regex using the username and password with which the clusters were registered to the shell.
+Finally we need the cluster to allow requests from our IP address, this can be done as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; curl ipconfig.me | allow ip --clusters .*</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The curl command returns our IP address, which we then pipe into <code>allow ip</code> and this is run against all of the registered clusters again.
+Now all of the healthy clusters are registered and ready to use through the shell.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_managing_multiple_clusters">2. Managing multiple clusters</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>CBShell is a powerful tool that can be used to interact with fleets comprised of a mix of self-managed and Capella clusters.
+Say we have the following four clusters registered with CBShell:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 obligingfaronmoller in ☁️ default._default._default
+&gt; cb-env managed
+╭───┬────────┬───────┬────────────┬───────────────┬──────────────────────┬─────────────────╮
+│ # │ active │  tls  │ identifier │   username    │ capella_organization │     project     │
+├───┼────────┼───────┼────────────┼───────────────┼──────────────────────┼─────────────────┤
+│ 0 │ false  │ true  │ systemtest │ Administrator │ my-org               │ CBShell Testing │
+│ 1 │ false  │ false │ localdev   │ Administrator │                      │                 │
+│ 2 │ false  │ true  │ prod       │ Administrator │ my-org               │ CBShell Testing │
+│ 3 │ true   │ true  │ ci         │ Administrator │ my-org               │ CBShell Testing │
+╰───┴────────┴───────┴────────────┴───────────────┴──────────────────────┴─────────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>There is one self-managed cluster (localdev) and three Capella clusters.
+Imagine that we want to perform some general health checks on this set of clusters, a good starting point is the <a href="https://couchbase.sh/docs/#_listing_nodes">nodes</a> command with the <a href="https://couchbase.sh/docs/#_working_with_clusters">clusters</a> flag.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 localdev in 🗄 travel-sample._default._default
+&gt; nodes --clusters *
+╭────┬─────────────────────────┬─────────────────────────────────────────────────────────────┬─────────┬──────────────────────────┬───────────────────────┬───────────────────────────┬──────────────┬─────────────┬─────╮
+│  # │         cluster         │                                       hostname              │ status  │         services         │        version        │            os             │ memory_total │ memory_free │ ... │
+├────┼─────────────────────────┼─────────────────────────────────────────────────────────────┼─────────┼──────────────────────────┼───────────────────────┼───────────────────────────┼──────────────┼─────────────┼─────┤
+│  0 │ localdev                │ 192.168.107.128:8091                                        │ healthy │ search,indexing,kv,query │ 7.6.2-3505-enterprise │ aarch64-unknown-linux-gnu │   6201221120 │  2841657344 │ ... │
+│  1 │ localdev                │ 192.168.107.129:8091                                        │ healthy │ search,indexing,kv,query │ 7.6.2-3505-enterprise │ aarch64-unknown-linux-gnu │   6201221120 │  2842959872 │ ... │
+│  2 │ localdev                │ 192.168.107.130:8091                                        │ healthy │ search,indexing,kv,query │ 7.6.2-3505-enterprise │ aarch64-unknown-linux-gnu │   6201221120 │  2843160576 │ ... │
+│  3 │ prod                    │ svc-dqi-node-001.lhb4l06lajhydwmk.cloud.couchbase.com:8091  │ healthy │ indexing,kv,query        │ 7.6.2-3721-enterprise │ x86_64-pc-linux-gnu       │  16776548352 │ 15518982144 │ ... │
+│  4 │ prod                    │ svc-dqi-node-002.lhb4l06lajhydwmk.cloud.couchbase.com:8091  │ healthy │ indexing,kv,query        │ 7.6.2-3721-enterprise │ x86_64-pc-linux-gnu       │  16776548352 │ 15518420992 │ ... │
+│  5 │ prod                    │ svc-dqi-node-003.lhb4l06lajhydwmk.cloud.couchbase.com:8091  │ healthy │ indexing,kv,query        │ 7.6.2-3721-enterprise │ x86_64-pc-linux-gnu       │  16776544256 │ 15501099008 │ ... │
+│  6 │ ci                      │ svc-dqi-node-001.fwplhqyopu9pgolq.cloud.couchbase.com:8091  │ healthy │ indexing,kv,query        │ 7.6.2-3721-enterprise │ x86_64-pc-linux-gnu       │  16277504000 │ 14538944512 │ ... │
+│  7 │ ci                      │ svc-dqi-node-002.fwplhqyopu9pgolq.cloud.couchbase.com:8091  │ healthy │ indexing,kv,query        │ 7.6.2-3721-enterprise │ x86_64-pc-linux-gnu       │  16277504000 │ 14559510528 │ ... │
+│  8 │ ci                      │ svc-dqi-node-003.fwplhqyopu9pgolq.cloud.couchbase.com:8091  │ healthy │ indexing,kv,query        │ 7.6.2-3721-enterprise │ x86_64-pc-linux-gnu       │  16277504000 │ 14565412864 │ ... │
+│  9 │ systemtest              │ svc-dqi-node-001.lyl8kbhzdovyqhv.cloud.couchbase.com:8091   │ healthy │ indexing,kv,query        │ 7.6.2-3721-enterprise │ x86_64-pc-linux-gnu       │  16766582784 │ 15491842048 │ ... │
+╰────┴─────────────────────────┴─────────────────────────────────────────────────────────────┴─────────┴──────────────────────────┴───────────────────────┴───────────────────────────┴──────────────┴─────────────┴─────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This gives us plenty of information, but sometimes it can be a bit difficult to read.
+We can make things much easier with some simple reformatting.
+To focus on the free memory that each cluster has, we can <a href="https://www.nushell.sh/commands/docs/select.html">select</a> just the relevant columns:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 localdev in 🗄 travel-sample._default._default
+&gt; nodes --clusters * | select cluster memory_free
+╭────┬────────────┬─────────────╮
+│  # │  cluster   │ memory_free │
+├────┼────────────┼─────────────┤
+│  0 │ localdev   │  2841657344 │
+│  1 │ localdev   │  2842959872 │
+│  2 │ localdev   │  2843160576 │
+│  3 │ prod       │ 15518982144 │
+│  4 │ prod       │ 15518420992 │
+│  5 │ prod       │ 15501099008 │
+│  6 │ ci         │ 14538944512 │
+│  7 │ ci         │ 14559510528 │
+│  8 │ ci         │ 14565412864 │
+│  9 │ systemtest │ 15491842048 │
+╰────┴────────────┴─────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>We can reformat the tables to make the the data more readable, but nushell&#8217;s understanding of various data types allows us to reformat the values within the table.
+For example we could convert the <code>memory_free</code> values from bytes to gigabytes:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 localdev in 🗄 travel-sample._default._default
+&gt; nodes --clusters * | each {|n| $n | update memory_free ($n.memory_free * 1B)} | select cluster memory_free
+╭───┬─────────────┬─────────────╮
+│  # │  cluster   │ memory_free │
+├───┼─────────────┼─────────────┤
+│ 0 │ localdev    │     2.6 GiB │
+│ 1 │ localdev    │     2.6 GiB │
+│ 2 │ localdev    │     2.6 GiB │
+│ 3 │ prod        │    14.5 GiB │
+│ 4 │ prod        │    14.5 GiB │
+│ 5 │ prod        │    14.4 GiB │
+│ 6 │ ci          │    13.5 GiB │
+│ 7 │ ci          │    13.6 GiB │
+│ 8 │ ci          │    13.6 GiB │
+│ 9 │ systemtest  │    14.4 GiB │
+╰───┴─────────────┴─────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>We do this by iterating over each node and <a href="https://www.nushell.sh/commands/docs/update.html">updating</a> the value in the <code>memory_free</code> column by multiplying the current value by nushell&#8217;s inbuilt <a href="https://www.nushell.sh/book/types_of_data.html#file-sizes">File Size</a> datatype.</p>
+</div>
+<div class="paragraph">
+<p>We can take this one step further and use the values returned to calculate new metrics about our clusters.
+When performing a healthcheck it&#8217;s be useful to know the memory utilization for each cluster.
+There are two columns that can be used to calculate this: <code>memory_free</code> and <code>memory_total</code>.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 localdev in 🗄 travel-sample._default._default
+&gt;  nodes --clusters * | each {|n| $n | insert utilization ((($n.memory_total - $n.memory_free) / $n.memory_total) * 100 ) } | select cluster utilization | sort-by utilization --reverse
+╭───┬────────────┬─────────────╮
+│ # │  cluster   │ utilization │
+├───┼────────────┼─────────────┤
+│ 0 │ localdev   │       54.32 │
+│ 1 │ localdev   │       54.32 │
+│ 2 │ localdev   │       54.28 │
+│ 3 │ ci         │       10.71 │
+│ 4 │ ci         │       10.60 │
+│ 5 │ ci         │       10.50 │
+│ 6 │ prod       │        7.61 │
+│ 7 │ systemtest │        7.59 │
+│ 8 │ prod       │        7.52 │
+│ 9 │ prod       │        7.49 │
+╰───┴────────────┴─────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>For <a href="https://www.nushell.sh/commands/docs/each.html">each</a> of the nodes we add a new column called utilization and we calculate the percentage disk used with:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>(($n.memory_total - $n.memory_free) / $n.memory_total) * 100</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Finally we <a href="https://www.nushell.sh/commands/docs/sort-by.html">sort-by</a> descending utilization.</p>
+</div>
+<div class="paragraph">
+<p>Now that we understand the resources being used by our cluster we can use this information to aid us when deploying a new bucket.
+Imagine that we want to create a 1GB bucket on any one of our clusters.
+We can use <code>nodes</code> to find the cluster with the most free memory and create the bucket there:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 localdev in 🗄 travel-sample._default._default
+&gt; nodes --clusters * | sort-by memory_free --reverse | first | get cluster | buckets create BigBucket 1000 --clusters $in</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Here we have fetched the nodes for all the registered clusters, sorted by the descending amount of <code>memory_free</code> and got the cluster name.
+Then we pipe the cluster name into <code>buckets create</code> command, using <code>$in</code> to access the piped value, and since no error is returned it is a success.
+To double check the success and see where our bucket was created we can do:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 localdev in 🗄 travel-sample._default._default
+&gt; buckets --clusters a* | where name == &quot;BigBucket&quot;
+╭───┬─────────┬───────────┬───────────┬──────────┬──────────────────────┬────────────┬───────────────┬───────┬────────────╮
+│ # │ cluster │   name    │   type    │ replicas │ min_durability_level │ ram_quota  │ flush_enabled │ cloud │ max_expiry │
+├───┼─────────┼───────────┼───────────┼──────────┼──────────────────────┼────────────┼───────────────┼───────┼────────────┤
+│ 0 │ prod    │ BigBucket │ couchbase │        1 │ none                 │ 1000.0 MiB │ false         │ true  │          0 │
+╰───┴─────────┴───────────┴───────────┴──────────┴──────────────────────┴────────────┴───────────────┴───────┴────────────╯</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_moving_data_between_clusters">3. Moving data between clusters</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>CBShell allows data to be moved between clusters, along with buckets, scopes and collections.
+Imagine you have 2 clusters, one self-managed (named local) and a Capella cluster called remote:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+&gt; cb-env managed
+╭───┬────────┬───────┬────────────┬───────────────┬──────────────────────┬─────────────────╮
+│ # │ active │  tls  │ identifier │   username    │ capella_organization │     project     │
+├───┼────────┼───────┼────────────┼───────────────┼──────────────────────┼─────────────────┤
+│ 0 │ false  │ true  │ remote     │ Administrator │ my-org               │ CBShell Testing │
+│ 1 │ true   │ false │ local      │ Administrator │                      │                 │
+╰───┴────────┴───────┴────────────┴───────────────┴──────────────────────┴─────────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>remote</code> cluster is empty while <code>local</code> contains two buckets with scopes and collections containing data:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+&gt; buckets
+╭───┬─────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬───────┬────────────╮
+│ # │ cluster │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ cloud │ max_expiry │
+├───┼─────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼───────┼────────────┤
+│ 0 │ local   │ beer-sample   │ couchbase │        1 │ none                 │ 200.0 MiB │ false         │ false │          0 │
+│ 1 │ local   │ travel-sample │ couchbase │        1 │ none                 │ 200.0 MiB │ false         │ false │          0 │
+╰───┴─────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴───────┴────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The first thing to do is to recreate all of the buckets that we have on the <code>local</code> cluster on the <code>remote</code> cluster:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; buckets | each {|in| buckets create $in.name ($in.ram_quota / 1MB | into int)  --clusters remote --replicas 1}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Here we simply get all of the buckets, then iterate over the list with <a href="https://www.nushell.sh/commands/docs/each.html">each</a> and create buckets with the same name and ram quota, specifying the <code>remote</code> cluster with the <a href="https://couchbase.sh/docs/#_the_clusters_flag">--clusters</a> flag.
+Since the value for the ram quote is returned in bytes from <code>buckets</code> we convert it to MiB by dividing by nushell&#8217;s 1MB <a href="https://www.nushell.sh/book/types_of_data.html#file-sizes">FileSize</a> datatype.
+We can check that this has worked by running the <code>buckets</code> command against the remote cluster:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+&gt; buckets --clusters remote
+╭───┬─────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬───────┬────────────╮
+│ # │ cluster │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ cloud │ max_expiry │
+├───┼─────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼───────┼────────────┤
+│ 0 │ remote  │ beer-sample   │ couchbase │        1 │ none                 │ 209.0 MiB │ false         │ true  │          0 │
+│ 1 │ remote  │ travel-sample │ couchbase │        1 │ none                 │ 209.0 MiB │ false         │ true  │          0 │
+╰───┴─────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴───────┴────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Next we need to create all of the scopes within these buckets.
+First we get all the buckets again on the <code>local</code> cluster, then for each of the buckets we get the scopes:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+&gt; buckets | each {|bckt| scopes --bucket $bckt.name | where scope not-in [_default _system] | get scope}
+╭───┬─────────────────────────╮
+│ 0 │ ╭───┬───────╮           │
+│   │ │ 0 │ Cafes │           │
+│   │ ╰───┴───────╯           │
+│ 1 │ ╭───┬─────────────────╮ │
+│   │ │ 0 │ inventory       │ │
+│   │ │ 1 │ tenant_agent_00 │ │
+│   │ │ 2 │ tenant_agent_01 │ │
+│   │ │ 3 │ tenant_agent_02 │ │
+│   │ │ 4 │ tenant_agent_03 │ │
+│   │ │ 5 │ tenant_agent_04 │ │
+│   │ ╰───┴─────────────────╯ │
+╰───┴─────────────────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Here we iterate over each of the buckets and call <code>scopes</code> with the <code>--bucket</code> flag to get the scopes from each of them.
+Then we use  <a href="https://www.nushell.sh/commands/docs/where.html">where</a> and <a href="https://www.nushell.sh/book/operators.html">not-in</a> operators to filter out the <code>_default</code> and <code>_system</code> scopes, since these are empty.
+Note for the purposes of this demo we have moved the data in beer-sample out of the default scope and collection into the Cafes scope and Breweries collection.</p>
+</div>
+<div class="paragraph">
+<p>Now that we have listed all the scopes in the buckets, we can amended the previous command to use <code>scopes create</code> to create the scopes on the remote cluster:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+&gt; buckets | each {|bckt| scopes --bucket $bckt.name | where scope not-in [_default _system] | get scope | each {|scp| scopes create $scp --clusters remote --bucket $bckt.name}}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Here we have run the same command to list all the scopes, then for each scope we create one of the same name in the corresponding bucket on the <code>remote</code> cluster.</p>
+</div>
+<div class="paragraph">
+<p>The final step is to do the same with the collections:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+&gt; buckets | each {|bckt| scopes --bucket $bckt.name | where scope not-in [_default _system] | get scope | each {|scp| collections --scope $scp --bucket $bckt.name | get collection | each {|col| collections create $col --bucket $bckt.name --scope $scp --clusters remote}}}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Here we have fetched the <code>buckets</code>, and for each bucket fetched the <code>scopes</code> and finally for each of the scopes we have fetched the <code>collections</code>.
+Then for each of the collections in a bucket/scope we re-create it on the remote cluster in the corresponding buckets/scope.</p>
+</div>
+<div class="paragraph">
+<p>Before we copy our data over to our new collections we also want to migrate our indexes across.
+The first step to doing this is to list all of the index definitions on the <code>local</code> cluster as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+&gt; query indexes --definitions | where name != '#primary'
+╭────┬───────────────┬───────────┬────────────┬───────────────────────────────────────┬────────┬──────────────┬──────────┬────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┬─────╮
+│  # │    bucket     │   scope   │ collection │                 name                  │ status │ storage_mode │ replicas │                                                     definition                                                     │ ... │
+├────┼───────────────┼───────────┼────────────┼───────────────────────────────────────┼────────┼──────────────┼──────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼─────┤
+│  0 │ beer-sample   │ _default  │ _default   │ beer_primary                          │ Ready  │ plasma       │        0 │ CREATE PRIMARY INDEX `beer_primary` ON `beer-sample` WITH {  &quot;defer_build&quot;:true }                                  │ ... │
+│  1 │ travel-sample │ _default  │ _default   │ def_airportname                       │ Ready  │ plasma       │        0 │ CREATE INDEX `def_airportname` ON `travel-sample`(`airportname`) WITH {  &quot;defer_build&quot;:true }                      │ ... │
+│ .. │      ...      │    ...    │     ...    │                  ...                  │   ...  │      ...     │    ...   │                                                         ...                                                        │ ... │
+│ 23 │ travel-sample │ _default  │ _default   │ def_type                              │ Ready  │ plasma       │        0 │ CREATE INDEX `def_type` ON `travel-sample`(`type`) WITH {  &quot;defer_build&quot;:true }                                    │ ... │
+╰────┴───────────────┴───────────┴────────────┴───────────────────────────────────────┴────────┴──────────────┴──────────┴────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┴─────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Here we use <a href="https://couchbase.sh/docs/#_query_commands">query</a> with the definitions flag to fetch all of the query definitions on the active cluster.
+Then we have used <code>where</code> to filter out all of the primary indexes as these were already created when we created the buckets on the Capella cluster.</p>
+</div>
+<div class="paragraph">
+<p>Now we can <a href="https://www.nushell.sh/commands/docs/select.html">select</a> the definition column and iterate over the definitions, using <code>query</code> to re-create the indexes on the <code>remote</code> cluster:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+&gt; query indexes --definitions | where name != '#primary' | get definition | each {|def| query $def --clusters remote}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The final step is to copy the data from each bucket/scope/collection from the <code>local</code> cluster into the corresponding bucket/scope/collection on the <code>remote</code> cluster:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; buckets | each {|bckt| scopes --bucket $bckt.name | where scope not-in [_default _system] | get scope | each {|scp| collections --scope $scp --bucket $bckt.name | get collection | each {|col| &quot;SELECT meta().id, * FROM `&quot; + $bckt.name + &quot;`.&quot; + $scp + &quot;.&quot; + $col | query $in | if $in != null {$in | reject cluster | rename id content | doc upsert --bucket $bckt.name --scope $scp --collection $col --clusters remote}}}}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Here we have the same nested <code>each</code> loops that get the scopes for each bucket then the collections contained within each scope.
+We then use the bucket/scope and collection to construct a query:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&quot;SELECT meta().id, * FROM `&quot; + $bckt.name + &quot;`.&quot; + $scp + &quot;.&quot; + $col</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>So when the bucket is <code>travel-sample</code> the scope <code>inventory</code> and the collection <code>airline</code> the above will give:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&quot;SELECT meta().id, * FROM `travel-sample`.inventory.airline&quot;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>We run each of these queries using the <code>query</code> command, and pipe the output into the final section of our command:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>if $in != null {$in | reject cluster | rename id content | doc upsert --bucket $bckt.name --scope $scp --collection $col --clusters remote}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>To understand what we are doing here you need to know what format the data being output by our queries is in.
+If the query run is the example given above then the output will look like this:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>╭─────┬───────────────┬────────────────────────────────────────────────────────┬─────────╮
+│   # │      id       │                        airline                         │ cluster │
+├─────┼───────────────┼────────────────────────────────────────────────────────┼─────────┤
+│   0 │ airline_10    │ ╭──────────┬───────────────╮                           │ local   │
+│     │               │ │ id       │ 10            │                           │         │
+│     │               │ │ type     │ airline       │                           │         │
+│     │               │ │ name     │ 40-Mile Air   │                           │         │
+│     │               │ │ iata     │ Q5            │                           │         │
+│     │               │ │ icao     │ MLA           │                           │         │
+│     │               │ │ callsign │ MILE-AIR      │                           │         │
+│     │               │ │ country  │ United States │                           │         │
+│     │               │ ╰──────────┴───────────────╯                           │         │
+│ ... │      ...      │                           ...                          │   ...   │
+│ 186 │ airline_9833  │ ╭──────────┬───────────────╮                           │ local   │
+│     │               │ │ id       │ 9833          │                           │         │
+│     │               │ │ type     │ airline       │                           │         │
+│     │               │ │ name     │ Epic Holiday  │                           │         │
+│     │               │ │ iata     │ FA            │                           │         │
+│     │               │ │ icao     │ 4AA           │                           │         │
+│     │               │ │ callsign │ Epic          │                           │         │
+│     │               │ │ country  │ United States │                           │         │
+│     │               │ ╰──────────┴───────────────╯                           │         │
+╰─────┴───────────────┴────────────────────────────────────────────────────────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Before we can insert this into out <code>remote</code> cluster using <a href="https://couchbase.sh/docs/#_mutating">doc upsert</a> we need it to be correctly <a href="https://couchbase.sh/docs/#_a_note_on_data_format">formatted</a>.
+But before we try to reformat any of the data we make sure that the query not returned null with <code>if $in != null</code> since trying to manipulate a null value will return an error.
+The formatting required is to drop the cluster column which we do using <a href="https://www.nushell.sh/commands/docs/reject.html">reject</a> then rename the column named after the collection, in this case <code>airline</code> to <code>content</code> which we do using <a href="https://www.nushell.sh/commands/docs/rename.html">rename</a>.
+After the formatting has been applied to the above example it would become:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>╭─────┬───────────────┬────────────────────────────────────────────────────────╮
+│   # │      id       │                        content                         │
+├─────┼───────────────┼────────────────────────────────────────────────────────┤
+│   0 │ airline_10    │ ╭──────────┬───────────────╮                           │
+│     │               │ │ id       │ 10            │                           │
+│     │               │ │ type     │ airline       │                           │
+│     │               │ │ name     │ 40-Mile Air   │                           │
+│     │               │ │ iata     │ Q5            │                           │
+│     │               │ │ icao     │ MLA           │                           │
+│     │               │ │ callsign │ MILE-AIR      │                           │
+│     │               │ │ country  │ United States │                           │
+│     │               │ ╰──────────┴───────────────╯                           │
+│ ... │      ...      │                           ...                          │
+│ 186 │ airline_9833  │ ╭──────────┬───────────────╮                           │
+│     │               │ │ id       │ 9833          │                           │
+│     │               │ │ type     │ airline       │                           │
+│     │               │ │ name     │ Epic Holiday  │                           │
+│     │               │ │ iata     │ FA            │                           │
+│     │               │ │ icao     │ 4AA           │                           │
+│     │               │ │ callsign │ Epic          │                           │
+│     │               │ │ country  │ United States │                           │
+│     │               │ ╰──────────┴───────────────╯                           │
+╰─────┴───────────────┴────────────────────────────────────────────────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Now that our data is correctly formatted it can be piped into <code>doc upsert</code> and using the appropriate flags upserted into the corresponding bucket/scope/collection on our <code>remote</code> cluster.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_similarity_search">4. Similarity Search</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The <a href="https://couchbase.sh/docs/#_vector_commands">vector commands</a> can be used to enrich your existing data and allow you to experiment with the value that similarity search can add.
+Before you can follow this recipe you&#8217;ll need to <a href="https://couchbase.sh/docs/#_cb_env_llm">configure a llm</a> for use with the shell.</p>
 </div>
 <div class="paragraph">
 <p>Next you&#8217;ll need a set of data, for this example we&#8217;ll be using the travel-sample data set that you can load with:</p>
@@ -68,12 +574,12 @@ Embedding batch 3/3
 </div>
 </div>
 <div class="paragraph">
-<p>Here we have used <a href="#_query">query</a> to get all the landmark doc ids and bodies.
-Then we have enriched all of these with the embedding generated from the <code>content</code> field, see <a href="#_vector_enrich_doc">vector enrich-doc</a> for details.
-Finally we pipe the output directly into <a href="#_mutating">doc upsert</a> to overwrite the original landmark documents with our enriched versions.</p>
+<p>Here we have used <a href="https://couchbase.sh/docs/#_query_commands">query</a> to get all the landmark doc ids and bodies.
+Then we have enriched all of these with the embedding generated from the <code>content</code> field, see <a href="https://couchbase.sh/docs/#_vector_enrich_doc">vector enrich-doc</a> for details.
+Finally we pipe the output directly into <a href="https://couchbase.sh/docs/#_mutating">doc upsert</a> to overwrite the original landmark documents with our enriched versions.</p>
 </div>
 <div class="paragraph">
-<p>Now that we have a set of docs containing vectors we can create a vector index over them using <a href="#_vector_create_index">vector create-index</a>:</p>
+<p>Now that we have a set of docs containing vectors we can create a vector index over them using <a href="https://couchbase.sh/docs/#_vector_create_index">vector create-index</a>:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -83,7 +589,7 @@ Finally we pipe the output directly into <a href="#_mutating">doc upsert</a> to 
 </div>
 <div class="paragraph">
 <p>Once the index has finished building we can use it to perform similarity searches over all of the contentVector fields.
-This is done using the <a href="#_vector_search">vector search</a> command as follows:</p>
+This is done using the <a href="https://couchbase.sh/docs/#_vector_search">vector search</a> command as follows:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -101,7 +607,7 @@ This is done using the <a href="#_vector_search">vector search</a> command as fo
 </div>
 </div>
 <div class="paragraph">
-<p>Here we have used <a href="#_subdoc_get">subdoc get</a> to get the contentVector field from <code>landmark_10019</code>, which is why the most similar result is <code>landmark_10019</code> the vector is the same.
+<p>Here we have used <a href="https://couchbase.sh/docs/#_subdoc_get">subdoc get</a> to get the contentVector field from <code>landmark_10019</code>, which is why the most similar result is <code>landmark_10019</code>: the vector is the same.
 Once we have this list of results from the vector search we can use the ids to inspect the source documents:</p>
 </div>
 <div class="listingblock">
@@ -146,11 +652,11 @@ Once we have this list of results from the vector search we can use the ids to i
 </div>
 </div>
 <div class="paragraph">
-<p>Here we could have used <a href="#_reading">doc get</a> to get the whole of the documents, but to keep things tidy we&#8217;ve used another <code>subdoc get</code> to retrieved the name, address and content fields.
+<p>Here we could have used <a href="https://couchbase.sh/docs/#_reading">doc get</a> to get the whole of the documents, but to keep things tidy we&#8217;ve used another <code>subdoc get</code> to retrieved the name, address and content fields.
 As you can see by examining the results they all have semantically similar content fields.</p>
 </div>
 <div class="paragraph">
-<p>Another way that CBShell can be used to generate embeddings is from plain text with <a href="#_vector_enrich_text">vector enrich-text</a>:</p>
+<p>Another way that CBShell can be used to generate embeddings is from plain text with <a href="https://couchbase.sh/docs/#_vector_enrich_text">vector enrich-text</a>:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -172,18 +678,217 @@ Embedding batch 1/1
 <div class="paragraph">
 <p>Here we have done another similarity search using the same index, but our source vector is the result of embedding the phrase "physical exercise".
 One important detail to remeber is that the embedding generated from <code>vector enrich-text</code> must have the same dimension as those over which the index was created, otherwise <code>vector search</code> will return no results.
-See <a href="#_vector_enrich-text">vector enrich-text</a> for how to specify the dimension of the generated embeddings.</p>
+See <a href="https://couchbase.sh/docs/#_vector_enrich_text">vector enrich-text</a> for how to specify the dimension of the generated embeddings.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_useful_snippets">2. Useful snippets</h2>
+<h2 id="_simple_rag">5. Simple RAG</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Couchbase Shell&#8217;s <a href="https://couchbase.sh/docs/#_vector_commands">vector commands</a> along with <a href="https://couchbase.sh/docs/#_ask">ask</a> can be used to implement simple Retrieval Augmented Generation, more commonly know as RAG.
+In this process similarity search is used over chunks of a larger body of text to contextualise questions sent to a Large Language model to improve the answers given.
+For this demo we will use a text version of the Couchbase Shell docs as the source text for our chunks of data we have this stored locally as a text file.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in 🗄 RagChunks._default._default
+&gt; ls
+╭───┬──────────────────────────┬──────┬───────────┬────────────────╮
+│ # │           name           │ type │   size    │    modified    │
+├───┼──────────────────────────┼──────┼───────────┼────────────────┤
+│ 0 │ Couchbase_Shell_Docs.txt │ file │ 210.9 KiB │ 39 seconds ago │
+╰───┴──────────────────────────┴──────┴───────────┴────────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>First we need to split the file into chunks, and generating an embedding from all of the chunks.
+Fortunately <a href="https://couchbase.sh/docs/#_vector_enrich_text">vector enrich-text</a> can do all of this for us.
+It can takes the output of <code>ls</code> as input and read one or more text documents, before chunking them and generating embeddings using the <a href="https://couchbase.sh/docs/#_cb_env_llm">registered llm</a>.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in 🗄 RagChunks._default._default
+&gt; ls | vector enrich-text | first
+Embedding batch 1/1
+╭─────────┬─────────────────────────────────────────────────────────────────╮
+│ id      │ vector-18fe29                                                   │
+│         │ ╭────────┬────────────────────────────────────────────────────╮ │
+│ content │ │ text   │ META TAG (title): Couchbase Shell Documentation    │ │
+│         │ │        │                                                    │ │
+│         │ │        │ Couchbase Shell Documentation                      │ │
+│         │ │        │                                                    │ │
+│         │ │        │ (c) Copyright 2021, All Rights Reserved            │ │
+│         │ │        │                                                    │ │
+│         │ │        │ Table of Contents                                  │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 1. Quickstart                                    │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 1.1. Installation                                │ │
+│         │ │        │ • 1.2. Connecting to a Cluster                     │ │
+│         │ │        │ • 1.3. The config dotfiles                         │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 2. Introduction                                  │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 2.1. Navigating the Shell                        │ │
+│         │ │        │ • 2.2. Getting Help                                │ │
+│         │ │        │ • 2.3. The Prompt explained                        │ │
+│         │ │        │ • 2.4. Loading Data into the Shell                 │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 2.4.1. Doc import                                │ │
+│         │ │        │ • 2.4.2. Manual import                             │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 2.5. Exporting Data from the Shell               │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 3. cb-env and the Environment                    │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 3.1. cb-env cluster                              │ │
+│         │ │        │ • 3.2. cb-env bucket/scope/collection              │ │
+│         │ │        │ • 3.3. cb-env project/capella-organization         │ │
+│         │ │        │ • 3.4. cb-env register                             │ │
+│         │ │        │ • 3.5. cb-env llm                                  │ │
+│         │ │        │ • 3.6. Per command execution environments          │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 3.6.1. The --clusters flag                       │ │
+│         │ │        │ • 3.6.2. The --bucket, --scope, --collection flags │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 4. Couchbase Commands                            │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 4.1. Working with clusters                       │ │
+│         │ │        │ • 4.2. Working with buckets                        │ │
+│         │ │        │ • 4.3. Working with scopes and collections         │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 4.3.1. Scopes                                    │ │
+│         │ │        │ • 4.3.2. Collections                               │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 4.4. Listing nodes                               │ │
+│         │ │        │ • 4.5. Reading and Writing `doc`uments             │ │
+│         │ │        │                                                    │ │
+│         │ │        │ • 4.5.1. Reading                                   │ │
+│         │ │        │ • 4.5.2. Mutating                                  │ │
+│         │ │        │ • 4.5.3. Remov                                     │ │
+│         │ │        │ ╭──────┬───────╮                                   │ │
+│         │ │ vector │ │    0 │ -0.00 │                                   │ │
+│         │ │        │ │  ... │  ...  │                                   │ │
+│         │ │        │ │ 1535 │ -0.02 │                                   │ │
+│         │ │        │ ╰──────┴───────╯                                   │ │
+│         │ ╰────────┴────────────────────────────────────────────────────╯ │
+╰─────────┴─────────────────────────────────────────────────────────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><code>vector enrich-text</code> will create a <code>vector doc</code> for each of the text chunks, these docs contain the original chunk of text along with the embedding generated from it.
+These docs are <a href="https://couchbase.sh/docs/#_a_note_on_data_format">formatted</a> so that they can be piped directly into <a href="https://couchbase.sh/docs/#_mutating">doc upsert</a> to store them in the active Couchbase Cluster.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ RagChunks._default._default
+&gt; ls | vector enrich-text | doc upsert
+Embedding batch 1/1
+╭───┬───────────┬─────────┬────────┬──────────┬─────────╮
+│ # │ processed │ success │ failed │ failures │ cluster │
+├───┼───────────┼─────────┼────────┼──────────┼─────────┤
+│ 0 │       152 │     152 │      0 │          │ remote  │
+╰───┴───────────┴─────────┴────────┴──────────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>We can see from the output of <code>doc upsert</code> that the 152 vector docs have been successfully uploaded to the active bucket named <code>RagChunks</code>.
+Next we use <a href="https://couchbase.sh/docs/#_vector_create_index">vector create-index</a> to create a vector index over our new vector docs:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ RagChunks._default._default
+&gt; vector create-index cbsh-docs-index vector 1536</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>See the previous link of a detailed explanation of this command.</p>
+</div>
+<div class="paragraph">
+<p>Now that we have created and indexed our vector docs we can take a look at the final command we will use: <a href="https://couchbase.sh/docs/#_ask">ask</a>.
+If we were to ask the active llm a specific question about one of the vector commands used in this recipe it would give an answer, just not a very good one:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ RagChunks._default._default
+&gt; ask &quot;How do I use the vector enrich-text command?&quot;
+I'm sorry, but I'm not familiar with a specific command called &quot;vector enrich-text.&quot; It's possible that this command is specific to a certain programming language, software, or tool.
+
+If you provide me with more context or details about where you encountered this command, I might be able to help you better. Feel free to share more information so I can assist you accordingly.</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>However this is to be expected, since the model we are using was trained before these commands existed, so how would it know?
+What we can do is take the question being asked, generate an embedding from it and use that embedding to find some similar chunks in the the documentation:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ RagChunks._default._default
+&gt; let $question = &quot;How do I use the vector enrich-text command?&quot;
+👤 Charlie 🏠 remote in ☁️ RagChunks._default._default
+&gt; $question | vector enrich-text | vector search cbsh-docs-index vector --neighbors 5
+Embedding batch 1/1
+╭───┬───────────────┬───────────┬─────────╮
+│ # │      id       │   score   │ cluster │
+├───┼───────────────┼───────────┼─────────┤
+│ 0 │ vector-897825 │ 1.4923782 │ remote  │
+│ 1 │ vector-f9fdb3 │ 1.4744251 │ remote  │
+│ 2 │ vector-a10b29 │ 1.457908  │ remote  │
+│ 3 │ vector-260f27 │ 1.3271111 │ remote  │
+│ 4 │ vector-0b01e8 │ 1.3185736 │ remote  │
+╰───┴───────────────┴───────────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>First we store the question in a <a href="https://www.nushell.sh/book/variables.html">variable</a> to avoid typing it repeatedly.
+The we use the question to generate an embedding which we then pipe to <a href="https://couchbase.sh/docs/#_vector_search">vector search</a>.
+This returns the vector docs with the most semantically similar chunks to our question.</p>
+</div>
+<div class="paragraph">
+<p>Using the returned doc ids we can use the <a href="https://couchbase.sh/docs/#_subdoc_get">subdoc get</a> command to retrieve the chunks.
+These chunks can then be piped directly into <code>ask</code> where they will be used to contextualise the question:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ RagChunks._default._default
+&gt; $question | vector enrich-text | vector search cbsh-docs-index vector --neighbors 5 | subdoc get text | select content | ask $question
+Embedding batch 1/1
+To use the `vector enrich-text` command, follow these steps:
+
+1. Open the command-line interface where you can interact with the Couchbase shell.
+
+2. Run the `vector enrich-text` command followed by the text you want to generate embeddings for. Here is the basic structure:
+
+&gt; vector enrich-text &quot;some string&quot;
+
+3. Optionally, you can provide additional flags to customize the behavior of the command. Some of the available flags include:
+   - `--dimension &lt;Int&gt;`: Specify the dimension of the resulting embeddings.
+   - `--model &lt;String&gt;`: Choose the model to generate the embeddings with.
+   - `--maxTokens &lt;Int&gt;`: Set the token per minute limit for the provider/model.
+   - `--vectorField &lt;String&gt;`: Define the name of the field into which the embedding is written.
+
+4. After running the command, you will receive the embeddings generated from the input text as output.
+
+5. You can further process or store these embeddings, for example, by piping the output into another command or action.
+
+Remember to consult the available flags and options for more customization and flexibility when using the `vector enrich-text` command.</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This allows <code>ask</code> to produce a much more accurate and informative answer using the context it was given.
+Changing the size of the chunks, number og neighbours returned as well as the dimension of the embeddings can all have an impact on the result of RAG, and <code>cbsh</code> should help experimenting with these variables quick and easy.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_useful_snippets">6. Useful snippets</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>This section contains a collection of useful commands and sets of commands which don&#8217;t really fit into their own section of recipes.</p>
 </div>
 <div class="sect2">
-<h3 id="_migrating_scope_and_collection_definitions">2.1. Migrating scope and collection definitions</h3>
+<h3 id="_migrating_scope_and_collection_definitions">6.1. Migrating scope and collection definitions</h3>
 <div class="paragraph">
 <p>When you create a new cluster it can be useful to migrate scope and collection definitions from an old cluster.
 A good example here is migrating from an on-premise cluster to a Capella cluster.</p>
@@ -210,7 +915,7 @@ For example to filter more scopes you would just add more <code>where</code> cla
 </div>
 </div>
 <div class="sect2">
-<h3 id="_migrating_query_index_definitions">2.2. Migrating query index definitions</h3>
+<h3 id="_migrating_query_index_definitions">6.2. Migrating query index definitions</h3>
 <div class="paragraph">
 <p>When you create a new cluster it can be useful to migrate index definitions from an old cluster.
 A good example here is migrating from an on-premise cluster to a Capella cluster.</p>
@@ -229,7 +934,7 @@ A good example here is migrating from an on-premise cluster to a Capella cluster
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-09-03 18:14:44 UTC
+Last updated 2024-09-10 10:58:59 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
