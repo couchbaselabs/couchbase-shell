@@ -124,9 +124,10 @@
 </li>
 <li><a href="#_release_notes">6. Release Notes</a>
 <ul class="sectlevel2">
-<li><a href="#_0_75_2_2023_04_10">6.1. 0.75.2 - 2023-04-10</a></li>
-<li><a href="#_0_75_1_2023_04_13">6.2. 0.75.1 - 2023-04-13</a></li>
-<li><a href="#_0_75_0_2023_02_09">6.3. 0.75.0 - 2023-02-09</a></li>
+<li><a href="#_1_0_0_2024_09_11">6.1. 1.0.0 - 2024-09-11</a></li>
+<li><a href="#_0_75_2_2023_04_10">6.2. 0.75.2 - 2023-04-10</a></li>
+<li><a href="#_0_75_1_2023_04_13">6.3. 0.75.1 - 2023-04-13</a></li>
+<li><a href="#_0_75_0_2023_02_09">6.4. 0.75.0 - 2023-02-09</a></li>
 </ul>
 </li>
 </ul>
@@ -157,7 +158,7 @@ We are providing community support through this <a href="https://github.com/couc
 <div class="sect2">
 <h3 id="_installation">1.1. Installation</h3>
 <div class="paragraph">
-<p>The current latest version is <strong>0.92</strong>. The version of <code>cbsh</code> is kept in line with the underlying version of nushell that is supported.</p>
+<p>The current latest version is <strong>1.0.0</strong>.</p>
 </div>
 <div class="paragraph">
 <p>There are a couple ways you can get access to <code>cbsh</code>, the easiest one is to download our pre-built binaries for your platform of choice:</p>
@@ -165,19 +166,19 @@ We are providing community support through this <a href="https://github.com/couc
 <div class="ulist">
 <ul>
 <li>
-<p>Linux: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.1/cbsh-x86_64-unknown-linux-gnu.tar.gz">cbsh-x86_64-unknown-linux-gnu.tar.gz</a></p>
+<p>Linux: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0/cbsh-x86_64-unknown-linux-gnu.tar.gz">cbsh-x86_64-unknown-linux-gnu.tar.gz</a></p>
 </li>
 <li>
-<p>macOS: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.1/cbsh-x86_64-apple-darwin.zip">cbsh-x86_64-apple-darwin.zip</a></p>
+<p>macOS: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0/cbsh-x86_64-apple-darwin.zip">cbsh-x86_64-apple-darwin.zip</a></p>
 </li>
 <li>
-<p>Linux aarch64: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.1/cbsh-aarch64-unknown-linux-gnu.tar.gz">cbsh-aarch64-unknown-linux-gnu.tar.gz</a></p>
+<p>Linux aarch64: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0/cbsh-aarch64-unknown-linux-gnu.tar.gz">cbsh-aarch64-unknown-linux-gnu.tar.gz</a></p>
 </li>
 <li>
-<p>macOS aarch64: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.1/cbsh-aarch64-apple-darwin.zip">cbsh-aarch64-apple-darwin.zip</a></p>
+<p>macOS aarch64: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0/cbsh-aarch64-apple-darwin.zip">cbsh-aarch64-apple-darwin.zip</a></p>
 </li>
 <li>
-<p>Windows: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v0.75.1/cbsh-x86_64-pc-windows-msvc.zip">cbsh-x86_64-pc-windows-msvc.zip</a></p>
+<p>Windows: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0/cbsh-x86_64-pc-windows-msvc.zip">cbsh-x86_64-pc-windows-msvc.zip</a></p>
 </li>
 </ul>
 </div>
@@ -198,7 +199,7 @@ cbsh LICENSE LICENSE_AGREEMENT  README.md</code></pre>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>❯ ./cbsh --version
-The Couchbase Shell 0.75.1</code></pre>
+The Couchbase Shell 1.0.0</code></pre>
 </div>
 </div>
 <div class="admonitionblock tip">
@@ -3218,7 +3219,65 @@ Couterne,Bagnole-de-l'orne,France,,,,,LFAO,1257,airport,Europe/Paris,local</code
 <h2 id="_release_notes">6. Release Notes</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_0_75_2_2023_04_10">6.1. 0.75.2 - 2023-04-10</h3>
+<h3 id="_1_0_0_2024_09_11">6.1. 1.0.0 - 2024-09-11</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Nushell pinned to 0.95</p>
+</li>
+<li>
+<p>Added <code>vector</code> commands</p>
+</li>
+<li>
+<p>Added support for bucket creation/management on Capella clusters</p>
+</li>
+<li>
+<p>Added support for loading sample data onto Capella clusters</p>
+</li>
+<li>
+<p>Added support for sub doc reads</p>
+</li>
+<li>
+<p>Added integration with large language models from Google, AWS and OpenAI</p>
+</li>
+<li>
+<p>Added support for named and positional query parameters</p>
+</li>
+<li>
+<p>Support document ids being ints for <code>doc</code> commands</p>
+</li>
+<li>
+<p>Support no expiry for collections</p>
+</li>
+<li>
+<p>Unset scope/collection when higher level entity changed</p>
+</li>
+<li>
+<p>Supports creation and management of Capella Clusters</p>
+</li>
+<li>
+<p>Added support for credential creation against Capella clusters</p>
+</li>
+<li>
+<p>Added support for creation of allowed CIDRs against Capella clusters</p>
+</li>
+<li>
+<p>Take username and password securely when using <code>cb-env register</code></p>
+</li>
+<li>
+<p>Added support for managing Capella projects</p>
+</li>
+<li>
+<p>Added support for listing Capella organizations</p>
+</li>
+<li>
+<p>Enable use of <code>$nu</code> inside scripts and commands passed to cbsh</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_0_75_2_2023_04_10">6.2. 0.75.2 - 2023-04-10</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -3231,7 +3290,7 @@ Couterne,Bagnole-de-l'orne,France,,,,,LFAO,1257,airport,Europe/Paris,local</code
 </div>
 </div>
 <div class="sect2">
-<h3 id="_0_75_1_2023_04_13">6.2. 0.75.1 - 2023-04-13</h3>
+<h3 id="_0_75_1_2023_04_13">6.3. 0.75.1 - 2023-04-13</h3>
 <div class="paragraph">
 <p><strong>This release contains a number of breaking changes, which are explicitly called out below.</strong>
 As our versioning continues to track the underlying Nushell minor version this has required breaking changes in a patch version.</p>
@@ -3333,7 +3392,7 @@ As our versioning continues to track the underlying Nushell minor version this h
 </div>
 </div>
 <div class="sect2">
-<h3 id="_0_75_0_2023_02_09">6.3. 0.75.0 - 2023-02-09</h3>
+<h3 id="_0_75_0_2023_02_09">6.4. 0.75.0 - 2023-02-09</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -3383,7 +3442,7 @@ As our versioning continues to track the underlying Nushell minor version this h
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-09-10 10:58:59 UTC
+Last updated 2024-09-11 06:51:57 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
