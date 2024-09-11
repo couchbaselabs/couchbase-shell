@@ -21,7 +21,12 @@
 <ul class="sectlevel1">
 <li><a href="#_quickstart">1. Quickstart</a>
 <ul class="sectlevel2">
-<li><a href="#_installation">1.1. Installation</a></li>
+<li><a href="#_installation">1.1. Installation</a>
+<ul class="sectlevel3">
+<li><a href="#_binaries">1.1.1. Binaries</a></li>
+<li><a href="#_homebrew">1.1.2. Homebrew</a></li>
+</ul>
+</li>
 <li><a href="#_connecting_to_a_cluster">1.2. Connecting to a Cluster</a></li>
 <li><a href="#_the_config_dotfiles">1.3. The config dotfiles</a></li>
 </ul>
@@ -42,55 +47,66 @@
 </li>
 <li><a href="#_cb_env_and_the_environment">3. <code>cb-env</code> and the Environment</a>
 <ul class="sectlevel2">
-<li><a href="#_cb_env_cluster">3.1. <code>cb-env cluster</code></a></li>
-<li><a href="#_cb_env_bucketscopecollection">3.2. <code>cb-env bucket/scope/collection</code></a></li>
-<li><a href="#_cb_env_projectcapella_organization">3.3. <code>cb-env project/capella-organization</code></a></li>
-<li><a href="#_cb_env_register">3.4. <code>cb-env register</code></a></li>
-<li><a href="#_cb_env_llm">3.5. <code>cb-env llm</code></a></li>
-<li><a href="#_per_command_execution_environments">3.6. Per command execution environments</a>
+<li><a href="#_cb_env_managed">3.1. <code>cb-env managed</code></a></li>
+<li><a href="#_cb_env_cluster">3.2. <code>cb-env cluster</code></a></li>
+<li><a href="#_cb_env_bucketscopecollection">3.3. <code>cb-env bucket/scope/collection</code></a></li>
+<li><a href="#_cb_env_projectcapella_organization">3.4. <code>cb-env project/capella-organization</code></a></li>
+<li><a href="#_cb_env_register">3.5. <code>cb-env register</code></a></li>
+<li><a href="#_cb_env_llm">3.6. <code>cb-env llm</code></a></li>
+<li><a href="#_per_command_execution_environments">3.7. Per command execution environments</a>
 <ul class="sectlevel3">
-<li><a href="#_the_clusters_flag">3.6.1. The <code>--clusters</code> flag</a></li>
-<li><a href="#_the_bucket_scope_collection_flags">3.6.2. The <code>--bucket</code>, <code>--scope</code>, <code>--collection</code> flags</a></li>
+<li><a href="#_the_clusters_flag">3.7.1. The <code>--clusters</code> flag</a></li>
+<li><a href="#_the_bucket_scope_collection_flags">3.7.2. The <code>--bucket</code>, <code>--scope</code>, <code>--collection</code> flags</a></li>
 </ul>
 </li>
 </ul>
 </li>
 <li><a href="#_couchbase_commands">4. Couchbase Commands</a>
 <ul class="sectlevel2">
-<li><a href="#_working_with_clusters">4.1. Working with <code>clusters</code></a></li>
-<li><a href="#_working_with_buckets">4.2. Working with <code>buckets</code></a></li>
-<li><a href="#_working_with_scopes_and_collections">4.3. Working with <code>scopes</code> and <code>collections</code></a>
+<li><a href="#_buckets">4.1. buckets</a>
 <ul class="sectlevel3">
-<li><a href="#_scopes">4.3.1. Scopes</a></li>
-<li><a href="#_collections">4.3.2. Collections</a></li>
+<li><a href="#_buckets_2">4.1.1. <code>buckets</code></a></li>
+<li><a href="#_buckets_config">4.1.2. <code>buckets config</code></a></li>
+<li><a href="#_buckets_create">4.1.3. <code>buckets create</code></a></li>
+<li><a href="#_buckets_drop">4.1.4. <code>buckets drop</code></a></li>
+<li><a href="#_buckets_flush">4.1.5. <code>buckets flush</code></a></li>
+<li><a href="#_buckets_get">4.1.6. <code>buckets get</code></a></li>
+<li><a href="#_buckets_load_sample">4.1.7. <code>buckets load-sample</code></a></li>
+<li><a href="#_buckets_update">4.1.8. <code>buckets update</code></a></li>
 </ul>
 </li>
-<li><a href="#_listing_nodes">4.4. Listing <code>nodes</code></a></li>
-<li><a href="#_reading_and_writing_documents">4.5. Reading and Writing `doc`uments</a>
+<li><a href="#_working_with_scopes_and_collections">4.2. Working with <code>scopes</code> and <code>collections</code></a>
 <ul class="sectlevel3">
-<li><a href="#_reading">4.5.1. Reading</a></li>
-<li><a href="#_mutating">4.5.2. Mutating</a></li>
-<li><a href="#_removing">4.5.3. Removing</a></li>
+<li><a href="#_scopes">4.2.1. Scopes</a></li>
+<li><a href="#_collections">4.2.2. Collections</a></li>
 </ul>
 </li>
-<li><a href="#_subdoc_get">4.6. <code>subdoc get</code></a></li>
-<li><a href="#_query_commands">4.7. <code>query</code> commands</a>
+<li><a href="#_listing_nodes">4.3. Listing <code>nodes</code></a></li>
+<li><a href="#_reading_and_writing_documents">4.4. Reading and Writing `doc`uments</a>
 <ul class="sectlevel3">
-<li><a href="#_query">4.7.1. <code>query</code></a></li>
-<li><a href="#_query_advise">4.7.2. <code>query advise</code></a></li>
-<li><a href="#_query_indexes">4.7.3. <code>query indexes</code></a></li>
+<li><a href="#_reading">4.4.1. Reading</a></li>
+<li><a href="#_mutating">4.4.2. Mutating</a></li>
+<li><a href="#_removing">4.4.3. Removing</a></li>
 </ul>
 </li>
-<li><a href="#_vector_commands">4.8. <code>vector</code> commands</a>
+<li><a href="#_subdoc_get">4.5. <code>subdoc get</code></a></li>
+<li><a href="#_query">4.6. query</a>
 <ul class="sectlevel3">
-<li><a href="#_vector_search">4.8.1. <code>vector search</code></a></li>
-<li><a href="#_vector_create_index">4.8.2. <code>vector create-index</code></a></li>
-<li><a href="#_vector_enrich_doc">4.8.3. <code>vector enrich-doc</code></a></li>
-<li><a href="#_vector_enrich_text">4.8.4. <code>vector enrich-text</code></a></li>
+<li><a href="#_query_2">4.6.1. <code>query</code></a></li>
+<li><a href="#_query_advise">4.6.2. <code>query advise</code></a></li>
+<li><a href="#_query_indexes">4.6.3. <code>query indexes</code></a></li>
 </ul>
 </li>
-<li><a href="#_ask">4.9. <code>ask</code></a></li>
-<li><a href="#_version">4.10. <code>version</code></a></li>
+<li><a href="#_vector_commands">4.7. <code>vector</code> commands</a>
+<ul class="sectlevel3">
+<li><a href="#_vector_search">4.7.1. <code>vector search</code></a></li>
+<li><a href="#_vector_create_index">4.7.2. <code>vector create-index</code></a></li>
+<li><a href="#_vector_enrich_doc">4.7.3. <code>vector enrich-doc</code></a></li>
+<li><a href="#_vector_enrich_text">4.7.4. <code>vector enrich-text</code></a></li>
+</ul>
+</li>
+<li><a href="#_ask">4.8. <code>ask</code></a></li>
+<li><a href="#_version">4.9. <code>version</code></a></li>
 </ul>
 </li>
 <li><a href="#_reference">5. Reference</a>
@@ -161,7 +177,12 @@ We are providing community support through this <a href="https://github.com/couc
 <p>The current latest version is <strong>1.0.0</strong>.</p>
 </div>
 <div class="paragraph">
-<p>There are a couple ways you can get access to <code>cbsh</code>, the easiest one is to download our pre-built binaries for your platform of choice:</p>
+<p>There are a couple ways you can get access to <code>cbsh</code>.</p>
+</div>
+<div class="sect3">
+<h4 id="_binaries">1.1.1. Binaries</h4>
+<div class="paragraph">
+<p>Download our pre-built binaries for your platform of choice:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -220,6 +241,27 @@ Next time you run the binary you&#8217;ll get another prompt but then it should 
 <div class="imageblock">
 <div class="content">
 <img src="mac-binary-unsigned.png" alt="macOS Warning" width="600">
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_homebrew">1.1.2. Homebrew</h4>
+<div class="paragraph">
+<p>If running on macOS you can install via the <a href="https://formulae.brew.sh/formula/couchbase-shell">homebrew</a> formula:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>$ brew install couchbase-shell</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Then run as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>$ cbsh --version
+1.0.0</code></pre>
+</div>
 </div>
 </div>
 </div>
@@ -880,9 +922,27 @@ Flags:
 </div>
 </div>
 <div class="sect2">
-<h3 id="_cb_env_cluster">3.1. <code>cb-env cluster</code></h3>
+<h3 id="_cb_env_managed">3.1. <code>cb-env managed</code></h3>
 <div class="paragraph">
-<p>This command is used to change the active cluster. The change of cluster will be reflected in the output of <code>cb-env</code> and the prompt:</p>
+<p>Lists all the clusters you have registered with the shell.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; cb-env managed
+╭───┬────────┬───────┬────────────┬───────────────┬──────────────────────╮
+│ # │ active │  tls  │ identifier │   username    │ capella_organization │
+├───┼────────┼───────┼────────────┼───────────────┼──────────────────────┤
+│ 0 │ true   │ false │ dev.local  │ Administrator │                      │
+│ 1 │ false  │ true  │ capella    │ charlie       │                      │
+╰───┴────────┴───────┴────────────┴───────────────┴──────────────────────╯</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_cb_env_cluster">3.2. <code>cb-env cluster</code></h3>
+<div class="paragraph">
+<p>Changes the active cluster.
+The change of cluster will be reflected in the output of <code>cb-env</code> and the prompt:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -918,7 +978,7 @@ Error:   × The cluster named unregistered is not known</code></pre>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_cb_env_bucketscopecollection">3.2. <code>cb-env bucket/scope/collection</code></h3>
+<h3 id="_cb_env_bucketscopecollection">3.3. <code>cb-env bucket/scope/collection</code></h3>
 <div class="paragraph">
 <p>The <code>cb-env bucket</code>, <code>cb-env scope</code> and <code>cb-env collection</code> commands are used to set the active bucket/scope/collection respectively.
 When changing the bucket/scope/collection the change will be reflected in the <a href="#_the_prompt_explained">prompt</a> and the output of the <a href="#_cb_env_and_the_environment">cb-env</a> command:</p>
@@ -974,7 +1034,7 @@ Setting the active bucket/scope/collection to one that doesn&#8217;t exist will 
 </div>
 </div>
 <div class="sect2">
-<h3 id="_cb_env_projectcapella_organization">3.3. <code>cb-env project/capella-organization</code></h3>
+<h3 id="_cb_env_projectcapella_organization">3.4. <code>cb-env project/capella-organization</code></h3>
 <div class="paragraph">
 <p>The highest level entity in Capella is the organization. Within this you have projects which in turn contain clusters.
 Although you can connect to a Capella cluster without it having an <a href="#_the_config_dotfiles">organization registered</a> an organization is required to perform management operations: creating/destroying projects/clusters/buckets.</p>
@@ -1013,7 +1073,7 @@ Error:   × Organization not registered
 </div>
 </div>
 <div class="sect2">
-<h3 id="_cb_env_register">3.4. <code>cb-env register</code></h3>
+<h3 id="_cb_env_register">3.5. <code>cb-env register</code></h3>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; cb-env register --help
@@ -1073,7 +1133,7 @@ Note that clusters created through the shell using <code>clusters create</code> 
 </div>
 </div>
 <div class="sect2">
-<h3 id="_cb_env_llm">3.5. <code>cb-env llm</code></h3>
+<h3 id="_cb_env_llm">3.6. <code>cb-env llm</code></h3>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; cb-env llm --help
@@ -1185,7 +1245,7 @@ api_key = &quot;get-your-own&quot;</code></pre>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_per_command_execution_environments">3.6. Per command execution environments</h3>
+<h3 id="_per_command_execution_environments">3.7. Per command execution environments</h3>
 <div class="paragraph">
 <p>On many commands you will notice a set of flags which allow you to override the active execution environment.
 Different commands support different flags, depending on the command you can expect to see any of:</p>
@@ -1207,7 +1267,7 @@ Different commands support different flags, depending on the command you can exp
 </ul>
 </div>
 <div class="sect3">
-<h4 id="_the_clusters_flag">3.6.1. The <code>--clusters</code> flag</h4>
+<h4 id="_the_clusters_flag">3.7.1. The <code>--clusters</code> flag</h4>
 <div class="paragraph">
 <p>The argument for this flag is an identifier combined with a regular expression.
 So imagine you have three clusters setup with the following names:</p>
@@ -1242,7 +1302,7 @@ So imagine you have three clusters setup with the following names:</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_the_bucket_scope_collection_flags">3.6.2. The <code>--bucket</code>, <code>--scope</code>, <code>--collection</code> flags</h4>
+<h4 id="_the_bucket_scope_collection_flags">3.7.2. The <code>--bucket</code>, <code>--scope</code>, <code>--collection</code> flags</h4>
 <div class="paragraph">
 <p>These flags are a little different to the <code>--clusters</code> flag, they are not regular expressions and can only be used to define a single name each.
 Unlike <code>--clusters</code> the name provided to these flags does not have to be already known to Couchbase Shell, they can refer to any bucket, scope, and collection that exist within your active cluster or defined cluster(s).
@@ -1290,30 +1350,20 @@ For example:</p>
 them with built-in other shell commands as well as executables from your environment.</p>
 </div>
 <div class="sect2">
-<h3 id="_working_with_clusters">4.1. Working with <code>clusters</code></h3>
+<h3 id="_buckets">4.1. buckets</h3>
 <div class="paragraph">
-<p>The <code>cb-env managed</code> command lists all the clusters you have registered with the shell.</p>
+<p>The <code>buckets</code> commands are used to perform bucket management operations.
+They can be particularly powerful combined with the <a href="https://couchbase.sh/docs/#_the_clusters_flag">--clusters</a> flag.</p>
+</div>
+<div class="sect3">
+<h4 id="_buckets_2">4.1.1. <code>buckets</code></h4>
+<div class="paragraph">
+<p>Lists all the buckets from your active cluster:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; cb-env managed
-╭───┬────────┬───────┬────────────┬───────────────┬──────────────────────╮
-│ # │ active │  tls  │ identifier │   username    │ capella_organization │
-├───┼────────┼───────┼────────────┼───────────────┼──────────────────────┤
-│ 0 │ true   │ false │ dev.local  │ Administrator │                      │
-│ 1 │ false  │ true  │ capella    │ charlie       │                      │
-╰───┴────────┴───────┴────────────┴───────────────┴──────────────────────╯</code></pre>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_working_with_buckets">4.2. Working with <code>buckets</code></h3>
-<div class="paragraph">
-<p>The <code>buckets</code> command lists all the buckets from your active cluster:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight nowrap"><code>&gt; buckets
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 dev.local
+&gt; buckets
 ╭───┬───────────┬─────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────╮
 │ # │  cluster  │    name     │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud │
 ├───┼───────────┼─────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────┤
@@ -1324,7 +1374,13 @@ them with built-in other shell commands as well as executables from your environ
 </div>
 </div>
 <div class="paragraph">
-<p>As an advanced command, it is also possible to get the configuration for a bucket:</p>
+<p>Check this <a href="https://couchbase.sh/docs/recipes.html#_moving_data_between_clusters">recipe</a> to see how <code>cbsh</code> can be used to copy these buckets to another cluster.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_buckets_config">4.1.2. <code>buckets config</code></h4>
+<div class="paragraph">
+<p>Retrieves the full config for the named bucket:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -1369,13 +1425,147 @@ them with built-in other shell commands as well as executables from your environ
 <p>If you are unsure what you would use this for, you probably don&#8217;t need it.</p>
 </div>
 </div>
+<div class="sect3">
+<h4 id="_buckets_create">4.1.3. <code>buckets create</code></h4>
+<div class="paragraph">
+<p>Creates a bucket with the specified RAM quota on the active cluster:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 local
+&gt; buckets create default 256
+👤 Charlie 🏠 local
+&gt; buckets
+╭───┬─────────┬─────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬───────┬────────────╮
+│ # │ cluster │  name   │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ cloud │ max_expiry │
+├───┼─────────┼─────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼───────┼────────────┤
+│ 0 │ local   │ default │ couchbase │        1 │ none                 │ 256.0 MiB │ false         │ false │          0 │
+╰───┴─────────┴─────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴───────┴────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Check this <a href="https://couchbase.sh/docs/recipes.html#_managing_multiple_clusters">recipe</a> to see how <code>cbsh</code> can help find a cluster for your bucket.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_buckets_drop">4.1.4. <code>buckets drop</code></h4>
+<div class="paragraph">
+<p>Drops the named bucket:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 local
+&gt; buckets
+╭───┬─────────┬─────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬───────┬────────────╮
+│ # │ cluster │  name   │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ cloud │ max_expiry │
+├───┼─────────┼─────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼───────┼────────────┤
+│ 0 │ local   │ default │ couchbase │        1 │ none                 │ 256.0 MiB │ false         │ false │          0 │
+╰───┴─────────┴─────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴───────┴────────────╯
+👤 Charlie 🏠 local
+&gt; buckets drop default
+👤 Charlie 🏠 local
+&gt; buckets
+╭────────────╮
+│ empty list │
+╰────────────╯</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_buckets_flush">4.1.5. <code>buckets flush</code></h4>
+<div class="paragraph">
+<p>Deletes all docs from the named buckets:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local
+&gt; query &quot;SELECT * FROM `travel-sample`&quot; | length
+31591
+👤 Charlie 🏠 local
+&gt; buckets flush travel-sample
+👤 Charlie 🏠 local
+&gt; query &quot;SELECT * FROM `travel-sample`&quot; | length
+0</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Not following what&#8217;s going on, check the <a href="https://couchbase.sh/docs/#_query">query</a> and <a href="https://www.nushell.sh/commands/docs/length.html">length</a> documentation.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_buckets_get">4.1.6. <code>buckets get</code></h4>
+<div class="paragraph">
+<p>Gets the named bucket:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>&gt; buckets get travel-sample
+╭───┬─────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬───────┬────────────╮
+│ # │ cluster │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ cloud │ max_expiry │
+├───┼─────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼───────┼────────────┤
+│ 0 │ local   │ travel-sample │ couchbase │        1 │ none                 │ 200.0 MiB │ true          │ false │          0 │
+╰───┴─────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴───────┴────────────╯</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_buckets_load_sample">4.1.7. <code>buckets load-sample</code></h4>
+<div class="paragraph">
+<p>Loads the named <a href="https://docs.couchbase.com/server/current/manage/manage-settings/install-sample-buckets.html">sample bucket</a> onto the active cluster:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 local
+&gt; buckets load-sample travel-sample
+╭───┬─────────┬───────────────┬─────────╮
+│ # │ cluster │    sample     │ status  │
+├───┼─────────┼───────────────┼─────────┤
+│ 0 │ local   │ travel-sample │ success │
+╰───┴─────────┴───────────────┴─────────╯
+👤 Charlie 🏠 local
+&gt; buckets
+╭───┬─────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬───────┬────────────╮
+│ # │ cluster │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ cloud │ max_expiry │
+├───┼─────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼───────┼────────────┤
+│ 0 │ local   │ travel-sample │ couchbase │        1 │ none                 │ 200.0 MiB │ false         │ false │          0 │
+╰───┴─────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴───────┴────────────╯</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_buckets_update">4.1.8. <code>buckets update</code></h4>
+<div class="paragraph">
+<p>Updates the settings of an existing bucket:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 local
+&gt; buckets
+╭───┬─────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬───────┬────────────╮
+│ # │ cluster │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ cloud │ max_expiry │
+├───┼─────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼───────┼────────────┤
+│ 0 │ local   │ travel-sample │ couchbase │        1 │ none                 │ 200.0 MiB │ false         │ false │          0 │
+╰───┴─────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴───────┴────────────╯
+👤 Charlie 🏠 local
+&gt; buckets update travel-sample --flush true --replicas 2 --expiry 100
+👤 Charlie 🏠 local
+&gt; buckets
+╭───┬─────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬───────┬────────────╮
+│ # │ cluster │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ cloud │ max_expiry │
+├───┼─────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼───────┼────────────┤
+│ 0 │ local   │ travel-sample │ couchbase │        2 │ none                 │ 200.0 MiB │ true          │ false │        100 │
+╰───┴─────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴───────┴────────────╯</code></pre>
+</div>
+</div>
+</div>
+</div>
 <div class="sect2">
-<h3 id="_working_with_scopes_and_collections">4.3. Working with <code>scopes</code> and <code>collections</code></h3>
+<h3 id="_working_with_scopes_and_collections">4.2. Working with <code>scopes</code> and <code>collections</code></h3>
 <div class="paragraph">
 <p>The <code>scopes</code> and <code>collections</code> commands can be used for managing scopes and collection respectively.</p>
 </div>
 <div class="sect3">
-<h4 id="_scopes">4.3.1. Scopes</h4>
+<h4 id="_scopes">4.2.1. Scopes</h4>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; scopes -h
@@ -1453,7 +1643,7 @@ Flags:
 </div>
 </div>
 <div class="sect3">
-<h4 id="_collections">4.3.2. Collections</h4>
+<h4 id="_collections">4.2.2. Collections</h4>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; collections -h
@@ -1532,7 +1722,7 @@ Flags:
 </div>
 </div>
 <div class="sect2">
-<h3 id="_listing_nodes">4.4. Listing <code>nodes</code></h3>
+<h3 id="_listing_nodes">4.3. Listing <code>nodes</code></h3>
 <div class="paragraph">
 <p>The <code>nodes</code> command allows you to list all the nodes of the cluster you are currently connected to.</p>
 </div>
@@ -1550,13 +1740,13 @@ Flags:
 </div>
 </div>
 <div class="sect2">
-<h3 id="_reading_and_writing_documents">4.5. Reading and Writing `doc`uments</h3>
+<h3 id="_reading_and_writing_documents">4.4. Reading and Writing `doc`uments</h3>
 <div class="paragraph">
 <p>The fastest way to interact with documents is through the key value service (as long as you know the document ID).
 All those commands are located as subcommands under the <code>doc</code> namespace.</p>
 </div>
 <div class="sect3">
-<h4 id="_reading">4.5.1. Reading</h4>
+<h4 id="_reading">4.4.1. Reading</h4>
 <div class="paragraph">
 <p>You can retrieve a document with <code>doc get</code>:</p>
 </div>
@@ -1640,7 +1830,7 @@ This behavior can be customized through the <code>--id-column</code> flag.</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_mutating">4.5.2. Mutating</h4>
+<h4 id="_mutating">4.4.2. Mutating</h4>
 <div class="paragraph">
 <p>Documents can be mutated with <code>doc insert</code>, <code>doc upsert</code> and <code>doc replace</code>.</p>
 </div>
@@ -1662,7 +1852,7 @@ This behavior can be customized through the <code>--id-column</code> flag.</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_removing">4.5.3. Removing</h4>
+<h4 id="_removing">4.4.3. Removing</h4>
 <div class="paragraph">
 <p>Documents can be removed with <code>doc remove</code>.</p>
 </div>
@@ -1692,7 +1882,7 @@ This behavior can be customized through the <code>--id-column</code> flag.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_subdoc_get">4.6. <code>subdoc get</code></h3>
+<h3 id="_subdoc_get">4.5. <code>subdoc get</code></h3>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; subdoc get --help
@@ -1768,45 +1958,18 @@ Parameters:
 </div>
 </div>
 <div class="sect2">
-<h3 id="_query_commands">4.7. <code>query</code> commands</h3>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code>&gt; query --help
-Performs a n1ql query
-
-Usage:
-  &gt; query {flags} &lt;statement&gt;
-
-Subcommands:
-  query advise - Calls the query adviser and lists recommended indexes
-  query indexes - Lists all query indexes
-  query transactions - Performs a n1ql query as a part of a transaction
-
-Flags:
-  -h, --help - Display the help message for this command
-  --clusters &lt;String&gt; - the clusters to query against
-  --bucket &lt;String&gt; - the bucket to query against
-  --scope &lt;String&gt; - the scope to query against
-  --params &lt;Any&gt; - named or positional parameters for the query
-  --with-meta - include toplevel metadata
-  --disable-context - disable automatically detecting the query context based on the active bucket and scope
-
-Parameters:
-  statement &lt;string&gt;: the query statement</code></pre>
-</div>
-</div>
+<h3 id="_query">4.6. query</h3>
 <div class="paragraph">
 <p>The query commands can be used to explore/create indexes and execute queries.</p>
 </div>
 <div class="sect3">
-<h4 id="_query">4.7.1. <code>query</code></h4>
+<h4 id="_query_2">4.6.1. <code>query</code></h4>
 <div class="paragraph">
-<p>The plain <code>query</code> command takes a n1ql statement and executes it against the active cluster. For example the following
-gets the IDs of the landmark docs where the country is France:</p>
+<p>Takes a n1ql statement and executes it against the active cluster.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>👤 Administrator 🏠 cluster in 🗄 travel-sample._default._default
+<pre class="CodeRay highlight"><code>👤 Charlie  🏠 local in 🗄 travel-sample._default._default
 &gt; query &quot;SELECT meta().id FROM `travel-sample`.inventory.landmark WHERE country = 'France'&quot;
 ╭─────┬────────────────┬─────────╮
 │   # │       id       │ cluster │
@@ -1818,11 +1981,14 @@ gets the IDs of the landmark docs where the country is France:</p>
 </div>
 </div>
 <div class="paragraph">
-<p>Named query parameters can be used by passing them in with the <code>--params</code> flag:</p>
+<p>The query gets all the IDs of the docs where the country is France, then <code>cbsh</code> appends the cluster column to the results.</p>
+</div>
+<div class="paragraph">
+<p>Named parameters are supported through the <code>--params</code> flag when the argument is a json object:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>👤 Administrator 🏠 cluster in 🗄 travel-sample._default._default
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie  🏠 local in 🗄 travel-sample._default._default
 &gt; query &quot;SELECT meta().id FROM `travel-sample`.inventory.landmark WHERE country = $country&quot; --params {country: France}
 ╭─────┬────────────────┬─────────╮
 │   # │       id       │ cluster │
@@ -1834,11 +2000,11 @@ gets the IDs of the landmark docs where the country is France:</p>
 </div>
 </div>
 <div class="paragraph">
-<p>Multiple named parameters can be used at once, note there is no need to seperate them with commas:</p>
+<p>Multiple named parameters can be used at once, note there is no need to separate them with commas:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>👤 Administrator 🏠 cluster in 🗄 travel-sample._default._default
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie  🏠 local in 🗄 travel-sample._default._default
 &gt; query &quot;SELECT airline FROM `travel-sample`.inventory.route WHERE sourceairport = $aval AND distance &gt; $dval&quot; --params {aval: LAX dval: 13000}
 ╭───┬─────────┬─────────╮
 │ # │ airline │ cluster │
@@ -1850,12 +2016,12 @@ gets the IDs of the landmark docs where the country is France:</p>
 </div>
 </div>
 <div class="paragraph">
-<p>The wildcard character '%' can be used the same as inside of the query statement. The following finds any IDs
-that match the regex 'hotel1002*'.</p>
+<p>The wildcard character '%' can be used the same as inside of the query statement.
+The following finds any IDs that match the regex 'hotel1002*'.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>👤 Administrator 🏠 cluster in 🗄 travel-sample._default._default
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie  🏠 local in 🗄 travel-sample._default._default
 &gt; query &quot;SELECT meta().id FROM `travel-sample`.inventory.hotel WHERE meta().id LIKE $pattern&quot; --params {pattern: hotel_1002%}
 ╭───┬─────────────┬─────────╮
 │ # │     id      │ cluster │
@@ -1865,29 +2031,27 @@ that match the regex 'hotel1002*'.</p>
 ╰───┴─────────────┴─────────╯</code></pre>
 </div>
 </div>
+<div class="paragraph">
+<p>Positional parameters are also supported when the <code>--params</code> flag takes a <a href="https://www.nushell.sh/book/working_with_lists.html">list</a> argument:</p>
 </div>
-<div class="sect3">
-<h4 id="_query_advise">4.7.2. <code>query advise</code></h4>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; query advise --help
-Calls the query adviser and lists recommended indexes
-
-Usage:
-  &gt; query advise {flags} &lt;statement&gt;
-
-Flags:
-  -h, --help - Display the help message for this command
-  --with-meta - Includes related metadata in the result
-  --disable-context - disable automatically detecting the query context based on the active bucket and scope
-  --clusters &lt;String&gt; - the clusters to query against
-
-Parameters:
-  statement &lt;string&gt;: the query statement</code></pre>
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 local
+&gt; query &quot;SELECT airline FROM `travel-sample`.inventory.route WHERE sourceairport = $1 AND distance &gt; $2&quot; --params [LAX 13000]
+╭───┬─────────┬─────────╮
+│ # │ airline │ cluster │
+├───┼─────────┼─────────┤
+│ 0 │ B6      │ local   │
+│ 1 │ EK      │ local   │
+│ 2 │ SV      │ local   │
+╰───┴─────────┴─────────╯</code></pre>
 </div>
 </div>
+</div>
+<div class="sect3">
+<h4 id="_query_advise">4.6.2. <code>query advise</code></h4>
 <div class="paragraph">
-<p>The query advise command can help you to learn about the indexes that your queries are using, and what indexes
+<p>Helps you to learn about the indexes that your queries are using, and what indexes
 you could create to make them faster. For example we can take the first query from the <code>query</code> examples:</p>
 </div>
 <div class="listingblock">
@@ -1923,37 +2087,19 @@ you could create to make them faster. For example we can take the first query fr
 </div>
 </div>
 <div class="paragraph">
-<p>Here we can see that currently our statement uses the Primary index <code>def_inventory_landmark_primary</code> but it also
-recommends a covering index that we can create. We can use the <code>query</code> command to create the new suggested index as follows:</p>
+<p>This shows our query statement uses the Primary index <code>def_inventory_landmark_primary</code> and also recommends a covering index that we can create using <code>query</code>:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>query &quot;CREATE INDEX adv_country ON `default`:`travel-sample`.`inventory`.`landmark`(`country`)&quot;</code></pre>
+<pre class="CodeRay highlight"><code>&gt; query &quot;CREATE INDEX adv_country ON `default`:`travel-sample`.`inventory`.`landmark`(`country`)&quot;</code></pre>
 </div>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_query_indexes">4.7.3. <code>query indexes</code></h4>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code>&gt; query indexes --help
-Lists all query indexes
-
-Usage:
-  &gt; query indexes {flags}
-
-Flags:
-  -h, --help - Display the help message for this command
-  --definitions - Whether to fetch the index definitions (changes the output format)
-  --clusters &lt;String&gt; - the clusters to query against
-  --with-meta - Includes related metadata in the result
-  --disable-context - disable automatically detecting the query context based on the active bucket and scope</code></pre>
-</div>
-</div>
+<h4 id="_query_indexes">4.6.3. <code>query indexes</code></h4>
 <div class="paragraph">
-<p><code>query indexes</code> is very useful for managing and exploring indexes. If we had just created the recommended index at the
-end of the <code>query advise</code> section, the nushell command <code>find</code> can be used in conjunction with <code>query indexes</code> to check
-it was successfully created.</p>
+<p>Lists all of the query indexes.
+If we had just created the recommended index at the end of the <code>query advise</code> section, the nushell command <code>find</code> can be used in conjunction with <code>query indexes</code> to check it was successfully created.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -1980,10 +2126,13 @@ it was successfully created.</p>
 ╰───┴───────────────┴───────────┴────────────┴─────────────┴────────┴──────────────┴──────────┴─────────────────────────────────────────────────────────────────────────────────┴─────────╯</code></pre>
 </div>
 </div>
+<div class="paragraph">
+<p>Check this <a href="https://couchbase.sh/docs/recipes.html#_migrating_query_index_definitions">snippet</a> to see how <code>query indexes</code> can be used to to migrate indexes between clusters.</p>
+</div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_vector_commands">4.8. <code>vector</code> commands</h3>
+<h3 id="_vector_commands">4.7. <code>vector</code> commands</h3>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; vector --help
@@ -2006,7 +2155,7 @@ Flags:
 <p>The vector commands make it easy to explore the value that vector search can add to your data.</p>
 </div>
 <div class="sect3">
-<h4 id="_vector_search">4.8.1. <code>vector search</code></h4>
+<h4 id="_vector_search">4.7.1. <code>vector search</code></h4>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; vector search --help
@@ -2223,7 +2372,7 @@ Error:   × Unexpected status code
 </div>
 </div>
 <div class="sect3">
-<h4 id="_vector_create_index">4.8.2. <code>vector create-index</code></h4>
+<h4 id="_vector_create_index">4.7.2. <code>vector create-index</code></h4>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; vector create-index --help
@@ -2296,7 +2445,7 @@ Whereas in the latter the environment values need to be overwritten with the <co
 </div>
 </div>
 <div class="sect3">
-<h4 id="_vector_enrich_doc">4.8.3. <code>vector enrich-doc</code></h4>
+<h4 id="_vector_enrich_doc">4.7.3. <code>vector enrich-doc</code></h4>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; vector enrich-doc --help
@@ -2445,7 +2594,7 @@ For example to use the "name" field as the id of the resulting documents do:</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_vector_enrich_text">4.8.4. <code>vector enrich-text</code></h4>
+<h4 id="_vector_enrich_text">4.7.4. <code>vector enrich-text</code></h4>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; vector enrich-text --help
@@ -2575,7 +2724,7 @@ Embedding batch 1/1
 </div>
 </div>
 <div class="sect2">
-<h3 id="_ask">4.9. <code>ask</code></h3>
+<h3 id="_ask">4.8. <code>ask</code></h3>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; ask --help
@@ -2652,7 +2801,7 @@ At the new restaurant, you can enjoy the following activities:
 </div>
 </div>
 <div class="sect2">
-<h3 id="_version">4.10. <code>version</code></h3>
+<h3 id="_version">4.9. <code>version</code></h3>
 <div class="paragraph">
 <p>The <code>version</code> command lists the version of the couchbase shell.</p>
 </div>
@@ -3442,7 +3591,7 @@ As our versioning continues to track the underlying Nushell minor version this h
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-09-11 06:51:57 UTC
+Last updated 2024-09-11 13:18:32 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
