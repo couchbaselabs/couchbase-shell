@@ -3,20 +3,6 @@
 The following sections discuss the individual couchbase specific commands in greater detail. Remember, you can always mix and match
 them with built-in other shell commands as well as executables from your environment.
 
-=== Working with `clusters`
-
-The `cb-env managed` command lists all the clusters you have registered with the shell.
-
-```
-> cb-env managed
-╭───┬────────┬───────┬────────────┬───────────────┬──────────────────────╮
-│ # │ active │  tls  │ identifier │   username    │ capella_organization │
-├───┼────────┼───────┼────────────┼───────────────┼──────────────────────┤
-│ 0 │ true   │ false │ dev.local  │ Administrator │                      │
-│ 1 │ false  │ true  │ capella    │ charlie       │                      │
-╰───┴────────┴───────┴────────────┴───────────────┴──────────────────────╯
-```
-
 === Working with `buckets`
 
 The `buckets` command lists all the buckets from your active cluster:

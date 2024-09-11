@@ -57,9 +57,24 @@ Flags:
   --timeouts - show default execution environment for timeouts
 ```
 
+=== `cb-env managed`
+
+Lists all the clusters you have registered with the shell.
+
+```
+> cb-env managed
+╭───┬────────┬───────┬────────────┬───────────────┬──────────────────────╮
+│ # │ active │  tls  │ identifier │   username    │ capella_organization │
+├───┼────────┼───────┼────────────┼───────────────┼──────────────────────┤
+│ 0 │ true   │ false │ dev.local  │ Administrator │                      │
+│ 1 │ false  │ true  │ capella    │ charlie       │                      │
+╰───┴────────┴───────┴────────────┴───────────────┴──────────────────────╯
+```
+
 === `cb-env cluster`
 
-This command is used to change the active cluster. The change of cluster will be reflected in the output of `cb-env` and the prompt:
+Changes the active cluster.
+The change of cluster will be reflected in the output of `cb-env` and the prompt:
 
 ```
 👤 Charlie 🏠 capella
