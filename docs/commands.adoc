@@ -7,9 +7,11 @@ include::commands/buckets.adoc[]
 
 include::commands/scopes.adoc[]
 
+include::commands/doc.adoc[]
+
 include::commands/collections.adoc[]
 
-=== Listing `nodes`
+=== `nodes`
 
 The `nodes` command allows you to list all the nodes of the cluster you are currently connected to.
 
@@ -23,128 +25,6 @@ The `nodes` command allows you to list all the nodes of the cluster you are curr
 │ 1 │ prod-us-west │ 192.168.107.129:8091 │ healthy │ search,indexing,kv,query │ 7.6.2-3505-enterprise │ aarch64-unknown-linux-gnu │   6201221120 │  2204721152 │ false   │
 │ 2 │ prod-us-west │ 192.168.107.130:8091 │ healthy │ search,indexing,kv,query │ 7.6.2-3505-enterprise │ aarch64-unknown-linux-gnu │   6201221120 │  2209816576 │ false   │
 ╰───┴──────────────┴──────────────────────┴─────────┴──────────────────────────┴───────────────────────┴───────────────────────────┴──────────────┴─────────────┴─────────╯
-```
-
-=== Reading and Writing `doc`uments
-
-The fastest way to interact with documents is through the key value service (as long as you know the document ID).
-All those commands are located as subcommands under the `doc` namespace.
-
-==== Reading
-
-You can retrieve a document with `doc get`:
-
-```
-> doc get airline_10
-╭───┬────────────┬──────────────────────────────┬─────────────────────┬───────┬──────────────╮
-│ # │     id     │           content            │         cas         │ error │   cluster    │
-├───┼────────────┼──────────────────────────────┼─────────────────────┼───────┼──────────────┤
-│ 0 │ airline_10 │ ╭──────────┬───────────────╮ │ 1712321628975398912 │       │ prod-us-west │
-│   │            │ │ id       │ 10            │ │                     │       │              │
-│   │            │ │ type     │ airline       │ │                     │       │              │
-│   │            │ │ name     │ 40-Mile Air   │ │                     │       │              │
-│   │            │ │ iata     │ Q5            │ │                     │       │              │
-│   │            │ │ icao     │ MLA           │ │                     │       │              │
-│   │            │ │ callsign │ MILE-AIR      │ │                     │       │              │
-│   │            │ │ country  │ United States │ │                     │       │              │
-│   │            │ ╰──────────┴───────────────╯ │                     │       │              │
-╰───┴────────────┴──────────────────────────────┴─────────────────────┴───────┴──────────────╯
-```
-
-To distinguish the actual content from the metadata, the content is nested in the `content` field.
-If you want to have everything at the top level, you can pipe to the `flatten` command:
-
-[options="nowrap"]
-```
-> doc get airline_10 | flatten
-╭───┬────────────┬────────────┬─────────┬─────────────┬──────┬──────┬──────────┬───────────────┬─────────────────────┬───────┬──────────────╮
-│ # │     id     │ content_id │  type   │    name     │ iata │ icao │ callsign │    country    │         cas         │ error │   cluster    │
-├───┼────────────┼────────────┼─────────┼─────────────┼──────┼──────┼──────────┼───────────────┼─────────────────────┼───────┼──────────────┤
-│ 0 │ airline_10 │         10 │ airline │ 40-Mile Air │ Q5   │ MLA  │ MILE-AIR │ United States │ 1712321628975398912 │       │ prod-us-west │
-╰───┴────────────┴────────────┴─────────┴─────────────┴──────┴──────┴──────────┴───────────────┴─────────────────────┴───────┴──────────────╯
-```
-
-If the document is not found, an empty result is returned.
-
-To perform a bulk get operation, the incoming stream can be utilized.
-
-```
-> [airline_10 airline_10748 airline_137] | wrap id | doc get
-╭───┬───────────────┬──────────────────────────────┬─────────────────────┬───────┬──────────────╮
-│ # │      id       │           content            │         cas         │ error │   cluster    │
-├───┼───────────────┼──────────────────────────────┼─────────────────────┼───────┼──────────────┤
-│ 0 │ airline_10    │ ╭──────────┬───────────────╮ │ 1712321628975398912 │       │ prod-us-west │
-│   │               │ │ id       │ 10            │ │                     │       │              │
-│   │               │ │ type     │ airline       │ │                     │       │              │
-│   │               │ │ name     │ 40-Mile Air   │ │                     │       │              │
-│   │               │ │ iata     │ Q5            │ │                     │       │              │
-│   │               │ │ icao     │ MLA           │ │                     │       │              │
-│   │               │ │ callsign │ MILE-AIR      │ │                     │       │              │
-│   │               │ │ country  │ United States │ │                     │       │              │
-│   │               │ ╰──────────┴───────────────╯ │                     │       │              │
-│ 1 │ airline_137   │ ╭──────────┬────────────╮    │ 1712321633323712512 │       │ prod-us-west │
-│   │               │ │ id       │ 137        │    │                     │       │              │
-│   │               │ │ type     │ airline    │    │                     │       │              │
-│   │               │ │ name     │ Air France │    │                     │       │              │
-│   │               │ │ iata     │ AF         │    │                     │       │              │
-│   │               │ │ icao     │ AFR        │    │                     │       │              │
-│   │               │ │ callsign │ AIRFRANS   │    │                     │       │              │
-│   │               │ │ country  │ France     │    │                     │       │              │
-│   │               │ ╰──────────┴────────────╯    │                     │       │              │
-│ 2 │ airline_10748 │ ╭──────────┬───────────────╮ │ 1712321631323947008 │       │ prod-us-west │
-│   │               │ │ id       │ 10748         │ │                     │       │              │
-│   │               │ │ type     │ airline       │ │                     │       │              │
-│   │               │ │ name     │ Locair        │ │                     │       │              │
-│   │               │ │ iata     │ ZQ            │ │                     │       │              │
-│   │               │ │ icao     │ LOC           │ │                     │       │              │
-│   │               │ │ callsign │ LOCAIR        │ │                     │       │              │
-│   │               │ │ country  │ United States │ │                     │       │              │
-│   │               │ ╰──────────┴───────────────╯ │                     │       │              │
-╰───┴───────────────┴──────────────────────────────┴─────────────────────┴───────┴──────────────╯
-```
-
-If `doc get` operates on an incoming stream it will extract the document id from the `id` column.
-This behavior can be customized through the `--id-column` flag.
-
-==== Mutating
-
-Documents can be mutated with `doc insert`, `doc upsert` and `doc replace`.
-
-All those three commands take similar arguments. If you only want to mutate a single document, passing in the ID and the content as arguments is the simplest way:
-
-```
-> doc upsert my-doc {"hello": "world"}
-╭───┬───────────┬─────────┬────────┬──────────┬───────────╮
-│ # │ processed │ success │ failed │ failures │  cluster  │
-├───┼───────────┼─────────┼────────┼──────────┼───────────┤
-│ 0 │         1 │       1 │      0 │          │ dev.local │
-╰───┴───────────┴─────────┴────────┴──────────┴───────────╯
-```
-
-Multiple documents can be mutated through an input stream as well, defaulting to the `id` and `content` columns:
-
-==== Removing
-
-Documents can be removed with `doc remove`.
-
-```
-> doc remove airline_10
-╭───┬───────────┬─────────┬────────┬──────────┬───────────╮
-│ # │ processed │ success │ failed │ failures │  cluster  │
-├───┼───────────┼─────────┼────────┼──────────┼───────────┤
-│ 0 │         1 │       1 │      0 │          │ dev.local │
-╰───┴───────────┴─────────┴────────┴──────────┴───────────╯
-```
-
-Similar to `doc get`, if you want to delete more than one document at the same time, provide a stream of ids with an `id` column:
-
-```
-> [airline_10 airline_10748 airline_137] | wrap id | doc remove
-╭───┬───────────┬─────────┬────────┬───────────────┬───────────╮
-│ # │ processed │ success │ failed │   failures    │  cluster  │
-├───┼───────────┼─────────┼────────┼───────────────┼───────────┤
-│ 0 │         3 │       2 │      1 │ Key not found │ dev.local │
-╰───┴───────────┴─────────┴────────┴───────────────┴───────────╯
 ```
 
 === `subdoc get`
@@ -217,8 +97,6 @@ The path parameter can be a list, allowing retrieval of multiple fields in one o
 include::commands/query.adoc[]
 
 include::commands/vector.adoc[]
-
-
 
 === `ask`
 

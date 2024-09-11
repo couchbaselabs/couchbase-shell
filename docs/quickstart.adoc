@@ -119,7 +119,7 @@ Now you can try running N1QL queries using the <<_query,query>> command.
 ╰───┴──────────────────────────────┴─────────╯
 ```
 
-Or you can get documents by switching to the travel sample bucket with <<_cb_env_and_the_environment,cb-env>> and using <<_reading,doc_get>>:
+Or you can get documents by switching to the travel sample bucket with <<_cb_env_and_the_environment,cb-env>> and using <<_doc_get,doc_get>>:
 
 ```
 👤 Administrator 🏠 default
