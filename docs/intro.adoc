@@ -169,50 +169,6 @@ If you want to import data into Couchbase, or just load it into the shell for fu
 Once the data is loaded into the shell it can be sent to one of the Couchbase save commands like `doc upsert` and `doc import`.
 Depending on the structure of the data, and the command used, you may also need to tweak it a little bit so it can be properly stored.
 
-==== Doc import
-
-The `doc import` is the simplest way to import data through Couchbase Shell.
-The command expects a path to file containing data, the data can be any of the formats supported by the `from` command.
-In the following example we import a json file containing a single document.
-We also specify the `--id-column` flag because `doc import` will try to use an `id` field for the document key by default.
-
-```
-> cat user.json
-{
-  "name": "Michael",
-  "age": 32,
-  "height": 180
-}
-
-> doc import user.json --id-column name
-╭───┬───────────┬─────────┬────────┬──────────┬───────────╮
-│ # │ processed │ success │ failed │ failures │  cluster  │
-├───┼───────────┼─────────┼────────┼──────────┼───────────┤
-│ 0 │         1 │       1 │      0 │          │ dev.local │
-╰───┴───────────┴─────────┴────────┴──────────┴───────────╯
-```
-
-```
-> doc import -h
-Import documents from a file through the data service
-
-Usage:
-  > doc import {flags} <filename>
-
-Flags:
-  -h, --help - Display the help message for this command
-  --id-column <String> - the name of the id column if used with an input stream
-  --bucket <String> - the name of the bucket
-  --expiry <Number> - the expiry for the documents in seconds, or absolute
-  --scope <String> - the name of the scope
-  --collection <String> - the name of the collection
-  --clusters <String> - the clusters which should be contacted
-  --batch-size <Number> - the maximum number of items to batch send at a time
-
-Parameters:
-  filename <string>: the path to the file containing data to import
-```
-
 ==== Manual import
 
 The `open` command will look at file endings and try to decode it automatically.
@@ -257,9 +213,6 @@ In our case we use `from json`:
 │ height │ 180     │
 ╰────────┴─────────╯
 ```
-
-TIP: look at the many different import formats `from` supports, including csv, xml, yaml and even sqlite. With this simple tool
-at hand you are able to load many different data formats quickly and import them into Couchbase!
 
 We cannot use this format directly with commands like `doc upsert` as the command expects two "columns" in the data - id and content.
 This means that we have to perform some translation from the above format to one that `doc upsert` understands.
