@@ -4,7 +4,11 @@
 
 The current latest version is *1.0.0*.
 
-There are a couple ways you can get access to `cbsh`, the easiest one is to download our pre-built binaries for your platform of choice:
+There are a couple ways you can get access to `cbsh`.
+
+==== Binaries
+
+Download our pre-built binaries for your platform of choice:
 
  - Linux: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0/cbsh-x86_64-unknown-linux-gnu.tar.gz[cbsh-x86_64-unknown-linux-gnu.tar.gz]
  - macOS: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0/cbsh-x86_64-apple-darwin.zip[cbsh-x86_64-apple-darwin.zip]
@@ -34,6 +38,21 @@ To run it nonetheless you need to either navigate to `System Preferences -> Secu
 Next time you run the binary you'll get another prompt but then it should run fine.
 
 image::mac-binary-unsigned.png[macOS Warning,600]
+
+==== Homebrew
+
+If running on macOS you can install via the https://formulae.brew.sh/formula/couchbase-shell[homebrew] formula:
+
+```
+$ brew install couchbase-shell
+```
+
+Then run as follows:
+
+```
+$ cbsh --version
+1.0.0
+```
 
 === Connecting to a Cluster
 
