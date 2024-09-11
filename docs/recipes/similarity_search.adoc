@@ -98,7 +98,7 @@ Once we have this list of results from the vector search we can use the ids to i
 ╰───┴────────────────┴──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┴─────╯
 ```
 
-Here we could have used https://couchbase.sh/docs/#_reading[doc get] to get the whole of the documents, but to keep things tidy we've used another `subdoc get` to retrieved the name, address and content fields.
+Here we could have used https://couchbase.sh/docs/#_doc_get[doc get] to get the whole of the documents, but to keep things tidy we've used another `subdoc get` to retrieved the name, address and content fields.
 As you can see by examining the results they all have semantically similar content fields.
 
 Another way that CBShell can be used to generate embeddings is from plain text with https://couchbase.sh/docs/#_vector_enrich_text[vector enrich-text]:
