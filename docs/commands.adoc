@@ -3,63 +3,7 @@
 The following sections discuss the individual couchbase specific commands in greater detail. Remember, you can always mix and match
 them with built-in other shell commands as well as executables from your environment.
 
-=== Working with `buckets`
-
-The `buckets` command lists all the buckets from your active cluster:
-
-[options="nowrap"]
-```
-> buckets
-╭───┬───────────┬─────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬────────┬───────╮
-│ # │  cluster  │    name     │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ status │ cloud │
-├───┼───────────┼─────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼────────┼───────┤
-│ 0 │ dev.local │ beer-sample │ couchbase │        2 │ none                 │ 412.0 MiB │ false         │        │ false │
-│ 1 │ dev.local │ default     │ couchbase │        0 │ none                 │ 512.0 MiB │ false         │        │ false │
-│ 2 │ dev.local │ memd        │ memcached │        0 │ none                 │ 100.0 MiB │ false         │        │ false │
-╰───┴───────────┴─────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴────────┴───────╯
-```
-
-As an advanced command, it is also possible to get the configuration for a bucket:
-[options="nowrap"]
-```
-> buckets config default
-╭────────────────────────┬──────────────────────────────────────────────────────────────────────────────────────╮
-│ authType               │ sasl                                                                                 │
-│ autoCompactionSettings │ false                                                                                │
-│ basicStats             │ {record 8 fields}                                                                    │
-│ bucketCapabilities     │ [list 17 items]                                                                      │
-│ bucketCapabilitiesVer  │                                                                                      │
-│ bucketType             │ membase                                                                              │
-│ collectionsManifestUid │ 21                                                                                   │
-│ compressionMode        │ passive                                                                              │
-│ conflictResolutionType │ seqno                                                                                │
-│ controllers            │ {record 4 fields}                                                                    │
-│ ddocs                  │ {record 1 field}                                                                     │
-│ durabilityMinLevel     │ none                                                                                 │
-│ evictionPolicy         │ valueOnly                                                                            │
-│ localRandomKeyUri      │ /pools/default/buckets/default/localRandomKey                                        │
-│ maxTTL                 │ 0                                                                                    │
-│ name                   │ default                                                                              │
-│ nodeLocator            │ vbucket                                                                              │
-│ nodes                  │ [table 1 row]                                                                        │
-│ numVBuckets            │ 64                                                                                   │
-│ pitrEnabled            │ false                                                                                │
-│ pitrGranularity        │ 600                                                                                  │
-│ pitrMaxHistoryAge      │ 86400                                                                                │
-│ quota                  │ {record 2 fields}                                                                    │
-│ replicaIndex           │ false                                                                                │
-│ replicaNumber          │ 0                                                                                    │
-│ stats                  │ {record 3 fields}                                                                    │
-│ storageBackend         │ couchstore                                                                           │
-│ streamingUri           │ /pools/default/bucketsStreaming/default?bucket_uuid=0ef162c33e14b163630f04639b347937 │
-│ threadsNumber          │ 3                                                                                    │
-│ uri                    │ /pools/default/buckets/default?bucket_uuid=0ef162c33e14b163630f04639b347937          │
-│ uuid                   │ 0ef162c33e14b163630f04639b347937                                                     │
-│ vBucketServerMap       │ {record 4 fields}                                                                    │
-╰────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────╯
-```
-
-If you are unsure what you would use this for, you probably don't need it.
+include::commands/buckets.adoc[]
 
 === Working with `scopes` and `collections`
 
