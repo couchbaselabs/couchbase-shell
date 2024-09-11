@@ -62,7 +62,7 @@ fn import_sample_already_loaded() {
 
         // Wait for the bucket to finish being created
         sandbox.retry_until(
-            Instant::now().add(Duration::from_secs(100)),
+            Instant::now().add(Duration::from_secs(120)),
             Duration::from_millis(200),
             "buckets get beer-sample | first | to json",
             dirs.test(),
