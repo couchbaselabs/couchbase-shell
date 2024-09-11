@@ -1,0 +1,435 @@
+=== vector
+
+The vector commands make it easy to explore the value that vector search can add to your data.
+Check the recipes for how the vector commands can be combined to implement https://couchbase.sh/docs/recipes.html#_similarity_search[similarity search] or https://couchbase.sh/docs/recipes.html#_simple_rag[simple RAG].
+
+==== `vector search`
+
+Performs a vector search against a named vector index.
+Requires a vector to be used as the source of the search which can be supplied in a couple of formats.
+
+For example imagine we have the following document stored in our cluster:
+
+[options="nowrap"]
+```
+> doc get landmark_10019
+╭───┬────────────────┬───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┬─────╮
+│ # │       id       │                                                                                                      content                                                                                                      │ ... │
+├───┼────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼─────┤
+│ 0 │ landmark_10019 │ ╭───────────────┬───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ │ ... │
+│   │                │ │ title         │ Gillingham (Kent)                                                                                                                                                                             │ │     │
+│   │                │ │ name          │ Royal Engineers Museum                                                                                                                                                                        │ │     │
+│   │                │ │ alt           │                                                                                                                                                                                               │ │     │
+│   │                │ │ address       │ Prince Arthur Road, ME4 4UG                                                                                                                                                                   │ │     │
+│   │                │ │ directions    │                                                                                                                                                                                               │ │     │
+│   │                │ │ phone         │ +44 1634 822839                                                                                                                                                                               │ │     │
+│   │                │ │ tollfree      │                                                                                                                                                                                               │ │     │
+│   │                │ │ email         │                                                                                                                                                                                               │ │     │
+│   │                │ │ url           │ http://www.remuseum.org.uk                                                                                                                                                                    │ │     │
+│   │                │ │ hours         │ Tues - Fri 9.00am to 5.00pm, Sat - Sun 11.30am - 5.00pm                                                                                                                                       │ │     │
+│   │                │ │ image         │                                                                                                                                                                                               │ │     │
+│   │                │ │ price         │                                                                                                                                                                                               │ │     │
+│   │                │ │ content       │ Adult - £6.99 for an Adult ticket that allows you to come back for further visits within a year (children's and concessionary tickets also available). Museum on military engineering and the │ │     │
+│   │                │ │               │  history of the British Empire. A quite extensive collection that takes about half a day to see. Of most interest to fans of British and military history or civil engineering. The outside   │ │     │
+│   │                │ │               │ collection of tank mounted bridges etc can be seen for free. There is also an extensive series of themed special event weekends, admission to which is included in the cost of the annual     │ │     │
+│   │                │ │               │ ticket.                                                                                                                                                                                       │ │     │
+│   │                │ │               │ ╭──────────┬────────────────────╮                                                                                                                                                             │ │     │
+│   │                │ │ geo           │ │ lat      │ 51.39              │                                                                                                                                                             │ │     │
+│   │                │ │               │ │ lon      │ 0.54               │                                                                                                                                                             │ │     │
+│   │                │ │               │ │ accuracy │ RANGE_INTERPOLATED │                                                                                                                                                             │ │     │
+│   │                │ │               │ ╰──────────┴────────────────────╯                                                                                                                                                             │ │     │
+│   │                │ │ activity      │ see                                                                                                                                                                                           │ │     │
+│   │                │ │ type          │ landmark                                                                                                                                                                                      │ │     │
+│   │                │ │ id            │ 10019                                                                                                                                                                                         │ │     │
+│   │                │ │ country       │ United Kingdom                                                                                                                                                                                │ │     │
+│   │                │ │ city          │ Gillingham                                                                                                                                                                                    │ │     │
+│   │                │ │ state         │                                                                                                                                                                                               │ │     │
+│   │                │ │               │ ╭──────┬───────╮                                                                                                                                                                              │ │     │
+│   │                │ │ contentVector │ │    0 │  0.02 │                                                                                                                                                                              │ │     │
+│   │                │ │               │ │  ... │   ... │                                                                                                                                                                              │ │     │
+│   │                │ │               │ │ 1023 │ -0.00 │                                                                                                                                                                              │ │     │
+│   │                │ │               │ ╰──────┴───────╯                                                                                                                                                                              │ │     │
+│   │                │ ╰───────────────┴───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ │     │
+╰───┴────────────────┴───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┴─────╯
+```
+
+The field `contentVector` contains a vector of dimension 1024 that could be used as the input to a vector search.
+Due to the format of the data returned by <<_reading, doc get>> we need to https://www.nushell.sh/commands/docs/flatten.html[flatten] to remove the nesting then https://www.nushell.sh/commands/docs/select.html[select] the `contentVector` field:
+
+```
+> doc get landmark_10019 | flatten | select contentVector
+╭───┬──────────────────╮
+│ # │  contentVector   │
+├───┼──────────────────┤
+│ 0 │ ╭──────┬───────╮ │
+│   │ │    0 │  0.03 │ │
+│   │ │ ...  │  ...  │ │
+│   │ │ 1023 │ -0.00 │ │
+│   │ ╰──────┴───────╯ │
+╰───┴──────────────────╯
+```
+
+This can then be piped directly into `vector search`:
+
+[options="nowrap"]
+```
+> doc get landmark_10019 | flatten | select contentVector | vector search landmark-content-index contentVector
+╭───┬────────────────┬─────────────────────────────────────────┬─────────╮
+│ # │       id       │                  score                  │ cluster │
+├───┼────────────────┼─────────────────────────────────────────┼─────────┤
+│ 0 │ landmark_10019 │ 340282350000000000000000000000000000000 │ local   │
+│ 1 │ landmark_28965 │ 1.0286634                               │ local   │
+│ 2 │ landmark_3547  │ 1.0150017                               │ local   │
+╰───┴────────────────┴─────────────────────────────────────────┴─────────╯
+```
+
+We specify the vector index to be queried (landmark-content-index) as well as the name of the field on which the vector index was created (contentVector).
+See <<_vector_create_index,vector create-index>> for further explanation.
+
+<<_subdoc_get, Subdoc get>> can also be used to fetch the source vector:
+
+[options="nowrap"]
+```
+> subdoc get contentVector landmark_10019 | select content | vector search landmark-content-index contentVector
+╭───┬────────────────┬─────────────────────────────────────────┬─────────╮
+│ # │       id       │                  score                  │ cluster │
+├───┼────────────────┼─────────────────────────────────────────┼─────────┤
+│ 0 │ landmark_10019 │ 340282350000000000000000000000000000000 │ local   │
+│ 1 │ landmark_28965 │ 1.0286634                               │ local   │
+│ 2 │ landmark_3547  │ 1.0150017                               │ local   │
+╰───┴────────────────┴─────────────────────────────────────────┴─────────╯
+```
+
+Here we don't need to flatten and specify the field since the content of the `sub doc` output already only holds the `contentVector` field.
+
+Another format that is accepted is the output of  <<_vector_enrich_text,vector enrich-text>> :
+
+```
+> vector enrich-text "some string" --dimension 1024 | vector search landmark-content-index contentVector
+Embedding batch 1/1
+╭───┬────────────────┬────────────┬─────────╮
+│ # │       id       │   score    │ cluster │
+├───┼────────────────┼────────────┼─────────┤
+│ 0 │ landmark_21681 │ 0.70561004 │ local   │
+│ 1 │ landmark_20732 │ 0.7003826  │ local   │
+│ 2 │ landmark_21682 │ 0.6987926  │ local   │
+╰───┴────────────────┴────────────┴─────────╯
+```
+
+Note the `--dimension` flag used here, the vector provided as the source of the search must match the dimension of the vectors on which the index was <<_vector_create_index,created>> else you will get no results.
+
+Finally if you just have a plain vector that is a list of floats this can be passed in as a final positional parameter:
+
+```
+> let vector = [0.1 0.2 0.3 0.4]
+> vector search vector-index fieldName $vector
+```
+
+The vector here only has a dimension of 4 which is unrealistically low, but it is used for illustrative purposes.
+
+The output of the search is a table containing the IDs of the `n` (specified by the `--neighbours` flag) documents with the most similar vector in the field named.
+The similarity of vectors is calculated using the metric specified on <<_vector_create_index,index creation>>.
+
+To see the contents of the documents identified in the table simply pipe the output of vector search into a <<_reading,doc get>> command.
+If only interested in a particular field then the <<_subdoc_get,subdoc get>> command will also work in the same way:
+
+```
+👤 Charlie 🏠 local in ☁️ default._default._default
+> vector search landmark-content-index contentVector $vector | subdoc get address
+╭───┬────────────────┬───────────────────────────────────────┬─────────────────────┬───────┬─────────╮
+│ # │       id       │                content                │         cas         │ error │ cluster │
+├───┼────────────────┼───────────────────────────────────────┼─────────────────────┼───────┼─────────┤
+│ 0 │ landmark_11956 │ Hornchurch Road, Hornchurch, RM11 1JU │ 1722871671832641536 │       │ local   │
+│ 1 │ landmark_25284 │ 4040 Twiggs St                        │ 1722871685304025088 │       │ local   │
+│ 2 │ landmark_7744  │ Grandstand Road                       │ 1722871709487202304 │       │ local   │
+╰───┴────────────────┴───────────────────────────────────────┴─────────────────────┴───────┴─────────╯
+```
+
+The environment is important when using the `vector search` command as the fully qualified index name is constructed from the active bucket and scope.
+The above command will be trying to use the index `default._default.landmark-content-index`.
+If the index was created against a different bucket/scope then you will get an index not found error.
+
+[options="nowrap"]
+```
+👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+> vector search landmark-content-index contentVector $vector
+Error:   × Unexpected status code
+   ╭─[entry #4:1:1]
+ 1 │ vector search landmark-content-index contentVector $vector
+   · ──────┬──────
+   ·       ╰──
+   ╰────
+  help: Unexpected status code: 400, body: {"error":"rest_auth: preparePerms, err: index not found","request":{"ctl":{"timeout":75000},"knn":[{"field":"contentVector","k":3,"vector":
+  ...
+```
+
+If you want to use an index that was created against a different bucket/scope to those that are active, this can be done with the `--bucket` and `--scope` flags.
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+> vector search landmark-content-index contentVector $vector --bucket default --scope _default
+╭───┬────────────────┬─────────────────────────────────────────┬─────────╮
+│ # │       id       │                  score                  │ cluster │
+├───┼────────────────┼─────────────────────────────────────────┼─────────┤
+│ 0 │ landmark_10019 │ 340282350000000000000000000000000000000 │ local   │
+│ 1 │ landmark_16379 │ 1.0082568                               │ local   │
+│ 2 │ landmark_33857 │ 0.9897698                               │ local   │
+╰───┴────────────────┴─────────────────────────────────────────┴─────────╯
+```
+
+==== `vector create-index`
+
+Creates a vector index against the active bucket/scope or the bucket/scope specified with the corresponding flags.
+For example the following will create an index named new-vector-index over the field fieldName in documents in the bucket `default` and the scope `_default`:
+
+```
+👤 Charlie 🏠 local in ☁️ default._default._default
+> vector create-index new-vector-index fieldName 1024
+```
+
+Any documents located elsewhere will not be indexed, and a vector search performed with this index will not find them.
+If the documents to be indexed were stored elsewhere then the environment would need to be changed with `cb-env bucket/scope` or the bucket and scope could be passed in with the appropriate flags.
+
+The field parameter is the name of the field in the documents that contains the vector, and the dimension (length of the vector) parameter must match that of the vectors contained in the named field.
+Imagine there are documents with the following structure in the bucket `users` and scope `embeddedUsers`:
+
+```
+{
+    "name": "my-name",
+    "e-mail": "shell-user@couchbase.com",
+    "description": "A rich textual description of the user.",
+    "descriptionEmbedding": [0.0178287, 0.123098, -0.0189239, 1.109238],
+}
+```
+
+In this example the descriptionEmbedding is the result of using a large language model to generate an embedding from the description field.
+The dimension of the vector (4) is unrealistically low but it's been chosen for illustrative purposes.
+To create an index over such documents in order to find users with similar descriptions the command would be:
+
+```
+👤 Charlie 🏠 local in ☁️ users.embeddedUsers._default
+> vector create-index user-description-index descriptionEmbedding 4
+
+or
+
+👤 Charlie 🏠 local in ☁️ default._default._default
+> vector create-index user-description-index descriptionEmbedding 4 --bucket users --scope embeddedUsers
+```
+
+In the first example the create command is run from within the bucket and scope that the documents are stored in.
+Whereas in the latter the environment values need to be overwritten with the `--bucket` and `--scope` flags to correctly create the index.
+
+==== `vector enrich-doc`
+
+Enriches an existing json document by generating an embedding using the <<_cb_env_llm,active llm>> from a named field and storing it in a new field in the same document.
+
+For example take one of the documents from the travel sample data set:
+
+[options="nowrap"]
+```
+> doc get landmark_10019
+╭───┬────────────────┬────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┬─────╮
+│ # │       id       │                                                                                                        content                                                                                                         │ ... │
+├───┼────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼─────┤
+│ 0 │ landmark_10019 │ ╭────────────┬───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ │ ... │
+│   │                │ │ title      │ Gillingham (Kent)                                                                                                                                                                                     │ │     │
+│   │                │ │ name       │ Royal Engineers Museum                                                                                                                                                                                │ │     │
+│   │                │ │ alt        │                                                                                                                                                                                                       │ │     │
+│   │                │ │ address    │ Prince Arthur Road, ME4 4UG                                                                                                                                                                           │ │     │
+│   │                │ │ directions │                                                                                                                                                                                                       │ │     │
+│   │                │ │ phone      │ +44 1634 822839                                                                                                                                                                                       │ │     │
+│   │                │ │ tollfree   │                                                                                                                                                                                                       │ │     │
+│   │                │ │ email      │                                                                                                                                                                                                       │ │     │
+│   │                │ │ url        │ http://www.remuseum.org.uk                                                                                                                                                                            │ │     │
+│   │                │ │ hours      │ Tues - Fri 9.00am to 5.00pm, Sat - Sun 11.30am - 5.00pm                                                                                                                                               │ │     │
+│   │                │ │ image      │                                                                                                                                                                                                       │ │     │
+│   │                │ │ price      │                                                                                                                                                                                                       │ │     │
+│   │                │ │ content    │ Adult - £6.99 for an Adult ticket that allows you to come back for further visits within a year (children's and concessionary tickets also available). Museum on military engineering and the history │ │     │
+│   │                │ │            │  of the British Empire. A quite extensive collection that takes about half a day to see. Of most interest to fans of British and military history or civil engineering. The outside collection of     │ │     │
+│   │                │ │            │ tank mounted bridges etc can be seen for free. There is also an extensive series of themed special event weekends, admission to which is included in the cost of the annual ticket.                   │ │     │
+│   │                │ │            │ ╭──────────┬────────────────────╮                                                                                                                                                                     │ │     │
+│   │                │ │ geo        │ │ lat      │ 51.39              │                                                                                                                                                                     │ │     │
+│   │                │ │            │ │ lon      │ 0.54               │                                                                                                                                                                     │ │     │
+│   │                │ │            │ │ accuracy │ RANGE_INTERPOLATED │                                                                                                                                                                     │ │     │
+│   │                │ │            │ ╰──────────┴────────────────────╯                                                                                                                                                                     │ │     │
+│   │                │ │ activity   │ see                                                                                                                                                                                                   │ │     │
+│   │                │ │ type       │ landmark                                                                                                                                                                                              │ │     │
+│   │                │ │ id         │ 10019                                                                                                                                                                                                 │ │     │
+│   │                │ │ country    │ United Kingdom                                                                                                                                                                                        │ │     │
+│   │                │ │ city       │ Gillingham                                                                                                                                                                                            │ │     │
+│   │                │ │ state      │                                                                                                                                                                                                       │ │     │
+│   │                │ ╰────────────┴───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ │     │
+╰───┴────────────────┴────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┴─────╯
+```
+
+We can use the content field to generate an embedding, and the result will be a new document that is the same as the original, with a new field containing the vector that is the result of the embedding generation:
+
+[options="nowrap"]
+```
+> doc get landmark_10019 | vector enrich-doc content
+Embedding batch 1/1
+╭───┬────────────────┬─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ # │       id       │                                                                                                         content                                                                                                         │
+├───┼────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 0 │ landmark_10019 │ ╭───────────────┬─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ │
+│   │                │ │ title         │ Gillingham (Kent)                                                                                                                                                                                   │ │
+│   │                │ │ name          │ Royal Engineers Museum                                                                                                                                                                              │ │
+│   │                │ │ alt           │                                                                                                                                                                                                     │ │
+│   │                │ │ address       │ Prince Arthur Road, ME4 4UG                                                                                                                                                                         │ │
+│   │                │ │ directions    │                                                                                                                                                                                                     │ │
+│   │                │ │ phone         │ +44 1634 822839                                                                                                                                                                                     │ │
+│   │                │ │ tollfree      │                                                                                                                                                                                                     │ │
+│   │                │ │ email         │                                                                                                                                                                                                     │ │
+│   │                │ │ url           │ http://www.remuseum.org.uk                                                                                                                                                                          │ │
+│   │                │ │ hours         │ Tues - Fri 9.00am to 5.00pm, Sat - Sun 11.30am - 5.00pm                                                                                                                                             │ │
+│   │                │ │ image         │                                                                                                                                                                                                     │ │
+│   │                │ │ price         │                                                                                                                                                                                                     │ │
+│   │                │ │ content       │ Adult - £6.99 for an Adult ticket that allows you to come back for further visits within a year (children's and concessionary tickets also available). Museum on military engineering and the       │ │
+│   │                │ │               │ history of the British Empire. A quite extensive collection that takes about half a day to see. Of most interest to fans of British and military history or civil engineering. The outside          │ │
+│   │                │ │               │ collection of tank mounted bridges etc can be seen for free. There is also an extensive series of themed special event weekends, admission to which is included in the cost of the annual ticket.   │ │
+│   │                │ │               │ ╭──────────┬────────────────────╮                                                                                                                                                                   │ │
+│   │                │ │ geo           │ │ lat      │ 51.39              │                                                                                                                                                                   │ │
+│   │                │ │               │ │ lon      │ 0.54               │                                                                                                                                                                   │ │
+│   │                │ │               │ │ accuracy │ RANGE_INTERPOLATED │                                                                                                                                                                   │ │
+│   │                │ │               │ ╰──────────┴────────────────────╯                                                                                                                                                                   │ │
+│   │                │ │ activity      │ see                                                                                                                                                                                                 │ │
+│   │                │ │ type          │ landmark                                                                                                                                                                                            │ │
+│   │                │ │ id            │ 10019                                                                                                                                                                                               │ │
+│   │                │ │ country       │ United Kingdom                                                                                                                                                                                      │ │
+│   │                │ │ city          │ Gillingham                                                                                                                                                                                          │ │
+│   │                │ │ state         │                                                                                                                                                                                                     │ │
+│   │                │ │               │ ╭──────┬───────╮                                                                                                                                                                                    │ │
+│   │                │ │ contentVector │ │    0 │  0.02 │                                                                                                                                                                                    │ │
+│   │                │ │               │ │  ... │   ... │                                                                                                                                                                                    │ │
+│   │                │ │               │ │ 1535 │ -0.01 │                                                                                                                                                                                    │ │
+│   │                │ │               │ ╰──────┴───────╯                                                                                                                                                                                    │ │
+│   │                │ ╰───────────────┴─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ │
+╰───┴────────────────┴─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+```
+
+The resulting document is the same as the original, but with a new field `contentVector` which contains the result of embedding the content field with the <<_cb_env_llm,active llm>>.
+The name of the field that the embedding will be written to will default to the name of the original field with "Vector" appended.
+This default behaviour can be overwritten with the `vectorField` flag.
+The resulting document is formatted with an id and content column which allows it to be piped into a `doc upsert` command to store it in the connected couchbase cluster.
+
+```
+> doc get landmark_10019 | vector enrich-doc content | doc upsert
+Embedding batch 1/1
+╭───┬───────────┬─────────┬────────┬──────────┬─────────╮
+│ # │ processed │ success │ failed │ failures │ cluster │
+├───┼───────────┼─────────┼────────┼──────────┼─────────┤
+│ 0 │         1 │       1 │      0 │          │ local   │
+╰───┴───────────┴─────────┴────────┴──────────┴─────────╯
+```
+
+`vector enrich-doc` can enrich more than one document at a time.
+To repeat what we have done above on all the landmark documents we can get all the docs using a query and pipe the result directly into the `enrich-doc` command:
+
+```
+> query "SELECT meta().id, * FROM `travel-sample` WHERE type = 'landmark'" | vector enrich-doc content
+```
+
+When using the result of a query as the input to `enrich-doc` you need to query for the document id as well as the contents, hence "SELECT meta().id, *".
+This allows the new document output by the command to have the same id as the original.
+If there is another field in the doc that you want to use as the id in the resulting documents then just select this and specify the field with the `--id-column` flag.
+For example to use the "name" field as the id of the resulting documents do:
+
+[options="nowrap"]
+```
+> query "SELECT name, * FROM `travel-sample` WHERE type = 'landmark'" | vector enrich-doc content --id-column name
+```
+
+==== `vector enrich-text`
+
+Generates an embedding from the input text using the <<_cb_env_llm,active_llm>> and outputs a json document containing the source text and the embedding.
+
+It can be used directly on strings, which can be passed in as a positional parameter:
+
+```
+> vector enrich-text "some string" --dimension 5
+Embedding batch 1/1
+╭───┬───────────────┬────────────────────────────╮
+│ # │      id       │          content           │
+├───┼───────────────┼────────────────────────────┤
+│ 0 │ vector-c9e02c │ ╭────────┬───────────────╮ │
+│   │               │ │ text   │ some string   │ │
+│   │               │ │        │ ╭───┬───────╮ │ │
+│   │               │ │ vector │ │ 0 │  0.31 │ │ │
+│   │               │ │        │ │ 1 │ -0.61 │ │ │
+│   │               │ │        │ │ 2 │ -0.21 │ │ │
+│   │               │ │        │ │ 3 │ -0.59 │ │ │
+│   │               │ │        │ │ 4 │ -0.38 │ │ │
+│   │               │ │        │ ╰───┴───────╯ │ │
+│   │               │ ╰────────┴───────────────╯ │
+╰───┴───────────────┴────────────────────────────╯
+```
+
+Or piped directly in:
+
+```
+> "some string" | vector enrich-text --dimension 5
+Embedding batch 1/1
+╭───┬───────────────┬────────────────────────────╮
+│ # │      id       │          content           │
+├───┼───────────────┼────────────────────────────┤
+│ 0 │ vector-a269a7 │ ╭────────┬───────────────╮ │
+│   │               │ │ text   │ some string   │ │
+│   │               │ │        │ ╭───┬───────╮ │ │
+│   │               │ │ vector │ │ 0 │  0.31 │ │ │
+│   │               │ │        │ │ 1 │ -0.61 │ │ │
+│   │               │ │        │ │ 2 │ -0.21 │ │ │
+│   │               │ │        │ │ 3 │ -0.59 │ │ │
+│   │               │ │        │ │ 4 │ -0.38 │ │ │
+│   │               │ │        │ ╰───┴───────╯ │ │
+│   │               │ ╰────────┴───────────────╯ │
+╰───┴───────────────┴────────────────────────────╯
+```
+
+Note that the dimension used here (5) is unrealistically low, but has just been chosen for illustrative purposes.
+
+The output is in a format that means it can be piped directly into a `doc upsert` command to upsert it into the cluster:
+
+```
+> "some string" | vector enrich-text --dimension 5 | doc upsert
+Embedding batch 1/1
+╭───┬───────────┬─────────┬────────┬──────────┬─────────╮
+│ # │ processed │ success │ failed │ failures │ cluster │
+├───┼───────────┼─────────┼────────┼──────────┼─────────┤
+│ 0 │         1 │       1 │      0 │          │ local   │
+╰───┴───────────┴─────────┴────────┴──────────┴─────────╯
+```
+
+Or the output can be piped directly into `vector search` to find indexed docs with a similar vector.
+This makes `vector enrich-text` a very easy way to experiment with similarity search using strings.
+See <<_vector_search,vector search>> for an example of this.
+
+`vector enrich-text` can also be used on larger chunks of text to produce multiple `vector docs` at once.
+For example say you have a text file called `some-text.txt`:
+
+```
+> open some-text.txt | vector enrich-text | doc upsert
+Embedding batch 1/1
+╭───┬───────────┬─────────┬────────┬──────────┬─────────╮
+│ # │ processed │ success │ failed │ failures │ cluster │
+├───┼───────────┼─────────┼────────┼──────────┼─────────┤
+│ 0 │        92 │      92 │      0 │          │ local   │
+╰───┴───────────┴─────────┴────────┴──────────┴─────────╯
+```
+
+When used on larger amounts of text `vector enrich-text` will split it into chunks of length 1024 by default, the length of the chunks can be changed with the `--chunks` flag.
+In this example the contents of `some-text.txt` was split into 92 chunks, resulting in 92 `vector docs` that were then upserted into the connected cluster.
+
+Finally if you have a set of files within a directory that you want to generate `vector docs` from then you can list the files in the current directory with `ls` and pipe this list into `vector enrich-text`:
+
+```
+> ls | vector enrich-text | doc upsert
+Embedding batch 1/1
+╭───┬───────────┬─────────┬────────┬──────────┬─────────╮
+│ # │ processed │ success │ failed │ failures │ cluster │
+├───┼───────────┼─────────┼────────┼──────────┼─────────┤
+│ 0 │       278 │     278 │      0 │          │ local   │
+╰───┴───────────┴─────────┴────────┴──────────┴─────────╯
+```
+
+Here `vector enrich-text` will read each file, chunk the contents, retrieve the embeddings then generate the `vector docs`.
+Check this https://couchbase.sh/docs/recipes.html#_simple_rag[recipe] to see how `vector enrich-text` enables the implementation of simple Retrieval Augmented Generation. 
