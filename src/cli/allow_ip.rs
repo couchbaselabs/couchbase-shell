@@ -14,23 +14,23 @@ use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
 #[derive(Clone)]
-pub struct AllowIP {
+pub struct IPAllow {
     state: Arc<Mutex<State>>,
 }
 
-impl crate::cli::AllowIP {
+impl crate::cli::IPAllow {
     pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
 
-impl Command for crate::cli::AllowIP {
+impl Command for crate::cli::IPAllow {
     fn name(&self) -> &str {
-        "allow ip"
+        "ip allow"
     }
 
     fn signature(&self) -> Signature {
-        Signature::build("allow ip")
+        Signature::build("ip allow")
             .category(Category::Custom("couchbase".to_string()))
             .named(
                 "clusters",
@@ -46,7 +46,7 @@ impl Command for crate::cli::AllowIP {
     }
 
     fn usage(&self) -> &str {
-        "Adds IP address to allowlist on a Capella cluster"
+        "Adds IP address to allow list on a Capella cluster"
     }
 
     fn run(
@@ -56,11 +56,11 @@ impl Command for crate::cli::AllowIP {
         call: &Call,
         input: PipelineData,
     ) -> Result<PipelineData, ShellError> {
-        allow_ip(self.state.clone(), engine_state, stack, call, input)
+        ip_allow(self.state.clone(), engine_state, stack, call, input)
     }
 }
 
-fn allow_ip(
+fn ip_allow(
     state: Arc<Mutex<State>>,
     engine_state: &EngineState,
     stack: &mut Stack,
@@ -73,7 +73,7 @@ fn allow_ip(
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let guard = state.lock().unwrap();
 
-    debug!("Running allow_ip");
+    debug!("Running ip_allow");
 
     let ip_address = match input.into_value(span)? {
         Value::String { val, .. } => format_ip_address(val),

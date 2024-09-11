@@ -71,10 +71,10 @@ This creates read/write credentials on all of the registered clusters that match
 Finally we need the cluster to allow requests from our IP address, this can be done as follows:
 
 ```
-> curl ipconfig.me | allow ip --clusters .*
+> curl ifconfig.me | ip allow --clusters .*
 ```
 
-The curl command returns our IP address, which we then pipe into `allow ip` and this is run against all of the registered clusters again.
+The curl command returns our IP address, which we then pipe into `ip allow` and this is run against all of the registered clusters again.
 Now all of the healthy clusters are registered and ready to use through the shell.
 
 

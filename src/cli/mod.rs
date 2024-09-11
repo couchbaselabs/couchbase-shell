@@ -84,7 +84,7 @@ mod vector_enrich_text;
 mod vector_search;
 mod version;
 
-pub use allow_ip::AllowIP;
+pub use allow_ip::IPAllow;
 pub use analytics::Analytics;
 pub use analytics_buckets::AnalyticsBuckets;
 pub use analytics_datasets::AnalyticsDatasets;
