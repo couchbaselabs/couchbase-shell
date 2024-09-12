@@ -1,5 +1,28 @@
 /* Asciidoctor default stylesheet | MIT License | http://asciidoctor.org */
 @import "https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700";
+#logo-container img {
+   height: 35px;
+   margin-top: 15px;
+   padding-left: 2.7em;
+ }
+
+nav {
+   background-color: #fff;
+   box-shadow: none;
+   -webkit-box-shadow: none;
+   -moz-box-shadow: none;
+   position: fixed;
+   z-index: 999;
+}
+
+#nav-mobile {
+   z-index: 10000;
+}
+
+nav ul a {
+   color: #039be5;
+   font-weight: bold;
+}
 article,aside,details,figcaption,figure,footer,header,hgroup,main,nav,section,summary{
    display:block
 }
@@ -139,7 +162,6 @@ body{
    color:rgba(0,0,0,.8);
    padding:0;
    margin:0;
-   font-family:"Noto Serif","DejaVu Serif",serif;
    font-weight:400;
    font-style:normal;
    line-height:1;
@@ -214,8 +236,7 @@ div,dl,dt,dd,ul,ol,li,h1,h2,h3,#toctitle,.sidebarblock>.content>.title,h4,h5,h6,
    direction:ltr
 }
 a{
-   color:#2156a5;
-   text-decoration:underline;
+   color:#2196F3;
    line-height:inherit
 }
 a:hover,a:focus{
@@ -293,7 +314,6 @@ code{
 }
 ul,ol,dl{
    font-size:1em;
-   line-height:1.6;
    margin-bottom:1.25em;
    list-style-position:outside;
    font-family:inherit
@@ -543,7 +563,7 @@ p a>code:hover{
 }
 #header>h1:first-child{
    color:#ED2226;
-   margin-top:2.25rem;
+   margin-top:2.1em;
    margin-bottom:0
 }
 #header>h1:first-child+#toc{
@@ -636,7 +656,7 @@ p a>code:hover{
    #toctitle{
        font-size:1.375em
    }
-    body.toc2{
+    body.toc2, div.toc2{
        padding-left:15em;
        padding-right:0
    }
