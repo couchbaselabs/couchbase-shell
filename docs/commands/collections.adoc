@@ -1,0 +1,63 @@
+=== collections
+
+The `collections` commands are used to manage collections.
+
+==== `collections`
+
+Lists all of the collections in the active scope:
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+> collections
+╭───┬────────────┬────────────┬─────────╮
+│ # │ collection │ max_expiry │ cluster │
+├───┼────────────┼────────────┼─────────┤
+│ 0 │ landmark   │ inherited  │ local   │
+│ 1 │ hotel      │ inherited  │ local   │
+│ 2 │ airport    │ inherited  │ local   │
+│ 3 │ airline    │ inherited  │ local   │
+│ 4 │ route      │ inherited  │ local   │
+╰───┴────────────┴────────────┴─────────╯
+```
+
+==== `collections create`
+
+Create a collection with the name supplied:
+
+```
+👤 Charlie 🏠 local in 🗄 my-bucket.my-scope._default
+> collections
+╭────────────╮
+│ empty list │
+╰────────────╯
+👤 Charlie 🏠 local in 🗄 my-bucket.my-scope._default
+> collections create new-collection
+👤 Charlie 🏠 local in 🗄 my-bucket.my-scope._default
+> collections
+╭───┬────────────────┬────────────┬─────────╮
+│ # │   collection   │ max_expiry │ cluster │
+├───┼────────────────┼────────────┼─────────┤
+│ 0 │ new-collection │ inherited  │ local   │
+╰───┴────────────────┴────────────┴─────────╯
+```
+
+==== `collections drop`
+
+Drop the collection matching the name given:
+
+```
+👤 Charlie 🏠 local in 🗄 default.my-scope._default
+> collections
+╭───┬────────────────┬────────────┬─────────╮
+│ # │   collection   │ max_expiry │ cluster │
+├───┼────────────────┼────────────┼─────────┤
+│ 0 │ new-collection │ inherited  │ local   │
+╰───┴────────────────┴────────────┴─────────╯
+👤 Charlie 🏠 local in 🗄 default.my-scope._default
+> collections drop new-collection
+👤 Charlie 🏠 local in 🗄 default.my-scope._default
+> collections
+╭────────────╮
+│ empty list │
+╰────────────╯
+```

@@ -75,38 +75,46 @@
 <li><a href="#_buckets_update">4.1.8. <code>buckets update</code></a></li>
 </ul>
 </li>
-<li><a href="#_working_with_scopes_and_collections">4.2. Working with <code>scopes</code> and <code>collections</code></a>
+<li><a href="#_scopes">4.2. scopes</a>
 <ul class="sectlevel3">
-<li><a href="#_scopes">4.2.1. Scopes</a></li>
-<li><a href="#_collections">4.2.2. Collections</a></li>
+<li><a href="#_scopes_2">4.2.1. <code>scopes</code></a></li>
+<li><a href="#_scopes_create">4.2.2. <code>scopes create</code></a></li>
+<li><a href="#_scopes_drop">4.2.3. <code>scopes drop</code></a></li>
 </ul>
 </li>
-<li><a href="#_listing_nodes">4.3. Listing <code>nodes</code></a></li>
-<li><a href="#_reading_and_writing_documents">4.4. Reading and Writing `doc`uments</a>
+<li><a href="#_collections">4.3. collections</a>
 <ul class="sectlevel3">
-<li><a href="#_reading">4.4.1. Reading</a></li>
-<li><a href="#_mutating">4.4.2. Mutating</a></li>
-<li><a href="#_removing">4.4.3. Removing</a></li>
+<li><a href="#_collections_2">4.3.1. <code>collections</code></a></li>
+<li><a href="#_collections_create">4.3.2. <code>collections create</code></a></li>
+<li><a href="#_collections_drop">4.3.3. <code>collections drop</code></a></li>
 </ul>
 </li>
-<li><a href="#_subdoc_get">4.5. <code>subdoc get</code></a></li>
-<li><a href="#_query">4.6. query</a>
+<li><a href="#_listing_nodes">4.4. Listing <code>nodes</code></a></li>
+<li><a href="#_reading_and_writing_documents">4.5. Reading and Writing `doc`uments</a>
 <ul class="sectlevel3">
-<li><a href="#_query_2">4.6.1. <code>query</code></a></li>
-<li><a href="#_query_advise">4.6.2. <code>query advise</code></a></li>
-<li><a href="#_query_indexes">4.6.3. <code>query indexes</code></a></li>
+<li><a href="#_reading">4.5.1. Reading</a></li>
+<li><a href="#_mutating">4.5.2. Mutating</a></li>
+<li><a href="#_removing">4.5.3. Removing</a></li>
 </ul>
 </li>
-<li><a href="#_vector">4.7. vector</a>
+<li><a href="#_subdoc_get">4.6. <code>subdoc get</code></a></li>
+<li><a href="#_query">4.7. query</a>
 <ul class="sectlevel3">
-<li><a href="#_vector_search">4.7.1. <code>vector search</code></a></li>
-<li><a href="#_vector_create_index">4.7.2. <code>vector create-index</code></a></li>
-<li><a href="#_vector_enrich_doc">4.7.3. <code>vector enrich-doc</code></a></li>
-<li><a href="#_vector_enrich_text">4.7.4. <code>vector enrich-text</code></a></li>
+<li><a href="#_query_2">4.7.1. <code>query</code></a></li>
+<li><a href="#_query_advise">4.7.2. <code>query advise</code></a></li>
+<li><a href="#_query_indexes">4.7.3. <code>query indexes</code></a></li>
 </ul>
 </li>
-<li><a href="#_ask">4.8. <code>ask</code></a></li>
-<li><a href="#_version">4.9. <code>version</code></a></li>
+<li><a href="#_vector">4.8. vector</a>
+<ul class="sectlevel3">
+<li><a href="#_vector_search">4.8.1. <code>vector search</code></a></li>
+<li><a href="#_vector_create_index">4.8.2. <code>vector create-index</code></a></li>
+<li><a href="#_vector_enrich_doc">4.8.3. <code>vector enrich-doc</code></a></li>
+<li><a href="#_vector_enrich_text">4.8.4. <code>vector enrich-text</code></a></li>
+</ul>
+</li>
+<li><a href="#_ask">4.9. <code>ask</code></a></li>
+<li><a href="#_version">4.10. <code>version</code></a></li>
 </ul>
 </li>
 <li><a href="#_reference">5. Reference</a>
@@ -1555,169 +1563,165 @@ They can be particularly powerful combined with the <a href="https://couchbase.s
 </div>
 </div>
 <div class="sect2">
-<h3 id="_working_with_scopes_and_collections">4.2. Working with <code>scopes</code> and <code>collections</code></h3>
+<h3 id="_scopes">4.2. scopes</h3>
 <div class="paragraph">
-<p>The <code>scopes</code> and <code>collections</code> commands can be used for managing scopes and collection respectively.</p>
+<p>The <code>scopes</code> commands are used to manage scopes.</p>
 </div>
 <div class="sect3">
-<h4 id="_scopes">4.2.1. Scopes</h4>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code>&gt; scopes -h
-Fetches scopes through the HTTP API
-
-Usage:
-  &gt; scopes {flags}
-
-Subcommands:
-  scopes create - Creates scopes through the HTTP API
-  scopes drop - Deletes scopes through the HTTP API
-
-Flags:
-  -h, --help - Display the help message for this command
-  --bucket &lt;String&gt; - the name of the bucket
-  --clusters &lt;String&gt; - the clusters to query against</code></pre>
-</div>
-</div>
+<h4 id="_scopes_2">4.2.1. <code>scopes</code></h4>
 <div class="paragraph">
-<p>To list all scopes in the bucket you would use:</p>
+<p>Lists all of the scopes in the active bucket:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; scopes
-╭───┬─────────────────┬───────────╮
-│ # │      scope      │  cluster  │
-├───┼─────────────────┼───────────┤
-│ 0 │ inventory       │ dev.local │
-│ 1 │ tenant_agent_00 │ dev.local │
-│ 2 │ tenant_agent_01 │ dev.local │
-│ 3 │ tenant_agent_02 │ dev.local │
-│ 4 │ tenant_agent_03 │ dev.local │
-│ 5 │ tenant_agent_04 │ dev.local │
-│ 6 │ _default        │ dev.local │
-╰───┴─────────────────┴───────────╯</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>You can also create and remove scopes:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code>&gt; scopes create tenant_agent_05
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample._default._default
 &gt; scopes
-╭───┬─────────────────┬───────────╮
-│ # │      scope      │  cluster  │
-├───┼─────────────────┼───────────┤
-│ 0 │ tenant_agent_05 │ dev.local │
-│ 1 │ inventory       │ dev.local │
-│ 2 │ tenant_agent_00 │ dev.local │
-│ 3 │ tenant_agent_01 │ dev.local │
-│ 4 │ tenant_agent_02 │ dev.local │
-│ 5 │ tenant_agent_03 │ dev.local │
-│ 6 │ tenant_agent_04 │ dev.local │
-│ 7 │ _default        │ dev.local │
-╰───┴─────────────────┴───────────╯</code></pre>
-</div>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code>&gt; scopes drop tenant_agent_05
-&gt; scopes
-╭───┬─────────────────┬───────────╮
-│ # │      scope      │  cluster  │
-├───┼─────────────────┼───────────┤
-│ 0 │ inventory       │ dev.local │
-│ 1 │ tenant_agent_00 │ dev.local │
-│ 2 │ tenant_agent_01 │ dev.local │
-│ 3 │ tenant_agent_02 │ dev.local │
-│ 4 │ tenant_agent_03 │ dev.local │
-│ 5 │ tenant_agent_04 │ dev.local │
-│ 6 │ _default        │ dev.local │
-╰───┴─────────────────┴───────────╯</code></pre>
+╭───┬─────────────────┬─────────╮
+│ # │      scope      │ cluster │
+├───┼─────────────────┼─────────┤
+│ 0 │ inventory       │ local   │
+│ 1 │ tenant_agent_00 │ local   │
+│ 2 │ tenant_agent_01 │ local   │
+│ 3 │ tenant_agent_02 │ local   │
+│ 4 │ tenant_agent_03 │ local   │
+│ 5 │ tenant_agent_04 │ local   │
+│ 6 │ _default        │ local   │
+╰───┴─────────────────┴─────────╯</code></pre>
 </div>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_collections">4.2.2. Collections</h4>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code>&gt; collections -h
-Fetches collections through the HTTP API
-
-Usage:
-  &gt; collections {flags}
-
-Subcommands:
-  collections create - Creates collections through the HTTP API
-  collections drop - Deletes collections through the HTTP API
-
-Flags:
-  -h, --help - Display the help message for this command
-  --bucket &lt;String&gt; - the name of the bucket
-  --scope &lt;String&gt; - the name of the scope
-  --clusters &lt;String&gt; - the clusters to query against</code></pre>
-</div>
-</div>
+<h4 id="_scopes_create">4.2.2. <code>scopes create</code></h4>
 <div class="paragraph">
-<p>To list all collection in the bucket you would use:</p>
+<p>Creates a scope with the name supplied:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; collections
-╭────┬─────────────────┬────────────┬────────────┬───────────╮
-│  # │      scope      │ collection │ max_expiry │  cluster  │
-├────┼─────────────────┼────────────┼────────────┼───────────┤
-│  0 │ inventory       │ landmark   │       0sec │ dev.local │
-│  1 │ inventory       │ hotel      │       0sec │ dev.local │
-│  2 │ inventory       │ airport    │       0sec │ dev.local │
-│  3 │ inventory       │ airline    │       0sec │ dev.local │
-│  4 │ inventory       │ route      │       0sec │ dev.local │
-│  5 │ tenant_agent_00 │ bookings   │       0sec │ dev.local │
-│  6 │ tenant_agent_00 │ users      │       0sec │ dev.local │
-│  7 │ tenant_agent_01 │ users      │       0sec │ dev.local │
-│  8 │ tenant_agent_01 │ bookings   │       0sec │ dev.local │
-│  9 │ tenant_agent_02 │ users      │       0sec │ dev.local │
-│ 10 │ tenant_agent_02 │ bookings   │       0sec │ dev.local │
-│ 11 │ tenant_agent_03 │ users      │       0sec │ dev.local │
-│ 12 │ tenant_agent_03 │ bookings   │       0sec │ dev.local │
-│ 13 │ tenant_agent_04 │ users      │       0sec │ dev.local │
-│ 14 │ tenant_agent_04 │ bookings   │       0sec │ dev.local │
-│ 15 │ _default        │ _default   │       0sec │ dev.local │
-╰────┴─────────────────┴────────────┴────────────┴───────────╯</code></pre>
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 default._default._default
+&gt; scopes
+╭───┬──────────┬─────────╮
+│ # │  scope   │ cluster │
+├───┼──────────┼─────────┤
+│ 0 │ _default │ local   │
+╰───┴──────────┴─────────╯
+👤 Charlie 🏠 local in 🗄 default._default._default
+&gt; scopes create new-scope
+👤 Charlie 🏠 local in 🗄 default._default._default
+&gt; scopes
+╭───┬───────────┬─────────╮
+│ # │   scope   │ cluster │
+├───┼───────────┼─────────┤
+│ 0 │ new-scope │ local   │
+│ 1 │ _default  │ local   │
+╰───┴───────────┴─────────╯</code></pre>
 </div>
 </div>
+</div>
+<div class="sect3">
+<h4 id="_scopes_drop">4.2.3. <code>scopes drop</code></h4>
 <div class="paragraph">
-<p>You can also create and remove collections:</p>
+<p>Deletes the scope matching the given name:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; collections create staff --scope tenant_agent_00
-&gt; collections --scope tenant_agent_00
-╭───┬─────────────────┬────────────┬────────────┬───────────╮
-│ # │      scope      │ collection │ max_expiry │  cluster  │
-├───┼─────────────────┼────────────┼────────────┼───────────┤
-│ 0 │ tenant_agent_00 │ staff      │       0sec │ dev.local │
-│ 1 │ tenant_agent_00 │ bookings   │       0sec │ dev.local │
-│ 2 │ tenant_agent_00 │ users      │       0sec │ dev.local │
-╰───┴─────────────────┴────────────┴────────────┴───────────╯</code></pre>
-</div>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code>&gt; collections drop staff --scope tenant_agent_00
-&gt; collections --scope tenant_agent_00
-╭───┬─────────────────┬────────────┬────────────┬───────────╮
-│ # │      scope      │ collection │ max_expiry │  cluster  │
-├───┼─────────────────┼────────────┼────────────┼───────────┤
-│ 0 │ tenant_agent_00 │ bookings   │       0sec │ dev.local │
-│ 1 │ tenant_agent_00 │ users      │       0sec │ dev.local │
-╰───┴─────────────────┴────────────┴────────────┴───────────╯</code></pre>
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 default._default._default
+&gt; scopes
+╭───┬───────────┬─────────╮
+│ # │   scope   │ cluster │
+├───┼───────────┼─────────┤
+│ 0 │ new-scope │ local   │
+│ 1 │ _default  │ local   │
+╰───┴───────────┴─────────╯
+👤 Charlie 🏠 local in 🗄 default._default._default
+&gt; scopes drop new-scope
+👤 Charlie 🏠 local in 🗄 default._default._default
+&gt; scopes
+╭───┬──────────┬─────────╮
+│ # │  scope   │ cluster │
+├───┼──────────┼─────────┤
+│ 0 │ _default │ local   │
+╰───┴──────────┴─────────╯</code></pre>
 </div>
 </div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_listing_nodes">4.3. Listing <code>nodes</code></h3>
+<h3 id="_collections">4.3. collections</h3>
+<div class="paragraph">
+<p>The <code>collections</code> commands are used to manage collections.</p>
+</div>
+<div class="sect3">
+<h4 id="_collections_2">4.3.1. <code>collections</code></h4>
+<div class="paragraph">
+<p>Lists all of the collections in the active scope:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+&gt; collections
+╭───┬────────────┬────────────┬─────────╮
+│ # │ collection │ max_expiry │ cluster │
+├───┼────────────┼────────────┼─────────┤
+│ 0 │ landmark   │ inherited  │ local   │
+│ 1 │ hotel      │ inherited  │ local   │
+│ 2 │ airport    │ inherited  │ local   │
+│ 3 │ airline    │ inherited  │ local   │
+│ 4 │ route      │ inherited  │ local   │
+╰───┴────────────┴────────────┴─────────╯</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_collections_create">4.3.2. <code>collections create</code></h4>
+<div class="paragraph">
+<p>Create a collection with the name supplied:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 my-bucket.my-scope._default
+&gt; collections
+╭────────────╮
+│ empty list │
+╰────────────╯
+👤 Charlie 🏠 local in 🗄 my-bucket.my-scope._default
+&gt; collections create new-collection
+👤 Charlie 🏠 local in 🗄 my-bucket.my-scope._default
+&gt; collections
+╭───┬────────────────┬────────────┬─────────╮
+│ # │   collection   │ max_expiry │ cluster │
+├───┼────────────────┼────────────┼─────────┤
+│ 0 │ new-collection │ inherited  │ local   │
+╰───┴────────────────┴────────────┴─────────╯</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_collections_drop">4.3.3. <code>collections drop</code></h4>
+<div class="paragraph">
+<p>Drop the collection matching the name given:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 default.my-scope._default
+&gt; collections
+╭───┬────────────────┬────────────┬─────────╮
+│ # │   collection   │ max_expiry │ cluster │
+├───┼────────────────┼────────────┼─────────┤
+│ 0 │ new-collection │ inherited  │ local   │
+╰───┴────────────────┴────────────┴─────────╯
+👤 Charlie 🏠 local in 🗄 default.my-scope._default
+&gt; collections drop new-collection
+👤 Charlie 🏠 local in 🗄 default.my-scope._default
+&gt; collections
+╭────────────╮
+│ empty list │
+╰────────────╯</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_listing_nodes">4.4. Listing <code>nodes</code></h3>
 <div class="paragraph">
 <p>The <code>nodes</code> command allows you to list all the nodes of the cluster you are currently connected to.</p>
 </div>
@@ -1735,13 +1739,13 @@ Flags:
 </div>
 </div>
 <div class="sect2">
-<h3 id="_reading_and_writing_documents">4.4. Reading and Writing `doc`uments</h3>
+<h3 id="_reading_and_writing_documents">4.5. Reading and Writing `doc`uments</h3>
 <div class="paragraph">
 <p>The fastest way to interact with documents is through the key value service (as long as you know the document ID).
 All those commands are located as subcommands under the <code>doc</code> namespace.</p>
 </div>
 <div class="sect3">
-<h4 id="_reading">4.4.1. Reading</h4>
+<h4 id="_reading">4.5.1. Reading</h4>
 <div class="paragraph">
 <p>You can retrieve a document with <code>doc get</code>:</p>
 </div>
@@ -1825,7 +1829,7 @@ This behavior can be customized through the <code>--id-column</code> flag.</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_mutating">4.4.2. Mutating</h4>
+<h4 id="_mutating">4.5.2. Mutating</h4>
 <div class="paragraph">
 <p>Documents can be mutated with <code>doc insert</code>, <code>doc upsert</code> and <code>doc replace</code>.</p>
 </div>
@@ -1847,7 +1851,7 @@ This behavior can be customized through the <code>--id-column</code> flag.</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_removing">4.4.3. Removing</h4>
+<h4 id="_removing">4.5.3. Removing</h4>
 <div class="paragraph">
 <p>Documents can be removed with <code>doc remove</code>.</p>
 </div>
@@ -1877,7 +1881,7 @@ This behavior can be customized through the <code>--id-column</code> flag.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_subdoc_get">4.5. <code>subdoc get</code></h3>
+<h3 id="_subdoc_get">4.6. <code>subdoc get</code></h3>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; subdoc get --help
@@ -1953,12 +1957,12 @@ Parameters:
 </div>
 </div>
 <div class="sect2">
-<h3 id="_query">4.6. query</h3>
+<h3 id="_query">4.7. query</h3>
 <div class="paragraph">
 <p>The query commands can be used to explore/create indexes and execute queries.</p>
 </div>
 <div class="sect3">
-<h4 id="_query_2">4.6.1. <code>query</code></h4>
+<h4 id="_query_2">4.7.1. <code>query</code></h4>
 <div class="paragraph">
 <p>Takes a n1ql statement and executes it against the active cluster.</p>
 </div>
@@ -2044,7 +2048,7 @@ The following finds any IDs that match the regex 'hotel1002*'.</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_query_advise">4.6.2. <code>query advise</code></h4>
+<h4 id="_query_advise">4.7.2. <code>query advise</code></h4>
 <div class="paragraph">
 <p>Helps you to learn about the indexes that your queries are using, and what indexes
 you could create to make them faster. For example we can take the first query from the <code>query</code> examples:</p>
@@ -2091,7 +2095,7 @@ you could create to make them faster. For example we can take the first query fr
 </div>
 </div>
 <div class="sect3">
-<h4 id="_query_indexes">4.6.3. <code>query indexes</code></h4>
+<h4 id="_query_indexes">4.7.3. <code>query indexes</code></h4>
 <div class="paragraph">
 <p>Lists all of the query indexes.
 If we had just created the recommended index at the end of the <code>query advise</code> section, the nushell command <code>find</code> can be used in conjunction with <code>query indexes</code> to check it was successfully created.</p>
@@ -2127,13 +2131,13 @@ If we had just created the recommended index at the end of the <code>query advis
 </div>
 </div>
 <div class="sect2">
-<h3 id="_vector">4.7. vector</h3>
+<h3 id="_vector">4.8. vector</h3>
 <div class="paragraph">
 <p>The vector commands make it easy to explore the value that vector search can add to your data.
 Check the recipes for how the vector commands can be combined to implement <a href="https://couchbase.sh/docs/recipes.html#_similarity_search">similarity search</a> or <a href="https://couchbase.sh/docs/recipes.html#_simple_rag">simple RAG</a>.</p>
 </div>
 <div class="sect3">
-<h4 id="_vector_search">4.7.1. <code>vector search</code></h4>
+<h4 id="_vector_search">4.8.1. <code>vector search</code></h4>
 <div class="paragraph">
 <p>Performs a vector search against a named vector index.
 Requires a vector to be used as the source of the search which can be supplied in a couple of formats.</p>
@@ -2328,7 +2332,7 @@ Error:   × Unexpected status code
 </div>
 </div>
 <div class="sect3">
-<h4 id="_vector_create_index">4.7.2. <code>vector create-index</code></h4>
+<h4 id="_vector_create_index">4.8.2. <code>vector create-index</code></h4>
 <div class="paragraph">
 <p>Creates a vector index against the active bucket/scope or the bucket/scope specified with the corresponding flags.
 For example the following will create an index named new-vector-index over the field fieldName in documents in the bucket <code>default</code> and the scope <code>_default</code>:</p>
@@ -2379,7 +2383,7 @@ Whereas in the latter the environment values need to be overwritten with the <co
 </div>
 </div>
 <div class="sect3">
-<h4 id="_vector_enrich_doc">4.7.3. <code>vector enrich-doc</code></h4>
+<h4 id="_vector_enrich_doc">4.8.3. <code>vector enrich-doc</code></h4>
 <div class="paragraph">
 <p>Enriches an existing json document by generating an embedding using the <a href="#_cb_env_llm">active llm</a> from a named field and storing it in a new field in the same document.</p>
 </div>
@@ -2508,7 +2512,7 @@ For example to use the "name" field as the id of the resulting documents do:</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_vector_enrich_text">4.7.4. <code>vector enrich-text</code></h4>
+<h4 id="_vector_enrich_text">4.8.4. <code>vector enrich-text</code></h4>
 <div class="paragraph">
 <p>Generates an embedding from the input text using the <a href="#_cb_env_llm">active_llm</a> and outputs a json document containing the source text and the embedding.</p>
 </div>
@@ -2620,7 +2624,7 @@ Check this <a href="https://couchbase.sh/docs/recipes.html#_simple_rag">recipe</
 </div>
 </div>
 <div class="sect2">
-<h3 id="_ask">4.8. <code>ask</code></h3>
+<h3 id="_ask">4.9. <code>ask</code></h3>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; ask --help
@@ -2697,7 +2701,7 @@ At the new restaurant, you can enjoy the following activities:
 </div>
 </div>
 <div class="sect2">
-<h3 id="_version">4.9. <code>version</code></h3>
+<h3 id="_version">4.10. <code>version</code></h3>
 <div class="paragraph">
 <p>The <code>version</code> command lists the version of the couchbase shell.</p>
 </div>
@@ -3487,7 +3491,7 @@ As our versioning continues to track the underlying Nushell minor version this h
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-09-17 10:34:00 UTC
+Last updated 2024-09-17 10:56:41 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
