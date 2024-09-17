@@ -5,7 +5,6 @@
    margin-top: 15px;
    padding-left: 2.7em;
  }
-
 nav {
    background-color: #fff;
    box-shadow: none;
@@ -14,11 +13,6 @@ nav {
    position: fixed;
    z-index: 999;
 }
-
-#nav-mobile {
-   z-index: 10000;
-}
-
 nav ul a {
    color: #039be5;
    font-weight: bold;
