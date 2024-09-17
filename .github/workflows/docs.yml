@@ -13,12 +13,12 @@ jobs:
         id: adocbuild_index
         uses: tonynv/asciidoctor-action@master
         with:
-          program: "asciidoctor -D docs -r ./docs/lib/cb-docinfoprocessor.rb -a toc=left -a toclevels=4 -a source-highlighter=coderay -a stylesheet=couchbase.css -a linkcss=true docs/index.adoc"
+          program: "asciidoctor -D docs -r ./docs/lib/cb-docinfoprocessor.rb -a toc=left -a toclevels=4 -a source-highlighter=coderay -a stylesheet=couchbase.css -a linkcss=true docs/index.adoc -o docs.html"
       - name: Build recipes page
         id: adocbuild_recipe
         uses: tonynv/asciidoctor-action@master
         with:
-          program: "asciidoctor -D docs -r ./docs/lib/cb-docinfoprocessor.rb -a toc=left -a toclevels=4 -a source-highlighter=coderay -a stylesheet=couchbase.css -a linkcss=true docs/recipes.adoc"
+          program: "asciidoctor -D docs -r ./docs/lib/cb-docinfoprocessor.rb -a toc=left -a toclevels=4 -a source-highlighter=coderay -a stylesheet=couchbase.css docs/recipes.adoc -o recipes/recipes.html"
       - name: Print execution time
         run: echo "Time ${{ steps.adocbuild.outputs.time }}"
       - name: Deploy docs to ghpages
@@ -28,4 +28,5 @@ jobs:
           publish_branch: gh-pages
           publish_dir: ./docs
           destination_dir: ./docs
-          exclude_assets: '*.adoc,build.sh,lib/,recipes/'
+          exclude_assets: '*.adoc,build.sh,lib/,recipes/*.adoc'
+          keep_files: true
