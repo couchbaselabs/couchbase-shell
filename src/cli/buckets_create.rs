@@ -224,25 +224,14 @@ pub fn create_capella_bucket(
     span: Span,
 ) -> Result<(), ShellError> {
     let client = org.client();
-    let deadline = Instant::now().add(org.timeout());
 
-    let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
-
-    let project_id = find_project_id(
-        ctrl_c.clone(),
-        project,
-        &client,
-        deadline,
-        span,
-        org_id.clone(),
-    )?;
-
+    let org_id = find_org_id(ctrl_c.clone(), &client, span)?;
+    let project_id = find_project_id(ctrl_c.clone(), project, &client, span, org_id.clone())?;
     let json_cluster = cluster_from_conn_str(
         identifier.clone(),
         ctrl_c.clone(),
         cluster.hostnames().clone(),
         &client,
-        deadline,
         span,
         org_id.clone(),
         project_id.clone(),
@@ -262,7 +251,6 @@ pub fn create_capella_bucket(
             project_id,
             json_cluster.id(),
             serde_json::to_string(&json).unwrap(),
-            deadline,
             ctrl_c,
         )
         .map_err(|e| client_error_to_shell_error(e, span))

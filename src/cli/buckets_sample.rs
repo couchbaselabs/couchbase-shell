@@ -1,12 +1,11 @@
 use crate::cli::error::client_error_to_shell_error;
 use crate::cli::util::{
-    cluster_from_conn_str, cluster_identifiers_from, find_org_id, find_project_id,
-    get_active_cluster, NuValueMap,
+    cluster_identifiers_from, find_org_project_cluster_ids, get_active_cluster, NuValueMap,
 };
 use crate::client::{ClientError, ManagementRequest};
 use crate::remote_cluster::RemoteCluster;
 use crate::remote_cluster::RemoteClusterType::Provisioned;
-use crate::state::{RemoteCapellaOrganization, State};
+use crate::state::State;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -81,22 +80,33 @@ fn load_sample_bucket(
 
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
-        let cluster = get_active_cluster(identifier.clone(), &guard, span)?;
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
-        let result = if cluster.cluster_type() == Provisioned {
-            let org = guard.named_or_active_org(cluster.capella_org())?;
+        let result = if active_cluster.cluster_type() == Provisioned {
+            let client = guard
+                .named_or_active_org(active_cluster.capella_org())?
+                .client();
 
-            load_capella_sample(
-                org,
-                guard.named_or_active_project(cluster.project())?,
-                cluster,
-                identifier.clone(),
-                bucket_name.clone(),
+            let (org_id, project_id, cluster_id) = find_org_project_cluster_ids(
+                &client,
                 ctrl_c.clone(),
                 span,
-            )
+                identifier.clone(),
+                guard.named_or_active_project(active_cluster.project())?,
+                active_cluster,
+            )?;
+
+            client
+                .load_sample_bucket(
+                    org_id,
+                    project_id,
+                    cluster_id,
+                    bucket_name.clone(),
+                    ctrl_c.clone(),
+                )
+                .map_err(|e| client_error_to_shell_error(e, span))
         } else {
-            load_sever_sample(cluster, bucket_name.clone(), ctrl_c.clone(), span)
+            load_sever_sample(active_cluster, bucket_name.clone(), ctrl_c.clone(), span)
         };
 
         let mut collected = NuValueMap::default();
@@ -120,52 +130,6 @@ fn load_sample_bucket(
         internal_span: span,
     }
     .into_pipeline_data())
-}
-
-fn load_capella_sample(
-    org: &RemoteCapellaOrganization,
-    project: String,
-    cluster: &RemoteCluster,
-    identifier: String,
-    sample: String,
-    ctrl_c: Arc<AtomicBool>,
-    span: Span,
-) -> Result<(), ShellError> {
-    let client = org.client();
-    let deadline = Instant::now().add(org.timeout());
-
-    let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
-
-    let project_id = find_project_id(
-        ctrl_c.clone(),
-        project,
-        &client,
-        deadline,
-        span,
-        org_id.clone(),
-    )?;
-
-    let json_cluster = cluster_from_conn_str(
-        identifier.clone(),
-        ctrl_c.clone(),
-        cluster.hostnames().clone(),
-        &client,
-        deadline,
-        span,
-        org_id.clone(),
-        project_id.clone(),
-    )?;
-
-    client
-        .load_sample_bucket(
-            org_id,
-            project_id,
-            json_cluster.id(),
-            sample,
-            deadline,
-            ctrl_c.clone(),
-        )
-        .map_err(|e| client_error_to_shell_error(e, span))
 }
 
 fn load_sever_sample(

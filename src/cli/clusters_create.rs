@@ -2,9 +2,7 @@ use crate::client::cloud_json::{ClusterCreateRequest, Provider};
 use crate::state::State;
 use log::{debug, info};
 use std::convert::TryFrom;
-use std::ops::Add;
 use std::sync::{Arc, Mutex};
-use tokio::time::Instant;
 
 use crate::cli::error::{client_error_to_shell_error, serialize_error};
 use crate::cli::generic_error;
@@ -144,25 +142,17 @@ fn clusters_create(
     let guard = state.lock().unwrap();
     let control = guard.named_or_active_org(capella)?;
     let client = control.client();
-    let deadline = Instant::now().add(control.timeout());
 
     let project =
         guard.named_or_active_project(call.get_flag(engine_state, stack, "project")?)?;
 
-    let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
-    let project_id = find_project_id(
-        ctrl_c.clone(),
-        project,
-        &client,
-        deadline,
-        span,
-        org_id.clone(),
-    )?;
+    let org_id = find_org_id(ctrl_c.clone(), &client, span)?;
+    let project_id = find_project_id(ctrl_c.clone(), project, &client, span, org_id.clone())?;
 
     let payload =
         serde_json::to_string(&definition).map_err(|e| serialize_error(e.to_string(), span))?;
     client
-        .create_cluster(org_id, project_id, payload, deadline, ctrl_c)
+        .create_cluster(org_id, project_id, payload, ctrl_c)
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
     Ok(PipelineData::empty())

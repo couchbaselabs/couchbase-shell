@@ -1,11 +1,10 @@
 //! The `collections drop` commanddrop a collection from the server.
 
 use crate::cli::util::{
-    cluster_from_conn_str, cluster_identifiers_from, find_org_id, find_project_id,
-    get_active_cluster,
+    cluster_identifiers_from, find_org_project_cluster_ids, get_active_cluster,
 };
 use crate::client::ManagementRequest::DropCollection;
-use crate::state::{RemoteCapellaOrganization, State};
+use crate::state::State;
 use log::debug;
 use std::ops::Add;
 use std::sync::atomic::AtomicBool;
@@ -14,6 +13,7 @@ use tokio::time::Instant;
 
 use crate::cli::collections::{get_bucket_or_active, get_scope_or_active};
 use crate::cli::error::{client_error_to_shell_error, unexpected_status_code_error};
+use crate::client::cloud::CollectionNamespace;
 use crate::remote_cluster::RemoteCluster;
 use crate::remote_cluster::RemoteClusterType::Provisioned;
 use nu_engine::CallExt;
@@ -97,17 +97,24 @@ fn collections_drop(
         );
 
         if active_cluster.cluster_type() == Provisioned {
-            drop_capella_collection(
-                guard.named_or_active_org(active_cluster.capella_org())?,
-                guard.named_or_active_project(active_cluster.project())?,
-                active_cluster,
-                bucket.clone(),
-                scope.clone(),
-                collection.clone(),
-                identifier,
+            let client = guard
+                .named_or_active_org(active_cluster.capella_org())?
+                .client();
+
+            let (org_id, project_id, cluster_id) = find_org_project_cluster_ids(
+                &client,
                 ctrl_c.clone(),
                 span,
-            )
+                identifier,
+                guard.named_or_active_project(active_cluster.project())?,
+                active_cluster,
+            )?;
+
+            let namespace = CollectionNamespace::new(org_id, project_id, cluster_id, bucket, scope);
+
+            client
+                .delete_collection(namespace, collection.clone(), ctrl_c.clone())
+                .map_err(|e| client_error_to_shell_error(e, span))
         } else {
             drop_server_collection(
                 active_cluster,
@@ -121,57 +128,6 @@ fn collections_drop(
     }
 
     Ok(PipelineData::empty())
-}
-
-#[allow(clippy::too_many_arguments)]
-fn drop_capella_collection(
-    org: &RemoteCapellaOrganization,
-    project: String,
-    cluster: &RemoteCluster,
-    bucket: String,
-    scope: String,
-    collection: String,
-    identifier: String,
-    ctrl_c: Arc<AtomicBool>,
-    span: Span,
-) -> Result<(), ShellError> {
-    let client = org.client();
-    let deadline = Instant::now().add(org.timeout());
-
-    let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
-
-    let project_id = find_project_id(
-        ctrl_c.clone(),
-        project,
-        &client,
-        deadline,
-        span,
-        org_id.clone(),
-    )?;
-
-    let json_cluster = cluster_from_conn_str(
-        identifier.clone(),
-        ctrl_c.clone(),
-        cluster.hostnames().clone(),
-        &client,
-        deadline,
-        span,
-        org_id.clone(),
-        project_id.clone(),
-    )?;
-
-    client
-        .delete_collection(
-            org_id,
-            project_id,
-            json_cluster.id(),
-            bucket,
-            scope,
-            collection,
-            deadline,
-            ctrl_c,
-        )
-        .map_err(|e| client_error_to_shell_error(e, span))
 }
 
 fn drop_server_collection(

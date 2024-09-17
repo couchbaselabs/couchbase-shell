@@ -7,9 +7,7 @@ use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
 };
-use std::ops::Add;
 use std::sync::{Arc, Mutex};
-use tokio::time::Instant;
 
 #[derive(Clone)]
 pub struct Clusters {
@@ -77,20 +75,12 @@ fn clusters(
         guard.named_or_active_project(call.get_flag(engine_state, stack, "project")?)?;
 
     let client = control.client();
-    let deadline = Instant::now().add(control.timeout());
 
-    let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
-    let project_id = find_project_id(
-        ctrl_c.clone(),
-        project,
-        &client,
-        deadline,
-        span,
-        org_id.clone(),
-    )?;
+    let org_id = find_org_id(ctrl_c.clone(), &client, span)?;
+    let project_id = find_project_id(ctrl_c.clone(), project, &client, span, org_id.clone())?;
 
     let clusters = client
-        .list_clusters(org_id, project_id, deadline, ctrl_c)
+        .list_clusters(org_id, project_id, ctrl_c)
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
     let mut results = vec![];

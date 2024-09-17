@@ -3,13 +3,12 @@ use crate::cli::error::{
     client_error_to_shell_error, deserialize_error, unexpected_status_code_error,
 };
 use crate::cli::util::{
-    cluster_from_conn_str, cluster_identifiers_from, find_org_id, find_project_id,
-    get_active_cluster, NuValueMap,
+    cluster_identifiers_from, find_org_project_cluster_ids, get_active_cluster, NuValueMap,
 };
 use crate::client::ManagementRequest;
 use crate::remote_cluster::RemoteCluster;
 use crate::remote_cluster::RemoteClusterType::Provisioned;
-use crate::state::{RemoteCapellaOrganization, State};
+use crate::state::State;
 use log::debug;
 use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -92,18 +91,33 @@ fn run(
         debug!("Running scopes get for bucket {:?}", &bucket);
 
         let scopes = if active_cluster.cluster_type() == Provisioned {
-            get_capella_scopes(
-                guard.named_or_active_org(active_cluster.capella_org())?,
-                guard.named_or_active_project(active_cluster.project())?,
-                active_cluster,
-                identifier.clone(),
-                bucket,
+            let client = guard
+                .named_or_active_org(active_cluster.capella_org())?
+                .client();
+
+            let (org_id, project_id, cluster_id) = find_org_project_cluster_ids(
+                &client,
                 ctrl_c.clone(),
                 span,
-            )
+                identifier.clone(),
+                guard.named_or_active_project(active_cluster.project())?,
+                active_cluster,
+            )?;
+
+            let scopes = client
+                .list_scopes(
+                    org_id,
+                    project_id,
+                    cluster_id,
+                    bucket.clone(),
+                    ctrl_c.clone(),
+                )
+                .map_err(|e| client_error_to_shell_error(e, span))?;
+
+            scopes.scopes().iter().map(|s| s.name().clone()).collect()
         } else {
-            get_server_scopes(active_cluster, bucket, ctrl_c.clone(), span)
-        }?;
+            get_server_scopes(active_cluster, bucket, ctrl_c.clone(), span)?
+        };
 
         for scope in scopes {
             let mut collected = NuValueMap::default();
@@ -118,53 +132,6 @@ fn run(
         internal_span: span,
     }
     .into_pipeline_data())
-}
-
-fn get_capella_scopes(
-    org: &RemoteCapellaOrganization,
-    project: String,
-    cluster: &RemoteCluster,
-    identifier: String,
-    bucket: String,
-    ctrl_c: Arc<AtomicBool>,
-    span: Span,
-) -> Result<Vec<String>, ShellError> {
-    let client = org.client();
-    let deadline = Instant::now().add(org.timeout());
-
-    let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
-    let project_id = find_project_id(
-        ctrl_c.clone(),
-        project,
-        &client,
-        deadline,
-        span,
-        org_id.clone(),
-    )?;
-
-    let json_cluster = cluster_from_conn_str(
-        identifier.clone(),
-        ctrl_c.clone(),
-        cluster.hostnames().clone(),
-        &client,
-        deadline,
-        span,
-        org_id.clone(),
-        project_id.clone(),
-    )?;
-
-    let scopes = client
-        .list_scopes(
-            org_id,
-            project_id,
-            json_cluster.id(),
-            bucket,
-            deadline,
-            ctrl_c,
-        )
-        .map_err(|e| client_error_to_shell_error(e, span))?;
-
-    Ok(scopes.scopes().iter().map(|s| s.name().clone()).collect())
 }
 
 fn get_server_scopes(

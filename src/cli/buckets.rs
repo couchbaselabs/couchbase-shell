@@ -1,8 +1,7 @@
 use crate::cli::buckets_builder::{BucketSettings, JSONBucketSettings};
 use crate::cli::buckets_get::bucket_to_nu_value;
 use crate::cli::util::{
-    cluster_from_conn_str, cluster_identifiers_from, find_org_id, find_project_id,
-    get_active_cluster,
+    cluster_identifiers_from, find_org_project_cluster_ids, get_active_cluster,
 };
 use crate::client::ManagementRequest;
 use crate::state::{RemoteCapellaOrganization, State};
@@ -170,31 +169,18 @@ pub fn get_capella_buckets(
     span: Span,
 ) -> Result<Vec<BucketSettings>, ShellError> {
     let client = org.client();
-    let deadline = Instant::now().add(org.timeout());
 
-    let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
-    let project_id = find_project_id(
-        ctrl_c.clone(),
-        project,
+    let (org_id, project_id, cluster_id) = find_org_project_cluster_ids(
         &client,
-        deadline,
+        ctrl_c.clone(),
         span,
-        org_id.clone(),
-    )?;
-
-    let json_cluster = cluster_from_conn_str(
         identifier.clone(),
-        ctrl_c.clone(),
-        cluster.hostnames().clone(),
-        &client,
-        deadline,
-        span,
-        org_id.clone(),
-        project_id.clone(),
+        project,
+        cluster,
     )?;
 
     let buckets = client
-        .list_buckets(org_id, project_id, json_cluster.id(), deadline, ctrl_c)
+        .list_buckets(org_id, project_id, cluster_id, ctrl_c)
         .map_err(|e| client_error_to_shell_error(e, span))?;
     let mut buckets_settings: Vec<BucketSettings> = vec![];
     for bucket in buckets.items() {

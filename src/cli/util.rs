@@ -20,7 +20,6 @@ use regex::Regex;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
-use tokio::time::Instant;
 
 pub fn is_http_status(response: &HttpResponse, status: u16, span: Span) -> Result<(), ShellError> {
     if response.status() != status {
@@ -312,13 +311,12 @@ pub(crate) fn cluster_from_conn_str(
     ctrl_c: Arc<AtomicBool>,
     hostnames: Vec<String>,
     client: &Arc<CapellaClient>,
-    deadline: Instant,
     span: Span,
     org_id: String,
     project_id: String,
 ) -> Result<Cluster, ShellError> {
     let response = client
-        .list_clusters(org_id, project_id, deadline, ctrl_c)
+        .list_clusters(org_id, project_id, ctrl_c)
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
     for c in response.items() {
@@ -332,16 +330,31 @@ pub(crate) fn cluster_from_conn_str(
     Err(ShellError::from(ClusterNotFound { identifier, span }))
 }
 
+pub(crate) fn find_cluster_id(
+    identifier: String,
+    ctrl_c: Arc<AtomicBool>,
+    hostnames: Vec<String>,
+    client: &Arc<CapellaClient>,
+    span: Span,
+    org_id: String,
+    project_id: String,
+) -> Result<String, ShellError> {
+    let cluster = cluster_from_conn_str(
+        identifier, ctrl_c, hostnames, client, span, org_id, project_id,
+    )?;
+
+    Ok(cluster.id())
+}
+
 pub(crate) fn find_project_id(
     ctrl_c: Arc<AtomicBool>,
     name: String,
     client: &Arc<CapellaClient>,
-    deadline: Instant,
     span: Span,
     org_id: String,
 ) -> Result<String, ShellError> {
     let projects = client
-        .list_projects(org_id, deadline, ctrl_c)
+        .list_projects(org_id, ctrl_c)
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
     for p in projects.items() {
@@ -356,11 +369,10 @@ pub(crate) fn find_project_id(
 pub(crate) fn find_org_id(
     ctrl_c: Arc<AtomicBool>,
     client: &Arc<CapellaClient>,
-    deadline: Instant,
     span: Span,
 ) -> Result<String, ShellError> {
     let orgs = client
-        .list_organizations(deadline, ctrl_c.clone())
+        .list_organizations(ctrl_c.clone())
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
     let org_id = match orgs.items().first() {
@@ -369,6 +381,29 @@ pub(crate) fn find_org_id(
     };
 
     Ok(org_id.to_string())
+}
+
+pub(crate) fn find_org_project_cluster_ids(
+    client: &Arc<CapellaClient>,
+    ctrl_c: Arc<AtomicBool>,
+    span: Span,
+    identifier: String,
+    project: String,
+    cluster: &RemoteCluster,
+) -> Result<(String, String, String), ShellError> {
+    let org_id = find_org_id(ctrl_c.clone(), client, span)?;
+    let project_id = find_project_id(ctrl_c.clone(), project, client, span, org_id.clone())?;
+    let cluster_id = find_cluster_id(
+        identifier.clone(),
+        ctrl_c.clone(),
+        cluster.hostnames().clone(),
+        client,
+        span,
+        org_id.clone(),
+        project_id.clone(),
+    )?;
+
+    Ok((org_id, project_id, cluster_id))
 }
 
 // duration_to_golang_string creates a golang formatted string to use with timeouts. Unlike Golang

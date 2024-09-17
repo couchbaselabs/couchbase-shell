@@ -1,7 +1,7 @@
 use crate::cli::CtrlcFuture;
 use crate::client::cloud_json::{
-    Bucket, BucketsResponse, Cluster, ClustersResponse, CollectionsResponse, OrganizationsResponse,
-    ProjectsResponse, ScopesResponse,
+    Bucket, BucketsResponse, Cluster, ClustersResponse, Collection, CollectionsResponse,
+    OrganizationsResponse, ProjectsResponse, ScopesResponse,
 };
 use crate::client::error::ClientError;
 use crate::client::http_handler::{HttpResponse, HttpVerb};
@@ -12,10 +12,10 @@ use hmac::{Hmac, Mac};
 use log::debug;
 use reqwest::Client;
 use sha2::Sha256;
-use std::ops::Sub;
+use std::ops::{Add, Sub};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::runtime::Runtime;
 use tokio::{select, time::Instant};
 
@@ -26,15 +26,26 @@ pub struct CapellaClient {
     secret_key: String,
     access_key: String,
     api_endpoint: String,
+    timeout: Duration,
 }
 
 impl CapellaClient {
-    pub fn new(secret_key: String, access_key: String, api_endpoint: String) -> Self {
+    pub fn new(
+        secret_key: String,
+        access_key: String,
+        api_endpoint: String,
+        timeout: Duration,
+    ) -> Self {
         Self {
             secret_key,
             access_key,
             api_endpoint,
+            timeout,
         }
+    }
+
+    fn deadline(&self) -> Instant {
+        Instant::now().add(self.timeout)
     }
 
     fn http_do(
@@ -42,14 +53,13 @@ impl CapellaClient {
         verb: HttpVerb,
         path: &str,
         payload: Option<Vec<u8>>,
-        deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(String, u16), ClientError> {
         let now = Instant::now();
-        if now >= deadline {
+        if now >= self.deadline() {
             return Err(ClientError::Timeout { key: None });
         }
-        let timeout = deadline.sub(now);
+        let timeout = self.deadline().sub(now);
         let ctrl_c_fut = CtrlcFuture::new(ctrl_c);
 
         let uri = format!("{}{}", self.api_endpoint, path);
@@ -111,62 +121,49 @@ impl CapellaClient {
         })
     }
 
-    fn http_get(
-        &self,
-        path: &str,
-        deadline: Instant,
-        ctrl_c: Arc<AtomicBool>,
-    ) -> Result<(String, u16), ClientError> {
-        self.http_do(HttpVerb::Get, path, None, deadline, ctrl_c)
+    fn http_get(&self, path: &str, ctrl_c: Arc<AtomicBool>) -> Result<(String, u16), ClientError> {
+        self.http_do(HttpVerb::Get, path, None, ctrl_c)
     }
 
     fn http_delete(
         &self,
         path: &str,
         payload: Option<Vec<u8>>,
-        deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(String, u16), ClientError> {
-        self.http_do(HttpVerb::Delete, path, payload, deadline, ctrl_c)
+        self.http_do(HttpVerb::Delete, path, payload, ctrl_c)
     }
 
     fn http_post(
         &self,
         path: &str,
         payload: Option<Vec<u8>>,
-        deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(String, u16), ClientError> {
-        self.http_do(HttpVerb::Post, path, payload, deadline, ctrl_c)
+        self.http_do(HttpVerb::Post, path, payload, ctrl_c)
     }
 
     fn http_put(
         &self,
         path: &str,
         payload: Option<Vec<u8>>,
-        deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(String, u16), ClientError> {
-        self.http_do(HttpVerb::Put, path, payload, deadline, ctrl_c)
+        self.http_do(HttpVerb::Put, path, payload, ctrl_c)
     }
 
     pub fn capella_request(
         &self,
         request: CapellaRequest,
-        deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<HttpResponse, ClientError> {
         let (content, status) = match request.verb() {
-            HttpVerb::Get => self.http_get(request.path().as_str(), deadline, ctrl_c)?,
-            HttpVerb::Post => {
-                self.http_post(request.path().as_str(), request.payload(), deadline, ctrl_c)?
-            }
+            HttpVerb::Get => self.http_get(request.path().as_str(), ctrl_c)?,
+            HttpVerb::Post => self.http_post(request.path().as_str(), request.payload(), ctrl_c)?,
             HttpVerb::Delete => {
-                self.http_delete(request.path().as_str(), request.payload(), deadline, ctrl_c)?
+                self.http_delete(request.path().as_str(), request.payload(), ctrl_c)?
             }
-            HttpVerb::Put => {
-                self.http_put(request.path().as_str(), request.payload(), deadline, ctrl_c)?
-            }
+            HttpVerb::Put => self.http_put(request.path().as_str(), request.payload(), ctrl_c)?,
         };
         // This endpoint is pretty undenyably a hack, but doesn't really matter for now.
         Ok(HttpResponse::new(
@@ -178,11 +175,10 @@ impl CapellaClient {
 
     pub fn list_organizations(
         &self,
-        deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<OrganizationsResponse, ClientError> {
         let request = CapellaRequest::OrganizationList {};
-        let response = self.capella_request(request, deadline, ctrl_c)?;
+        let response = self.capella_request(request, ctrl_c)?;
 
         if response.status() != 200 {
             return Err(ClientError::RequestFailed {
@@ -198,11 +194,10 @@ impl CapellaClient {
     pub fn list_projects(
         &self,
         org_id: String,
-        deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<ProjectsResponse, ClientError> {
         let request = CapellaRequest::ProjectList { org_id };
-        let response = self.capella_request(request, deadline, ctrl_c)?;
+        let response = self.capella_request(request, ctrl_c)?;
 
         if response.status() != 200 {
             return Err(ClientError::RequestFailed {
@@ -219,14 +214,13 @@ impl CapellaClient {
         &self,
         org_id: String,
         name: String,
-        deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
         let request = CapellaRequest::ProjectCreate {
             org_id,
             payload: format!("{{\"name\": \"{}\"}}", name),
         };
-        let response = self.capella_request(request, deadline, ctrl_c)?;
+        let response = self.capella_request(request, ctrl_c)?;
 
         if response.status() != 201 {
             return Err(ClientError::RequestFailed {
@@ -242,11 +236,10 @@ impl CapellaClient {
         &self,
         org_id: String,
         project_id: String,
-        deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
         let request = CapellaRequest::ProjectDelete { org_id, project_id };
-        let response = self.capella_request(request, deadline, ctrl_c)?;
+        let response = self.capella_request(request, ctrl_c)?;
 
         if response.status() != 204 {
             return Err(ClientError::RequestFailed {
@@ -263,11 +256,10 @@ impl CapellaClient {
         cluster_name: String,
         org_id: String,
         project_id: String,
-        deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<Cluster, ClientError> {
         let request = CapellaRequest::ClusterList { org_id, project_id };
-        let response = self.capella_request(request, deadline, ctrl_c)?;
+        let response = self.capella_request(request, ctrl_c)?;
 
         if response.status() != 200 {
             return Err(ClientError::RequestFailed {
@@ -291,11 +283,10 @@ impl CapellaClient {
         &self,
         org_id: String,
         project_id: String,
-        deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<ClustersResponse, ClientError> {
         let request = CapellaRequest::ClusterList { org_id, project_id };
-        let response = self.capella_request(request, deadline, ctrl_c)?;
+        let response = self.capella_request(request, ctrl_c)?;
 
         if response.status() != 200 {
             return Err(ClientError::RequestFailed {
@@ -313,7 +304,6 @@ impl CapellaClient {
         org_id: String,
         project_id: String,
         payload: String,
-        deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
         let request = CapellaRequest::ClusterCreate {
@@ -321,7 +311,7 @@ impl CapellaClient {
             project_id,
             payload,
         };
-        let response = self.capella_request(request, deadline, ctrl_c)?;
+        let response = self.capella_request(request, ctrl_c)?;
 
         if response.status() != 202 {
             return Err(ClientError::RequestFailed {
@@ -337,7 +327,6 @@ impl CapellaClient {
         org_id: String,
         project_id: String,
         cluster_id: String,
-        deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
         let request = CapellaRequest::ClusterDelete {
@@ -345,7 +334,7 @@ impl CapellaClient {
             project_id,
             cluster_id,
         };
-        let response = self.capella_request(request, deadline, ctrl_c)?;
+        let response = self.capella_request(request, ctrl_c)?;
 
         if response.status() != 202 {
             return Err(ClientError::RequestFailed {
@@ -362,7 +351,6 @@ impl CapellaClient {
         project_id: String,
         cluster_id: String,
         payload: String,
-        deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
         let request = CapellaRequest::CredentialsCreate {
@@ -371,7 +359,7 @@ impl CapellaClient {
             cluster_id,
             payload,
         };
-        let response = self.capella_request(request, deadline, ctrl_c)?;
+        let response = self.capella_request(request, ctrl_c)?;
 
         if response.status() != 201 {
             return Err(ClientError::RequestFailed {
@@ -388,7 +376,6 @@ impl CapellaClient {
         project_id: String,
         cluster_id: String,
         bucket: String,
-        deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<Bucket, ClientError> {
         let request = CapellaRequest::BucketGet {
@@ -397,7 +384,7 @@ impl CapellaClient {
             cluster_id,
             bucket_id: BASE64_STANDARD.encode(bucket),
         };
-        let response = self.capella_request(request, deadline, ctrl_c)?;
+        let response = self.capella_request(request, ctrl_c)?;
 
         if response.status() != 200 {
             return Err(ClientError::RequestFailed {
@@ -415,7 +402,6 @@ impl CapellaClient {
         org_id: String,
         project_id: String,
         cluster_id: String,
-        deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<BucketsResponse, ClientError> {
         let request = CapellaRequest::BucketList {
@@ -423,7 +409,7 @@ impl CapellaClient {
             project_id,
             cluster_id,
         };
-        let response = self.capella_request(request, deadline, ctrl_c)?;
+        let response = self.capella_request(request, ctrl_c)?;
 
         if response.status() != 200 {
             return Err(ClientError::RequestFailed {
@@ -442,7 +428,6 @@ impl CapellaClient {
         project_id: String,
         cluster_id: String,
         payload: String,
-        deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
         let request = CapellaRequest::BucketCreate {
@@ -451,7 +436,7 @@ impl CapellaClient {
             cluster_id,
             payload,
         };
-        let response = self.capella_request(request, deadline, ctrl_c)?;
+        let response = self.capella_request(request, ctrl_c)?;
 
         if response.status() != 201 {
             return Err(ClientError::RequestFailed {
@@ -468,7 +453,6 @@ impl CapellaClient {
         project_id: String,
         cluster_id: String,
         bucket: String,
-        deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
         let request = CapellaRequest::BucketDelete {
@@ -477,7 +461,7 @@ impl CapellaClient {
             cluster_id,
             bucket_id: BASE64_STANDARD.encode(bucket),
         };
-        let response = self.capella_request(request, deadline, ctrl_c)?;
+        let response = self.capella_request(request, ctrl_c)?;
 
         if response.status() != 204 {
             return Err(ClientError::RequestFailed {
@@ -495,7 +479,6 @@ impl CapellaClient {
         cluster_id: String,
         bucket: String,
         payload: String,
-        deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
         let request = CapellaRequest::BucketUpdate {
@@ -505,7 +488,7 @@ impl CapellaClient {
             bucket_id: BASE64_STANDARD.encode(bucket),
             payload,
         };
-        let response = self.capella_request(request, deadline, ctrl_c)?;
+        let response = self.capella_request(request, ctrl_c)?;
 
         if response.status() != 204 {
             return Err(ClientError::RequestFailed {
@@ -522,7 +505,6 @@ impl CapellaClient {
         project_id: String,
         cluster_id: String,
         sample: String,
-        deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
         let request = CapellaRequest::BucketLoadSample {
@@ -531,7 +513,7 @@ impl CapellaClient {
             cluster_id,
             payload: format!("{{\"name\": \"{}\"}}", sample.clone()),
         };
-        let response = self.capella_request(request, deadline, ctrl_c)?;
+        let response = self.capella_request(request, ctrl_c)?;
 
         // TODO - need to add handling for sample already loaded once AV-82577 is complete
         match response.status() {
@@ -550,7 +532,6 @@ impl CapellaClient {
         project_id: String,
         cluster_id: String,
         address: String,
-        deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
         let request = CapellaRequest::AllowIPAddress {
@@ -559,7 +540,7 @@ impl CapellaClient {
             cluster_id,
             payload: format!("{{\"cidr\": \"{}\"}}", address.clone()),
         };
-        let response = self.capella_request(request, deadline, ctrl_c)?;
+        let response = self.capella_request(request, ctrl_c)?;
 
         match response.status() {
             201 => Ok(()),
@@ -576,7 +557,6 @@ impl CapellaClient {
         project_id: String,
         cluster_id: String,
         bucket: String,
-        deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<ScopesResponse, ClientError> {
         let request = CapellaRequest::ScopeList {
@@ -585,7 +565,7 @@ impl CapellaClient {
             cluster_id,
             bucket_id: BASE64_STANDARD.encode(bucket),
         };
-        let response = self.capella_request(request, deadline, ctrl_c)?;
+        let response = self.capella_request(request, ctrl_c)?;
 
         if response.status() != 200 {
             return Err(ClientError::RequestFailed {
@@ -601,24 +581,20 @@ impl CapellaClient {
     #[allow(clippy::too_many_arguments)]
     pub fn create_collection(
         &self,
-        org_id: String,
-        project_id: String,
-        cluster_id: String,
-        bucket: String,
-        scope: String,
-        payload: String,
-        deadline: Instant,
+        collection: String,
+        expiry: i64,
+        namespace: CollectionNamespace,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
         let request = CapellaRequest::CollectionCreate {
-            org_id,
-            project_id,
-            cluster_id,
-            bucket_id: BASE64_STANDARD.encode(bucket),
-            scope,
-            payload,
+            org_id: namespace.org_id,
+            project_id: namespace.project_id,
+            cluster_id: namespace.cluster_id,
+            bucket_id: namespace.bucket_id,
+            scope: namespace.scope,
+            payload: serde_json::to_string(&Collection::new(collection.clone(), expiry)).unwrap(),
         };
-        let response = self.capella_request(request, deadline, ctrl_c)?;
+        let response = self.capella_request(request, ctrl_c)?;
 
         if response.status() != 201 {
             return Err(ClientError::RequestFailed {
@@ -633,24 +609,19 @@ impl CapellaClient {
     #[allow(clippy::too_many_arguments)]
     pub fn delete_collection(
         &self,
-        org_id: String,
-        project_id: String,
-        cluster_id: String,
-        bucket: String,
-        scope: String,
+        namespace: CollectionNamespace,
         collection: String,
-        deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
         let request = CapellaRequest::CollectionDelete {
-            org_id,
-            project_id,
-            cluster_id,
-            bucket_id: BASE64_STANDARD.encode(bucket),
-            scope,
+            org_id: namespace.org_id,
+            project_id: namespace.project_id,
+            cluster_id: namespace.cluster_id,
+            bucket_id: namespace.bucket_id,
+            scope: namespace.scope,
             collection,
         };
-        let response = self.capella_request(request, deadline, ctrl_c)?;
+        let response = self.capella_request(request, ctrl_c)?;
 
         if response.status() != 204 {
             return Err(ClientError::RequestFailed {
@@ -664,22 +635,17 @@ impl CapellaClient {
 
     pub fn list_collections(
         &self,
-        org_id: String,
-        project_id: String,
-        cluster_id: String,
-        bucket: String,
-        scope: String,
-        deadline: Instant,
+        namespace: CollectionNamespace,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<CollectionsResponse, ClientError> {
         let request = CapellaRequest::CollectionList {
-            org_id,
-            project_id,
-            cluster_id,
-            bucket_id: BASE64_STANDARD.encode(bucket),
-            scope,
+            org_id: namespace.org_id,
+            project_id: namespace.project_id,
+            cluster_id: namespace.cluster_id,
+            bucket_id: namespace.bucket_id,
+            scope: namespace.scope,
         };
-        let response = self.capella_request(request, deadline, ctrl_c)?;
+        let response = self.capella_request(request, ctrl_c)?;
 
         if response.status() != 200 {
             return Err(ClientError::RequestFailed {
@@ -699,7 +665,6 @@ impl CapellaClient {
         cluster_id: String,
         bucket: String,
         scope: String,
-        deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
         let request = CapellaRequest::ScopeCreate {
@@ -709,7 +674,7 @@ impl CapellaClient {
             bucket_id: BASE64_STANDARD.encode(bucket),
             payload: format!("{{\"name\": \"{}\"}}", scope),
         };
-        let response = self.capella_request(request, deadline, ctrl_c)?;
+        let response = self.capella_request(request, ctrl_c)?;
 
         if response.status() != 201 {
             return Err(ClientError::RequestFailed {
@@ -728,7 +693,6 @@ impl CapellaClient {
         cluster_id: String,
         bucket: String,
         scope: String,
-        deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<(), ClientError> {
         let request = CapellaRequest::ScopeDelete {
@@ -738,7 +702,7 @@ impl CapellaClient {
             bucket_id: BASE64_STANDARD.encode(bucket),
             scope,
         };
-        let response = self.capella_request(request, deadline, ctrl_c)?;
+        let response = self.capella_request(request, ctrl_c)?;
 
         if response.status() != 204 {
             return Err(ClientError::RequestFailed {
@@ -1127,6 +1091,32 @@ impl CapellaRequest {
             Self::CollectionCreate { payload, .. } => Some(payload.as_bytes().into()),
             Self::CredentialsCreate { payload, .. } => Some(payload.as_bytes().into()),
             _ => None,
+        }
+    }
+}
+
+pub struct CollectionNamespace {
+    org_id: String,
+    project_id: String,
+    cluster_id: String,
+    bucket_id: String,
+    scope: String,
+}
+
+impl CollectionNamespace {
+    pub fn new(
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+        bucket: String,
+        scope: String,
+    ) -> Self {
+        Self {
+            org_id,
+            project_id,
+            cluster_id,
+            bucket_id: BASE64_STANDARD.encode(bucket),
+            scope,
         }
     }
 }

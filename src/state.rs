@@ -371,6 +371,7 @@ impl RemoteCapellaOrganization {
                 self.secret_key.clone(),
                 self.access_key.clone(),
                 self.api_endpoint.clone(),
+                self.timeout,
             )));
         }
         c.as_ref().unwrap().clone()
