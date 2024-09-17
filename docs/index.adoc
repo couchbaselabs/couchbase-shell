@@ -1,5 +1,5 @@
 = Couchbase Shell Documentation =
-(c) Copyright 2021, All Rights Reserved
+(c) Copyright 2024, All Rights Reserved
 
 :sectnums:
 :toclevels: 3
