@@ -1,8 +1,6 @@
 = Couchbase Shell Documentation =
 (c) Copyright 2021, All Rights Reserved
 
-image::couchbase.svg[Couchbase,200]
-
 :sectnums:
 :toclevels: 3
 
