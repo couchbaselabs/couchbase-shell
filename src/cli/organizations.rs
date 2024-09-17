@@ -3,8 +3,6 @@ use crate::state::State;
 use std::sync::{Arc, Mutex};
 
 use log::debug;
-use std::ops::Add;
-use tokio::time::Instant;
 
 use crate::cli::error::client_error_to_shell_error;
 use nu_protocol::ast::Call;
@@ -66,9 +64,8 @@ fn organizations(
         let mut collected = NuValueMap::default();
         collected.add_string("identifier", identifier, span);
 
-        let deadline = Instant::now().add(org.timeout());
         let orgs = client
-            .list_organizations(deadline, ctrl_c.clone())
+            .list_organizations(ctrl_c.clone())
             .map_err(|e| client_error_to_shell_error(e, span))?;
 
         for org in orgs.items() {

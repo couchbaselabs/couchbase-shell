@@ -3,8 +3,7 @@ use crate::state::{RemoteCapellaOrganization, State};
 
 use crate::cli::buckets_builder::{BucketSettings, JSONBucketSettings};
 use crate::cli::util::{
-    cluster_from_conn_str, cluster_identifiers_from, find_org_id, find_project_id,
-    get_active_cluster, NuValueMap,
+    cluster_identifiers_from, find_org_project_cluster_ids, get_active_cluster, NuValueMap,
 };
 use crate::client::{HttpResponse, ManagementRequest};
 use log::debug;
@@ -88,23 +87,23 @@ fn buckets_get(
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
         let guard = state.lock().unwrap();
-        let cluster = get_active_cluster(identifier.clone(), &guard, span)?;
+        let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
-        let content = if cluster.cluster_type() == Provisioned {
-            let org = guard.named_or_active_org(cluster.capella_org())?;
+        let content = if active_cluster.cluster_type() == Provisioned {
+            let org = guard.named_or_active_org(active_cluster.capella_org())?;
 
             get_capella_bucket(
                 org,
-                guard.named_or_active_project(cluster.project())?,
-                cluster,
+                guard.named_or_active_project(active_cluster.project())?,
+                active_cluster,
                 bucket.clone(),
                 identifier.clone(),
                 ctrl_c.clone(),
                 span,
-            )?
+            )
         } else {
-            get_server_bucket(cluster, bucket.clone(), ctrl_c.clone(), span)?
-        };
+            get_server_bucket(active_cluster, bucket.clone(), ctrl_c.clone(), span)
+        }?;
 
         results.push(bucket_to_nu_value(content, identifier, false, span));
     }
@@ -158,38 +157,18 @@ pub fn get_capella_bucket(
     span: Span,
 ) -> Result<BucketSettings, ShellError> {
     let client = org.client();
-    let deadline = Instant::now().add(org.timeout());
 
-    let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
-    let project_id = find_project_id(
-        ctrl_c.clone(),
-        project,
+    let (org_id, project_id, cluster_id) = find_org_project_cluster_ids(
         &client,
-        deadline,
+        ctrl_c.clone(),
         span,
-        org_id.clone(),
-    )?;
-
-    let json_cluster = cluster_from_conn_str(
         identifier.clone(),
-        ctrl_c.clone(),
-        cluster.hostnames().clone(),
-        &client,
-        deadline,
-        span,
-        org_id.clone(),
-        project_id.clone(),
+        project,
+        cluster,
     )?;
 
     let bucket = client
-        .get_bucket(
-            org_id,
-            project_id,
-            json_cluster.id(),
-            bucket_name,
-            deadline,
-            ctrl_c,
-        )
+        .get_bucket(org_id, project_id, cluster_id, bucket_name, ctrl_c)
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
     BucketSettings::try_from(&bucket).map_err(|e| {

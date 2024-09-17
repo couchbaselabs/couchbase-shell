@@ -1,9 +1,7 @@
 use crate::cli::util::{find_org_id, find_project_id};
 use crate::state::State;
 use log::debug;
-use std::ops::Add;
 use std::sync::{Arc, Mutex};
-use tokio::time::Instant;
 
 use crate::cli::error::client_error_to_shell_error;
 use nu_engine::CallExt;
@@ -65,20 +63,12 @@ fn projects_drop(
     let guard = &mut state.lock().unwrap();
     let control = guard.active_capella_org()?;
     let client = control.client();
-    let deadline = Instant::now().add(control.timeout());
 
-    let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
-    let project_id = find_project_id(
-        ctrl_c.clone(),
-        name,
-        &client,
-        deadline,
-        span,
-        org_id.clone(),
-    )?;
+    let org_id = find_org_id(ctrl_c.clone(), &client, span)?;
+    let project_id = find_project_id(ctrl_c.clone(), name, &client, span, org_id.clone())?;
 
     client
-        .delete_project(org_id, project_id, deadline, ctrl_c)
+        .delete_project(org_id, project_id, ctrl_c)
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
     Ok(PipelineData::empty())

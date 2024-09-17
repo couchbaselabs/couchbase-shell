@@ -1,8 +1,6 @@
 use crate::state::State;
 use log::debug;
-use std::ops::Add;
 use std::sync::{Arc, Mutex};
-use tokio::time::Instant;
 
 use crate::cli::error::client_error_to_shell_error;
 use crate::cli::util::{convert_json_value_to_nu_value, find_org_id, find_project_id, NuValueMap};
@@ -82,26 +80,12 @@ fn clusters_get(
         guard.named_or_active_project(call.get_flag(engine_state, stack, "project")?)?;
 
     let client = control.client();
-    let deadline = Instant::now().add(control.timeout());
 
-    let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
-    let project_id = find_project_id(
-        ctrl_c.clone(),
-        project,
-        &client,
-        deadline,
-        span,
-        org_id.clone(),
-    )?;
+    let org_id = find_org_id(ctrl_c.clone(), &client, span)?;
+    let project_id = find_project_id(ctrl_c.clone(), project, &client, span, org_id.clone())?;
 
     let cluster = client
-        .get_cluster(
-            name,
-            org_id.clone(),
-            project_id.clone(),
-            deadline,
-            ctrl_c.clone(),
-        )
+        .get_cluster(name, org_id.clone(), project_id.clone(), ctrl_c.clone())
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
     let mut collected = NuValueMap::default();

@@ -1,9 +1,8 @@
 use crate::cli::util::{
-    cluster_from_conn_str, cluster_identifiers_from, find_org_id, find_project_id,
-    get_active_cluster,
+    cluster_identifiers_from, find_org_project_cluster_ids, get_active_cluster,
 };
 use crate::client::ManagementRequest;
-use crate::state::{RemoteCapellaOrganization, State};
+use crate::state::State;
 use log::debug;
 use std::ops::Add;
 use std::sync::atomic::AtomicBool;
@@ -96,16 +95,29 @@ fn run(
         );
 
         if active_cluster.cluster_type() == Provisioned {
-            create_capella_scope(
-                guard.named_or_active_org(active_cluster.capella_org())?,
-                guard.named_or_active_project(active_cluster.project())?,
-                active_cluster,
-                identifier.clone(),
-                bucket.clone(),
-                scope.clone(),
+            let client = guard
+                .named_or_active_org(active_cluster.capella_org())?
+                .client();
+
+            let (org_id, project_id, cluster_id) = find_org_project_cluster_ids(
+                &client,
                 ctrl_c.clone(),
                 span,
-            )
+                identifier.clone(),
+                guard.named_or_active_project(active_cluster.project())?,
+                active_cluster,
+            )?;
+
+            client
+                .create_scope(
+                    org_id,
+                    project_id,
+                    cluster_id,
+                    bucket,
+                    scope.clone(),
+                    ctrl_c.clone(),
+                )
+                .map_err(|e| client_error_to_shell_error(e, span))
         } else {
             create_server_scope(
                 active_cluster,
@@ -118,54 +130,6 @@ fn run(
     }
 
     Ok(PipelineData::empty())
-}
-
-fn create_capella_scope(
-    org: &RemoteCapellaOrganization,
-    project: String,
-    cluster: &RemoteCluster,
-    identifier: String,
-    bucket: String,
-    name: String,
-    ctrl_c: Arc<AtomicBool>,
-    span: Span,
-) -> Result<(), ShellError> {
-    let client = org.client();
-    let deadline = Instant::now().add(org.timeout());
-
-    let org_id = find_org_id(ctrl_c.clone(), &client, deadline, span)?;
-
-    let project_id = find_project_id(
-        ctrl_c.clone(),
-        project,
-        &client,
-        deadline,
-        span,
-        org_id.clone(),
-    )?;
-
-    let json_cluster = cluster_from_conn_str(
-        identifier.clone(),
-        ctrl_c.clone(),
-        cluster.hostnames().clone(),
-        &client,
-        deadline,
-        span,
-        org_id.clone(),
-        project_id.clone(),
-    )?;
-
-    client
-        .create_scope(
-            org_id,
-            project_id,
-            json_cluster.id(),
-            bucket,
-            name,
-            deadline,
-            ctrl_c,
-        )
-        .map_err(|e| client_error_to_shell_error(e, span))
 }
 
 fn create_server_scope(
