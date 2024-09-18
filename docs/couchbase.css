@@ -4,7 +4,22 @@
    height: 35px;
    margin-top: 15px;
    padding-left: 2.7em;
- }
+}
+@media screen and (min-width: 768px) {
+   #logo-container img {
+      padding-left: 4em;
+   }
+}
+@media screen and (min-width: 993px)  {
+   #logo-container img {
+      padding-left: 2.7em;
+   }
+}
+@media screen and (min-width: 1400px) and (max-width: 1590px)  {
+   #logo-container img {
+      padding-left: 4em;
+   }
+}
 nav {
    background-color: #fff;
    box-shadow: none;
@@ -702,7 +717,7 @@ p a>code:hover{
        right:0
    }
 }
-@media screen and (min-width:1280px){
+@media screen and (min-width:1400px){
    body.toc2{
        padding-left:20em;
        padding-right:0
@@ -908,7 +923,7 @@ table.tableblock #preamble>.sectionbody>[class="paragraph"]:first-of-type p{
        font-size:.90625em
    }
 }
-@media screen and (min-width:1280px){
+@media screen and (min-width:1400px){
    .literalblock pre,.literalblock pre[class],.listingblock pre,.listingblock pre[class]{
        font-size:1em
    }
