@@ -88,7 +88,7 @@ Embedding batch 1/1
 ```
 
 `vector enrich-text` will create a `vector doc` for each of the text chunks, these docs contain the original chunk of text along with the embedding generated from it.
-These docs are https://couchbase.sh/docs/#_a_note_on_data_format[formatted] so that they can be piped directly into https://couchbase.sh/docs/#_mutating[doc upsert] to store them in the active Couchbase Cluster.
+These docs are https://couchbase.sh/docs/#_manual_import[formatted] so that they can be piped directly into https://couchbase.sh/docs/#_doc_upsert[doc upsert] to store them in the active Couchbase Cluster.
 
 ```
 👤 Charlie 🏠 remote in ☁️ RagChunks._default._default

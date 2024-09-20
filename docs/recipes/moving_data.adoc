@@ -175,7 +175,7 @@ If the query run is the example given above then the output will look like this:
 ╰─────┴───────────────┴────────────────────────────────────────────────────────┴─────────╯
 ```
 
-Before we can insert this into out `remote` cluster using https://couchbase.sh/docs/#_mutating[doc upsert] we need it to be correctly https://couchbase.sh/docs/#_a_note_on_data_format[formatted].
+Before we can insert this into our `remote` cluster using https://couchbase.sh/docs/#_doc_upsert[doc upsert] we need it to be correctly https://couchbase.sh/docs/#_manual_import[formatted].
 But before we try to reformat any of the data we make sure that the query not returned null with `if $in != null` since trying to manipulate a null value will return an error.
 The formatting required is to drop the cluster column which we do using https://www.nushell.sh/commands/docs/reject.html[reject] then rename the column named after the collection, in this case `airline` to `content` which we do using https://www.nushell.sh/commands/docs/rename.html[rename].
 After the formatting has been applied to the above example it would become:

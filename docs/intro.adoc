@@ -166,8 +166,8 @@ If we ran a `doc get` it would fetch the doc from travel-sample.inventory.landma
 === Loading Data into the Shell
 
 If you want to import data into Couchbase, or just load it into the shell for further processing, there are different commands available to help you.
-Once the data is loaded into the shell it can be sent to one of the Couchbase save commands like `doc upsert` and `doc import`.
-Depending on the structure of the data, and the command used, you may also need to tweak it a little bit so it can be properly stored.
+Once data is loaded into the shell the simplest way to save it to the connected cluster is using the <<_doc_import,doc import>> command.
+Alternatively if you want more control over the format and key of the uploaded data you can upload it manually using one of the other Couchbase save commands: `doc upsert` and `doc insert`.
 
 ==== Manual import
 
@@ -214,9 +214,10 @@ In our case we use `from json`:
 ╰────────┴─────────╯
 ```
 
-We cannot use this format directly with commands like `doc upsert` as the command expects two "columns" in the data - id and content.
-This means that we have to perform some translation from the above format to one that `doc upsert` understands.
-To do this we `wrap` the entire document into a content column and then extract the id that we want to use:
+The `doc upsert` and `doc insert` commands require there to be only two fields/columns.
+By default, these two columns are named `id` and `content`, but these can be overridden with `--id-column` and `--content-column`.
+The id column will be used as the key for the document, while the content column will be the json stored using that key.
+To get `user.json` in a format that can be inserted into the connected Cluster we https://www.nushell.sh/commands/docs/wrap.html[wrap] the entire document into a content column and then https://www.nushell.sh/commands/docs/insert.html[insert] the id that we want to use:
 
 ```
 > open user.json | wrap content | insert id $in.content.name
@@ -242,7 +243,11 @@ With our data in the correct format we can then upsert:
 ╰───┴───────────┴─────────┴────────┴──────────┴───────────╯
 ```
 
-See the <<_importing_data,Importing data recipes>> for more information.
+This results in the following doc being stored in the Cluster:
+
+image::example_doc.png[Example,500,1000,align="center"]
+
+See the <<_importing_data,Importing data recipes>> for more examples.
 
 === Exporting Data from the Shell
 
