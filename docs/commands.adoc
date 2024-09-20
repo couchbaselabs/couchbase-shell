@@ -7,9 +7,9 @@ include::commands/buckets.adoc[]
 
 include::commands/scopes.adoc[]
 
-include::commands/doc.adoc[]
-
 include::commands/collections.adoc[]
+
+include::commands/doc.adoc[]
 
 === `nodes`
 

@@ -6,6 +6,7 @@ api
 aws
 
 capella
+cas
 cb
 cbenv
 cbsh
@@ -103,7 +104,6 @@ toclevels
 toml
 toolchain
 
-uments
 unix
 upsert
 upserted

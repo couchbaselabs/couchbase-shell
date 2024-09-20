@@ -27,7 +27,7 @@ Embedding batch 3/3
 
 Here we have used https://couchbase.sh/docs/#_query_commands[query] to get all the landmark doc ids and bodies.
 Then we have enriched all of these with the embedding generated from the `content` field, see https://couchbase.sh/docs/#_vector_enrich_doc[vector enrich-doc] for details.
-Finally we pipe the output directly into https://couchbase.sh/docs/#_mutating[doc upsert] to overwrite the original landmark documents with our enriched versions.
+Finally we pipe the output directly into https://couchbase.sh/docs/#_doc_upsert[doc upsert] to overwrite the original landmark documents with our enriched versions.
 
 Now that we have a set of docs containing vectors we can create a vector index over them using https://couchbase.sh/docs/#_vector_create_index[vector create-index]:
 

@@ -54,7 +54,7 @@ For example imagine we have the following document stored in our cluster:
 ```
 
 The field `contentVector` contains a vector of dimension 1024 that could be used as the input to a vector search.
-Due to the format of the data returned by <<_reading, doc get>> we need to https://www.nushell.sh/commands/docs/flatten.html[flatten] to remove the nesting then https://www.nushell.sh/commands/docs/select.html[select] the `contentVector` field:
+Due to the format of the data returned by  https://couchbase.sh/docs/#_doc_get[doc get] we need to https://www.nushell.sh/commands/docs/flatten.html[flatten] to remove the nesting then https://www.nushell.sh/commands/docs/select.html[select] the `contentVector` field:
 
 ```
 > doc get landmark_10019 | flatten | select contentVector
@@ -130,7 +130,7 @@ The vector here only has a dimension of 4 which is unrealistically low, but it i
 The output of the search is a table containing the IDs of the `n` (specified by the `--neighbours` flag) documents with the most similar vector in the field named.
 The similarity of vectors is calculated using the metric specified on <<_vector_create_index,index creation>>.
 
-To see the contents of the documents identified in the table simply pipe the output of vector search into a <<_reading,doc get>> command.
+To see the contents of the documents identified in the table simply pipe the output of vector search into a https://couchbase.sh/docs/#_doc_get[doc get] command.
 If only interested in a particular field then the <<_subdoc_get,subdoc get>> command will also work in the same way:
 
 ```

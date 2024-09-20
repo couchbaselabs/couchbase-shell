@@ -5,25 +5,6 @@ Couchbase Shell supports loading data from a variety of formats and sources.
 The simplest way to import data is using `doc import` as covered in <<_loading_data_into_the_shell,Loading data into the shell>>.
 These recipes will cover more advanced use cases.
 
-==== A Note On Data format
-
-The `doc upsert` command requires there to be only two fields/columns for an upsert.
-There can be more than two fields/columns in the data but only two can be used.
-By default, these two columns are named `id` and `content`, but these can be overridden with `--id-column` and `--content-column`.
-
-Given the following document format we need to perform some data manipulation to get it into a format which works with `doc upsert`:
-
-```
-> cat mydoc.json
-{"id":3719,"cas":1600344369374167040,"type":"airport","airportname":"Columbia Rgnl","city":"Columbia","country":"United States","faa":"COU","icao":"KCOU","tz":"America/Chicago"}
-
-> open mydoc.json | wrap content | insert id { |it| echo $it.content.airportname }
-╭─────────┬───────────────────╮
-│ content │ {record 9 fields} │
-│ id      │ Columbia Rgnl     │
-╰─────────┴───────────────────╯
-```
-
 ==== From file
 
 ===== From JSON
