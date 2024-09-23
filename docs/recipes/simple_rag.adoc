@@ -1,7 +1,7 @@
 == Simple RAG
 
 Couchbase Shell's https://couchbase.sh/docs/#_vector_commands[vector commands] along with https://couchbase.sh/docs/#_ask[ask] can be used to implement simple Retrieval Augmented Generation, more commonly know as RAG.
-In this process similarity search is used over chunks of a larger body of text to contextualise questions sent to a Large Language model to improve the answers given.
+In this process similarity search is used over chunks of a larger body of text to contextualize questions sent to a Large Language model to improve the answers given.
 For this demo we will use a text version of the Couchbase Shell docs as the source text for our chunks of data we have this stored locally as a text file.
 
 ```
@@ -147,7 +147,7 @@ The we use the question to generate an embedding which we then pipe to https://c
 This returns the vector docs with the most semantically similar chunks to our question.
 
 Using the returned doc ids we can use the https://couchbase.sh/docs/#_subdoc_get[subdoc get] command to retrieve the chunks.
-These chunks can then be piped directly into `ask` where they will be used to contextualise the question:
+These chunks can then be piped directly into `ask` where they will be used to contextualize the question:
 
 ```
 👤 Charlie 🏠 remote in ☁️ RagChunks._default._default
@@ -175,4 +175,4 @@ Remember to consult the available flags and options for more customization and f
 ```
 
 This allows `ask` to produce a much more accurate and informative answer using the context it was given.
-Changing the size of the chunks, number og neighbours returned as well as the dimension of the embeddings can all have an impact on the result of RAG, and `cbsh` should help experimenting with these variables quick and easy.
+Changing the size of the chunks, number of neighbors returned as well as the dimension of the embeddings can all have an impact on the result of RAG, and `cbsh` should help experimenting with these variables quick and easy.

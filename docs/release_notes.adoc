@@ -22,7 +22,7 @@
 
 === 0.75.2 - 2023-04-10
 
-* Updated macos build to not have any dependency on OpenSSL.
+* Updated macOS build to not have any dependency on OpenSSL.
 * Fixed the release workflow so that Linux release tarballs contain the `cbsh` binary.
 
 === 0.75.1 - 2023-04-13
@@ -32,7 +32,7 @@ As our versioning continues to track the underlying Nushell minor version this h
 
 * Updated config file to rename `[[cluster]]` to `[[database]]` (`[[cluster]]` will continue to work).
 * **Breaking** Updated config file to rename `hostnames` to `connstr` and changed the format to be a string.
-* Added support, and detection, for different "cluster types"; Capella and Other. This allows us to modify behaviour based on cluster type.
+* Added support, and detection, for different "cluster types"; Capella and Other. This allows us to modify behavior based on cluster type.
 * *Breaking* Renamed `clusters health` to `health`.
 * *Breaking* Renamed other `clusters ...` commands to `database ...`
 * Replaced references to cluster with database.

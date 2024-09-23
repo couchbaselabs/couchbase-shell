@@ -35,7 +35,7 @@ The first thing to do is to recreate all of the buckets that we have on the `loc
 ```
 
 Here we simply get all of the buckets, then iterate over the list with https://www.nushell.sh/commands/docs/each.html[each] and create buckets with the same name and ram quota, specifying the `remote` cluster with the https://couchbase.sh/docs/#_the_clusters_flag[--clusters] flag.
-Since the value for the ram quote is returned in bytes from `buckets` we convert it to MiB by dividing by nushell's 1MB https://www.nushell.sh/book/types_of_data.html#file-sizes[FileSize] datatype.
+Since the value for the ram quota is returned in bytes from `buckets` we convert it to MiB by dividing by Nushell's 1MB https://www.nushell.sh/book/types_of_data.html#file-sizes[FileSize] datatype.
 We can check that this has worked by running the `buckets` command against the remote cluster:
 
 [options="nowrap"]

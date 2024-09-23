@@ -121,5 +121,5 @@ Embedding batch 1/1
 ```
 
 Here we have done another similarity search using the same index, but our source vector is the result of embedding the phrase "physical exercise".
-One important detail to remeber is that the embedding generated from `vector enrich-text` must have the same dimension as those over which the index was created, otherwise `vector search` will return no results.
+One important detail to remember is that the embedding generated from `vector enrich-text` must have the same dimension as those over which the index was created, otherwise `vector search` will return no results.
 See https://couchbase.sh/docs/#_vector_enrich_text[vector enrich-text] for how to specify the dimension of the generated embeddings.

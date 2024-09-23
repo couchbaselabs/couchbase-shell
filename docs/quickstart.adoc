@@ -41,7 +41,7 @@ image::mac-binary-unsigned.png[macOS Warning,600]
 
 ==== Homebrew
 
-If running on macOS you can install via the https://formulae.brew.sh/formula/couchbase-shell[homebrew] formula:
+If running on macOS you can install via the https://formulae.brew.sh/formula/couchbase-shell[Homebrew] formula:
 
 ```
 $ brew install couchbase-shell
@@ -99,7 +99,7 @@ To start experimenting with data operations load some sample data onto the clust
 ╰───┴─────────┴───────────────┴─────────╯
 ```
 
-Now you can try running n1ql queries using the <<_query,query>> command.
+Now you can try running N1QL queries using the <<_query,query>> command.
 
 ```
 👤 Administrator 🏠 default
