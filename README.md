@@ -93,8 +93,8 @@ On top of [nushell](https://www.nushell.sh/) built-in commands, the following co
  - `cb-env project` - Sets the active cloud project based on its name
  - `cb-env scope` - Sets the active scope based on its name
  - `cb-env timeouts` - Sets the default timeouts
- - `clouds` - Lists all clusters on the active Capella organisation
- - `clusters`- Lists all clusters on the active Capella organisation
+ - `clouds` - Lists all clusters on the active Capella organization
+ - `clusters`- Lists all clusters on the active Capella organization
  - `clusters create` - Creates a new cluster against the active Capella organization
  - `clusters drop` - Deletes a cluster from the active Capella organization
  - `clusters get` - Gets a cluster from the active Capella organization

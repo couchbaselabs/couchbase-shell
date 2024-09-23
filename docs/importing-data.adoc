@@ -3,7 +3,7 @@
 Couchbase Shell supports loading data from a variety of formats and sources.
 
 The simplest way to import data is using `doc import` as covered in <<_loading_data_into_the_shell,Loading data into the shell>>.
-These recipes will cover more advanced usecases.
+These recipes will cover more advanced use cases.
 
 ==== A Note On Data format
 

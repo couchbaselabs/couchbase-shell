@@ -12,7 +12,7 @@ If you want to only store the document body then you can use `doc get <id> | get
 
 ===== To JSON
 
-From KeyValue
+From key-value
 ```
 > doc get airport_3719 --bucket travel-sample
 ╭───┬──────────────┬────────────────────────────────────┬─────────────────────┬───────┬─────────╮
@@ -152,7 +152,7 @@ To Multiple Documents
 
 ===== To CSV
 
-From KeyValue
+From key-value
 
 [options="nowrap"]
 ```

@@ -3,7 +3,7 @@
 :sectnums:
 
 Welcome to the recipes section of the Couchbase Shell `cbsh` documentation.
-Here you can find how powerful tasks can be performed by a combination of pipelined statements using `cbsh`.
+Here you can find how powerful tasks can be performed by a combining `cbsh` statements.
 
 include::recipes/register_cluster.adoc[]
 

@@ -1,7 +1,7 @@
 == Couchbase Commands
 
-The following sections discuss the individual couchbase specific commands in greater detail. Remember, you can always mix and match
-them with built-in other shell commands as well as executables from your environment.
+The following sections discuss the individual Couchbase specific commands in greater detail. Remember, you can always mix and match
+them with built-in other shell commands as well as executable programs from your environment.
 
 include::commands/buckets.adoc[]
 
@@ -52,7 +52,7 @@ You can retrieve a document with `doc get`:
 ```
 
 To distinguish the actual content from the metadata, the content is nested in the `content` field.
-If you want to have everything at the toplevel, you can pipe to the `flatten` command:
+If you want to have everything at the top level, you can pipe to the `flatten` command:
 
 [options="nowrap"]
 ```
@@ -288,7 +288,7 @@ The answering of questions with supplied context can be used to easily implement
 
 === `version`
 
-The `version` command lists the version of the couchbase shell.
+The `version` command lists the version of the Couchbase shell.
 
 ```
 > version

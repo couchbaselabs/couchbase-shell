@@ -62,7 +62,7 @@ To focus on the free memory that each cluster has, we can https://www.nushell.sh
 ╰────┴────────────┴─────────────╯
 ```
 
-We can reformat the tables to make the the data more readable, but nushell's understanding of various data types allows us to reformat the values within the table.
+We can reformat the tables to make the the data more readable, but Nushell's understanding of various data types allows us to reformat the values within the table.
 For example we could convert the `memory_free` values from bytes to gigabytes:
 
 [options="nowrap"]
@@ -85,10 +85,10 @@ For example we could convert the `memory_free` values from bytes to gigabytes:
 ╰───┴─────────────┴─────────────╯
 ```
 
-We do this by iterating over each node and https://www.nushell.sh/commands/docs/update.html[updating] the value in the `memory_free` column by multiplying the current value by nushell's inbuilt https://www.nushell.sh/book/types_of_data.html#file-sizes[File Size] datatype.
+We do this by iterating over each node and https://www.nushell.sh/commands/docs/update.html[updating] the value in the `memory_free` column by multiplying the current value by Nushell's inbuilt https://www.nushell.sh/book/types_of_data.html#file-sizes[File Size] datatype.
 
 We can take this one step further and use the values returned to calculate new metrics about our clusters.
-When performing a healthcheck it's be useful to know the memory utilization for each cluster.
+When performing a health check it's be useful to know the memory utilization for each cluster.
 There are two columns that can be used to calculate this: `memory_free` and `memory_total`.
 
 [options="nowrap"]

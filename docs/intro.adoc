@@ -1,16 +1,16 @@
 == Introduction
 
-Couchbase Shell is fully featured, so it does not only contain commands related to couchbase but is actually built on top of a
-general purpose shell called https://www.nushell.sh/[nushell]. This allows you to interact with the file system or any other
+Couchbase Shell is fully featured, so it does not only contain commands related to Couchbase but is actually built on top of a
+general purpose shell called https://www.nushell.sh/[Nushell]. This allows you to interact with the file system or any other
 command available on your machine, making it a great tool for both operational and development tasks on top of Couchbase.
 
 The following introduction only touches on the basic concepts to make you productive quickly. We recommend also checking out the
-great https://www.nushell.sh/book[nushell documentation] so you can get the most out of it.
+great https://www.nushell.sh/book[Nushell documentation] so you can get the most out of it.
 
 === Navigating the Shell
 
 Commands take inputs and produce output in a structured manner, most often represented as tables. Note how both the generic `ls`
-command and the couchbase-specific `buckets` command both produce a table as their output:
+command and the Couchbase-specific `buckets` command both produce a table as their output:
 
 ```
 > ls
@@ -166,7 +166,7 @@ If we ran a `doc get` it would fetch the doc from travel-sample.inventory.landma
 === Loading Data into the Shell
 
 If you want to import data into Couchbase, or just load it into the shell for further processing, there are different commands available to help you.
-Once the data is loaded into the shell it can be sent to one of the couchbase save commands like `doc upsert` and `doc import`.
+Once the data is loaded into the shell it can be sent to one of the Couchbase save commands like `doc upsert` and `doc import`.
 Depending on the structure of the data, and the command used, you may also need to tweak it a little bit so it can be properly stored.
 
 ==== Doc import
@@ -259,7 +259,7 @@ In our case we use `from json`:
 ```
 
 TIP: look at the many different import formats `from` supports, including csv, xml, yaml and even sqlite. With this simple tool
-at hand you are able to load many different data formats quickly and import them into couchbase!
+at hand you are able to load many different data formats quickly and import them into Couchbase!
 
 We cannot use this format directly with commands like `doc upsert` as the command expects two "columns" in the data - id and content.
 This means that we have to perform some translation from the above format to one that `doc upsert` understands.

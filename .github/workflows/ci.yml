@@ -160,3 +160,14 @@ jobs:
         with:
           version: "*"
       - run: nu docs/sample_config/prompt_tests.nu
+
+  check-spelling:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Check Spelling
+        uses: rojopolis/spellcheck-github-actions@0.23.0
+        with:
+          config_path: .github/workflows/.spellcheck.yml
+          task_name: Markdown
