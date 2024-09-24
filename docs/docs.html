@@ -38,8 +38,7 @@
 <li><a href="#_the_prompt_explained">2.3. The Prompt explained</a></li>
 <li><a href="#_loading_data_into_the_shell">2.4. Loading Data into the Shell</a>
 <ul class="sectlevel3">
-<li><a href="#_doc_import">2.4.1. Doc import</a></li>
-<li><a href="#_manual_import">2.4.2. Manual import</a></li>
+<li><a href="#_manual_import">2.4.1. Manual import</a></li>
 </ul>
 </li>
 <li><a href="#_exporting_data_from_the_shell">2.5. Exporting Data from the Shell</a></li>
@@ -89,14 +88,17 @@
 <li><a href="#_collections_drop">4.3.3. <code>collections drop</code></a></li>
 </ul>
 </li>
-<li><a href="#_listing_nodes">4.4. Listing <code>nodes</code></a></li>
-<li><a href="#_reading_and_writing_documents">4.5. Reading and Writing `doc`uments</a>
+<li><a href="#_doc">4.4. doc</a>
 <ul class="sectlevel3">
-<li><a href="#_reading">4.5.1. Reading</a></li>
-<li><a href="#_mutating">4.5.2. Mutating</a></li>
-<li><a href="#_removing">4.5.3. Removing</a></li>
+<li><a href="#_doc_get">4.4.1. <code>doc get</code></a></li>
+<li><a href="#_doc_import">4.4.2. <code>doc import</code></a></li>
+<li><a href="#_doc_insert">4.4.3. <code>doc insert</code></a></li>
+<li><a href="#_doc_remove">4.4.4. <code>doc remove</code></a></li>
+<li><a href="#_doc_replace">4.4.5. <code>doc replace</code></a></li>
+<li><a href="#_doc_upsert">4.4.6. <code>doc upsert</code></a></li>
 </ul>
 </li>
+<li><a href="#_nodes">4.5. <code>nodes</code></a></li>
 <li><a href="#_subdoc_get">4.6. <code>subdoc get</code></a></li>
 <li><a href="#_query">4.7. query</a>
 <ul class="sectlevel3">
@@ -123,19 +125,18 @@
 <li><a href="#_credentials_file_format">5.2. Credentials File Format</a></li>
 <li><a href="#_importing_data">5.3. Importing data</a>
 <ul class="sectlevel3">
-<li><a href="#_a_note_on_data_format">5.3.1. A Note On Data format</a></li>
-<li><a href="#_from_file">5.3.2. From file</a>
+<li><a href="#_from_file">5.3.1. From file</a>
 <ul class="sectlevel4">
 <li><a href="#_from_json">From JSON</a></li>
 <li><a href="#_from_csv">From CSV</a></li>
 </ul>
 </li>
-<li><a href="#_modifying_data">5.3.3. Modifying data</a></li>
+<li><a href="#_modifying_data">5.3.2. Modifying data</a></li>
 </ul>
 </li>
 <li><a href="#_exporting_data">5.4. Exporting data</a>
 <ul class="sectlevel3">
-<li><a href="#_a_note_on_data_format_2">5.4.1. A Note On Data format</a></li>
+<li><a href="#_a_note_on_data_format">5.4.1. A Note On Data format</a></li>
 <li><a href="#_to_file">5.4.2. To file</a>
 <ul class="sectlevel4">
 <li><a href="#_to_json">To JSON</a></li>
@@ -344,7 +345,7 @@ As a quick sanity check, list the nodes in the cluster:</p>
 </div>
 </div>
 <div class="paragraph">
-<p>Or you can get documents by switching to the travel sample bucket with <a href="#_cb_env_and_the_environment">cb-env</a> and using <a href="#_reading">doc_get</a>:</p>
+<p>Or you can get documents by switching to the travel sample bucket with <a href="#_cb_env_and_the_environment">cb-env</a> and using <a href="https://couchbase.sh/docs/#_doc_get">doc get</a>:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -625,59 +626,11 @@ The current scope and collection have not been set, so they assume the <code>_de
 <h3 id="_loading_data_into_the_shell">2.4. Loading Data into the Shell</h3>
 <div class="paragraph">
 <p>If you want to import data into Couchbase, or just load it into the shell for further processing, there are different commands available to help you.
-Once the data is loaded into the shell it can be sent to one of the Couchbase save commands like <code>doc upsert</code> and <code>doc import</code>.
-Depending on the structure of the data, and the command used, you may also need to tweak it a little bit so it can be properly stored.</p>
+Once data is loaded into the shell the simplest way to save it to the connected cluster is using the <a href="#_doc_import">doc import</a> command.
+Alternatively if you want more control over the format and key of the uploaded data you can upload it manually using one of the other Couchbase save commands: <code>doc upsert</code> and <code>doc insert</code>.</p>
 </div>
 <div class="sect3">
-<h4 id="_doc_import">2.4.1. Doc import</h4>
-<div class="paragraph">
-<p>The <code>doc import</code> is the simplest way to import data through Couchbase Shell.
-The command expects a path to file containing data, the data can be any of the formats supported by the <code>from</code> command.
-In the following example we import a json file containing a single document.
-We also specify the <code>--id-column</code> flag because <code>doc import</code> will try to use an <code>id</code> field for the document key by default.</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code>&gt; cat user.json
-{
-  &quot;name&quot;: &quot;Michael&quot;,
-  &quot;age&quot;: 32,
-  &quot;height&quot;: 180
-}
-
-&gt; doc import user.json --id-column name
-╭───┬───────────┬─────────┬────────┬──────────┬───────────╮
-│ # │ processed │ success │ failed │ failures │  cluster  │
-├───┼───────────┼─────────┼────────┼──────────┼───────────┤
-│ 0 │         1 │       1 │      0 │          │ dev.local │
-╰───┴───────────┴─────────┴────────┴──────────┴───────────╯</code></pre>
-</div>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code>&gt; doc import -h
-Import documents from a file through the data service
-
-Usage:
-  &gt; doc import {flags} &lt;filename&gt;
-
-Flags:
-  -h, --help - Display the help message for this command
-  --id-column &lt;String&gt; - the name of the id column if used with an input stream
-  --bucket &lt;String&gt; - the name of the bucket
-  --expiry &lt;Number&gt; - the expiry for the documents in seconds, or absolute
-  --scope &lt;String&gt; - the name of the scope
-  --collection &lt;String&gt; - the name of the collection
-  --clusters &lt;String&gt; - the clusters which should be contacted
-  --batch-size &lt;Number&gt; - the maximum number of items to batch send at a time
-
-Parameters:
-  filename &lt;string&gt;: the path to the file containing data to import</code></pre>
-</div>
-</div>
-</div>
-<div class="sect3">
-<h4 id="_manual_import">2.4.2. Manual import</h4>
+<h4 id="_manual_import">2.4.1. Manual import</h4>
 <div class="paragraph">
 <p>The <code>open</code> command will look at file endings and try to decode it automatically.
 Imagine a file named <code>user.json</code> in your current directory.</p>
@@ -727,23 +680,11 @@ In our case we use <code>from json</code>:</p>
 ╰────────┴─────────╯</code></pre>
 </div>
 </div>
-<div class="admonitionblock tip">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Tip</div>
-</td>
-<td class="content">
-look at the many different import formats <code>from</code> supports, including csv, xml, yaml and even sqlite. With this simple tool
-at hand you are able to load many different data formats quickly and import them into Couchbase!
-</td>
-</tr>
-</table>
-</div>
 <div class="paragraph">
-<p>We cannot use this format directly with commands like <code>doc upsert</code> as the command expects two "columns" in the data - id and content.
-This means that we have to perform some translation from the above format to one that <code>doc upsert</code> understands.
-To do this we <code>wrap</code> the entire document into a content column and then extract the id that we want to use:</p>
+<p>The <code>doc upsert</code> and <code>doc insert</code> commands require there to be only two fields/columns.
+By default, these two columns are named <code>id</code> and <code>content</code>, but these can be overridden with <code>--id-column</code> and <code>--content-column</code>.
+The id column will be used as the key for the document, while the content column will be the json stored using that key.
+To get <code>user.json</code> in a format that can be inserted into the connected Cluster we <a href="https://www.nushell.sh/commands/docs/wrap.html">wrap</a> the entire document into a content column and then <a href="https://www.nushell.sh/commands/docs/insert.html">insert</a> the id that we want to use:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -773,7 +714,15 @@ With our data in the correct format we can then upsert:</p>
 </div>
 </div>
 <div class="paragraph">
-<p>See the <a href="#_importing_data">Importing data recipes</a> for more information.</p>
+<p>This results in the following doc being stored in the Cluster:</p>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="example_doc.png" alt="Example" width="500" height="1000">
+</div>
+</div>
+<div class="paragraph">
+<p>See the <a href="#_importing_data">Importing data recipes</a> for more examples.</p>
 </div>
 </div>
 </div>
@@ -1721,75 +1670,44 @@ They can be particularly powerful combined with the <a href="https://couchbase.s
 </div>
 </div>
 <div class="sect2">
-<h3 id="_listing_nodes">4.4. Listing <code>nodes</code></h3>
+<h3 id="_doc">4.4. doc</h3>
 <div class="paragraph">
-<p>The <code>nodes</code> command allows you to list all the nodes of the cluster you are currently connected to.</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight nowrap"><code>&gt; nodes
-╭───┬──────────────┬──────────────────────┬─────────┬──────────────────────────┬───────────────────────┬───────────────────────────┬──────────────┬─────────────┬─────────╮
-│ # │   cluster    │       hostname       │ status  │         services         │        version        │            os             │ memory_total │ memory_free │ capella │
-├───┼──────────────┼──────────────────────┼─────────┼──────────────────────────┼───────────────────────┼───────────────────────────┼──────────────┼─────────────┼─────────┤
-│ 0 │ prod-us-west │ 192.168.107.128:8091 │ healthy │ search,indexing,kv,query │ 7.6.2-3505-enterprise │ aarch64-unknown-linux-gnu │   6201221120 │  2227081216 │ false   │
-│ 1 │ prod-us-west │ 192.168.107.129:8091 │ healthy │ search,indexing,kv,query │ 7.6.2-3505-enterprise │ aarch64-unknown-linux-gnu │   6201221120 │  2204721152 │ false   │
-│ 2 │ prod-us-west │ 192.168.107.130:8091 │ healthy │ search,indexing,kv,query │ 7.6.2-3505-enterprise │ aarch64-unknown-linux-gnu │   6201221120 │  2209816576 │ false   │
-╰───┴──────────────┴──────────────────────┴─────────┴──────────────────────────┴───────────────────────┴───────────────────────────┴──────────────┴─────────────┴─────────╯</code></pre>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_reading_and_writing_documents">4.5. Reading and Writing `doc`uments</h3>
-<div class="paragraph">
-<p>The fastest way to interact with documents is through the key value service (as long as you know the document ID).
-All those commands are located as subcommands under the <code>doc</code> namespace.</p>
+<p>The <code>doc</code> commands are for managing the documents stored in the registered clusters.</p>
 </div>
 <div class="sect3">
-<h4 id="_reading">4.5.1. Reading</h4>
+<h4 id="_doc_get">4.4.1. <code>doc get</code></h4>
 <div class="paragraph">
-<p>You can retrieve a document with <code>doc get</code>:</p>
+<p>Gets a doc from the active cluster, bucket, scope and collection:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; doc get airline_10
-╭───┬────────────┬──────────────────────────────┬─────────────────────┬───────┬──────────────╮
-│ # │     id     │           content            │         cas         │ error │   cluster    │
-├───┼────────────┼──────────────────────────────┼─────────────────────┼───────┼──────────────┤
-│ 0 │ airline_10 │ ╭──────────┬───────────────╮ │ 1712321628975398912 │       │ prod-us-west │
-│   │            │ │ id       │ 10            │ │                     │       │              │
-│   │            │ │ type     │ airline       │ │                     │       │              │
-│   │            │ │ name     │ 40-Mile Air   │ │                     │       │              │
-│   │            │ │ iata     │ Q5            │ │                     │       │              │
-│   │            │ │ icao     │ MLA           │ │                     │       │              │
-│   │            │ │ callsign │ MILE-AIR      │ │                     │       │              │
-│   │            │ │ country  │ United States │ │                     │       │              │
-│   │            │ ╰──────────┴───────────────╯ │                     │       │              │
-╰───┴────────────┴──────────────────────────────┴─────────────────────┴───────┴──────────────╯</code></pre>
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+&gt; doc get airline_10
+╭───┬────────────┬──────────────────────────────┬─────────────────────┬───────┬─────────╮
+│ # │     id     │           content            │         cas         │ error │ cluster │
+├───┼────────────┼──────────────────────────────┼─────────────────────┼───────┼─────────┤
+│ 0 │ airline_10 │ ╭──────────┬───────────────╮ │ 1726047084573556736 │       │ local   │
+│   │            │ │ id       │ 10            │ │                     │       │         │
+│   │            │ │ type     │ airline       │ │                     │       │         │
+│   │            │ │ name     │ 40-Mile Air   │ │                     │       │         │
+│   │            │ │ iata     │ Q5            │ │                     │       │         │
+│   │            │ │ icao     │ MLA           │ │                     │       │         │
+│   │            │ │ callsign │ MILE-AIR      │ │                     │       │         │
+│   │            │ │ country  │ United States │ │                     │       │         │
+│   │            │ ╰──────────┴───────────────╯ │                     │       │         │
+╰───┴────────────┴──────────────────────────────┴─────────────────────┴───────┴─────────╯</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>To distinguish the actual content from the metadata, the content is nested in the <code>content</code> field.
-If you want to have everything at the top level, you can pipe to the <code>flatten</code> command:</p>
+<p>The contents of the document are returned in the <code>content</code> column alongside the document metadata (id, cas, error and cluster).</p>
+</div>
+<div class="paragraph">
+<p><code>doc get</code> can get multiple documents at once using an input stream:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight nowrap"><code>&gt; doc get airline_10 | flatten
-╭───┬────────────┬────────────┬─────────┬─────────────┬──────┬──────┬──────────┬───────────────┬─────────────────────┬───────┬──────────────╮
-│ # │     id     │ content_id │  type   │    name     │ iata │ icao │ callsign │    country    │         cas         │ error │   cluster    │
-├───┼────────────┼────────────┼─────────┼─────────────┼──────┼──────┼──────────┼───────────────┼─────────────────────┼───────┼──────────────┤
-│ 0 │ airline_10 │         10 │ airline │ 40-Mile Air │ Q5   │ MLA  │ MILE-AIR │ United States │ 1712321628975398912 │       │ prod-us-west │
-╰───┴────────────┴────────────┴─────────┴─────────────┴──────┴──────┴──────────┴───────────────┴─────────────────────┴───────┴──────────────╯</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>If the document is not found, an empty result is returned.</p>
-</div>
-<div class="paragraph">
-<p>To perform a bulk get operation, the incoming stream can be utilized.</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code>&gt; [airline_10 airline_10748 airline_137] | wrap id | doc get
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+&gt; [airline_10 airline_10748 airline_137] | wrap id | doc get
 ╭───┬───────────────┬──────────────────────────────┬─────────────────────┬───────┬──────────────╮
 │ # │      id       │           content            │         cas         │ error │   cluster    │
 ├───┼───────────────┼──────────────────────────────┼─────────────────────┼───────┼──────────────┤
@@ -1824,59 +1742,382 @@ If you want to have everything at the top level, you can pipe to the <code>flatt
 </div>
 </div>
 <div class="paragraph">
-<p>If <code>doc get</code> operates on an incoming stream it will extract the document id from the <code>id</code> column.
-This behavior can be customized through the <code>--id-column</code> flag.</p>
+<p><code>doc get</code> will extract the id from the <code>id</code> column, which is why you need to use <a href="https://www.nushell.sh/commands/docs/wrap.html">wrap</a>.
+But the <code>id</code> can be extracted from a different input column using the <code>--id-column</code> flag.</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_mutating">4.5.2. Mutating</h4>
+<h4 id="_doc_import">4.4.2. <code>doc import</code></h4>
 <div class="paragraph">
-<p>Documents can be mutated with <code>doc insert</code>, <code>doc upsert</code> and <code>doc replace</code>.</p>
-</div>
-<div class="paragraph">
-<p>All those three commands take similar arguments. If you only want to mutate a single document, passing in the ID and the content as arguments is the simplest way:</p>
+<p>The simplest way to import data into the active cluster.
+The data can be in any of the formats supported by the <a href="https://www.nushell.sh/commands/docs/from.html">from</a> command.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; doc upsert my-doc {&quot;hello&quot;: &quot;world&quot;}
-╭───┬───────────┬─────────┬────────┬──────────┬───────────╮
-│ # │ processed │ success │ failed │ failures │  cluster  │
-├───┼───────────┼─────────┼────────┼──────────┼───────────┤
-│ 0 │         1 │       1 │      0 │          │ dev.local │
-╰───┴───────────┴─────────┴────────┴──────────┴───────────╯</code></pre>
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 default._default._default
+&gt; cat user.json
+{
+  &quot;id&quot;: 123,
+  &quot;name&quot;: &quot;Michael&quot;,
+  &quot;age&quot;: 32,
+  &quot;height&quot;: 180
+}
+👤 Charlie 🏠 local in 🗄 default._default._default
+&gt; doc import user.json
+╭───┬───────────┬─────────┬────────┬──────────┬─────────╮
+│ # │ processed │ success │ failed │ failures │ cluster │
+├───┼───────────┼─────────┼────────┼──────────┼─────────┤
+│ 0 │         1 │       1 │      0 │          │ local   │
+╰───┴───────────┴─────────┴────────┴──────────┴─────────╯
+👤 Charlie 🏠 local in 🗄 default._default._default
+&gt; doc get 123
+╭───┬─────┬──────────────────────┬─────────────────────┬───────┬─────────╮
+│ # │ id  │       content        │         cas         │ error │ cluster │
+├───┼─────┼──────────────────────┼─────────────────────┼───────┼─────────┤
+│ 0 │ 123 │ ╭────────┬─────────╮ │ 1726063078042501120 │       │ local   │
+│   │     │ │ id     │ 123     │ │                     │       │         │
+│   │     │ │ name   │ Michael │ │                     │       │         │
+│   │     │ │ age    │ 32      │ │                     │       │         │
+│   │     │ │ height │ 180     │ │                     │       │         │
+│   │     │ ╰────────┴─────────╯ │                     │       │         │
+╰───┴─────┴──────────────────────┴─────────────────────┴───────┴─────────╯</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Multiple documents can be mutated through an input stream as well, defaulting to the <code>id</code> and <code>content</code> columns:</p>
+<p><code>doc import</code> will use the <code>id</code> field in the source document as the document key by default, but this behaviour can be changed with the <code>--id-column</code> flag.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 default._default._default
+&gt; cat user.csv
+name,age,height
+Michael,32,180
+👤 Charlie 🏠 local in 🗄 default._default._default
+&gt; doc import user.csv --id-column name
+╭───┬───────────┬─────────┬────────┬──────────┬─────────╮
+│ # │ processed │ success │ failed │ failures │ cluster │
+├───┼───────────┼─────────┼────────┼──────────┼─────────┤
+│ 0 │         1 │       1 │      0 │          │ local   │
+╰───┴───────────┴─────────┴────────┴──────────┴─────────╯
+👤 Charlie 🏠 local in 🗄 default._default._default
+&gt; doc get Michael
+╭───┬─────────┬──────────────────────┬─────────────────────┬───────┬─────────╮
+│ # │   id    │       content        │         cas         │ error │ cluster │
+├───┼─────────┼──────────────────────┼─────────────────────┼───────┼─────────┤
+│ 0 │ Michael │ ╭────────┬─────────╮ │ 1726063937243250688 │       │ local   │
+│   │         │ │ name   │ Michael │ │                     │       │         │
+│   │         │ │ age    │ 32      │ │                     │       │         │
+│   │         │ │ height │ 180     │ │                     │       │         │
+│   │         │ ╰────────┴─────────╯ │                     │       │         │
+╰───┴─────────┴──────────────────────┴─────────────────────┴───────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Tip</div>
+</td>
+<td class="content">
+look at the many different import formats <code>from</code> supports, including csv, xml, yaml and even sqlite.
+With this simple tool at hand you are able to load many different data formats quickly and import them into Couchbase!
+</td>
+</tr>
+</table>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_removing">4.5.3. Removing</h4>
+<h4 id="_doc_insert">4.4.3. <code>doc insert</code></h4>
 <div class="paragraph">
-<p>Documents can be removed with <code>doc remove</code>.</p>
+<p>Inserts document into the active bucket/scope/collection:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; doc remove airline_10
-╭───┬───────────┬─────────┬────────┬──────────┬───────────╮
-│ # │ processed │ success │ failed │ failures │  cluster  │
-├───┼───────────┼─────────┼────────┼──────────┼───────────┤
-│ 0 │         1 │       1 │      0 │          │ dev.local │
-╰───┴───────────┴─────────┴────────┴──────────┴───────────╯</code></pre>
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; open user.json
+╭────────┬─────────╮
+│ name   │ Michael │
+│ age    │ 32      │
+│ height │ 180     │
+╰────────┴─────────╯
+👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; open user.json | wrap content | insert id $in.content.name | doc insert
+╭───┬───────────┬─────────┬────────┬──────────┬─────────╮
+│ # │ processed │ success │ failed │ failures │ cluster │
+├───┼───────────┼─────────┼────────┼──────────┼─────────┤
+│ 0 │         1 │       1 │      0 │          │ remote  │
+╰───┴───────────┴─────────┴────────┴──────────┴─────────╯</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Similar to <code>doc get</code>, if you want to delete more than one document at the same time, provide a stream of ids with an <code>id</code> column:</p>
+<p>And if a document already exists in the active collection with this key then the command will fail:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>&gt; [airline_10 airline_10748 airline_137] | wrap id | doc remove
-╭───┬───────────┬─────────┬────────┬───────────────┬───────────╮
-│ # │ processed │ success │ failed │   failures    │  cluster  │
-├───┼───────────┼─────────┼────────┼───────────────┼───────────┤
-│ 0 │         3 │       2 │      1 │ Key not found │ dev.local │
-╰───┴───────────┴─────────┴────────┴───────────────┴───────────╯</code></pre>
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; open user.json | wrap content | insert id $in.content.name | doc insert
+╭───┬───────────┬─────────┬────────┬────────────────────┬─────────╮
+│ # │ processed │ success │ failed │      failures      │ cluster │
+├───┼───────────┼─────────┼────────┼────────────────────┼─────────┤
+│ 0 │         1 │       0 │      1 │ Key already exists │ remote  │
+╰───┴───────────┴─────────┴────────┴────────────────────┴─────────╯</code></pre>
 </div>
+</div>
+<div class="paragraph">
+<p>See the <a href="#_manual_import">manual import</a> section for an explanation of the formatting we do before piping to the <code>doc insert</code> command.</p>
+</div>
+<div class="paragraph">
+<p><code>doc insert</code> can be used to insert multiple documents at once, see <a href="#_importing_data">importing data</a> for examples.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_doc_remove">4.4.4. <code>doc remove</code></h4>
+<div class="paragraph">
+<p>Removes the document with the given key from the active collection.
+For example say we have the following stored:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; doc get Michael
+╭───┬─────────┬──────────────────────┬─────────────────────┬───────┬─────────╮
+│ # │   id    │       content        │         cas         │ error │ cluster │
+├───┼─────────┼──────────────────────┼─────────────────────┼───────┼─────────┤
+│ 0 │ Michael │ ╭────────┬─────────╮ │ 1726821299020365824 │       │ remote  │
+│   │         │ │ name   │ Michael │ │                     │       │         │
+│   │         │ │ age    │ 32      │ │                     │       │         │
+│   │         │ │ height │ 180     │ │                     │       │         │
+│   │         │ ╰────────┴─────────╯ │                     │       │         │
+╰───┴─────────┴──────────────────────┴─────────────────────┴───────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>We would remove it as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; doc remove Michael
+╭───┬───────────┬─────────┬────────┬──────────┬─────────╮
+│ # │ processed │ success │ failed │ failures │ cluster │
+├───┼───────────┼─────────┼────────┼──────────┼─────────┤
+│ 0 │         1 │       1 │      0 │          │ remote  │
+╰───┴───────────┴─────────┴────────┴──────────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>If a document matching the key cannot be found, then an error is returned:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; doc remove Michael
+╭───┬───────────┬─────────┬────────┬───────────────┬─────────╮
+│ # │ processed │ success │ failed │   failures    │ cluster │
+├───┼───────────┼─────────┼────────┼───────────────┼─────────┤
+│ 0 │         1 │       0 │      1 │ Key not found │ remote  │
+╰───┴───────────┴─────────┴────────┴───────────────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>You can also remove multiple documents at once with an input stream:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ travel-sample._default._default
+&gt; [airline_10 airline_10748 airline_137] | wrap id | doc remove
+╭───┬───────────┬─────────┬────────┬──────────┬─────────╮
+│ # │ processed │ success │ failed │ failures │ cluster │
+├───┼───────────┼─────────┼────────┼──────────┼─────────┤
+│ 0 │         3 │       3 │      0 │          │ remote  │
+╰───┴───────────┴─────────┴────────┴──────────┴─────────╯</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_doc_replace">4.4.5. <code>doc replace</code></h4>
+<div class="paragraph">
+<p>Replaces the document in Couchbase matching the key id of the new one, if there is no document matching the <code>id</code> then an error is returned.
+Say we have the following document stored in the connected cluster:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; doc get Michael
+╭───┬─────────┬──────────────────────┬─────────────────────┬───────┬─────────╮
+│ # │   id    │       content        │         cas         │ error │ cluster │
+├───┼─────────┼──────────────────────┼─────────────────────┼───────┼─────────┤
+│ 0 │ Michael │ ╭────────┬─────────╮ │ 1726821687787126784 │       │ remote  │
+│   │         │ │ name   │ Michael │ │                     │       │         │
+│   │         │ │ age    │ 32      │ │                     │       │         │
+│   │         │ │ height │ 180     │ │                     │       │         │
+│   │         │ ╰────────┴─────────╯ │                     │       │         │
+╰───┴─────────┴──────────────────────┴─────────────────────┴───────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>And we have an updated version stored locally:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; open user.json
+╭────────┬─────────╮
+│ name   │ Michael │
+│ age    │ 80      │
+│ height │ 110     │
+╰────────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Then we can replace the first with the second using <code>doc replace</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; open user.json | wrap content | insert id $in.content.name | doc replace
+╭───┬───────────┬─────────┬────────┬──────────┬─────────╮
+│ # │ processed │ success │ failed │ failures │ cluster │
+├───┼───────────┼─────────┼────────┼──────────┼─────────┤
+│ 0 │         1 │       1 │      0 │          │ remote  │
+╰───┴───────────┴─────────┴────────┴──────────┴─────────╯
+👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; doc get Michael
+╭───┬─────────┬──────────────────────┬─────────────────────┬───────┬─────────╮
+│ # │   id    │       content        │         cas         │ error │ cluster │
+├───┼─────────┼──────────────────────┼─────────────────────┼───────┼─────────┤
+│ 0 │ Michael │ ╭────────┬─────────╮ │ 1726821910540648448 │       │ remote  │
+│   │         │ │ name   │ Michael │ │                     │       │         │
+│   │         │ │ age    │ 80      │ │                     │       │         │
+│   │         │ │ height │ 110     │ │                     │       │         │
+│   │         │ ╰────────┴─────────╯ │                     │       │         │
+╰───┴─────────┴──────────────────────┴─────────────────────┴───────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>See the <a href="#_manual_import">manual import</a> section for an explanation of the formatting we do before piping to the <code>doc replace</code> command.
+If there was no document with the <code>id</code> Michael, then the replace would fail:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; open user.json | wrap content | insert id $in.content.name | doc replace
+╭───┬───────────┬─────────┬────────┬───────────────┬─────────╮
+│ # │ processed │ success │ failed │   failures    │ cluster │
+├───┼───────────┼─────────┼────────┼───────────────┼─────────┤
+│ 0 │         1 │       0 │      1 │ Key not found │ remote  │
+╰───┴───────────┴─────────┴────────┴───────────────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Similarly to <code>doc insert</code>, <code>doc replace</code> can be used to replace multiple documents at once, see <a href="#_importing_data">importing data</a> for examples.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_doc_upsert">4.4.6. <code>doc upsert</code></h4>
+<div class="paragraph">
+<p>This is the most robust way to import data into the cluster since it will work whether or not there is an existing doc in the cluster with a matching <code>id</code>.
+If there is no document already in the cluster with a matching <code>id</code> then it behaves the same as <a href="#_doc_insert">doc insert</a>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; doc get Michael
+╭───┬─────────┬─────────┬─────┬───────────────┬─────────╮
+│ # │   id    │ content │ cas │     error     │ cluster │
+├───┼─────────┼─────────┼─────┼───────────────┼─────────┤
+│ 0 │ Michael │         │   0 │ Key not found │ remote  │
+╰───┴─────────┴─────────┴─────┴───────────────┴─────────╯
+👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; open user.json
+╭────────┬─────────╮
+│ name   │ Michael │
+│ age    │ 32      │
+│ height │ 180     │
+╰────────┴─────────╯
+👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; open user.json | wrap content | insert id $in.content.name | doc upsert
+╭───┬───────────┬─────────┬────────┬──────────┬─────────╮
+│ # │ processed │ success │ failed │ failures │ cluster │
+├───┼───────────┼─────────┼────────┼──────────┼─────────┤
+│ 0 │         1 │       1 │      0 │          │ remote  │
+╰───┴───────────┴─────────┴────────┴──────────┴─────────╯
+👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; doc get Michael
+╭───┬─────────┬──────────────────────┬─────────────────────┬───────┬─────────╮
+│ # │   id    │       content        │         cas         │ error │ cluster │
+├───┼─────────┼──────────────────────┼─────────────────────┼───────┼─────────┤
+│ 0 │ Michael │ ╭────────┬─────────╮ │ 1726822249315041280 │       │ remote  │
+│   │         │ │ name   │ Michael │ │                     │       │         │
+│   │         │ │ age    │ 32      │ │                     │       │         │
+│   │         │ │ height │ 180     │ │                     │       │         │
+│   │         │ ╰────────┴─────────╯ │                     │       │         │
+╰───┴─────────┴──────────────────────┴─────────────────────┴───────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>See the <a href="#_manual_import">manual import</a> section for an explanation of the formatting we do before piping to the <code>doc upsert</code> command.</p>
+</div>
+<div class="paragraph">
+<p>Or if there is an existing document with the same <code>id</code> then <code>upsert</code> will behave the same as a <code>replace</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; doc get Michael
+╭───┬─────────┬──────────────────────┬─────────────────────┬───────┬─────────╮
+│ # │   id    │       content        │         cas         │ error │ cluster │
+├───┼─────────┼──────────────────────┼─────────────────────┼───────┼─────────┤
+│ 0 │ Michael │ ╭────────┬─────────╮ │ 1726822249315041280 │       │ remote  │
+│   │         │ │ name   │ Michael │ │                     │       │         │
+│   │         │ │ age    │ 32      │ │                     │       │         │
+│   │         │ │ height │ 180     │ │                     │       │         │
+│   │         │ ╰────────┴─────────╯ │                     │       │         │
+╰───┴─────────┴──────────────────────┴─────────────────────┴───────┴─────────╯
+👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; open user.json
+╭────────┬─────────╮
+│ name   │ Michael │
+│ age    │ 80      │
+│ height │ 110     │
+╰────────┴─────────╯
+👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; open user.json | wrap content | insert id $in.content.name | doc upsert
+╭───┬───────────┬─────────┬────────┬──────────┬─────────╮
+│ # │ processed │ success │ failed │ failures │ cluster │
+├───┼───────────┼─────────┼────────┼──────────┼─────────┤
+│ 0 │         1 │       1 │      0 │          │ remote  │
+╰───┴───────────┴─────────┴────────┴──────────┴─────────╯
+👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; doc get Michael
+╭───┬─────────┬──────────────────────┬─────────────────────┬───────┬─────────╮
+│ # │   id    │       content        │         cas         │ error │ cluster │
+├───┼─────────┼──────────────────────┼─────────────────────┼───────┼─────────┤
+│ 0 │ Michael │ ╭────────┬─────────╮ │ 1726822368839598080 │       │ remote  │
+│   │         │ │ name   │ Michael │ │                     │       │         │
+│   │         │ │ age    │ 80      │ │                     │       │         │
+│   │         │ │ height │ 110     │ │                     │       │         │
+│   │         │ ╰────────┴─────────╯ │                     │       │         │
+╰───┴─────────┴──────────────────────┴─────────────────────┴───────┴─────────╯</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_nodes">4.5. <code>nodes</code></h3>
+<div class="paragraph">
+<p>The <code>nodes</code> command allows you to list all the nodes of the cluster you are currently connected to.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>&gt; nodes
+╭───┬──────────────┬──────────────────────┬─────────┬──────────────────────────┬───────────────────────┬───────────────────────────┬──────────────┬─────────────┬─────────╮
+│ # │   cluster    │       hostname       │ status  │         services         │        version        │            os             │ memory_total │ memory_free │ capella │
+├───┼──────────────┼──────────────────────┼─────────┼──────────────────────────┼───────────────────────┼───────────────────────────┼──────────────┼─────────────┼─────────┤
+│ 0 │ prod-us-west │ 192.168.107.128:8091 │ healthy │ search,indexing,kv,query │ 7.6.2-3505-enterprise │ aarch64-unknown-linux-gnu │   6201221120 │  2227081216 │ false   │
+│ 1 │ prod-us-west │ 192.168.107.129:8091 │ healthy │ search,indexing,kv,query │ 7.6.2-3505-enterprise │ aarch64-unknown-linux-gnu │   6201221120 │  2204721152 │ false   │
+│ 2 │ prod-us-west │ 192.168.107.130:8091 │ healthy │ search,indexing,kv,query │ 7.6.2-3505-enterprise │ aarch64-unknown-linux-gnu │   6201221120 │  2209816576 │ false   │
+╰───┴──────────────┴──────────────────────┴─────────┴──────────────────────────┴───────────────────────┴───────────────────────────┴──────────────┴─────────────┴─────────╯</code></pre>
 </div>
 </div>
 </div>
@@ -2190,7 +2431,7 @@ Requires a vector to be used as the source of the search which can be supplied i
 </div>
 <div class="paragraph">
 <p>The field <code>contentVector</code> contains a vector of dimension 1024 that could be used as the input to a vector search.
-Due to the format of the data returned by <a href="#_reading">doc get</a> we need to <a href="https://www.nushell.sh/commands/docs/flatten.html">flatten</a> to remove the nesting then <a href="https://www.nushell.sh/commands/docs/select.html">select</a> the <code>contentVector</code> field:</p>
+Due to the format of the data returned by  <a href="https://couchbase.sh/docs/#_doc_get">doc get</a> we need to <a href="https://www.nushell.sh/commands/docs/flatten.html">flatten</a> to remove the nesting then <a href="https://www.nushell.sh/commands/docs/select.html">select</a> the <code>contentVector</code> field:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -2279,7 +2520,7 @@ Embedding batch 1/1
 The similarity of vectors is calculated using the metric specified on <a href="#_vector_create_index">index creation</a>.</p>
 </div>
 <div class="paragraph">
-<p>To see the contents of the documents identified in the table simply pipe the output of vector search into a <a href="#_reading">doc get</a> command.
+<p>To see the contents of the documents identified in the table simply pipe the output of vector search into a <a href="https://couchbase.sh/docs/#_doc_get">doc get</a> command.
 If only interested in a particular field then the <a href="#_subdoc_get">subdoc get</a> command will also work in the same way:</p>
 </div>
 <div class="listingblock">
@@ -2795,30 +3036,7 @@ password = &quot;password&quot;
 These recipes will cover more advanced use cases.</p>
 </div>
 <div class="sect3">
-<h4 id="_a_note_on_data_format">5.3.1. A Note On Data format</h4>
-<div class="paragraph">
-<p>The <code>doc upsert</code> command requires there to be only two fields/columns for an upsert.
-There can be more than two fields/columns in the data but only two can be used.
-By default, these two columns are named <code>id</code> and <code>content</code>, but these can be overridden with <code>--id-column</code> and <code>--content-column</code>.</p>
-</div>
-<div class="paragraph">
-<p>Given the following document format we need to perform some data manipulation to get it into a format which works with <code>doc upsert</code>:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code>&gt; cat mydoc.json
-{&quot;id&quot;:3719,&quot;cas&quot;:1600344369374167040,&quot;type&quot;:&quot;airport&quot;,&quot;airportname&quot;:&quot;Columbia Rgnl&quot;,&quot;city&quot;:&quot;Columbia&quot;,&quot;country&quot;:&quot;United States&quot;,&quot;faa&quot;:&quot;COU&quot;,&quot;icao&quot;:&quot;KCOU&quot;,&quot;tz&quot;:&quot;America/Chicago&quot;}
-
-&gt; open mydoc.json | wrap content | insert id { |it| echo $it.content.airportname }
-╭─────────┬───────────────────╮
-│ content │ {record 9 fields} │
-│ id      │ Columbia Rgnl     │
-╰─────────┴───────────────────╯</code></pre>
-</div>
-</div>
-</div>
-<div class="sect3">
-<h4 id="_from_file">5.3.2. From file</h4>
+<h4 id="_from_file">5.3.1. From file</h4>
 <div class="sect4">
 <h5 id="_from_json">From JSON</h5>
 <div class="paragraph">
@@ -2927,7 +3145,7 @@ Bray,Albert,France,,LFAQ,1258,airport,Europe/Paris
 </div>
 </div>
 <div class="sect3">
-<h4 id="_modifying_data">5.3.3. Modifying data</h4>
+<h4 id="_modifying_data">5.3.2. Modifying data</h4>
 <div class="paragraph">
 <p>In some circumstances you may want to modify the data before you import it.
 Let&#8217;s take the example of importing from a csv file but this time the airports.csv file is missing the <code>type</code> column but we want to add it to our data:</p>
@@ -2979,7 +3197,7 @@ Bray,Albert,France,,LFAQ,1258,Europe/Paris
 <p>Couchbase Shell supports exporting data to a variety of formats and sources.</p>
 </div>
 <div class="sect3">
-<h4 id="_a_note_on_data_format_2">5.4.1. A Note On Data format</h4>
+<h4 id="_a_note_on_data_format">5.4.1. A Note On Data format</h4>
 <div class="paragraph">
 <p>The <code>doc get</code> command exposes data as three fields; <code>id</code>, <code>cas</code>, and <code>content</code>.
 The body of the document is stored within the <code>content</code> column.
@@ -3491,7 +3709,7 @@ As our versioning continues to track the underlying Nushell minor version this h
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-09-24 12:10:52 UTC
+Last updated 2024-09-24 18:12:16 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':

@@ -2306,7 +2306,7 @@ If the query run is the example given above then the output will look like this:
 </div>
 </div>
 <div class="paragraph">
-<p>Before we can insert this into out <code>remote</code> cluster using <a href="https://couchbase.sh/docs/#_mutating">doc upsert</a> we need it to be correctly <a href="https://couchbase.sh/docs/#_a_note_on_data_format">formatted</a>.
+<p>Before we can insert this into our <code>remote</code> cluster using <a href="https://couchbase.sh/docs/#_doc_upsert">doc upsert</a> we need it to be correctly <a href="https://couchbase.sh/docs/#_manual_import">formatted</a>.
 But before we try to reformat any of the data we make sure that the query not returned null with <code>if $in != null</code> since trying to manipulate a null value will return an error.
 The formatting required is to drop the cluster column which we do using <a href="https://www.nushell.sh/commands/docs/reject.html">reject</a> then rename the column named after the collection, in this case <code>airline</code> to <code>content</code> which we do using <a href="https://www.nushell.sh/commands/docs/rename.html">rename</a>.
 After the formatting has been applied to the above example it would become:</p>
@@ -2379,7 +2379,7 @@ Embedding batch 3/3
 <div class="paragraph">
 <p>Here we have used <a href="https://couchbase.sh/docs/#_query_commands">query</a> to get all the landmark doc ids and bodies.
 Then we have enriched all of these with the embedding generated from the <code>content</code> field, see <a href="https://couchbase.sh/docs/#_vector_enrich_doc">vector enrich-doc</a> for details.
-Finally we pipe the output directly into <a href="https://couchbase.sh/docs/#_mutating">doc upsert</a> to overwrite the original landmark documents with our enriched versions.</p>
+Finally we pipe the output directly into <a href="https://couchbase.sh/docs/#_doc_upsert">doc upsert</a> to overwrite the original landmark documents with our enriched versions.</p>
 </div>
 <div class="paragraph">
 <p>Now that we have a set of docs containing vectors we can create a vector index over them using <a href="https://couchbase.sh/docs/#_vector_create_index">vector create-index</a>:</p>
@@ -2455,7 +2455,7 @@ Once we have this list of results from the vector search we can use the ids to i
 </div>
 </div>
 <div class="paragraph">
-<p>Here we could have used <a href="https://couchbase.sh/docs/#_reading">doc get</a> to get the whole of the documents, but to keep things tidy we&#8217;ve used another <code>subdoc get</code> to retrieved the name, address and content fields.
+<p>Here we could have used <a href="https://couchbase.sh/docs/#_doc_get">doc get</a> to get the whole of the documents, but to keep things tidy we&#8217;ve used another <code>subdoc get</code> to retrieved the name, address and content fields.
 As you can see by examining the results they all have semantically similar content fields.</p>
 </div>
 <div class="paragraph">
@@ -2581,7 +2581,7 @@ Embedding batch 1/1
 </div>
 <div class="paragraph">
 <p><code>vector enrich-text</code> will create a <code>vector doc</code> for each of the text chunks, these docs contain the original chunk of text along with the embedding generated from it.
-These docs are <a href="https://couchbase.sh/docs/#_a_note_on_data_format">formatted</a> so that they can be piped directly into <a href="https://couchbase.sh/docs/#_mutating">doc upsert</a> to store them in the active Couchbase Cluster.</p>
+These docs are <a href="https://couchbase.sh/docs/#_manual_import">formatted</a> so that they can be piped directly into <a href="https://couchbase.sh/docs/#_doc_upsert">doc upsert</a> to store them in the active Couchbase Cluster.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -2737,7 +2737,7 @@ A good example here is migrating from an on-premise cluster to a Capella cluster
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-09-24 12:10:52 UTC
+Last updated 2024-09-24 18:12:16 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
