@@ -19,19 +19,21 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::runtime::Runtime;
 use tokio::{select, time::Instant};
 
-const CLOUD_URL: &str = "https://cloudapi.cloud.couchbase.com";
+pub const CLOUD_URL: &str = "https://cloudapi.cloud.couchbase.com";
 pub const CAPELLA_SRV_SUFFIX: &str = "cloud.couchbase.com";
 
 pub struct CapellaClient {
     secret_key: String,
     access_key: String,
+    api_endpoint: String,
 }
 
 impl CapellaClient {
-    pub fn new(secret_key: String, access_key: String) -> Self {
+    pub fn new(secret_key: String, access_key: String, api_endpoint: String) -> Self {
         Self {
             secret_key,
             access_key,
+            api_endpoint,
         }
     }
 
@@ -50,7 +52,7 @@ impl CapellaClient {
         let timeout = deadline.sub(now);
         let ctrl_c_fut = CtrlcFuture::new(ctrl_c);
 
-        let uri = format!("{}{}", CLOUD_URL, path);
+        let uri = format!("{}{}", self.api_endpoint, path);
 
         let client = Client::new();
         let mut res_builder = match verb {
@@ -170,7 +172,7 @@ impl CapellaClient {
         Ok(HttpResponse::new(
             content,
             status,
-            Endpoint::new(CLOUD_URL.to_string(), 443),
+            Endpoint::new(self.api_endpoint.to_string(), 443),
         ))
     }
 

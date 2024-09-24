@@ -230,6 +230,7 @@ pub fn update_config_file(guard: &mut MutexGuard<State>, span: Span) -> Result<(
             c.access_key(),
             Some(c.timeout()),
             c.default_project(),
+            None,
         ))
     }
 

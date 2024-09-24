@@ -45,7 +45,7 @@ use nu_protocol::{
     Span, Value,
 };
 
-use crate::client::RustTlsConfig;
+use crate::client::{RustTlsConfig, CLOUD_URL};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::error::Error;
@@ -658,12 +658,14 @@ fn make_state(
                 None => DEFAULT_MANAGEMENT_TIMEOUT,
             };
             let name = c.identifier();
+            let api_endpoint = c.api_endpoint().unwrap_or(CLOUD_URL.to_string());
 
             let plane = RemoteCapellaOrganization::new(
                 c.secret_key(),
                 c.access_key(),
                 management_timeout,
                 c.default_project(),
+                api_endpoint,
             );
 
             if active_capella_org.is_none() {
