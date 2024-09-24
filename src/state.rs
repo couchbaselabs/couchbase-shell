@@ -335,6 +335,7 @@ pub struct RemoteCapellaOrganization {
     client: Mutex<Option<Arc<CapellaClient>>>,
     timeout: Duration,
     default_project: Option<String>,
+    api_endpoint: String,
 }
 
 impl RemoteCapellaOrganization {
@@ -343,6 +344,7 @@ impl RemoteCapellaOrganization {
         access_key: String,
         timeout: Duration,
         default_project: Option<String>,
+        api_endpoint: String,
     ) -> Self {
         Self {
             secret_key,
@@ -350,6 +352,7 @@ impl RemoteCapellaOrganization {
             client: Mutex::new(None),
             timeout,
             default_project,
+            api_endpoint,
         }
     }
 
@@ -367,6 +370,7 @@ impl RemoteCapellaOrganization {
             *c = Some(Arc::new(CapellaClient::new(
                 self.secret_key.clone(),
                 self.access_key.clone(),
+                self.api_endpoint.clone(),
             )));
         }
         c.as_ref().unwrap().clone()

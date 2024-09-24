@@ -103,7 +103,7 @@ impl Cluster {
         let mut total = 0;
 
         for sg in &self.service_groups {
-            total = sg.num_of_nodes.unwrap() + total;
+            total += sg.num_of_nodes.unwrap();
         }
         total
     }
