@@ -250,7 +250,7 @@ Next time you run the binary you&#8217;ll get another prompt but then it should 
 <div class="sect3">
 <h4 id="_homebrew">1.1.2. Homebrew</h4>
 <div class="paragraph">
-<p>If running on macOS you can install via the <a href="https://formulae.brew.sh/formula/couchbase-shell">homebrew</a> formula:</p>
+<p>If running on macOS you can install via the <a href="https://formulae.brew.sh/formula/couchbase-shell">Homebrew</a> formula:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -322,7 +322,7 @@ As a quick sanity check, list the nodes in the cluster:</p>
 </div>
 </div>
 <div class="paragraph">
-<p>Now you can try running n1ql queries using the <a href="#_query">query</a> command.</p>
+<p>Now you can try running N1QL queries using the <a href="#_query">query</a> command.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -436,19 +436,19 @@ A config file can be created with just a capella-organization then the shell can
 <h2 id="_introduction">2. Introduction</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Couchbase Shell is fully featured, so it does not only contain commands related to couchbase but is actually built on top of a
-general purpose shell called <a href="https://www.nushell.sh/">nushell</a>. This allows you to interact with the file system or any other
+<p>Couchbase Shell is fully featured, so it does not only contain commands related to Couchbase but is actually built on top of a
+general purpose shell called <a href="https://www.nushell.sh/">Nushell</a>. This allows you to interact with the file system or any other
 command available on your machine, making it a great tool for both operational and development tasks on top of Couchbase.</p>
 </div>
 <div class="paragraph">
 <p>The following introduction only touches on the basic concepts to make you productive quickly. We recommend also checking out the
-great <a href="https://www.nushell.sh/book">nushell documentation</a> so you can get the most out of it.</p>
+great <a href="https://www.nushell.sh/book">Nushell documentation</a> so you can get the most out of it.</p>
 </div>
 <div class="sect2">
 <h3 id="_navigating_the_shell">2.1. Navigating the Shell</h3>
 <div class="paragraph">
 <p>Commands take inputs and produce output in a structured manner, most often represented as tables. Note how both the generic <code>ls</code>
-command and the couchbase-specific <code>buckets</code> command both produce a table as their output:</p>
+command and the Couchbase-specific <code>buckets</code> command both produce a table as their output:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -625,7 +625,7 @@ The current scope and collection have not been set, so they assume the <code>_de
 <h3 id="_loading_data_into_the_shell">2.4. Loading Data into the Shell</h3>
 <div class="paragraph">
 <p>If you want to import data into Couchbase, or just load it into the shell for further processing, there are different commands available to help you.
-Once the data is loaded into the shell it can be sent to one of the couchbase save commands like <code>doc upsert</code> and <code>doc import</code>.
+Once the data is loaded into the shell it can be sent to one of the Couchbase save commands like <code>doc upsert</code> and <code>doc import</code>.
 Depending on the structure of the data, and the command used, you may also need to tweak it a little bit so it can be properly stored.</p>
 </div>
 <div class="sect3">
@@ -735,7 +735,7 @@ In our case we use <code>from json</code>:</p>
 </td>
 <td class="content">
 look at the many different import formats <code>from</code> supports, including csv, xml, yaml and even sqlite. With this simple tool
-at hand you are able to load many different data formats quickly and import them into couchbase!
+at hand you are able to load many different data formats quickly and import them into Couchbase!
 </td>
 </tr>
 </table>
@@ -1349,8 +1349,8 @@ For example:</p>
 <h2 id="_couchbase_commands">4. Couchbase Commands</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The following sections discuss the individual couchbase specific commands in greater detail. Remember, you can always mix and match
-them with built-in other shell commands as well as executables from your environment.</p>
+<p>The following sections discuss the individual Couchbase specific commands in greater detail. Remember, you can always mix and match
+them with built-in other shell commands as well as executable programs from your environment.</p>
 </div>
 <div class="sect2">
 <h3 id="_buckets">4.1. buckets</h3>
@@ -1377,7 +1377,7 @@ They can be particularly powerful combined with the <a href="https://couchbase.s
 </div>
 </div>
 <div class="paragraph">
-<p>Check this <a href="https://couchbase.sh/docs/recipes.html#_moving_data_between_clusters">recipe</a> to see how <code>cbsh</code> can be used to copy these buckets to another cluster.</p>
+<p>Check this <a href="https://couchbase.sh/docs/recipes/#_moving_data_between_clusters">recipe</a> to see how <code>cbsh</code> can be used to copy these buckets to another cluster.</p>
 </div>
 </div>
 <div class="sect3">
@@ -1769,7 +1769,7 @@ All those commands are located as subcommands under the <code>doc</code> namespa
 </div>
 <div class="paragraph">
 <p>To distinguish the actual content from the metadata, the content is nested in the <code>content</code> field.
-If you want to have everything at the toplevel, you can pipe to the <code>flatten</code> command:</p>
+If you want to have everything at the top level, you can pipe to the <code>flatten</code> command:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -1964,7 +1964,7 @@ Parameters:
 <div class="sect3">
 <h4 id="_query_2">4.7.1. <code>query</code></h4>
 <div class="paragraph">
-<p>Takes a n1ql statement and executes it against the active cluster.</p>
+<p>Takes a N1QL statement and executes it against the active cluster.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -2476,7 +2476,7 @@ Embedding batch 1/1
 <div class="paragraph">
 <p>The resulting document is the same as the original, but with a new field <code>contentVector</code> which contains the result of embedding the content field with the <a href="#_cb_env_llm">active llm</a>.
 The name of the field that the embedding will be written to will default to the name of the original field with "Vector" appended.
-This default behaviour can be overwritten with the <code>vectorField</code> flag.
+This default behavior can be overwritten with the <code>vectorField</code> flag.
 The resulting document is formatted with an id and content column which allows it to be piped into a <code>doc upsert</code> command to store it in the connected couchbase cluster.</p>
 </div>
 <div class="listingblock">
@@ -2703,7 +2703,7 @@ At the new restaurant, you can enjoy the following activities:
 <div class="sect2">
 <h3 id="_version">4.10. <code>version</code></h3>
 <div class="paragraph">
-<p>The <code>version</code> command lists the version of the couchbase shell.</p>
+<p>The <code>version</code> command lists the version of the Couchbase shell.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -2792,7 +2792,7 @@ password = &quot;password&quot;
 </div>
 <div class="paragraph">
 <p>The simplest way to import data is using <code>doc import</code> as covered in <a href="#_loading_data_into_the_shell">Loading data into the shell</a>.
-These recipes will cover more advanced usecases.</p>
+These recipes will cover more advanced use cases.</p>
 </div>
 <div class="sect3">
 <h4 id="_a_note_on_data_format">5.3.1. A Note On Data format</h4>
@@ -2991,7 +2991,7 @@ If you want to only store the document body then you can use <code>doc get &lt;i
 <div class="sect4">
 <h5 id="_to_json">To JSON</h5>
 <div class="paragraph">
-<p>From KeyValue</p>
+<p>From key-value</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -3140,7 +3140,7 @@ If you want to only store the document body then you can use <code>doc get &lt;i
 <div class="sect4">
 <h5 id="_to_csv">To CSV</h5>
 <div class="paragraph">
-<p>From KeyValue</p>
+<p>From key-value</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -3330,7 +3330,7 @@ Couterne,Bagnole-de-l'orne,France,,,,,LFAO,1257,airport,Europe/Paris,local</code
 <div class="ulist">
 <ul>
 <li>
-<p>Updated macos build to not have any dependency on OpenSSL.</p>
+<p>Updated macOS build to not have any dependency on OpenSSL.</p>
 </li>
 <li>
 <p>Fixed the release workflow so that Linux release tarballs contain the <code>cbsh</code> binary.</p>
@@ -3353,7 +3353,7 @@ As our versioning continues to track the underlying Nushell minor version this h
 <p><strong>Breaking</strong> Updated config file to rename <code>hostnames</code> to <code>connstr</code> and changed the format to be a string.</p>
 </li>
 <li>
-<p>Added support, and detection, for different "cluster types"; Capella and Other. This allows us to modify behaviour based on cluster type.</p>
+<p>Added support, and detection, for different "cluster types"; Capella and Other. This allows us to modify behavior based on cluster type.</p>
 </li>
 <li>
 <p><strong>Breaking</strong> Renamed <code>clusters health</code> to <code>health</code>.</p>
@@ -3491,7 +3491,7 @@ As our versioning continues to track the underlying Nushell minor version this h
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-09-18 09:13:52 UTC
+Last updated 2024-09-24 12:10:52 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':

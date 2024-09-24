@@ -1837,7 +1837,7 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <div class="sectionbody">
 <div class="paragraph">
 <p>Welcome to the recipes section of the Couchbase Shell <code>cbsh</code> documentation.
-Here you can find how powerful tasks can be performed by a combination of pipelined statements using <code>cbsh</code>.</p>
+Here you can find how powerful tasks can be performed by a combining <code>cbsh</code> statements.</p>
 </div>
 </div>
 </div>
@@ -2007,7 +2007,7 @@ To focus on the free memory that each cluster has, we can <a href="https://www.n
 </div>
 </div>
 <div class="paragraph">
-<p>We can reformat the tables to make the the data more readable, but nushell&#8217;s understanding of various data types allows us to reformat the values within the table.
+<p>We can reformat the tables to make the the data more readable, but Nushell&#8217;s understanding of various data types allows us to reformat the values within the table.
 For example we could convert the <code>memory_free</code> values from bytes to gigabytes:</p>
 </div>
 <div class="listingblock">
@@ -2031,11 +2031,11 @@ For example we could convert the <code>memory_free</code> values from bytes to g
 </div>
 </div>
 <div class="paragraph">
-<p>We do this by iterating over each node and <a href="https://www.nushell.sh/commands/docs/update.html">updating</a> the value in the <code>memory_free</code> column by multiplying the current value by nushell&#8217;s inbuilt <a href="https://www.nushell.sh/book/types_of_data.html#file-sizes">File Size</a> datatype.</p>
+<p>We do this by iterating over each node and <a href="https://www.nushell.sh/commands/docs/update.html">updating</a> the value in the <code>memory_free</code> column by multiplying the current value by Nushell&#8217;s inbuilt <a href="https://www.nushell.sh/book/types_of_data.html#file-sizes">File Size</a> datatype.</p>
 </div>
 <div class="paragraph">
 <p>We can take this one step further and use the values returned to calculate new metrics about our clusters.
-When performing a healthcheck it&#8217;s be useful to know the memory utilization for each cluster.
+When performing a health check it&#8217;s be useful to know the memory utilization for each cluster.
 There are two columns that can be used to calculate this: <code>memory_free</code> and <code>memory_total</code>.</p>
 </div>
 <div class="listingblock">
@@ -2142,7 +2142,7 @@ Imagine you have 2 clusters, one self-managed (named local) and a Capella cluste
 </div>
 <div class="paragraph">
 <p>Here we simply get all of the buckets, then iterate over the list with <a href="https://www.nushell.sh/commands/docs/each.html">each</a> and create buckets with the same name and ram quota, specifying the <code>remote</code> cluster with the <a href="https://couchbase.sh/docs/#_the_clusters_flag">--clusters</a> flag.
-Since the value for the ram quote is returned in bytes from <code>buckets</code> we convert it to MiB by dividing by nushell&#8217;s 1MB <a href="https://www.nushell.sh/book/types_of_data.html#file-sizes">FileSize</a> datatype.
+Since the value for the ram quota is returned in bytes from <code>buckets</code> we convert it to MiB by dividing by Nushell&#8217;s 1MB <a href="https://www.nushell.sh/book/types_of_data.html#file-sizes">FileSize</a> datatype.
 We can check that this has worked by running the <code>buckets</code> command against the remote cluster:</p>
 </div>
 <div class="listingblock">
@@ -2480,7 +2480,7 @@ Embedding batch 1/1
 </div>
 <div class="paragraph">
 <p>Here we have done another similarity search using the same index, but our source vector is the result of embedding the phrase "physical exercise".
-One important detail to remeber is that the embedding generated from <code>vector enrich-text</code> must have the same dimension as those over which the index was created, otherwise <code>vector search</code> will return no results.
+One important detail to remember is that the embedding generated from <code>vector enrich-text</code> must have the same dimension as those over which the index was created, otherwise <code>vector search</code> will return no results.
 See <a href="https://couchbase.sh/docs/#_vector_enrich_text">vector enrich-text</a> for how to specify the dimension of the generated embeddings.</p>
 </div>
 </div>
@@ -2490,7 +2490,7 @@ See <a href="https://couchbase.sh/docs/#_vector_enrich_text">vector enrich-text<
 <div class="sectionbody">
 <div class="paragraph">
 <p>Couchbase Shell&#8217;s <a href="https://couchbase.sh/docs/#_vector_commands">vector commands</a> along with <a href="https://couchbase.sh/docs/#_ask">ask</a> can be used to implement simple Retrieval Augmented Generation, more commonly know as RAG.
-In this process similarity search is used over chunks of a larger body of text to contextualise questions sent to a Large Language model to improve the answers given.
+In this process similarity search is used over chunks of a larger body of text to contextualize questions sent to a Large Language model to improve the answers given.
 For this demo we will use a text version of the Couchbase Shell docs as the source text for our chunks of data we have this stored locally as a text file.</p>
 </div>
 <div class="listingblock">
@@ -2650,7 +2650,7 @@ This returns the vector docs with the most semantically similar chunks to our qu
 </div>
 <div class="paragraph">
 <p>Using the returned doc ids we can use the <a href="https://couchbase.sh/docs/#_subdoc_get">subdoc get</a> command to retrieve the chunks.
-These chunks can then be piped directly into <code>ask</code> where they will be used to contextualise the question:</p>
+These chunks can then be piped directly into <code>ask</code> where they will be used to contextualize the question:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -2680,7 +2680,7 @@ Remember to consult the available flags and options for more customization and f
 </div>
 <div class="paragraph">
 <p>This allows <code>ask</code> to produce a much more accurate and informative answer using the context it was given.
-Changing the size of the chunks, number og neighbours returned as well as the dimension of the embeddings can all have an impact on the result of RAG, and <code>cbsh</code> should help experimenting with these variables quick and easy.</p>
+Changing the size of the chunks, number of neighbors returned as well as the dimension of the embeddings can all have an impact on the result of RAG, and <code>cbsh</code> should help experimenting with these variables quick and easy.</p>
 </div>
 </div>
 </div>
@@ -2737,7 +2737,7 @@ A good example here is migrating from an on-premise cluster to a Capella cluster
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-09-18 09:13:52 UTC
+Last updated 2024-09-24 12:10:52 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':

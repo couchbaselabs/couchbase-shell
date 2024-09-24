@@ -309,7 +309,7 @@ Embedding batch 1/1
 
 The resulting document is the same as the original, but with a new field `contentVector` which contains the result of embedding the content field with the <<_cb_env_llm,active llm>>.
 The name of the field that the embedding will be written to will default to the name of the original field with "Vector" appended.
-This default behaviour can be overwritten with the `vectorField` flag.
+This default behavior can be overwritten with the `vectorField` flag.
 The resulting document is formatted with an id and content column which allows it to be piped into a `doc upsert` command to store it in the connected couchbase cluster.
 
 ```

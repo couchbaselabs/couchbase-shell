@@ -5,7 +5,7 @@ The query commands can be used to explore/create indexes and execute queries.
 
 ==== `query`
 
-Takes a n1ql statement and executes it against the active cluster.
+Takes a N1QL statement and executes it against the active cluster.
 
 ```
 👤 Charlie  🏠 local in 🗄 travel-sample._default._default

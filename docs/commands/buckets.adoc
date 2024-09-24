@@ -20,7 +20,7 @@ Lists all the buckets from your active cluster:
 ╰───┴───────────┴─────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴────────┴───────╯
 ```
 
-Check this https://couchbase.sh/docs/recipes.html#_moving_data_between_clusters[recipe] to see how `cbsh` can be used to copy these buckets to another cluster.
+Check this https://couchbase.sh/docs/recipes/#_moving_data_between_clusters[recipe] to see how `cbsh` can be used to copy these buckets to another cluster.
 
 ==== `buckets config`
 
