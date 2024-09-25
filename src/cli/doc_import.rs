@@ -124,9 +124,7 @@ fn run_import(
 
                     content.insert(k.clone(), convert_nu_value_to_json_value(v, span).ok()?);
                 }
-                if let Some(i) = id {
-                    return Some((i.to_string(), content));
-                }
+                return Some((id.unwrap_or("".into()), content));
             }
             None
         })

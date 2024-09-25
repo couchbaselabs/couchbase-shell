@@ -171,10 +171,9 @@ pub(crate) fn run_kv_store_ops(
                     content = convert_nu_value_to_json_value(v, span).ok();
                 }
             }
-            if let Some(i) = id {
-                if let Some(c) = content {
-                    return Some((i.to_string(), c));
-                }
+
+            if let Some(c) = content {
+                return Some((id.unwrap_or("".into()), c));
             }
         }
         None
@@ -287,16 +286,23 @@ pub fn run_kv_mutations(
 
                 let client = client.clone();
 
-                workers.push(async move {
-                    client
-                        .request(
-                            req_builder(item.0, item.1, expiry as u32),
-                            cid,
-                            deadline,
-                            ctrl_c,
-                        )
-                        .await
-                });
+                if !item.0.is_empty() {
+                    workers.push(async move {
+                        client
+                            .request(
+                                req_builder(item.0, item.1, expiry as u32),
+                                cid,
+                                deadline,
+                                ctrl_c,
+                            )
+                            .await
+                    });
+                } else {
+                    failed += 1;
+                    let mut missing_reason = HashSet::new();
+                    missing_reason.insert("Missing doc id".into());
+                    fail_reasons.extend(missing_reason);
+                }
             }
             // process_kv_workers will handle creating an error for us if halt_on_error is set so we
             // can just bubble it.
