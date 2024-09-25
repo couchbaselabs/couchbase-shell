@@ -39,3 +39,19 @@ fn error_on_insert_twice() {
         assert_eq!("Key already exists", json["failures"]);
     });
 }
+
+#[test]
+#[cfg_attr(not(feature = "key_value"), ignore)]
+fn insert_missing_id() {
+    CBPlayground::setup("insert_missing_id", None, None, |dirs, sandbox| {
+        let content = r#"{foo: bar, fizz: buzz}"#;
+        let out = cbsh!(cwd: dirs.test(), support::cb_pipeline(format!("{} | wrap content | insert not_id 123 | doc insert | first | to json", content)));
+        assert_eq!("", out.err);
+
+        let json = sandbox.parse_out_to_json(out.out).unwrap();
+        assert_eq!(0, json["success"]);
+        assert_eq!(1, json["processed"]);
+        assert_eq!(1, json["failed"]);
+        assert_eq!("Missing doc id", json["failures"]);
+    });
+}
