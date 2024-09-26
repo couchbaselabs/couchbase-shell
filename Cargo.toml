@@ -18,7 +18,7 @@ chrono = { version = "0.4.38", features = ["serde"] }
 ctrlc = "3.4.4"
 dirs = "5.0.1"
 env_logger = "0.10.0"
-fake = { version = "2.9.2", features = ["chrono", "random_color"] }
+fake = { version = "2.10.0", features = ["chrono", "random_color"] }
 futures = "0.3.30"
 hmac = "0.12.1"
 humantime-serde = "1.1.1"

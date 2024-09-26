@@ -296,7 +296,7 @@ fn register_functions(tera: &mut Tera) {
         Ok(JSONValue::from(Buzzword(EN).fake::<String>()))
     });
     tera.register_function("catchphrase", |_: &HashMap<String, JSONValue>| {
-        Ok(JSONValue::from(CatchPhase(EN).fake::<String>()))
+        Ok(JSONValue::from(CatchPhrase(EN).fake::<String>()))
     });
     tera.register_function("bs", |_: &HashMap<String, JSONValue>| {
         Ok(JSONValue::from(Bs(EN).fake::<String>()))
