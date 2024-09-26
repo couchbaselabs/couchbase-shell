@@ -1,6 +1,6 @@
 == Similarity Search
 
-The https://couchbase.sh/docs/#_vector_commands[vector commands] can be used to enrich your existing data and allow you to experiment with the value that similarity search can add.
+The https://couchbase.sh/docs/#_vector[vector commands] can be used to enrich your existing data and allow you to experiment with the value that similarity search can add.
 Before you can follow this recipe you'll need to https://couchbase.sh/docs/#_cb_env_llm[configure a llm] for use with the shell.
 
 Next you'll need a set of data, for this example we'll be using the travel-sample data set that you can load with:

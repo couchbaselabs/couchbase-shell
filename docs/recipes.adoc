@@ -1,5 +1,9 @@
 = Recipes
 
+++++
+<script src="../../js/scroll.js"></script>
+++++
+
 :sectnums:
 
 Welcome to the recipes section of the Couchbase Shell `cbsh` documentation.

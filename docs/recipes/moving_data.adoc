@@ -111,7 +111,7 @@ The first step to doing this is to list all of the index definitions on the `loc
 ╰────┴───────────────┴───────────┴────────────┴───────────────────────────────────────┴────────┴──────────────┴──────────┴────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┴─────╯
 ```
 
-Here we use https://couchbase.sh/docs/#_query_commands[query] with the definitions flag to fetch all of the query definitions on the active cluster.
+Here we use https://couchbase.sh/docs/#_query[query] with the definitions flag to fetch all of the query definitions on the active cluster.
 Then we have used `where` to filter out all of the primary indexes as these were already created when we created the buckets on the Capella cluster.
 
 Now we can https://www.nushell.sh/commands/docs/select.html[select] the definition column and iterate over the definitions, using `query` to re-create the indexes on the `remote` cluster:

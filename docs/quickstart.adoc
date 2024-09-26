@@ -37,8 +37,6 @@ This is because our binaries are not yet signed.
 To run it nonetheless you need to either navigate to `System Preferences -> Security & Privacy` and click `Allow Anyway`, or  run `sudo xattr -r -d com.apple.quarantine $PWD/cbsh` inside your terminal.
 Next time you run the binary you'll get another prompt but then it should run fine.
 
-image::mac-binary-unsigned.png[macOS Warning,600]
-
 ==== Homebrew
 
 If running on macOS you can install via the https://formulae.brew.sh/formula/couchbase-shell[Homebrew] formula:

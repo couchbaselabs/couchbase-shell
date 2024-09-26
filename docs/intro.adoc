@@ -243,10 +243,6 @@ With our data in the correct format we can then upsert:
 ╰───┴───────────┴─────────┴────────┴──────────┴───────────╯
 ```
 
-This results in the following doc being stored in the Cluster:
-
-image::example_doc.png[Example,500,1000,align="center"]
-
 See the <<_importing_data,Importing data recipes>> for more examples.
 
 === Exporting Data from the Shell
