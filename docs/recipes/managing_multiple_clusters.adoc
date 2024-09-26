@@ -17,7 +17,7 @@ Say we have the following four clusters registered with CBShell:
 ```
 
 There is one self-managed cluster (localdev) and three Capella clusters.
-Imagine that we want to perform some general health checks on this set of clusters, a good starting point is the https://couchbase.sh/docs/#_listing_nodes[nodes] command with the https://couchbase.sh/docs/#_working_with_clusters[clusters] flag.
+Imagine that we want to perform some general health checks on this set of clusters, a good starting point is the https://couchbase.sh/docs/#_nodes[nodes] command with the https://couchbase.sh/docs/#_the_clusters_flag[--clusters] flag.
 
 [options="nowrap"]
 ```

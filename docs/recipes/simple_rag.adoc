@@ -1,6 +1,6 @@
 == Simple RAG
 
-Couchbase Shell's https://couchbase.sh/docs/#_vector_commands[vector commands] along with https://couchbase.sh/docs/#_ask[ask] can be used to implement simple Retrieval Augmented Generation, more commonly know as RAG.
+Couchbase Shell's https://couchbase.sh/docs/#_vector[vector commands] along with https://couchbase.sh/docs/#_ask[ask] can be used to implement simple Retrieval Augmented Generation, more commonly know as RAG.
 In this process similarity search is used over chunks of a larger body of text to contextualize questions sent to a Large Language model to improve the answers given.
 For this demo we will use a text version of the Couchbase Shell docs as the source text for our chunks of data we have this stored locally as a text file.
 

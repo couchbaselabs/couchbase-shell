@@ -1,6 +1,11 @@
 = Couchbase Shell Documentation =
 (c) Copyright 2024, All Rights Reserved
 
+++++
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="../js/scroll.js"></script>
+++++
+
 :sectnums:
 :toclevels: 3
 
