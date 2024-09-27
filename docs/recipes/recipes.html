@@ -1836,16 +1836,7 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <div id="content">
 <div id="preamble">
 <div class="sectionbody">
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-<script>
-$(document).ready(function () {
-    // Handler for .ready() called.
-    var hash = $(location).attr('hash');
-    $('html, body').animate({
-        scrollTop: $(hash).offset().top - 64
-    }, 'slow');
-});
-</script>
+<script src="../../js/scroll.js"></script>
 <div class="paragraph">
 <p>Welcome to the recipes section of the Couchbase Shell <code>cbsh</code> documentation.
 Here you can find how powerful tasks can be performed by a combining <code>cbsh</code> statements.</p>
@@ -2240,7 +2231,7 @@ The first step to doing this is to list all of the index definitions on the <cod
 </div>
 </div>
 <div class="paragraph">
-<p>Here we use <a href="https://couchbase.sh/docs/#_query_commands">query</a> with the definitions flag to fetch all of the query definitions on the active cluster.
+<p>Here we use <a href="https://couchbase.sh/docs/#_query">query</a> with the definitions flag to fetch all of the query definitions on the active cluster.
 Then we have used <code>where</code> to filter out all of the primary indexes as these were already created when we created the buckets on the Capella cluster.</p>
 </div>
 <div class="paragraph">
@@ -2748,7 +2739,7 @@ A good example here is migrating from an on-premise cluster to a Capella cluster
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-09-27 13:08:58 UTC
+Last updated 2024-09-27 15:09:31 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
