@@ -162,7 +162,15 @@
 <div id="preamble">
 <div class="sectionbody">
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-<script src="../js/scroll.js"></script>
+<script>
+$(document).ready(function () {
+    // Handler for .ready() called.
+    var hash = $(location).attr('hash');
+    $('html, body').animate({
+        scrollTop: $(hash).offset().top - 64
+    }, 'slow');
+});
+</script>
 <div class="paragraph">
 <p>Welcome to the Couchbase Shell <code>cbsh</code> documentation!
 If you are new, you will want to start with the <a href="#_quickstart">quickstart</a> section and then proceed with the <a href="#_introduction">introduction</a>.
@@ -3711,7 +3719,7 @@ As our versioning continues to track the underlying Nushell minor version this h
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-09-27 11:14:37 UTC
+Last updated 2024-09-27 11:43:32 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
