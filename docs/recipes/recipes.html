@@ -1837,7 +1837,15 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <div id="preamble">
 <div class="sectionbody">
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-<script src="../../js/scroll.js"></script>
+<script>
+$(document).ready(function () {
+    // Handler for .ready() called.
+    var hash = $(location).attr('hash');
+    $('html, body').animate({
+        scrollTop: $(hash).offset().top - 64
+    }, 'slow');
+});
+</script>
 <div class="paragraph">
 <p>Welcome to the recipes section of the Couchbase Shell <code>cbsh</code> documentation.
 Here you can find how powerful tasks can be performed by a combining <code>cbsh</code> statements.</p>
@@ -2740,7 +2748,7 @@ A good example here is migrating from an on-premise cluster to a Capella cluster
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-09-27 08:40:38 UTC
+Last updated 2024-09-27 08:44:51 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
