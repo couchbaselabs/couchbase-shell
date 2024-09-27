@@ -1,18 +1,12 @@
-=== Exporting data
+== Exporting data
 
 Couchbase Shell supports exporting data to a variety of formats and sources.
+These recipes will cover exporting data through different Couchbase services to be stored in a variety of formats.
 
-==== A Note On Data format
+=== From key-value
 
-The `doc get` command exposes data as three fields; `id`, `cas`, and `content`.
-The body of the document is stored within the `content` column.
-If you want to only store the document body then you can use `doc get <id> | get content`.
+The simplest way to get a document from the connected cluster is using the https://couchbase.sh/docs/#_doc_get[doc get] command.
 
-==== To file
-
-===== To JSON
-
-From key-value
 ```
 > doc get airport_3719 --bucket travel-sample
 ╭───┬──────────────┬────────────────────────────────────┬─────────────────────┬───────┬─────────╮
@@ -34,9 +28,44 @@ From key-value
 │   │              │ │             │ ╰─────┴────────╯ │ │                     │       │         │
 │   │              │ ╰─────────────┴──────────────────╯ │                     │       │         │
 ╰───┴──────────────┴────────────────────────────────────┴─────────────────────┴───────┴─────────╯
+```
 
-> doc get airport_3719 | get content.0 | save mydoc.json
-👤 Charlie 🏠 local
+The `doc get` command exposes data as three fields; `id`, `cas`, and `content`, where the body of the document is stored within the `content` column.
+If you want to only store the document body then you can use `doc get <id> | get content`, then pipe this to Nushell's https://www.nushell.sh/commands/docs/save.html[save] command.
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+> doc get airport_3719 | get content | save mydoc.json
+👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+> cat mydoc.json
+[
+  {
+    "id": 3719,
+    "type": "airport",
+    "airportname": "Columbia Rgnl",
+    "city": "Columbia",
+    "country": "United States",
+    "faa": "COU",
+    "icao": "KCOU",
+    "tz": "America/Chicago",
+    "geo":
+    {
+      "lat": 38.818094,
+      "lon": -92.219631,
+      "alt": 889
+    }
+  }
+]
+```
+
+When using Nushell's https://www.nushell.sh/commands/docs/get.html[get] we can specify either a column from the input table or a specific cell path.
+Since we have just specified a column name we are piping a list of length 1 into `save` and `mydoc.json` contains an array of our single JSON object.
+If we want to store the body as a single JSON object, we can `get` the first item from the `content` column with `get content.0`.
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+> doc get airport_3719 | get content.0 | save mydoc.json -f
+👤 Charlie 🏠 local in 🗄 travel-sample._default._default
 > cat mydoc.json
 {
   "id": 3719,
@@ -56,9 +85,68 @@ From key-value
 }
 ```
 
-From Query/Analytics
+Here we use `-f` with the `save` command to overwrite the `mydoc.json` created in the previous example.
+In these examples we have saved the data as JSON, the same format as it is stored in the cluster.
+However CBShell can be used to transform the format of data for example we may want to save the same document but this time in CSV.
 
-To Single Document
+Let's use the same document as in the last example:
+
+[options="nowrap"]
+```
+> doc get airport_3719 --bucket travel-sample | get content
+╭───┬──────┬─────────┬───────────────┬──────────┬───────────────┬─────┬──────┬─────────────────┬──────────────────╮
+│ # │  id  │  type   │  airportname  │   city   │    country    │ faa │ icao │       tz        │       geo        │
+├───┼──────┼─────────┼───────────────┼──────────┼───────────────┼─────┼──────┼─────────────────┼──────────────────┤
+│ 0 │ 3719 │ airport │ Columbia Rgnl │ Columbia │ United States │ COU │ KCOU │ America/Chicago │ ╭─────┬────────╮ │
+│   │      │         │               │          │               │     │      │                 │ │ lat │ 38.82  │ │
+│   │      │         │               │          │               │     │      │                 │ │ lon │ -92.22 │ │
+│   │      │         │               │          │               │     │      │                 │ │ alt │ 889.00 │ │
+│   │      │         │               │          │               │     │      │                 │ ╰─────┴────────╯ │
+╰───┴──────┴─────────┴───────────────┴──────────┴───────────────┴─────┴──────┴─────────────────┴──────────────────╯
+```
+
+The `geo` column in the above data contains a https://www.nushell.sh/book/working_with_records.html[record], which means that the data is nested.
+This means that we have to flatten out the `geo` column due to limitations of the CSV format.
+If we try to export the content into CSV as it is then we will see:
+
+```
+> doc get airport_3719 --bucket travel-sample | get content | to csv
+Error: nu::shell::cant_convert (link)
+
+  × Can't convert to CSV.
+   ╭─[entry #25:1:1]
+ 1 │ doc get airport_3719 --bucket travel-sample | get content | to csv
+   · ───┬───
+   ·    ╰── can't convert table<airportname: string, city: string, country: string, faa: string, geo: record<alt: float, lat: float, lon: float>, icao: string, id: int, type: string, tz: string> to CSV
+   ╰────
+```
+
+Fortunately the native Nushell https://www.nushell.sh/commands/docs/flatten.html[flatten] command removes this nesting:
+
+[options="nowrap"]
+```
+> doc get airport_3719 --bucket travel-sample | get content | flatten
+╭───┬──────┬─────────┬───────────────┬──────────┬───────────────┬─────┬──────┬─────────────────┬───────┬────────┬────────╮
+│ # │  id  │  type   │  airportname  │   city   │    country    │ faa │ icao │       tz        │  lat  │  lon   │  alt   │
+├───┼──────┼─────────┼───────────────┼──────────┼───────────────┼─────┼──────┼─────────────────┼───────┼────────┼────────┤
+│ 0 │ 3719 │ airport │ Columbia Rgnl │ Columbia │ United States │ COU │ KCOU │ America/Chicago │ 38.82 │ -92.22 │ 889.00 │
+╰───┴──────┴─────────┴───────────────┴──────────┴───────────────┴─────┴──────┴─────────────────┴───────┴────────┴────────╯
+```
+
+Once flat we can then pipe to save:
+
+```
+> doc get airport_3719 --bucket travel-sample | get content | flatten | save mydoc.csv
+> cat mydoc.csv
+id,type,airportname,city,country,faa,icao,tz,lat,lon,alt
+3719,airport,Columbia Rgnl,Columbia,United States,COU,KCOU,America/Chicago,38.818094,-92.219631,889
+```
+
+=== From Query
+
+While the key-value service can be very useful for exporting small numbers of documents based on their IDs, the Query service can be powerful for fetching large numbers of documents.
+For example we can https://couchbase.sh/docs/#_query_2[query] for the first 5 documents of type airport:
+
 [options="nowrap"]
 ```
 >  query "SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5"
@@ -79,8 +167,14 @@ To Single Document
 │   │                         │                   │               │     │ ╰─────┴────────╯  │      │      │         │                     │         │
 │ 4 │ Couterne                │ Bagnole-de-l'orne │ France        │     │        ❎         │ LFAO │ 1257 │ airport │ Europe/Paris        │ local   │
 ╰───┴─────────────────────────┴───────────────────┴───────────────┴─────┴───────────────────┴──────┴──────┴─────────┴─────────────────────┴─────────╯
+```
 
+The simplest way to save these is in a single documents as an array of JSON objects:
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample._default._default
 > query "SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5" | save airports.json
+👤 Charlie 🏠 local in 🗄 travel-sample._default._default
 > cat airports.json
 [
   {
@@ -115,28 +209,12 @@ To Single Document
 ]
 ```
 
+Alternatively you may want to save the documents separately, as they are stored in the Cluster.
+This can be done by iterating over https://www.nushell.sh/commands/docs/each.html[each] of the returned documents and saving them individually:
+
 To Multiple Documents
 [options="nowrap"]
 ```
-> query "SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5"
-╭───┬─────────────────────────┬───────────────────┬───────────────┬─────┬───────────────────┬──────┬──────┬─────────┬─────────────────────┬─────────╮
-│ # │       airportname       │       city        │    country    │ faa │        geo        │ icao │  id  │  type   │         tz          │ cluster │
-├───┼─────────────────────────┼───────────────────┼───────────────┼─────┼───────────────────┼──────┼──────┼─────────┼─────────────────────┼─────────┤
-│ 0 │ Boeing Fld King Co Intl │ Seattle           │ United States │ BFI │ ╭─────┬─────────╮ │ KBFI │ 3726 │ airport │ America/Los_Angeles │ local   │
-│   │                         │                   │               │     │ │ alt │ 21      │ │      │      │         │                     │         │
-│   │                         │                   │               │     │ │ lat │ 47.53   │ │      │      │         │                     │         │
-│   │                         │                   │               │     │ │ lon │ -122.30 │ │      │      │         │                     │         │
-│   │                         │                   │               │     │ ╰─────┴─────────╯ │      │      │         │                     │         │
-│ 1 │ Bray                    │ Albert            │ France        │     │        ❎         │ LFAQ │ 1258 │ airport │ Europe/Paris        │ local   │
-│ 2 │ Calais Dunkerque        │ Calais            │ France        │ CQF │        ❎         │ LFAC │ 1254 │ airport │ Europe/Paris        │ local   │
-│ 3 │ Columbia Rgnl           │ Columbia          │ United States │ COU │ ╭─────┬────────╮  │ KCOU │ 3719 │ airport │ America/Chicago     │ local   │
-│   │                         │                   │               │     │ │ alt │ 889    │  │      │      │         │                     │         │
-│   │                         │                   │               │     │ │ lat │ 38.82  │  │      │      │         │                     │         │
-│   │                         │                   │               │     │ │ lon │ -92.22 │  │      │      │         │                     │         │
-│   │                         │                   │               │     │ ╰─────┴────────╯  │      │      │         │                     │         │
-│ 4 │ Couterne                │ Bagnole-de-l'orne │ France        │     │        ❎         │ LFAO │ 1257 │ airport │ Europe/Paris        │ local   │
-╰───┴─────────────────────────┴───────────────────┴───────────────┴─────┴───────────────────┴──────┴──────┴─────────┴─────────────────────┴─────────╯
-
 > query "SELECT `travel-sample`.* FROM `travel-sample` WHERE `type`='airport' LIMIT 5" | each { |it| $it | save (["airport_", $it.id ,".json"] | str join) }
 > ls airport*.json
 ╭───┬───────────────────┬──────┬───────┬──────────╮
@@ -150,83 +228,13 @@ To Multiple Documents
 ╰───┴───────────────────┴──────┴───────┴──────────╯
 ```
 
-===== To CSV
+Here we used Nushell's `each` command to iterate over the returned docs and store them using the `save` command.
+The file name that each doc is saved to is constructed by the `(["airport_", $it.id ,".json"] | str join)` clause.
+This defines a list of strings: `["airport_", $it.id ,".json"]` which we concatenate using https://www.nushell.sh/commands/docs/str_join.html[str join].
+So if the `id` of the document is 1254 the defined list would be `["airport_" 1254 ".json"]` which would yield `airport_1254.json` when concatenated.
 
-From key-value
-
-[options="nowrap"]
-```
-> doc get airport_3719 --bucket travel-sample
-╭───┬──────────────┬────────────────────────────────────┬─────────────────────┬───────┬─────────╮
-│ # │      id      │              content               │         cas         │ error │ cluster │
-├───┼──────────────┼────────────────────────────────────┼─────────────────────┼───────┼─────────┤
-│ 0 │ airport_3719 │ ╭─────────────┬──────────────────╮ │ 1712321632867319808 │       │ local   │
-│   │              │ │ id          │ 3719             │ │                     │       │         │
-│   │              │ │ type        │ airport          │ │                     │       │         │
-│   │              │ │ airportname │ Columbia Rgnl    │ │                     │       │         │
-│   │              │ │ city        │ Columbia         │ │                     │       │         │
-│   │              │ │ country     │ United States    │ │                     │       │         │
-│   │              │ │ faa         │ COU              │ │                     │       │         │
-│   │              │ │ icao        │ KCOU             │ │                     │       │         │
-│   │              │ │ tz          │ America/Chicago  │ │                     │       │         │
-│   │              │ │             │ ╭─────┬────────╮ │ │                     │       │         │
-│   │              │ │ geo         │ │ lat │ 38.82  │ │ │                     │       │         │
-│   │              │ │             │ │ lon │ -92.22 │ │ │                     │       │         │
-│   │              │ │             │ │ alt │ 889.00 │ │ │                     │       │         │
-│   │              │ │             │ ╰─────┴────────╯ │ │                     │       │         │
-│   │              │ ╰─────────────┴──────────────────╯ │                     │       │         │
-╰───┴──────────────┴────────────────────────────────────┴─────────────────────┴───────┴─────────╯
-
-> doc get airport_3719 --bucket travel-sample | get content
-╭───┬──────┬─────────┬───────────────┬──────────┬───────────────┬─────┬──────┬─────────────────┬──────────────────╮
-│ # │  id  │  type   │  airportname  │   city   │    country    │ faa │ icao │       tz        │       geo        │
-├───┼──────┼─────────┼───────────────┼──────────┼───────────────┼─────┼──────┼─────────────────┼──────────────────┤
-│ 0 │ 3719 │ airport │ Columbia Rgnl │ Columbia │ United States │ COU │ KCOU │ America/Chicago │ ╭─────┬────────╮ │
-│   │      │         │               │          │               │     │      │                 │ │ lat │ 38.82  │ │
-│   │      │         │               │          │               │     │      │                 │ │ lon │ -92.22 │ │
-│   │      │         │               │          │               │     │      │                 │ │ alt │ 889.00 │ │
-│   │      │         │               │          │               │     │      │                 │ ╰─────┴────────╯ │
-╰───┴──────┴─────────┴───────────────┴──────────┴───────────────┴─────┴──────┴─────────────────┴──────────────────╯
-```
-
-The `geo` column in the above data contains a `record`, which means that the data is nested.
-This means that we have to flatten out the `geo` column due to limitations of the csv format.
-If we try to import the content as it is then we will see:
-
-```
-> doc get airport_3719 --bucket travel-sample | get content | to csv
-Error: nu::shell::cant_convert (link)
-
-  × Can't convert to CSV.
-   ╭─[entry #25:1:1]
- 1 │ doc get airport_3719 --bucket travel-sample | get content | to csv
-   · ───┬───
-   ·    ╰── can't convert table<airportname: string, city: string, country: string, faa: string, geo: record<alt: float, lat: float, lon: float>, icao: string, id: int, type: string, tz: string> to CSV
-   ╰────
-```
-
-To flatten out the data we can simply use the `flatten` command:
-
-[options="nowrap"]
-```
-> doc get airport_3719 --bucket travel-sample | get content | flatten
-╭───┬──────┬─────────┬───────────────┬──────────┬───────────────┬─────┬──────┬─────────────────┬───────┬────────┬────────╮
-│ # │  id  │  type   │  airportname  │   city   │    country    │ faa │ icao │       tz        │  lat  │  lon   │  alt   │
-├───┼──────┼─────────┼───────────────┼──────────┼───────────────┼─────┼──────┼─────────────────┼───────┼────────┼────────┤
-│ 0 │ 3719 │ airport │ Columbia Rgnl │ Columbia │ United States │ COU │ KCOU │ America/Chicago │ 38.82 │ -92.22 │ 889.00 │
-╰───┴──────┴─────────┴───────────────┴──────────┴───────────────┴─────┴──────┴─────────────────┴───────┴────────┴────────╯
-```
-
-Which we can then pipe to save:
-
-```
-> doc get airport_3719 --bucket travel-sample | get content | flatten | save mydoc.csv
-> cat mydoc.csv
-id,type,airportname,city,country,faa,icao,tz,lat,lon,alt
-3719,airport,Columbia Rgnl,Columbia,United States,COU,KCOU,America/Chicago,38.818094,-92.219631,889
-```
-
-From Query/Analytics
+Again we may want to store the results of our query in a format other than JSON, so lets look at how we could save the docs as CSV.
+Imagine that wee are using the same query to find our source data.
 
 [options="nowrap"]
 ```
@@ -250,7 +258,7 @@ From Query/Analytics
 ╰───┴─────────────────────────┴───────────────────┴───────────────┴─────┴───────────────────┴──────┴──────┴─────────┴─────────────────────┴─────────╯
 ```
 
-Similar to the above we need to flatten out the `geo` data before we can save this to csv:
+Before we save this to CSV all we need to https://www.nushell.sh/commands/docs/flatten.html[flatten] out the nested `geo` field:
 
 ```
 > query "SELECT `travel-sample`.* from `travel-sample` WHERE `type`='airport' LIMIT 5" | flatten | save mydoc.csv
