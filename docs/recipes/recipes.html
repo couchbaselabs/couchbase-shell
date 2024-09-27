@@ -1837,15 +1837,7 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <div id="preamble">
 <div class="sectionbody">
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-<script>
-    $(document).ready(function () {
-        // Handler for .ready() called.
-        var hash = $(location).attr('hash');
-        $('html, body').animate({
-            scrollTop: $(hash).offset().top - 64
-        }, 'slow');
-    });
-</script>
+<script src="../../js/scroll.js"></script>
 <div class="paragraph">
 <p>Welcome to the recipes section of the Couchbase Shell <code>cbsh</code> documentation.
 Here you can find how powerful tasks can be performed by a combining <code>cbsh</code> statements.</p>
@@ -1970,7 +1962,7 @@ Say we have the following four clusters registered with CBShell:</p>
 </div>
 <div class="paragraph">
 <p>There is one self-managed cluster (localdev) and three Capella clusters.
-Imagine that we want to perform some general health checks on this set of clusters, a good starting point is the <a href="https://couchbase.sh/docs/#_listing_nodes">nodes</a> command with the <a href="https://couchbase.sh/docs/#_working_with_clusters">clusters</a> flag.</p>
+Imagine that we want to perform some general health checks on this set of clusters, a good starting point is the <a href="https://couchbase.sh/docs/#_nodes">nodes</a> command with the <a href="https://couchbase.sh/docs/#_the_clusters_flag">--clusters</a> flag.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -2358,7 +2350,7 @@ After the formatting has been applied to the above example it would become:</p>
 <h2 id="_similarity_search">4. Similarity Search</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The <a href="https://couchbase.sh/docs/#_vector_commands">vector commands</a> can be used to enrich your existing data and allow you to experiment with the value that similarity search can add.
+<p>The <a href="https://couchbase.sh/docs/#_vector">vector commands</a> can be used to enrich your existing data and allow you to experiment with the value that similarity search can add.
 Before you can follow this recipe you&#8217;ll need to <a href="https://couchbase.sh/docs/#_cb_env_llm">configure a llm</a> for use with the shell.</p>
 </div>
 <div class="paragraph">
@@ -2500,7 +2492,7 @@ See <a href="https://couchbase.sh/docs/#_vector_enrich_text">vector enrich-text<
 <h2 id="_simple_rag">5. Simple RAG</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Couchbase Shell&#8217;s <a href="https://couchbase.sh/docs/#_vector_commands">vector commands</a> along with <a href="https://couchbase.sh/docs/#_ask">ask</a> can be used to implement simple Retrieval Augmented Generation, more commonly know as RAG.
+<p>Couchbase Shell&#8217;s <a href="https://couchbase.sh/docs/#_vector">vector commands</a> along with <a href="https://couchbase.sh/docs/#_ask">ask</a> can be used to implement simple Retrieval Augmented Generation, more commonly know as RAG.
 In this process similarity search is used over chunks of a larger body of text to contextualize questions sent to a Large Language model to improve the answers given.
 For this demo we will use a text version of the Couchbase Shell docs as the source text for our chunks of data we have this stored locally as a text file.</p>
 </div>
@@ -2748,7 +2740,7 @@ A good example here is migrating from an on-premise cluster to a Capella cluster
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-09-26 09:01:05 UTC
+Last updated 2024-09-27 08:40:38 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
