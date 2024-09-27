@@ -93,6 +93,7 @@ rustup
 sectnums
 sqlite
 SRV
+str
 subcommands
 subdoc
 

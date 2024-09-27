@@ -13,6 +13,10 @@ include::recipes/register_cluster.adoc[]
 
 include::recipes/managing_multiple_clusters.adoc[]
 
+include::recipes/importing-data.adoc[]
+
+include::recipes/exporting-data.adoc[]
+
 include::recipes/moving_data.adoc[]
 
 include::recipes/similarity_search.adoc[]
