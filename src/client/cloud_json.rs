@@ -367,6 +367,65 @@ impl Cluster {
 }
 
 #[derive(Debug, Deserialize)]
+pub(crate) struct ColumnarClustersResponse {
+    data: Vec<ColumnarCluster>,
+}
+
+impl ColumnarClustersResponse {
+    pub fn items(&self) -> Vec<ColumnarCluster> {
+        self.data.clone()
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ColumnarCluster {
+    id: String,
+    description: String,
+    name: String,
+    cloud_provider: String,
+    region: String,
+    nodes: i64,
+    current_state: String,
+    support: Support,
+    compute: Compute,
+    availability: Availability,
+}
+
+impl ColumnarCluster {
+    pub fn id(&self) -> String {
+        self.id.clone()
+    }
+    pub fn name(&self) -> String {
+        self.name.clone()
+    }
+    pub fn state(&self) -> String {
+        self.current_state.clone()
+    }
+    pub fn description(&self) -> String {
+        self.description.clone()
+    }
+    pub fn region(&self) -> String {
+        self.region.clone()
+    }
+    pub fn provider(&self) -> String {
+        self.cloud_provider.clone()
+    }
+    pub fn availability(&self) -> &Availability {
+        &self.availability
+    }
+    pub fn compute(&self) -> Compute {
+        self.compute.clone()
+    }
+    pub fn support(&self) -> &Support {
+        &self.support
+    }
+    pub fn nodes(&self) -> i64 {
+        self.nodes
+    }
+}
+
+#[derive(Debug, Deserialize)]
 pub struct CollectionsResponse {
     data: Vec<Collection>,
 }
