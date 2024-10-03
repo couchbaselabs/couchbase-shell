@@ -1,7 +1,7 @@
 use crate::cli::CtrlcFuture;
 use crate::client::cloud_json::{
-    Cluster, ClustersResponse, Collection, CollectionsResponse, OrganizationsResponse,
-    ProjectsResponse, ScopesResponse,
+    Cluster, ClustersResponse, Collection, CollectionsResponse, ColumnarClustersResponse,
+    OrganizationsResponse, ProjectsResponse, ScopesResponse,
 };
 use crate::client::error::ClientError;
 use crate::client::http_handler::{HttpResponse, HttpVerb};
@@ -343,6 +343,26 @@ impl CapellaClient {
             });
         }
         Ok(())
+    }
+
+    pub fn list_columnar_clusters(
+        &self,
+        org_id: String,
+        project_id: String,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<ColumnarClustersResponse, ClientError> {
+        let request = CapellaRequest::ColumnarClusterList { org_id, project_id };
+        let response = self.capella_request(request, ctrl_c)?;
+
+        if response.status() != 200 {
+            return Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            });
+        }
+
+        let resp: ColumnarClustersResponse = serde_json::from_str(response.content())?;
+        Ok(resp)
     }
 
     pub fn create_credentials(
@@ -702,6 +722,10 @@ pub enum CapellaRequest {
         org_id: String,
         project_id: String,
     },
+    ColumnarClusterList {
+        org_id: String,
+        project_id: String,
+    },
     BucketCreate {
         org_id: String,
         project_id: String,
@@ -844,6 +868,12 @@ impl CapellaRequest {
             Self::ClusterList { org_id, project_id } => {
                 format!(
                     "/v4/organizations/{}/projects/{}/clusters",
+                    org_id, project_id
+                )
+            }
+            Self::ColumnarClusterList { org_id, project_id } => {
+                format!(
+                    "/v4/organizations/{}/projects/{}/analyticsClusters",
                     org_id, project_id
                 )
             }
@@ -1010,6 +1040,7 @@ impl CapellaRequest {
             Self::ClusterDelete { .. } => HttpVerb::Delete,
             Self::ClusterGet { .. } => HttpVerb::Get,
             Self::ClusterList { .. } => HttpVerb::Get,
+            Self::ColumnarClusterList { .. } => HttpVerb::Get,
             Self::BucketCreate { .. } => HttpVerb::Post,
             Self::BucketDelete { .. } => HttpVerb::Delete,
             Self::BucketGet { .. } => HttpVerb::Get,
