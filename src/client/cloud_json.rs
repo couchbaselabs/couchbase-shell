@@ -367,54 +367,6 @@ impl Cluster {
 }
 
 #[derive(Debug, Deserialize)]
-pub(crate) struct BucketsResponse {
-    data: Vec<Bucket>,
-}
-
-impl BucketsResponse {
-    pub fn items(self) -> Vec<Bucket> {
-        self.data
-    }
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct Bucket {
-    name: String,
-    #[serde(alias = "type")]
-    bucket_type: String,
-    memory_allocation_in_mb: u64,
-    durability_level: String,
-    replicas: u32,
-    flush: bool,
-    time_to_live_in_seconds: u64,
-}
-
-impl Bucket {
-    pub fn name(&self) -> String {
-        self.name.clone()
-    }
-    pub fn ram_quota(&self) -> u64 {
-        self.memory_allocation_in_mb
-    }
-    pub fn flush(&self) -> bool {
-        self.flush
-    }
-    pub fn replicas(&self) -> u32 {
-        self.replicas
-    }
-    pub fn bucket_type(&self) -> String {
-        self.bucket_type.clone()
-    }
-    pub fn ttl_seconds(&self) -> u64 {
-        self.time_to_live_in_seconds
-    }
-    pub fn durability_level(&self) -> String {
-        self.durability_level.clone()
-    }
-}
-
-#[derive(Debug, Deserialize)]
 pub struct CollectionsResponse {
     data: Vec<Collection>,
 }

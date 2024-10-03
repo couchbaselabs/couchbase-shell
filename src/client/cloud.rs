@@ -1,7 +1,7 @@
 use crate::cli::CtrlcFuture;
 use crate::client::cloud_json::{
-    Bucket, BucketsResponse, Cluster, ClustersResponse, Collection, CollectionsResponse,
-    OrganizationsResponse, ProjectsResponse, ScopesResponse,
+    Cluster, ClustersResponse, Collection, CollectionsResponse, OrganizationsResponse,
+    ProjectsResponse, ScopesResponse,
 };
 use crate::client::error::ClientError;
 use crate::client::http_handler::{HttpResponse, HttpVerb};
@@ -368,58 +368,6 @@ impl CapellaClient {
             });
         }
         Ok(())
-    }
-
-    pub fn get_bucket(
-        &self,
-        org_id: String,
-        project_id: String,
-        cluster_id: String,
-        bucket: String,
-        ctrl_c: Arc<AtomicBool>,
-    ) -> Result<Bucket, ClientError> {
-        let request = CapellaRequest::BucketGet {
-            org_id,
-            project_id,
-            cluster_id,
-            bucket_id: BASE64_STANDARD.encode(bucket),
-        };
-        let response = self.capella_request(request, ctrl_c)?;
-
-        if response.status() != 200 {
-            return Err(ClientError::RequestFailed {
-                reason: Some(response.content().into()),
-                key: None,
-            });
-        }
-
-        let resp: Bucket = serde_json::from_str(response.content())?;
-        Ok(resp)
-    }
-
-    pub fn list_buckets(
-        &self,
-        org_id: String,
-        project_id: String,
-        cluster_id: String,
-        ctrl_c: Arc<AtomicBool>,
-    ) -> Result<BucketsResponse, ClientError> {
-        let request = CapellaRequest::BucketList {
-            org_id,
-            project_id,
-            cluster_id,
-        };
-        let response = self.capella_request(request, ctrl_c)?;
-
-        if response.status() != 200 {
-            return Err(ClientError::RequestFailed {
-                reason: Some(response.content().into()),
-                key: None,
-            });
-        }
-
-        let resp: BucketsResponse = serde_json::from_str(response.content())?;
-        Ok(resp)
     }
 
     pub fn create_bucket(

@@ -1,10 +1,8 @@
 //! The `buckets get` command fetches buckets from the server.
-use crate::state::{RemoteCapellaOrganization, State};
+use crate::state::State;
 
 use crate::cli::buckets_builder::{BucketSettings, JSONBucketSettings};
-use crate::cli::util::{
-    cluster_identifiers_from, find_org_project_cluster_ids, get_active_cluster, NuValueMap,
-};
+use crate::cli::util::{cluster_identifiers_from, get_active_cluster, NuValueMap};
 use crate::client::{HttpResponse, ManagementRequest};
 use log::debug;
 use std::convert::TryFrom;
@@ -89,23 +87,14 @@ fn buckets_get(
         let guard = state.lock().unwrap();
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
-        let content = if active_cluster.cluster_type() == Provisioned {
-            let org = guard.named_or_active_org(active_cluster.capella_org())?;
+        let content = get_server_bucket(active_cluster, bucket.clone(), ctrl_c.clone(), span)?;
 
-            get_capella_bucket(
-                org,
-                guard.named_or_active_project(active_cluster.project())?,
-                active_cluster,
-                bucket.clone(),
-                identifier.clone(),
-                ctrl_c.clone(),
-                span,
-            )
-        } else {
-            get_server_bucket(active_cluster, bucket.clone(), ctrl_c.clone(), span)
-        }?;
-
-        results.push(bucket_to_nu_value(content, identifier, false, span));
+        results.push(bucket_to_nu_value(
+            content,
+            identifier,
+            active_cluster.cluster_type() == Provisioned,
+            span,
+        ));
     }
 
     Ok(Value::List {
@@ -147,46 +136,13 @@ pub fn get_server_bucket(
     })
 }
 
-pub fn get_capella_bucket(
-    org: &RemoteCapellaOrganization,
-    project: String,
-    cluster: &RemoteCluster,
-    bucket_name: String,
-    identifier: String,
-    ctrl_c: Arc<AtomicBool>,
-    span: Span,
-) -> Result<BucketSettings, ShellError> {
-    let client = org.client();
-
-    let (org_id, project_id, cluster_id) = find_org_project_cluster_ids(
-        &client,
-        ctrl_c.clone(),
-        span,
-        identifier.clone(),
-        project,
-        cluster,
-    )?;
-
-    let bucket = client
-        .get_bucket(org_id, project_id, cluster_id, bucket_name, ctrl_c)
-        .map_err(|e| client_error_to_shell_error(e, span))?;
-
-    BucketSettings::try_from(&bucket).map_err(|e| {
-        malformed_response_error(
-            "Could not parse bucket settings",
-            format!("Error: {}, bucket: {:?}", e, bucket),
-            span,
-        )
-    })
-}
-
 pub(crate) fn check_response(
     response: &HttpResponse,
     bucket: String,
     span: Span,
 ) -> Result<(), ShellError> {
     match response.status() {
-        200..=204 => {}
+        200 => {}
         404 => {
             if response
                 .content()
