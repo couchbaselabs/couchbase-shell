@@ -1,4 +1,4 @@
-use crate::cli::doc_upsert::{id_from_value, run_kv_mutations};
+use crate::cli::doc_common::{id_from_value, run_kv_mutations};
 use crate::cli::error::serialize_error;
 use crate::cli::util::convert_nu_value_to_json_value;
 use crate::client::KeyValueRequest;
