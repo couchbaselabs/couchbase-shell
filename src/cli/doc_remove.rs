@@ -1,9 +1,9 @@
 //! The `doc remove` command performs a KV remove operation.
 
-use crate::cli::doc_get::ids_from_input;
-use crate::cli::doc_upsert::{
+use crate::cli::doc_common::{
     build_batched_kv_items, get_active_cluster_client_cid, process_kv_workers, MutationResult,
 };
+use crate::cli::doc_get::ids_from_input;
 use crate::cli::util::cluster_identifiers_from;
 use crate::client::KeyValueRequest;
 use crate::state::State;

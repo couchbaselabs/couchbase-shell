@@ -1,6 +1,6 @@
 //! The `doc insert` command performs a KV insert operation.
 
-use crate::cli::doc_upsert::run_kv_store_ops;
+use crate::cli::doc_common::run_kv_store_ops;
 use crate::client::KeyValueRequest;
 use crate::state::State;
 use std::sync::{Arc, Mutex};

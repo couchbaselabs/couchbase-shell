@@ -29,6 +29,7 @@ mod collections_drop;
 mod credentials_create;
 mod ctrlc_future;
 mod doc;
+mod doc_common;
 mod doc_get;
 mod doc_insert;
 mod doc_remove;

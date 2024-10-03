@@ -1,9 +1,9 @@
 use super::util::convert_json_value_to_nu_value;
 use crate::state::State;
 
+use crate::cli::doc_common::{build_batched_kv_items, get_active_cluster_client_cid};
 use crate::cli::doc_get::ids_from_input;
 use crate::cli::doc_get::GetResult;
-use crate::cli::doc_upsert::{build_batched_kv_items, get_active_cluster_client_cid};
 use crate::cli::util::cluster_identifiers_from;
 use crate::client::KeyValueRequest;
 use futures::stream::FuturesUnordered;
