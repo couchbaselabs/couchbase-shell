@@ -1,4 +1,3 @@
-use crate::client::cloud_json::Bucket;
 use serde_derive::Deserialize;
 use std::convert::TryFrom;
 use std::fmt;
@@ -310,22 +309,6 @@ impl TryFrom<JSONBucketSettings> for BucketSettings {
             bucket_type: BucketType::try_from(settings.bucket_type.as_str())?,
             max_expiry: Duration::from_secs(settings.max_expiry as u64),
             durability_level: DurabilityLevel::try_from(settings.durability_level.as_str())?,
-        })
-    }
-}
-
-impl TryFrom<&Bucket> for BucketSettings {
-    type Error = BuilderError;
-
-    fn try_from(settings: &Bucket) -> Result<Self, Self::Error> {
-        Ok(BucketSettings {
-            name: settings.name(),
-            ram_quota_mb: settings.ram_quota(),
-            flush_enabled: settings.flush(),
-            num_replicas: Some(settings.replicas()),
-            bucket_type: BucketType::try_from(settings.bucket_type().as_str())?,
-            max_expiry: Duration::from_secs(settings.ttl_seconds()),
-            durability_level: DurabilityLevel::try_from(settings.durability_level().as_str())?,
         })
     }
 }

@@ -1,5 +1,5 @@
 use crate::cli::buckets_builder::{BucketSettings, DurabilityLevel};
-use crate::cli::buckets_get::{get_capella_bucket, get_server_bucket};
+use crate::cli::buckets_get::get_server_bucket;
 use crate::cli::error::{client_error_to_shell_error, generic_error, serialize_error};
 use crate::cli::unexpected_status_code_error;
 use crate::cli::util::{
@@ -118,21 +118,7 @@ fn buckets_update(
     for identifier in cluster_identifiers {
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
-        let mut settings = if active_cluster.cluster_type() == Provisioned {
-            let org = guard.named_or_active_org(active_cluster.capella_org())?;
-
-            get_capella_bucket(
-                org,
-                guard.named_or_active_project(active_cluster.project())?,
-                active_cluster,
-                name.clone(),
-                identifier.clone(),
-                ctrl_c.clone(),
-                span,
-            )
-        } else {
-            get_server_bucket(active_cluster, name.clone(), ctrl_c.clone(), span)
-        }?;
+        let mut settings = get_server_bucket(active_cluster, name.clone(), ctrl_c.clone(), span)?;
 
         update_bucket_settings(
             &mut settings,

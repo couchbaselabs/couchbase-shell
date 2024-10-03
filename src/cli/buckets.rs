@@ -1,10 +1,8 @@
 use crate::cli::buckets_builder::{BucketSettings, JSONBucketSettings};
 use crate::cli::buckets_get::bucket_to_nu_value;
-use crate::cli::util::{
-    cluster_identifiers_from, find_org_project_cluster_ids, get_active_cluster,
-};
+use crate::cli::util::{cluster_identifiers_from, get_active_cluster};
 use crate::client::ManagementRequest;
-use crate::state::{RemoteCapellaOrganization, State};
+use crate::state::State;
 use log::debug;
 use std::convert::TryFrom;
 use std::ops::Add;
@@ -85,23 +83,10 @@ fn buckets_get_all(
     for identifier in cluster_identifiers {
         let cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
-        let (buckets, is_cloud) = if cluster.cluster_type() == Provisioned {
-            let org = guard.named_or_active_org(cluster.capella_org())?;
-
-            (
-                get_capella_buckets(
-                    identifier.clone(),
-                    org,
-                    guard.named_or_active_project(cluster.project())?,
-                    cluster,
-                    ctrl_c.clone(),
-                    span,
-                )?,
-                true,
-            )
-        } else {
-            (get_server_buckets(cluster, ctrl_c.clone(), span)?, false)
-        };
+        let (buckets, is_cloud) = (
+            get_buckets(cluster, ctrl_c.clone(), span)?,
+            cluster.cluster_type() == Provisioned,
+        );
 
         for bucket in buckets {
             results.push(bucket_to_nu_value(
@@ -120,7 +105,7 @@ fn buckets_get_all(
     .into_pipeline_data())
 }
 
-pub fn get_server_buckets(
+pub fn get_buckets(
     cluster: &RemoteCluster,
     ctrl_c: Arc<AtomicBool>,
     span: Span,
@@ -158,39 +143,4 @@ pub fn get_server_buckets(
     }
 
     Ok(buckets)
-}
-
-pub fn get_capella_buckets(
-    identifier: String,
-    org: &RemoteCapellaOrganization,
-    project: String,
-    cluster: &RemoteCluster,
-    ctrl_c: Arc<AtomicBool>,
-    span: Span,
-) -> Result<Vec<BucketSettings>, ShellError> {
-    let client = org.client();
-
-    let (org_id, project_id, cluster_id) = find_org_project_cluster_ids(
-        &client,
-        ctrl_c.clone(),
-        span,
-        identifier.clone(),
-        project,
-        cluster,
-    )?;
-
-    let buckets = client
-        .list_buckets(org_id, project_id, cluster_id, ctrl_c)
-        .map_err(|e| client_error_to_shell_error(e, span))?;
-    let mut buckets_settings: Vec<BucketSettings> = vec![];
-    for bucket in buckets.items() {
-        buckets_settings.push(BucketSettings::try_from(&bucket).map_err(|e| {
-            malformed_response_error(
-                "Could not parse bucket settings",
-                format!("Error: {}, bucket settings: {:?}", e, bucket),
-                span,
-            )
-        })?);
-    }
-    Ok(buckets_settings)
 }
