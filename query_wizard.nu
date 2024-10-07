@@ -99,3 +99,82 @@ field15?: string@fields
     # print $query
     query $query
 }
+
+
+# TESTS
+# These need to be executed in the travel-sample.inventory scope
+
+def assert [expected: list, result: list] {
+    if (not ($expected == $result)) {
+        print (ansi red_bold) failed (ansi reset)
+        print "EXPECTED: " $expected
+        print "RESULT: " $result
+    } else {
+        print (ansi green_bold) passed (ansi reset)
+    }
+}
+
+export def fields_tests [] {
+
+    # All fields test
+    let $context = "FROM route SELECT "
+    let $expected = [* airline airlineid destinationairport distance equipment id schedule sourceairport stops type]
+    print "All fields test"
+    assert $expected (fields $context)
+
+    # Wildcard test
+     let $context = "FROM route SELECT * "
+     let $expected = [WHERE]
+     print "Wildcard test"
+     assert $expected (fields $context)
+
+    # Don't suggest used fields
+    let $context = "FROM route SELECT airline distance schedule type "
+    let $expected = [WHERE airlineid destinationairport equipment id sourceairport stops]
+    print "Remove used fields"
+    assert $expected (fields $context)
+
+    # Suggest all fields after where
+    let $context = "FROM route SELECT airline distance schedule type WHERE "
+    let $expected = [airline airlineid destinationairport distance equipment id schedule sourceairport stops type]
+    print "Suggest all fields after where"
+    assert $expected (fields $context)
+
+    # Suggest operators after WHERE field
+    let $context = "FROM route SELECT airline distance schedule type WHERE airline "
+    let $expected = [= != > < >= <=]
+    print "Suggest operators after WHERE field"
+    assert $expected (fields $context)
+
+    # Suggest noting after operator
+    let $context = "FROM route SELECT airline distance schedule type WHERE airline = "
+    let $expected = null
+    let $result = ((fields $context) == $expected)
+    print "Suggest nothing after operator"
+    if (not $result) {
+        print (ansi red_bold) failed (ansi reset)
+        print "EXPECTED: " $expected
+        print "RESULT: " (fields $context)
+    } else {
+       print (ansi green_bold) passed (ansi reset)
+    }
+
+    # Suggest AND after condition value
+    let $context = "FROM route SELECT airline distance schedule type WHERE airline = someAirline "
+    let $expected = [AND]
+    print "Suggest AND after condition value"
+    assert $expected (fields $context)
+
+    # Remove field once used in condition
+    let $context = "FROM route SELECT airline distance schedule type WHERE airline = someAirline AND type = someType AND "
+    let $expected = [airlineid destinationairport distance equipment id schedule sourceairport stops]
+    print "Remove field once used in condition"
+    assert $expected (fields $context)
+
+    # Condition value with spaces
+     let $context = 'FROM route SELECT airline distance schedule type WHERE airline = "Best Airline" '
+     let $expected = [AND]
+     print "Condition value with spaces"
+     assert $expected (fields $context)
+
+}
