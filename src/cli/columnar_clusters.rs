@@ -96,8 +96,8 @@ fn columnar_clusters(
         collected.add_string("region", cluster.region(), span);
 
         if detail {
-            if !cluster.description().is_empty() {
-                collected.add_string("description", cluster.description(), span);
+            if let Some(desc) = cluster.description() {
+                collected.add_string("description", desc, span);
             }
 
             collected.add(
