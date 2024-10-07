@@ -1,0 +1,101 @@
+# query_wizard.nu
+
+def collection_fields [context: string] {
+    let $collection = ($context | split words | $in.1)
+    let $name_space = (cb-env | ["`" $in.bucket "`" . $in.scope . $collection] | str join)
+    [infer $name_space] | str join " " | query $in | get properties | columns
+}
+
+def fields [context: string] {
+     let $operators = [= != > < >= <=]
+     let $last = ($context | split row " " | drop | last)
+     if ("WHERE" in ($context | split words)) {
+        if ($last == "WHERE") {
+            collection_fields $context
+        } else {
+            if ($last in (collection_fields $context)) { $operators } else {
+                if ($last not-in $operators) {
+                    let $penultimate = ($context | split row " " | drop 2 |last)
+                    if ($penultimate in $operators) {
+                        [AND]
+                    } else {
+                        let $where_index = ($context | split words | enumerate | each {|it| if ($it.item == WHERE) {$it.index}})
+                        let $after_where = ($context | split words | skip ($where_index.0 + 1))
+                        collection_fields $context | each {|it| if ($it not-in $after_where) {$it}} | flatten
+                    }
+                }
+            }
+        }
+     } else {
+         match $last {
+            FROM => {
+                collections | get collection
+            }
+            * => [WHERE]
+            WHERE => {}
+            _ => {
+                let $length = ($context | split words | length)
+                match $length {
+                    2 => [SELECT]
+                    3 => {collection_fields $context | prepend *}
+                    _ => {
+                       let $used_fields = ($context | split words | skip 3)
+                       let $unused_fields = (collection_fields $context | each {|it| if ($it not-in $used_fields) {$it}} | flatten | prepend WHERE)
+                       if (($unused_fields | length) == 0) {
+                            [WHERE]
+                       } else {
+                            $unused_fields
+                       }
+                    }
+                }
+            }
+         }
+     }
+}
+
+def parse_after_where [fields: list] {
+    let $operators = [= != > < >= <=]
+    let $where_index = ($fields | enumerate | each {|it| if ($it.item == WHERE) {$it.index}})
+    let $after_where = ($fields | skip ($where_index.0 + 1))
+
+    let $condition_values = ($after_where | enumerate | each {|it| if ($it.item in $operators) {($after_where | get ($it.index + 1))}})
+    let $parsed_after_where = (($after_where | enumerate | each {|it| if ($it.item not-in $condition_values) { if ($it.item in $operators) { [$it.item, ($after_where | get ($it.index + 1) | do --ignore-shell-errors {$in | into int} | length | if ($in == 0) {['"' ($after_where | get ($it.index + 1)) '"'] | str join} else {($after_where | get ($it.index + 1))})]} else {$it.item}}}) | flatten)
+    $parsed_after_where
+}
+
+export def FROM [
+field1?: string@fields
+field2?: string@fields
+field3?: string@fields
+field4?: string@fields
+field5?: string@fields
+field6?: string@fields
+field7?: string@fields
+field8?: string@fields
+field9?: string@fields
+field10?: string@fields
+field11?: string@fields
+field12?: string@fields
+field13?: string@fields
+field14?: string@fields
+field15?: string@fields
+] {
+    let $inputs = [$field1 $field2 $field3 $field4 $field5 $field6 $field7 $field8 $field9 $field10 $field11 $field12 $field13 $field14 $field15]
+    let $where_index = ($inputs | enumerate | each {|it| if ($it.item == WHERE) {$it.index}})
+    let $after_where = ($inputs | skip ($where_index.0 + 1))
+    # print $after_where
+
+    let $operators = [= != > < >= <=]
+    let $condition_values = ($after_where | enumerate | each {|it| if ($it.item in $operators) {($after_where | get ($it.index + 1))}})
+    # print $condition_values
+    let $parsed_after_where = (parse_after_where $inputs)
+
+    let $select_fields = ($inputs | drop ($inputs | length | $in - $where_index.0) | skip 2)
+    # print $select_fields
+    # let $query = ([$field1 $field2 $field3 $field4 $field5 $field6 $field7 $field8 $field9 $field10 $field11 $field12 $field13 $field14 $field15] | prepend SELECT | str join " ")
+
+    let $select_section = [SELECT] | append ($select_fields | enumerate | each {|it| if ($it.index != ($select_fields | length | $in - 1)) { [$it.item `,`] | str join } else { $it.item }}) | str join " "
+    let $query = [$select_section FROM $field1 WHERE] | append $parsed_after_where | str join " "
+    # print $query
+    query $query
+}
