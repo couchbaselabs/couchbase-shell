@@ -381,7 +381,7 @@ impl ColumnarClustersResponse {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ColumnarCluster {
     id: String,
-    description: String,
+    description: Option<String>,
     name: String,
     cloud_provider: String,
     region: String,
@@ -402,7 +402,7 @@ impl ColumnarCluster {
     pub fn state(&self) -> String {
         self.current_state.clone()
     }
-    pub fn description(&self) -> String {
+    pub fn description(&self) -> Option<String> {
         self.description.clone()
     }
     pub fn region(&self) -> String {
