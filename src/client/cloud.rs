@@ -345,6 +345,29 @@ impl CapellaClient {
         Ok(())
     }
 
+    pub fn create_columnar_cluster(
+        &self,
+        org_id: String,
+        project_id: String,
+        payload: String,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<(), ClientError> {
+        let request = CapellaRequest::ColumnarClusterCreate {
+            org_id,
+            project_id,
+            payload,
+        };
+        let response = self.capella_request(request, ctrl_c)?;
+
+        if response.status() != 202 {
+            return Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            });
+        }
+        Ok(())
+    }
+
     pub fn list_columnar_clusters(
         &self,
         org_id: String,
@@ -763,6 +786,11 @@ pub enum CapellaRequest {
         org_id: String,
         project_id: String,
     },
+    ColumnarClusterCreate {
+        org_id: String,
+        project_id: String,
+        payload: String,
+    },
     ColumnarClusterDelete {
         org_id: String,
         project_id: String,
@@ -914,6 +942,14 @@ impl CapellaRequest {
             Self::ClusterList { org_id, project_id } => {
                 format!(
                     "/v4/organizations/{}/projects/{}/clusters",
+                    org_id, project_id
+                )
+            }
+            Self::ColumnarClusterCreate {
+                org_id, project_id, ..
+            } => {
+                format!(
+                    "/v4/organizations/{}/projects/{}/analyticsClusters",
                     org_id, project_id
                 )
             }
@@ -1096,6 +1132,7 @@ impl CapellaRequest {
             Self::ClusterDelete { .. } => HttpVerb::Delete,
             Self::ClusterGet { .. } => HttpVerb::Get,
             Self::ClusterList { .. } => HttpVerb::Get,
+            Self::ColumnarClusterCreate { .. } => HttpVerb::Post,
             Self::ColumnarClusterDelete { .. } => HttpVerb::Delete,
             Self::ColumnarClusterList { .. } => HttpVerb::Get,
             Self::BucketCreate { .. } => HttpVerb::Post,
@@ -1119,6 +1156,7 @@ impl CapellaRequest {
         match self {
             Self::ProjectCreate { payload, .. } => Some(payload.as_bytes().into()),
             Self::ClusterCreate { payload, .. } => Some(payload.as_bytes().into()),
+            Self::ColumnarClusterCreate { payload, .. } => Some(payload.as_bytes().into()),
             Self::BucketCreate { payload, .. } => Some(payload.as_bytes().into()),
             Self::BucketLoadSample { payload, .. } => Some(payload.as_bytes().into()),
             Self::BucketUpdate { payload, .. } => Some(payload.as_bytes().into()),
