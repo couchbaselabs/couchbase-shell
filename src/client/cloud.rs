@@ -1,7 +1,7 @@
 use crate::cli::CtrlcFuture;
 use crate::client::cloud_json::{
-    Cluster, ClustersResponse, Collection, CollectionsResponse, ColumnarClustersResponse,
-    OrganizationsResponse, ProjectsResponse, ScopesResponse,
+    Cluster, ClustersResponse, Collection, CollectionsResponse, ColumnarCluster,
+    ColumnarClustersResponse, OrganizationsResponse, ProjectsResponse, ScopesResponse,
 };
 use crate::client::error::ClientError;
 use crate::client::http_handler::{HttpResponse, HttpVerb};
@@ -365,6 +365,47 @@ impl CapellaClient {
         Ok(resp)
     }
 
+    pub fn get_columnar_cluster(
+        &self,
+        name: String,
+        org_id: String,
+        project_id: String,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<ColumnarCluster, ClientError> {
+        let resp = self.list_columnar_clusters(org_id, project_id, ctrl_c)?;
+
+        for cluster in resp.items() {
+            if cluster.name() == name {
+                return Ok(cluster);
+            }
+        }
+
+        Err(ClientError::CapellaClusterNotFound { name })
+    }
+
+    pub fn delete_columnar_cluster(
+        &self,
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<(), ClientError> {
+        let request = CapellaRequest::ColumnarClusterDelete {
+            org_id,
+            project_id,
+            cluster_id,
+        };
+        let response = self.capella_request(request, ctrl_c)?;
+
+        if response.status() != 202 {
+            return Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            });
+        }
+        Ok(())
+    }
+
     pub fn create_credentials(
         &self,
         org_id: String,
@@ -722,6 +763,11 @@ pub enum CapellaRequest {
         org_id: String,
         project_id: String,
     },
+    ColumnarClusterDelete {
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+    },
     ColumnarClusterList {
         org_id: String,
         project_id: String,
@@ -869,6 +915,16 @@ impl CapellaRequest {
                 format!(
                     "/v4/organizations/{}/projects/{}/clusters",
                     org_id, project_id
+                )
+            }
+            Self::ColumnarClusterDelete {
+                org_id,
+                project_id,
+                cluster_id,
+            } => {
+                format!(
+                    "/v4/organizations/{}/projects/{}/analyticsClusters/{}",
+                    org_id, project_id, cluster_id
                 )
             }
             Self::ColumnarClusterList { org_id, project_id } => {
@@ -1040,6 +1096,7 @@ impl CapellaRequest {
             Self::ClusterDelete { .. } => HttpVerb::Delete,
             Self::ClusterGet { .. } => HttpVerb::Get,
             Self::ClusterList { .. } => HttpVerb::Get,
+            Self::ColumnarClusterDelete { .. } => HttpVerb::Delete,
             Self::ColumnarClusterList { .. } => HttpVerb::Get,
             Self::BucketCreate { .. } => HttpVerb::Post,
             Self::BucketDelete { .. } => HttpVerb::Delete,
