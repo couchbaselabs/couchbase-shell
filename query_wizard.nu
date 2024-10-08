@@ -15,8 +15,8 @@ def fields [context: string] {
         } else {
             if ($last in (collection_fields $context)) { $operators } else {
                 if ($last not-in $operators) {
-                    let $penultimate = ($context | split row " " | drop 2 |last)
-                    if ($penultimate in $operators) {
+                    let $last_word = ($context | split words | last)
+                    if ($last_word != AND) and ($last_word not-in (collection_fields $context)) {
                         [AND]
                     } else {
                         let $where_index = ($context | split words | enumerate | each {|it| if ($it.item == WHERE) {$it.index}})
@@ -119,38 +119,38 @@ export def fields_tests [] {
     # All fields test
     let $context = "FROM route SELECT "
     let $expected = [* airline airlineid destinationairport distance equipment id schedule sourceairport stops type]
-    print "All fields test"
+    print $context
     assert $expected (fields $context)
 
     # Wildcard test
      let $context = "FROM route SELECT * "
      let $expected = [WHERE]
-     print "Wildcard test"
+     print $context
      assert $expected (fields $context)
 
     # Don't suggest used fields
     let $context = "FROM route SELECT airline distance schedule type "
     let $expected = [WHERE airlineid destinationairport equipment id sourceairport stops]
-    print "Remove used fields"
+    print $context
     assert $expected (fields $context)
 
     # Suggest all fields after where
     let $context = "FROM route SELECT airline distance schedule type WHERE "
     let $expected = [airline airlineid destinationairport distance equipment id schedule sourceairport stops type]
-    print "Suggest all fields after where"
+    print $context
     assert $expected (fields $context)
 
     # Suggest operators after WHERE field
     let $context = "FROM route SELECT airline distance schedule type WHERE airline "
     let $expected = [= != > < >= <=]
-    print "Suggest operators after WHERE field"
+    print $context
     assert $expected (fields $context)
 
     # Suggest noting after operator
     let $context = "FROM route SELECT airline distance schedule type WHERE airline = "
     let $expected = null
     let $result = ((fields $context) == $expected)
-    print "Suggest nothing after operator"
+    print $context
     if (not $result) {
         print (ansi red_bold) failed (ansi reset)
         print "EXPECTED: " $expected
@@ -162,19 +162,23 @@ export def fields_tests [] {
     # Suggest AND after condition value
     let $context = "FROM route SELECT airline distance schedule type WHERE airline = someAirline "
     let $expected = [AND]
-    print "Suggest AND after condition value"
+    print $context
     assert $expected (fields $context)
 
     # Remove field once used in condition
     let $context = "FROM route SELECT airline distance schedule type WHERE airline = someAirline AND type = someType AND "
     let $expected = [airlineid destinationairport distance equipment id schedule sourceairport stops]
-    print "Remove field once used in condition"
+    print $context
     assert $expected (fields $context)
 
     # Condition value with spaces
      let $context = 'FROM route SELECT airline distance schedule type WHERE airline = "Best Airline" '
      let $expected = [AND]
-     print "Condition value with spaces"
+     print $context
      assert $expected (fields $context)
 
+     let $context = 'FROM route SELECT airline distance schedule type WHERE airline = "Best Airline" AND type = "some things" AND '
+     let $expected = [airlineid destinationairport distance equipment id schedule sourceairport stops]
+     print $context
+     assert $expected (fields $context)
 }
