@@ -22,7 +22,7 @@ Imagine that we want to perform some general health checks on this set of cluste
 [options="nowrap"]
 ```
 👤 Charlie 🏠 localdev in 🗄 travel-sample._default._default
-> nodes --clusters *
+> nodes --clusters .*
 ╭────┬─────────────────────────┬─────────────────────────────────────────────────────────────┬─────────┬──────────────────────────┬───────────────────────┬───────────────────────────┬──────────────┬─────────────┬─────╮
 │  # │         cluster         │                                       hostname              │ status  │         services         │        version        │            os             │ memory_total │ memory_free │ ... │
 ├────┼─────────────────────────┼─────────────────────────────────────────────────────────────┼─────────┼──────────────────────────┼───────────────────────┼───────────────────────────┼──────────────┼─────────────┼─────┤
@@ -45,7 +45,7 @@ To focus on the free memory that each cluster has, we can https://www.nushell.sh
 
 ```
 👤 Charlie 🏠 localdev in 🗄 travel-sample._default._default
-> nodes --clusters * | select cluster memory_free
+> nodes --clusters .* | select cluster memory_free
 ╭────┬────────────┬─────────────╮
 │  # │  cluster   │ memory_free │
 ├────┼────────────┼─────────────┤
@@ -68,7 +68,7 @@ For example we could convert the `memory_free` values from bytes to gigabytes:
 [options="nowrap"]
 ```
 👤 Charlie 🏠 localdev in 🗄 travel-sample._default._default
-> nodes --clusters * | each {|n| $n | update memory_free ($n.memory_free * 1B)} | select cluster memory_free
+> nodes --clusters .* | each {|n| $n | update memory_free ($n.memory_free * 1B)} | select cluster memory_free
 ╭───┬─────────────┬─────────────╮
 │  # │  cluster   │ memory_free │
 ├───┼─────────────┼─────────────┤
@@ -94,7 +94,7 @@ There are two columns that can be used to calculate this: `memory_free` and `mem
 [options="nowrap"]
 ```
 👤 Charlie 🏠 localdev in 🗄 travel-sample._default._default
->  nodes --clusters * | each {|n| $n | insert utilization ((($n.memory_total - $n.memory_free) / $n.memory_total) * 100 ) } | select cluster utilization | sort-by utilization --reverse
+>  nodes --clusters .* | each {|n| $n | insert utilization ((($n.memory_total - $n.memory_free) / $n.memory_total) * 100 ) } | select cluster utilization | sort-by utilization --reverse
 ╭───┬────────────┬─────────────╮
 │ # │  cluster   │ utilization │
 ├───┼────────────┼─────────────┤
@@ -126,7 +126,7 @@ We can use `nodes` to find the cluster with the most free memory and create the 
 [options="nowrap"]
 ```
 👤 Charlie 🏠 localdev in 🗄 travel-sample._default._default
-> nodes --clusters * | sort-by memory_free --reverse | first | get cluster | buckets create BigBucket 1000 --clusters $in
+> nodes --clusters .* | sort-by memory_free --reverse | first | get cluster | buckets create BigBucket 1000 --clusters $in
 ```
 
 Here we have fetched the nodes for all the registered clusters, sorted by the descending amount of `memory_free` and got the cluster name.
@@ -136,7 +136,7 @@ To double check the success and see where our bucket was created we can do:
 [options="nowrap"]
 ```
 👤 Charlie 🏠 localdev in 🗄 travel-sample._default._default
-> buckets --clusters a* | where name == "BigBucket"
+> buckets --clusters .* | where name == "BigBucket"
 ╭───┬─────────┬───────────┬───────────┬──────────┬──────────────────────┬────────────┬───────────────┬───────┬────────────╮
 │ # │ cluster │   name    │   type    │ replicas │ min_durability_level │ ram_quota  │ flush_enabled │ cloud │ max_expiry │
 ├───┼─────────┼───────────┼───────────┼──────────┼──────────────────────┼────────────┼───────────────┼───────┼────────────┤
