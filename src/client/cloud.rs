@@ -258,19 +258,9 @@ impl CapellaClient {
         project_id: String,
         ctrl_c: Arc<AtomicBool>,
     ) -> Result<Cluster, ClientError> {
-        let request = CapellaRequest::ClusterList { org_id, project_id };
-        let response = self.capella_request(request, ctrl_c)?;
+        let cluster_list = self.list_clusters(org_id, project_id, ctrl_c)?;
 
-        if response.status() != 200 {
-            return Err(ClientError::RequestFailed {
-                reason: Some(response.content().into()),
-                key: None,
-            });
-        }
-
-        let resp: ClustersResponse = serde_json::from_str(response.content())?;
-
-        for c in resp.items() {
+        for c in cluster_list.items() {
             if c.name() == cluster_name {
                 return Ok(c);
             }
