@@ -17,7 +17,7 @@ def fields [context: string] {
                 if ($last not-in $operators) {
                     let $last_word = ($context | split words | last)
                     if ($last_word != AND) and ($last_word not-in (collection_fields $context)) {
-                        [AND]
+                        [AND LIMIT]
                     } else {
                         let $where_index = ($context | split words | enumerate | each {|it| if ($it.item == WHERE) {$it.index}})
                         let $after_where = ($context | split words | skip ($where_index.0 + 1))
@@ -160,7 +160,7 @@ export def fields_tests [] {
 
     # Suggest AND after condition value
     let $context = "FROM route SELECT airline distance schedule type WHERE airline = someAirline "
-    let $expected = [AND]
+    let $expected = [AND LIMIT]
     print $context
     assert $expected (fields $context)
 
@@ -172,7 +172,7 @@ export def fields_tests [] {
 
     # Condition value with spaces
      let $context = 'FROM route SELECT airline distance schedule type WHERE airline = "Best Airline" '
-     let $expected = [AND]
+     let $expected = [AND LIMIT]
      print $context
      assert $expected (fields $context)
 
