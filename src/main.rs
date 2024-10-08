@@ -743,6 +743,7 @@ fn merge_couchbase_delta(context: &mut EngineState, state: Arc<Mutex<State>>) {
         working_set.add_decl(Box::new(ColumnarClusters::new(state.clone())));
         working_set.add_decl(Box::new(ColumnarClustersCreate::new(state.clone())));
         working_set.add_decl(Box::new(ColumnarClustersDrop::new(state.clone())));
+        working_set.add_decl(Box::new(ColumnarDatabases::new(state.clone())));
         working_set.add_decl(Box::new(CredentialsCreate::new(state.clone())));
         working_set.add_decl(Box::new(Doc));
         working_set.add_decl(Box::new(DocGet::new(state.clone())));
