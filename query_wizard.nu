@@ -1,4 +1,5 @@
 # query_wizard.nu
+const $operators = [LIKE = != > < >= <=]
 
 def collection_fields [context: string] {
     let $collection = ($context | split words | $in.1)
@@ -7,13 +8,12 @@ def collection_fields [context: string] {
 }
 
 def fields [context: string] {
-     let $operators = [= != > < >= <=]
      let $last = ($context | split row " " | drop | last)
      if ("WHERE" in ($context | split words)) {
         if ($last == "WHERE") {
             collection_fields $context
         } else {
-            if ($last in (collection_fields $context)) { $operators } else {
+            if ($last in ((collection_fields $context | append "meta().id"))) { $operators } else {
                 if ($last not-in $operators) {
                     let $last_word = ($context | split words | last)
                     if ($last_word != AND) and ($last_word not-in (collection_fields $context)) {
@@ -54,7 +54,6 @@ def fields [context: string] {
 }
 
 def parse_after_where [fields: list] {
-    let $operators = [= != > < >= <=]
     let $where_index = ($fields | enumerate | each {|it| if ($it.item == WHERE) {$it.index}})
     let $after_where = ($fields | skip ($where_index.0 + 1))
 
@@ -80,23 +79,18 @@ field13?: string@fields
 field14?: string@fields
 field15?: string@fields
 ] {
-    let $inputs = [$field1 $field2 $field3 $field4 $field5 $field6 $field7 $field8 $field9 $field10 $field11 $field12 $field13 $field14 $field15]
+    # The brackets in meta().id get dropped so we need to add them back in
+    let $inputs = [$field1 $field2 $field3 $field4 $field5 $field6 $field7 $field8 $field9 $field10 $field11 $field12 $field13 $field14 $field15] | each {|it| if ($it == "meta.id") {"meta().id"} else {$it}}
     let $where_index = ($inputs | enumerate | each {|it| if ($it.item == WHERE) {$it.index}})
     let $after_where = ($inputs | skip ($where_index.0 + 1))
-    # print $after_where
 
-    let $operators = [= != > < >= <=]
     let $condition_values = ($after_where | enumerate | each {|it| if ($it.item in $operators) {($after_where | get ($it.index + 1))}})
-    # print $condition_values
     let $parsed_after_where = (parse_after_where $inputs)
 
     let $select_fields = ($inputs | drop ($inputs | length | $in - $where_index.0) | skip 2)
-    # print $select_fields
-    # let $query = ([$field1 $field2 $field3 $field4 $field5 $field6 $field7 $field8 $field9 $field10 $field11 $field12 $field13 $field14 $field15] | prepend SELECT | str join " ")
 
     let $select_section = [SELECT] | append ($select_fields | enumerate | each {|it| if ($it.index != ($select_fields | length | $in - 1)) { [$it.item `,`] | str join } else { $it.item }}) | str join " "
     let $query = [$select_section FROM $field1 WHERE] | append $parsed_after_where | str join " "
-    # print $query
     query $query
 }
 
@@ -142,7 +136,7 @@ export def fields_tests [] {
 
     # Suggest operators after WHERE field
     let $context = "FROM route SELECT airline distance schedule type WHERE airline "
-    let $expected = [= != > < >= <=]
+    let $expected = $operators
     print $context
     assert $expected (fields $context)
 
@@ -181,4 +175,10 @@ export def fields_tests [] {
      let $expected = [airlineid destinationairport distance equipment id schedule sourceairport stops]
      print $context
      assert $expected (fields $context)
+
+     # meta().id as condition value
+     let $context = 'FROM hotel SELECT meta().id WHERE meta().id '
+     let $expected = $operators
+      print $context
+      assert $expected (fields $context)
 }
