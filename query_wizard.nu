@@ -78,6 +78,7 @@ field12?: string@fields
 field13?: string@fields
 field14?: string@fields
 field15?: string@fields
+--print_query
 ] {
     # The brackets in meta().id get dropped so we need to add them back in
     let $inputs = [$field1 $field2 $field3 $field4 $field5 $field6 $field7 $field8 $field9 $field10 $field11 $field12 $field13 $field14 $field15] | each {|it| if ($it == "meta.id") {"meta().id"} else {$it}}
@@ -91,6 +92,10 @@ field15?: string@fields
 
     let $select_section = [SELECT] | append ($select_fields | enumerate | each {|it| if ($it.index != ($select_fields | length | $in - 1)) { [$it.item `,`] | str join } else { $it.item }}) | str join " "
     let $query = [$select_section FROM $field1 WHERE] | append $parsed_after_where | str join " "
+
+    if $print_query {
+        print $query
+    }
     query $query
 }
 
