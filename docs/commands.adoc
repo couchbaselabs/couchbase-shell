@@ -5,6 +5,8 @@ them with built-in other shell commands as well as executable programs from your
 
 include::commands/buckets.adoc[]
 
+include::commands/clusters.adoc[]
+
 include::commands/columnar.adoc[]
 
 include::commands/scopes.adoc[]
