@@ -1,0 +1,230 @@
+== Debugging
+
+If you encounter unexpected behaviour when using or developing `cbsh` the best way to start debugging is to increase the log level.
+This is done through an environment variable called `CBSH_LOG`.
+By default the log level is set to `warn`, but there are various levels available, all outlined in this section.
+
+=== error
+
+This is the lowest level, lower than the default (warn), so not much use for debugging since only errors will be logged.
+
+```
+➜  export CBSH_LOG=error
+➜  ./cbsh
+👤 Charlie 🏠 local
+>
+```
+
+There are no log messages when starting the shell, because there were no errors.
+
+=== warn
+
+This is the level above error, and is the default log level.
+
+[options="nowrap"]
+```
+➜  export CBSH_LOG=warn
+➜  ./cbsh
+
+[WARN] 2024-10-09 07:57:46.708 Using PLAIN authentication for cluster local, credentials will sent in plaintext - configure tls to disable this warning
+👤 Charlie 🏠 local
+>
+```
+
+Now when we start the shell we see a [WARN] message about our tls configuration.
+
+=== info
+
+This level returns a large amount of information, not just from cbsh but logs from Nushell, on which `cbsh` is built, will be printed:
+
+[options="nowrap"]
+```
+➜  export CBSH_LOG=info
+➜  ./cbsh
+[WARN] 2024-10-09 08:01:50.553 Using PLAIN authentication for cluster local, credentials will sent in plaintext - configure tls to disable this warning
+[INFO] 2024-10-09 08:01:50.791 Thanks for trying CBSH!
+[INFO] 2024-10-09 08:01:50.801 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/config_files.rs:60:9 add plugin file to engine_state took 457.375µs
+[INFO] 2024-10-09 08:01:50.833 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/config_files.rs:144:13 read plugin file /Users/charlie/Library/Application Support/CouchbaseShell/plugin.msgpackz took 31.719292ms
+[INFO] 2024-10-09 08:01:50.833 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/config_files.rs:163:13 load plugin file /Users/charlie/Library/Application Support/CouchbaseShell/plugin.msgpackz took 779.833µs
+[INFO] 2024-10-09 08:01:50.840 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/util.rs:235:9 eval_source /Users/charlie/Library/Application Support/CouchbaseShell/config.nu took 5.679334ms
+[INFO] 2024-10-09 08:01:50.841 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:96:9 translate env vars took 154.458µs
+[INFO] 2024-10-09 08:01:50.841 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:232:9 setup reedline took 105.834µs
+[INFO] 2024-10-09 08:01:50.841 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:246:13 setup history took 724.959µs
+[INFO] 2024-10-09 08:01:50.842 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:296:9 merge env took 14.958µs
+[INFO] 2024-10-09 08:01:50.842 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:310:9 reset ctrlc took 208ns
+[INFO] 2024-10-09 08:01:50.842 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:327:9 pre-prompt hook took 1.583µs
+[INFO] 2024-10-09 08:01:50.842 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:343:9 env-change hook took 417ns
+[INFO] 2024-10-09 08:01:50.842 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:362:9 get config/cursor config took 208ns
+[INFO] 2024-10-09 08:01:50.842 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:401:9 reedline builder took 8.333µs
+[INFO] 2024-10-09 08:01:50.842 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:423:9 reedline coloring/style_computer took 1.917µs
+[INFO] 2024-10-09 08:01:50.843 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:440:9 reedline adding menus took 879.583µs
+[INFO] 2024-10-09 08:01:50.843 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:464:9 reedline buffer_editor took 84.875µs
+[INFO] 2024-10-09 08:01:50.844 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:481:13 sync_history took 712.209µs
+[INFO] 2024-10-09 08:01:50.844 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:495:9 keybindings took 156.833µs
+[INFO] 2024-10-09 08:01:50.845 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:519:9 update_prompt took 1.218917ms
+👤 Charlie 🏠 local
+>
+```
+
+If you only want to see the logs from `cbsh` itself, not Nushell, that are info and below this can be done by setting `CBSH_LOG` to `cbsh=info`:
+
+[options="nowrap"]
+```
+➜  export CBSH_LOG=cbsh=info
+➜  ./cbsh
+[WARN] 2024-10-09 08:11:15.012 Using PLAIN authentication for cluster local, credentials will sent in plaintext - configure tls to disable this warning
+[INFO] 2024-10-09 08:11:15.233 Thanks for trying CBSH!
+👤 Charlie 🏠 local
+>
+```
+
+Now the `cbsh` welcome is the only [INFO] message printed.
+
+=== debug
+
+The log level can be set to `debug` as follows:
+
+```
+➜  export CBSH_LOG=debug
+```
+
+This is the most useful level for debugging, as it gives good insight into what requests are being made and where they are being sent.
+For example here are the logs when running the `buckets` command with this log level.
+
+[options="nowrap"]
+```
+👤 Charlie 🏠 local
+> buckets
+[INFO] 2024-10-09 08:04:32.053 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:553:9 line_editor setup took 1.402728208s
+[INFO] 2024-10-09 08:04:32.054 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:597:17 pre_execution_hook took 708ns
+[DEBUG] 2024-10-09 08:04:32.054 Running buckets
+[DEBUG] 2024-10-09 08:04:32.055 Fetching config from 192.168.107.128:8091/pools/default/nodeServices
+[DEBUG] 2024-10-09 08:04:32.055 Performing http request RequestBuilder { method: GET, url: Url { scheme: "http", cannot_be_a_base: false, username: "", password: None, host: Some(Ipv4(192.168.107.128)), port: Some(8091), path: "/pools/default/nodeServices", query: None, fragment: None }, headers: {"authorization": Sensitive} }
+[DEBUG] 2024-10-09 08:04:32.055 starting new connection: http://192.168.107.128:8091/
+[DEBUG] 2024-10-09 08:04:32.057 Performing http request RequestBuilder { method: GET, url: Url { scheme: "http", cannot_be_a_base: false, username: "", password: None, host: Some(Ipv4(192.168.107.129)), port: Some(8091), path: "/pools/default/buckets", query: None, fragment: None }, headers: {"authorization": Sensitive} }
+[DEBUG] 2024-10-09 08:04:32.058 starting new connection: http://192.168.107.129:8091/
+╭───┬─────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬───────┬────────────╮
+│ # │ cluster │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ cloud │ max_expiry │
+├───┼─────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼───────┼────────────┤
+│ 0 │ local   │ travel-sample │ couchbase │        1 │ none                 │ 200.0 MiB │ false         │ false │          0 │
+╰───┴─────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴───────┴────────────╯
+[INFO] 2024-10-09 08:04:32.073 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/util.rs:235:9 eval_source entry #3 took 19.071625ms
+[INFO] 2024-10-09 08:04:32.073 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:776:9 processing line editor input took 19.348083ms
+[INFO] 2024-10-09 08:04:32.073 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:785:9 time between prompts in line editor loop took 1.428516792s
+[INFO] 2024-10-09 08:04:32.073 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:296:9 merge env took 20.875µs
+[INFO] 2024-10-09 08:04:32.073 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:310:9 reset ctrlc took 250ns
+[INFO] 2024-10-09 08:04:32.073 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:327:9 pre-prompt hook took 417ns
+[INFO] 2024-10-09 08:04:32.073 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:343:9 env-change hook took 458ns
+[INFO] 2024-10-09 08:04:32.074 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:362:9 get config/cursor config took 416ns
+[INFO] 2024-10-09 08:04:32.074 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:401:9 reedline builder took 47.667µs
+[INFO] 2024-10-09 08:04:32.074 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:423:9 reedline coloring/style_computer took 1.5µs
+[INFO] 2024-10-09 08:04:32.075 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:440:9 reedline adding menus took 913.583µs
+[INFO] 2024-10-09 08:04:32.075 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:464:9 reedline buffer_editor took 108.5µs
+[INFO] 2024-10-09 08:04:32.076 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:481:13 sync_history took 1.022ms
+[INFO] 2024-10-09 08:04:32.076 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:495:9 keybindings took 142.417µs
+[INFO] 2024-10-09 08:04:32.076 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:519:9 update_prompt took 284.125µs
+```
+
+As you can see it is not only debug level messages but also messages at any lower log level, such as info.
+This includes the messages logged by Nushell, which can lead to a lot of clutter.
+In order to only see the messages at debug and below that originate from `cbsh` do:
+
+```
+➜  export CBSH_LOG=cbsh=debug
+```
+
+Now we sill still see the `debug` messages from `cbsh` but without all of the Nushell `info` level messages:
+
+[options="nowrap"]
+```
+👤 Charlie 🏠 local
+> buckets
+[DEBUG] 2024-10-09 08:19:50.503 Running buckets
+[DEBUG] 2024-10-09 08:19:50.504 Fetching config from 192.168.107.128:8091/pools/default/nodeServices
+[DEBUG] 2024-10-09 08:19:50.505 Performing http request RequestBuilder { method: GET, url: Url { scheme: "http", cannot_be_a_base: false, username: "", password: None, host: Some(Ipv4(192.168.107.128)), port: Some(8091), path: "/pools/default/nodeServices", query: None, fragment: None }, headers: {"authorization": Sensitive} }
+[DEBUG] 2024-10-09 08:19:50.511 Performing http request RequestBuilder { method: GET, url: Url { scheme: "http", cannot_be_a_base: false, username: "", password: None, host: Some(Ipv4(192.168.107.128)), port: Some(8091), path: "/pools/default/buckets", query: None, fragment: None }, headers: {"authorization": Sensitive} }
+╭───┬─────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬───────┬────────────╮
+│ # │ cluster │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ cloud │ max_expiry │
+├───┼─────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼───────┼────────────┤
+│ 0 │ local   │ travel-sample │ couchbase │        1 │ none                 │ 200.0 MiB │ false         │ false │          0 │
+╰───┴─────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴───────┴────────────╯
+```
+
+
+=== trace
+
+The highest log level available is `trace` and can be chosen in the same way as the others.
+This returns a huge amount of information, even when simply starting the shell:
+
+[options="nowrap"]
+```
+➜  export CBSH_LOG=trace
+➜  ./cbsh
+[DEBUG] 2024-10-09 08:08:16.095 Effective CliOptions { conn_string: None, username: None, password: None, cluster: None, bucket: None, scope: None, collection: None, command: None, script: None, stdin: false, no_motd: false, disable_tls: false, tls_cert_path: None, tls_accept_all_certs: false, config_path: None, logger_prefix: None, display_name: None, no_config_prompt: false }
+[WARN] 2024-10-09 08:08:16.097 Using PLAIN authentication for cluster local, credentials will sent in plaintext - configure tls to disable this warning
+[DEBUG] 2024-10-09 08:08:16.097 Was not able to parse cb.euej8ya-xthijfpn.cloud.com
+[DEBUG] 2024-10-09 08:08:16.097 Address cb.euej8ya-xthijfpn.cloud.com is not an ip v6 address
+[DEBUG] 2024-10-09 08:08:16.097 Address cb.euej8ya-xthijfpn.cloud.com is not an ip v4 address
+[TRACE] 2024-10-09 08:08:16.097 registering event source with poller: token=Token(1), interests=READABLE
+[TRACE] 2024-10-09 08:08:16.098 registering event source with poller: token=Token(4867532416), interests=READABLE | WRITABLE
+[TRACE] 2024-10-09 08:08:16.098 registering event source with poller: token=Token(4867532800), interests=READABLE | WRITABLE
+[TRACE] 2024-10-09 08:08:16.115 deregistering event source from poller
+[TRACE] 2024-10-09 08:08:16.115 deregistering event source from poller
+[DEBUG] 2024-10-09 08:08:16.115 Server lookup failed, falling back to hostnames: no record found for Query { name: Name("_couchbases._tcp.cb.euej8ya-xthijfpn.cloud.com."), query_type: SRV, query_class: IN }
+[TRACE] 2024-10-09 08:08:16.116 (ThreadId(1)) park without timeout
+[TRACE] 2024-10-09 08:08:16.116 registering event source with poller: token=Token(1), interests=READABLE
+[TRACE] 2024-10-09 08:08:16.116 (ThreadId(2)) start runtime::block_on
+[TRACE] 2024-10-09 08:08:16.118 wait at most 500ms
+[TRACE] 2024-10-09 08:08:16.118 (ThreadId(1)) park timeout 499.997792ms
+[DEBUG] 2024-10-09 08:08:16.119 starting new connection: http://motd.couchbase.sh/
+[TRACE] 2024-10-09 08:08:16.121 registering event source with poller: token=Token(4867529088), interests=READABLE | WRITABLE
+[TRACE] 2024-10-09 08:08:16.313 wait at most 500ms
+[TRACE] 2024-10-09 08:08:16.314 closing runtime thread (ThreadId(2))
+[TRACE] 2024-10-09 08:08:16.314 signaled close for runtime thread (ThreadId(2))
+[TRACE] 2024-10-09 08:08:16.314 (ThreadId(2)) Receiver is shutdown
+[TRACE] 2024-10-09 08:08:16.314 (ThreadId(2)) end runtime::block_on
+[TRACE] 2024-10-09 08:08:16.314 deregistering event source from poller
+[TRACE] 2024-10-09 08:08:16.316 (ThreadId(2)) finished
+[TRACE] 2024-10-09 08:08:16.316 closed runtime thread (ThreadId(2))
+[INFO] 2024-10-09 08:08:16.316 Thanks for trying CBSH!
+...
+[TRACE] 2024-10-09 08:08:16.401 registering event source with poller: token=Token(0), interests=READABLE
+[TRACE] 2024-10-09 08:08:16.401 registering event source with poller: token=Token(1), interests=READABLE
+[TRACE] 2024-10-09 08:08:16.435 highlighting:
+[TRACE] 2024-10-09 08:08:16.435 parse
+[TRACE] 2024-10-09 08:08:16.435 parsing block: LiteBlock { block: [] }
+👤 Charlie 🏠 local
+>
+```
+
+The vast majority of these `trace` messages are from Nushell itself, and do not originate from the `cbsh` code.
+Fortunately these can be turned off so that we only see the `traces` originating from `cbsh` directly:
+
+[options="nowrap"]
+```
+➜  export CBSH_LOG=cbsh=trace
+➜  ./cbsh
+[DEBUG] 2024-10-09 08:25:09.276 Effective CliOptions { conn_string: None, username: None, password: None, cluster: None, bucket: None, scope: None, collection: None, command: None, script: None, stdin: false, no_motd: false, disable_tls: false, tls_cert_path: None, tls_accept_all_certs: false, config_path: None, logger_prefix: None, display_name: None, no_config_prompt: false }
+[WARN] 2024-10-09 08:25:09.277 Using PLAIN authentication for cluster local, credentials will sent in plaintext - configure tls to disable this warning
+[DEBUG] 2024-10-09 08:25:09.277 Was not able to parse cb.euej8ya-xthijfpn.cloud.com
+[DEBUG] 2024-10-09 08:25:09.277 Address cb.euej8ya-xthijfpn.cloud.com is not an ip v6 address
+[DEBUG] 2024-10-09 08:25:09.277 Address cb.euej8ya-xthijfpn.cloud.com is not an ip v4 address
+[DEBUG] 2024-10-09 08:25:09.296 Server lookup failed, falling back to hostnames: no record found for Query { name: Name("_couchbases._tcp.cb.euej8ya-xthijfpn.cloud.com."), query_type: SRV, query_class: IN }
+[INFO] 2024-10-09 08:25:09.497 Thanks for trying CBSH!
+[DEBUG] 2024-10-09 08:25:09.523 Config file found at /Users/charlie/Library/Application Support/CouchbaseShell/config.nu, removing
+[DEBUG] 2024-10-09 08:25:09.523 Config file created at: /Users/charlie/Library/Application Support/CouchbaseShell/config.nu
+👤 Charlie 🏠 local
+> buckets
+[DEBUG] 2024-10-09 08:25:17.209 Running buckets
+[DEBUG] 2024-10-09 08:25:17.210 Fetching config from 192.168.107.128:8091/pools/default/nodeServices
+[DEBUG] 2024-10-09 08:25:17.211 Performing http request RequestBuilder { method: GET, url: Url { scheme: "http", cannot_be_a_base: false, username: "", password: None, host: Some(Ipv4(192.168.107.128)), port: Some(8091), path: "/pools/default/nodeServices", query: None, fragment: None }, headers: {"authorization": Sensitive} }
+[TRACE] 2024-10-09 08:25:17.215 Fetched config ClusterConfig { nodes_ext: [NodeExtConfig { services: {"ftsSSL": 18094, "mgmtSSL": 18091, "ftsGRPC": 9130, "capi": 8092, "indexAdmin": 9100, "indexHttps": 19102, "indexScan": 9101, "indexStreamMaint": 9105, "capiSSL": 18092, "ftsGRPCSSL": 19130, "fts": 8094, "indexStreamCatchup": 9104, "n1ql": 8093, "n1qlSSL": 18093, "mgmt": 8091, "indexHttp": 9102, "kv": 11210, "projector": 9999, "indexStreamInit": 9103, "kvSSL": 11207}, hostname: Some("192.168.107.128"), alternate_addresses: {} }, NodeExtConfig { services: {"indexAdmin": 9100, "kv": 11210, "fts": 8094, "capiSSL": 18092, "indexScan": 9101, "indexHttp": 9102, "indexStreamInit": 9103, "mgmtSSL": 18091, "n1ql": 8093, "kvSSL": 11207, "projector": 9999, "ftsGRPC": 9130, "capi": 8092, "indexStreamCatchup": 9104, "ftsGRPCSSL": 19130, "indexStreamMaint": 9105, "mgmt": 8091, "ftsSSL": 18094, "indexHttps": 19102, "n1qlSSL": 18093}, hostname: Some("192.168.107.129"), alternate_addresses: {} }, NodeExtConfig { services: {"capi": 8092, "indexHttp": 9102, "indexStreamCatchup": 9104, "mgmtSSL": 18091, "n1qlSSL": 18093, "projector": 9999, "indexHttps": 19102, "ftsSSL": 18094, "indexAdmin": 9100, "indexScan": 9101, "mgmt": 8091, "ftsGRPC": 9130, "kv": 11210, "capiSSL": 18092, "indexStreamMaint": 9105, "fts": 8094, "ftsGRPCSSL": 19130, "indexStreamInit": 9103, "kvSSL": 11207, "n1ql": 8093}, hostname: Some("192.168.107.130"), alternate_addresses: {} }], loaded_from: Some("192.168.107.128") }
+[DEBUG] 2024-10-09 08:25:17.215 Performing http request RequestBuilder { method: GET, url: Url { scheme: "http", cannot_be_a_base: false, username: "", password: None, host: Some(Ipv4(192.168.107.130)), port: Some(8091), path: "/pools/default/buckets", query: None, fragment: None }, headers: {"authorization": Sensitive} }
+╭───┬─────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬───────┬────────────╮
+│ # │ cluster │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ cloud │ max_expiry │
+├───┼─────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼───────┼────────────┤
+│ 0 │ local   │ travel-sample │ couchbase │        1 │ none                 │ 200.0 MiB │ false         │ false │          0 │
+╰───┴─────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴───────┴────────────╯
+```
+
+This will give you a much more manageable amount of information.

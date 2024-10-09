@@ -26,4 +26,6 @@ include::commands.adoc[]
 
 include::reference.adoc[]
 
+include::debugging.adoc[]
+
 include::release_notes.adoc[]
