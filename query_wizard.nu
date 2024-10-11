@@ -1,5 +1,6 @@
 # query_wizard.nu
-const $operators = [LIKE = != > < >= <=]
+const $key_words = [FROM SELECT WHERE AND ANY EVERY IN SATISFIES END LIMIT]
+const $operators = [!= <= >= > < = LIKE]
 
 # Returns a table with two columns, field and type
 export def collection_fields [context: string] {
@@ -7,87 +8,128 @@ export def collection_fields [context: string] {
     let $name_space = (cb-env | ["`" $in.bucket "`" . $in.scope . $collection] | str join)
     let $infer_result = [infer $name_space] | str join " " | query $in
     let $fields = ($infer_result | get properties | columns)
+    # For each field get its type from the results of the infer query and construct a table
     $fields | each {|it| $infer_result | get properties | get $it | get type | flatten | last | [[field type]; [$it $in]]} | flatten
 }
 
+# Returns list of next valid strings given a partial query
 export def fields [context: string] {
-     let $last = ($context | split row " " | drop | last)
+    let $last = ($context | split row " " | drop | last)
+    if $last == * {
+        return [WHERE]
+    }
 
-     if ("WHERE" in ($context | split words)) {
-        match $last {
-            WHERE => (collection_fields $context | get field | prepend ANY | prepend EVERY)
-            ANY => {}
-            EVERY => {}
-            IN => {(collection_fields $context| filter {|it| $it.type == array} | get field)}
+    let $query_words = ($context | split words)
+    let $last_word = ($query_words | last)
+    let $used_keywords = ($query_words | each {|it| if ($it in $key_words) {$it}})
+    let $last_keyword = ($used_keywords | last)
+
+    if $last_word == $last_keyword {
+        match $last_word {
+            FROM => {return (collections | get collection)}
+            SELECT => {return (collection_fields $context | get field | prepend *)}
+            WHERE => {return (collection_fields $context | get field | prepend ANY | prepend EVERY)}
+            AND => {
+                # Need to suggest list of fields after WHERE that have not been used in conditions yet
+                let $after_where = ($context | split row WHERE | last)
+                let $conditions = ($after_where | split row AND | drop)
+                # Check what fields with spaces in have to be enclosed with this assumes it is `
+                let $fields_in_conditions = ($conditions | each {|cond| $operators | each {|op| if (($cond | split row $op | length) > 1) {$cond | split row $op | first | str trim | str trim --char '`' } } | first})
+                return (collection_fields $context | get field | filter {|x| $x not-in $fields_in_conditions} | prepend [EVERY ANY])
+            }
+            ANY => {return}
+            EVERY => {return}
+            IN => {return (collection_fields $context| filter {|it| $it.type == array} | get field)}
             SATISFIES => {
-                let $in_index = ($context | split words | enumerate | each {|it| if ($it.item == IN) {$it.index}})
-                let $before_in = ($context | split words | get ($in_index.0 - 1))
+                # When the last word is satisfies we need to return a list of fields of the objects in the array
+                # appended to the alias of the array members given before IN
+
+                # context will be "... review IN reviews SATISFIES " so we get alias, array from either side of "IN"
+                let $in_index = ($context | split row " " | enumerate | each {|it| if ($it.item == IN) {$it.index}})
+                let $alias = ($context | split words | get ($in_index.0 - 1))
                 let $array = ($context | split words | get ($in_index.0 + 1))
+                print $array
+
                 let $collection = ($context | split words | get 1)
 
-                let $array_properties = ([infer $collection] | str join " " | query $in | get properties | get $array | get items | get properties)
-                let $array_fields = ($array_properties | columns)
-                $array_fields | each {|it| $array_properties | get $it | columns | if ("properties" in $in) {$array_properties | get $it | get properties | columns | each {|prop| [$before_in . $it . '`' $prop '`'] | str join }} else { [$before_in . '`' $it '`'] | str join} } | flatten
+                # Gets the infer results for the JSON objects in the array
+                let $array_object_fields = ([infer $collection] | str join " " | query $in | get properties | get $array | get items | get properties)
+
+
+
+                return ($array_object_fields | columns | each {|it| $array_object_fields | get $it | columns | if ("properties" in $in) {$array_object_fields | get $it | get properties | columns | each {|prop| [$alias . $it . '`' $prop '`'] | str join }} else { [$alias . '`' $it '`'] | str join} } | flatten)
             }
-            _ => {
-                let $penultimate = ($context | split words | drop | last)
-                if ($last in ((collection_fields $context | get field | append "meta().id"))) {
-                    if ($penultimate == IN) {
-                        [SATISFIES]
-                    } else {
-                        $operators
-                    }
-                } else {
-                    if ($last not-in $operators) {
-                        let $last_word = ($context | split words | last)
-                        if ($last_word != AND) and ($last_word not-in (collection_fields $context | get field)) {
-                            if ($penultimate in [ANY EVERY]) {
-                                [IN]
-                            } else {
-                                if (($context | split row " " | drop 2 | last) == SATISFIES) {
-                                    $operators
-                                } else {
-                                    if (($context | split row " " | drop 4 | last) == SATISFIES) {
-                                        [END]
-                                    } else {
-                                        [AND LIMIT]
-                                    }
-                                }
-                            }
-                        } else {
-                            let $where_index = ($context | split words | enumerate | each {|it| if ($it.item == WHERE) {$it.index}})
-                            let $after_where = ($context | split words | skip ($where_index.0 + 1))
-                            collection_fields $context | get field | each {|it| if ($it not-in $after_where) {$it}} | flatten | prepend ANY | prepend EVERY
-                        }
-                    }
-                }
-            }
+            END => [AND LIMIT]
         }
-     } else {
-         match $last {
-            FROM => {
-                collections | get collection
+    }
+
+    let $after_last_keyword = ($context | split row $last_keyword | last)
+
+    match $last_keyword {
+        FROM => {return [SELECT]}
+        SELECT => {
+            # TO DO - make this work with fields with spaces in
+            let $selected_fields = ($after_last_keyword | split row " ")
+            let $remaining_fields = (collection_fields $context | get field | each {|it| if ($it not-in $selected_fields) {$it}} | flatten)
+            return ($remaining_fields | prepend [WHERE])
+        }
+        WHERE => {
+            # If an operator is last argument suggest nothing
+            if ($last in $operators) {
+                return
             }
-            * => [WHERE]
-            WHERE => {}
-            _ => {
-                let $length = ($context | split words | length)
-                match $length {
-                    2 => [SELECT]
-                    3 => {collection_fields $context | get field | prepend *}
-                    _ => {
-                       let $used_fields = ($context | split words | skip 3)
-                       let $unused_fields = (collection_fields $context | get field | each {|it| if ($it not-in $used_fields) {$it}} | flatten | prepend WHERE)
-                       if (($unused_fields | length) == 0) {
-                            [WHERE]
-                       } else {
-                            $unused_fields
-                       }
-                    }
-                }
+
+            let $after_where = ($after_last_keyword | split row " ")
+
+             # WHERE x #operator y
+             # If an operator has been given after where but is not the last, then suggest AND
+             if (($after_last_keyword | split row " " | filter {|x| $x in $operators} | length) != 0) {
+                return [AND LIMIT]
+             }
+
+            # WHERE x
+            return $operators
+        }
+        AND => {
+            # If an operator is last argument suggest nothing
+            if ($last in $operators) {
+                return
             }
-         }
-     }
+
+            # If an operator has been given after AND but is not the last, then suggest AND LIMIT
+            if (($after_last_keyword | split row " " | filter {|x| $x in $operators} | length) != 0) {
+                # To do - should check if all fields have been used in conditions, if so only suggest LIMIT
+                return [AND LIMIT]
+            }
+
+            # AND x => $operators
+            return $operators
+        }
+        ANY => [IN]
+        EVERY => [IN]
+        IN => {
+            # Cases
+            # either
+            # IN y => [SATISFIES]
+            # IN x <operator> => Nothing
+            # IN x <operator> y
+            [SATISFIES]
+        }
+        SATISFIES => {
+            # If an operator is last argument suggest nothing
+            if ($last in $operators) {
+                return
+            }
+
+            # `Satisfies person.age <operator> <value> ` => END
+            if (($after_last_keyword | split row " " | filter {|x| $x in $operators} | length) != 0) {
+                return [END]
+            }
+
+            # `SATISFIES person.age ` => $operators
+            return $operators
+        }
+    }
 }
 
 def parse_after_where [fields: list] {
@@ -139,34 +181,47 @@ field15?: string@fields
 
 # TESTS
 # These need to be executed in the travel-sample.inventory scope
-
-def assert [expected: list, result: list] {
-    if (not ($expected == $result)) {
-        print (ansi red_bold) failed (ansi reset)
-        print "EXPECTED: " $expected
-        print "RESULT: " $result
-    } else {
-        print (ansi green_bold) passed (ansi reset)
-    }
-}
-
 export def fields_tests [] {
 
-    # All fields test
+    # Suggest collections after FROM
+    let $context = "FROM "
+    let $expected = [route landmark hotel airport airline]
+    print $context
+    assert $expected (fields $context)
+
+    # Suggest SELECT after collection with special characters
+    let $context = "FROM test_collection "
+    let $expected = [SELECT]
+    print $context
+    assert $expected (fields $context)
+
+    # Suggest list of fields after SELECT
     let $context = "FROM route SELECT "
     let $expected = [* airline airlineid destinationairport distance equipment id schedule sourceairport stops type]
     print $context
     assert $expected (fields $context)
 
-    # Wildcard test
-     let $context = "FROM route SELECT * "
-     let $expected = [WHERE]
-     print $context
-     assert $expected (fields $context)
+    # Suggest WHERE after *
+    let $context = "FROM route SELECT * "
+    let $expected = [WHERE]
+    print $context
+    assert $expected (fields $context)
+
+    # Suggest list of fields and WHERE after SELECT meta().id
+    let $context = "FROM route SELECT meta().id "
+    let $expected = [WHERE airline airlineid destinationairport distance equipment id schedule sourceairport stops type]
+    print $context
+    assert $expected (fields $context)
 
     # Don't suggest used fields
     let $context = "FROM route SELECT airline distance schedule type "
     let $expected = [WHERE airlineid destinationairport equipment id sourceairport stops]
+    print $context
+    assert $expected (fields $context)
+
+    # Suggest operators after WHERE meta().id
+    let $context = 'FROM hotel SELECT meta().id WHERE meta().id '
+    let $expected = $operators
     print $context
     assert $expected (fields $context)
 
@@ -177,10 +232,22 @@ export def fields_tests [] {
     assert $expected (fields $context)
 
     # Suggest operators after WHERE field
-    let $context = "FROM route SELECT airline distance schedule type WHERE airline "
+    let $context = "FROM route SELECT * WHERE airline "
     let $expected = $operators
     print $context
     assert $expected (fields $context)
+
+    # Suggest operator after WHERE field with spaces
+    let $context = "FROM route SELECT * WHERE `some field` "
+    let $expected = $operators
+    print $context
+    assert $expected (fields $context)
+
+    # Suggest operator after WHERE field with underscore
+     let $context = "FROM route SELECT * WHERE some_field "
+     let $expected = $operators
+     print $context
+     assert $expected (fields $context)
 
     # Suggest noting after operator
     let $context = "FROM route SELECT airline distance schedule type WHERE airline = "
@@ -217,12 +284,6 @@ export def fields_tests [] {
      let $expected = [EVERY ANY airlineid destinationairport distance equipment id schedule sourceairport stops]
      print $context
      assert $expected (fields $context)
-
-     # meta().id as condition value
-     let $context = 'FROM hotel SELECT meta().id WHERE meta().id '
-     let $expected = $operators
-      print $context
-      assert $expected (fields $context)
 
       # Empty list after ANY
       let $context = 'FROM hotel SELECT meta().id WHERE ANY '
@@ -274,6 +335,12 @@ export def fields_tests [] {
       print $context
       assert $expected (fields $context)
 
+      # SATISFIES after array field with multiple words
+      let $context = "FROM hotel SELECT meta().id WHERE ANY like IN public_likes "
+      let $expected = [SATISFIES]
+      print $context
+      assert $expected (fields $context)
+
       # Suggest nested fields after SATISFIES
       #let $context = 'FROM hotel SELECT meta().id WHERE ANY review IN reviews SATISFIES '
       #let $expected = [review.`author` review.`content` review.`date` review.ratings.`Business service` review.ratings.`Business service (e.g., internet access)` review.ratings.`Check in / front desk` review.ratings.`Cleanliness` review.ratings.`Location` review.ratings.`Overall`  review.ratings.`Rooms` review.ratings.`Service` review.ratings.`Sleep Quality` review.ratings.`Value`]
@@ -291,4 +358,20 @@ export def fields_tests [] {
       let $expected = [END]
       print $context
       assert $expected (fields $context)
+
+    # Value for SATISFIES condition contains spaces
+    let $context = "FROM hotel SELECT meta().id WHERE ANY like IN public_likes = 'Julius Tromp I' "
+    let $expected = [END]
+    print $context
+    assert $expected (fields $context)
+}
+
+def assert [expected: list, result: list] {
+    if (not ($expected == $result)) {
+        print (ansi red_bold) failed (ansi reset)
+        print "EXPECTED: " $expected
+        print "RESULT: " $result
+    } else {
+        print (ansi green_bold) passed (ansi reset)
+    }
 }
