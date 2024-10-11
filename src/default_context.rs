@@ -65,6 +65,7 @@ pub fn create_default_context() -> EngineState {
             Mut,
             Version,
             While,
+            Return,
         };
 
         // Charts, from nu_command
