@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Do not remove this test for UTF-8: if “Ω” doesn’t appear as greek uppercase omega letter
+enclosed in quotation marks, you should use an editor that supports UTF-8, not this one. -->
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+    <metadata>
+        <id>cbsh.portable</id>
+        <version>$version$</version>
+        <owners>Charles Dixon, Jack Westwood</owners>
+        <title>Couchbase Shell (Portable)</title>
+        <authors>Charles Dixon, Jack Westwood</authors>
+        <projectUrl>https://couchbase.sh</projectUrl>
+        <projectSourceUrl>https://github.com/couchbaselabs/couchbase-shell</projectSourceUrl>
+        <bugTrackerUrl>https://github.com/couchbaselabs/couchbase-shell/issues</bugTrackerUrl>
+        <tags>cli portable couchbase</tags>
+        <description>The modern and fun shell for Couchbase server and Cloud</description>
+        <releaseNotes>https://github.com/couchbaselabs/couchbase-shell/releases/tag/v$version$</releaseNotes>
+    </metadata>
+    <files>
+        <file src="./target/release/cbsh.exe" target="tools/cbsh.exe" />
+        <file src="NOTICES" target="tools/NOTICES.txt" />
+        <file src="LICENSE" target="tools/LICENSE.txt" />
+        <file src="LICENSE_AGREEMENT" target="tools/LICENSE_AGREEMENT.txt" />
+        <file src="README.md" target="tools/README.md" />
+    </files>
+</package>
