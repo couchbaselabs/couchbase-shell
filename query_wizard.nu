@@ -178,23 +178,24 @@ field15?: string@fields
     query $query
 }
 
-
 # TESTS
 # These need to be executed in the travel-sample.inventory scope
-export def fields_tests [] {
+# They are classified by the last key word present in the context
+export def FROM_tests [] {
+        # Expect list of collections after FROM
+        let $context = "FROM "
+        let $expected = [route landmark hotel airport airline]
+        print $context
+        assert $expected (fields $context)
 
-    # Suggest collections after FROM
-    let $context = "FROM "
-    let $expected = [route landmark hotel airport airline]
-    print $context
-    assert $expected (fields $context)
+        # Suggest SELECT after collection with special characters
+        let $context = "FROM test_collection "
+        let $expected = [SELECT]
+        print $context
+        assert $expected (fields $context)
+}
 
-    # Suggest SELECT after collection with special characters
-    let $context = "FROM test_collection "
-    let $expected = [SELECT]
-    print $context
-    assert $expected (fields $context)
-
+export def SELECT_tests [] {
     # Suggest list of fields after SELECT
     let $context = "FROM route SELECT "
     let $expected = [* airline airlineid destinationairport distance equipment id schedule sourceairport stops type]
@@ -219,20 +220,28 @@ export def fields_tests [] {
     print $context
     assert $expected (fields $context)
 
-    # Suggest operators after WHERE meta().id
-    let $context = 'FROM hotel SELECT meta().id WHERE meta().id '
-    let $expected = $operators
+    #Correctly detect used fields when meta().id present
+    let $context = "FROM route SELECT airline meta().id distance schedule type "
+    let $expected = [WHERE airlineid destinationairport equipment id sourceairport stops]
     print $context
     assert $expected (fields $context)
+}
 
+export def WHERE_tests [] {
     # Suggest all fields after where
     let $context = "FROM route SELECT airline distance schedule type WHERE "
     let $expected = [EVERY ANY airline airlineid destinationairport distance equipment id schedule sourceairport stops type]
     print $context
     assert $expected (fields $context)
 
-    # Suggest operators after WHERE field
+    # Suggest operators after field
     let $context = "FROM route SELECT * WHERE airline "
+    let $expected = $operators
+    print $context
+    assert $expected (fields $context)
+
+     # Suggest operators after WHERE meta().id
+    let $context = 'FROM hotel SELECT meta().id WHERE meta().id '
     let $expected = $operators
     print $context
     assert $expected (fields $context)
@@ -244,10 +253,10 @@ export def fields_tests [] {
     assert $expected (fields $context)
 
     # Suggest operator after WHERE field with underscore
-     let $context = "FROM route SELECT * WHERE some_field "
-     let $expected = $operators
-     print $context
-     assert $expected (fields $context)
+    let $context = "FROM route SELECT * WHERE some_field "
+    let $expected = $operators
+    print $context
+    assert $expected (fields $context)
 
     # Suggest noting after operator
     let $context = "FROM route SELECT airline distance schedule type WHERE airline = "
@@ -268,102 +277,139 @@ export def fields_tests [] {
     print $context
     assert $expected (fields $context)
 
+    # Condition value with spaces
+    let $context = 'FROM route SELECT airline distance schedule type WHERE airline = "Best Airline" '
+    let $expected = [AND LIMIT]
+    print $context
+    assert $expected (fields $context)
+}
+
+export def AND_tests [] {
     # Remove field once used in condition
+    let $context = "FROM route SELECT airline distance schedule type WHERE airline = someAirline AND "
+    let $expected = [EVERY ANY airlineid destinationairport distance equipment id schedule sourceairport stops type]
+    print $context
+    assert $expected (fields $context)
+
+    # Remove fields once used in condition
     let $context = "FROM route SELECT airline distance schedule type WHERE airline = someAirline AND type = someType AND "
     let $expected = [EVERY ANY airlineid destinationairport distance equipment id schedule sourceairport stops]
     print $context
     assert $expected (fields $context)
 
-    # Condition value with spaces
-     let $context = 'FROM route SELECT airline distance schedule type WHERE airline = "Best Airline" '
-     let $expected = [AND LIMIT]
-     print $context
-     assert $expected (fields $context)
+    # Condition values with spaces
+    let $context = 'FROM route SELECT airline distance schedule type WHERE airline = "Best Airline" AND type = "some things" AND '
+    let $expected = [EVERY ANY airlineid destinationairport distance equipment id schedule sourceairport stops]
+    print $context
+    assert $expected (fields $context)
+}
 
-     let $context = 'FROM route SELECT airline distance schedule type WHERE airline = "Best Airline" AND type = "some things" AND '
-     let $expected = [EVERY ANY airlineid destinationairport distance equipment id schedule sourceairport stops]
-     print $context
-     assert $expected (fields $context)
+export def ANY_tests [] {
+    # Empty list after ANY
+    let $context = 'FROM hotel SELECT meta().id WHERE ANY '
+    let $expected = null
+    let $result = ((fields $context) == $expected)
+    print $context
+    if (not $result) {
+        print (ansi red_bold) failed (ansi reset)
+        print "EXPECTED: " $expected
+        print "RESULT: " (fields $context)
+    } else {
+        print (ansi green_bold) passed (ansi reset)
+    }
 
-      # Empty list after ANY
-      let $context = 'FROM hotel SELECT meta().id WHERE ANY '
-      let $expected = null
-      let $result = ((fields $context) == $expected)
-      print $context
-      if (not $result) {
-          print (ansi red_bold) failed (ansi reset)
-          print "EXPECTED: " $expected
-          print "RESULT: " (fields $context)
-      } else {
-         print (ansi green_bold) passed (ansi reset)
-      }
+    # IN suggested after 'ANY x'
+    let $context = 'FROM hotel SELECT meta().id WHERE ANY review '
+    let $expected = [IN]
+    print $context
+    assert $expected (fields $context)
+}
 
-      # Empty list after ANY
-      let $context = 'FROM hotel SELECT meta().id WHERE EVERY '
-      let $expected = null
-      let $result = ((fields $context) == $expected)
-      print $context
-      if (not $result) {
-          print (ansi red_bold) failed (ansi reset)
-          print "EXPECTED: " $expected
-          print "RESULT: " (fields $context)
-      } else {
-         print (ansi green_bold) passed (ansi reset)
-      }
+export def EVERY_tests [] {
+    # Empty list after EVERY
+    let $context = 'FROM hotel SELECT meta().id WHERE EVERY '
+    let $expected = null
+    let $result = ((fields $context) == $expected)
+    print $context
+    if (not $result) {
+        print (ansi red_bold) failed (ansi reset)
+        print "EXPECTED: " $expected
+        print "RESULT: " (fields $context)
+    } else {
+        print (ansi green_bold) passed (ansi reset)
+    }
 
-      # IN suggested after EVERY
-      let $context = 'FROM hotel SELECT meta().id WHERE ANY review '
-      let $expected = [IN]
-      print $context
-      assert $expected (fields $context)
+    # IN suggested after 'EVERY x'
+    let $context = 'FROM hotel SELECT meta().id WHERE EVERY review '
+    let $expected = [IN]
+    print $context
+    assert $expected (fields $context)
+}
 
-      # IN suggested after EVERY
-      let $context = 'FROM hotel SELECT meta().id WHERE EVERY review '
-      let $expected = [IN]
-      print $context
-      assert $expected (fields $context)
+export def IN_tests [] {
+    # Suggest array fields after IN
+    let $context = 'FROM hotel SELECT meta().id WHERE EVERY review IN '
+    let $expected = [public_likes reviews]
+    print $context
+    assert $expected (fields $context)
 
-      # Suggest array fields after IN
-      let $context = 'FROM hotel SELECT meta().id WHERE EVERY review IN '
-      let $expected = [public_likes reviews]
-      print $context
-      assert $expected (fields $context)
+    # Suggest SATISFIES after IN array field
+    let $context = 'FROM hotel SELECT meta().id WHERE EVERY review IN reviews '
+    let $expected = [SATISFIES]
+    print $context
+    assert $expected (fields $context)
 
-      # Suggest SATISFIES after IN array field
-      let $context = 'FROM hotel SELECT meta().id WHERE EVERY review IN reviews '
-      let $expected = [SATISFIES]
-      print $context
-      assert $expected (fields $context)
+    # Suggest SATISFIES after IN array field with spaces
+    let $context = 'FROM hotel SELECT meta().id WHERE EVERY something IN "some array"'
+    let $expected = [SATISFIES]
+    print $context
+    assert $expected (fields $context)
 
-      # SATISFIES after array field with multiple words
-      let $context = "FROM hotel SELECT meta().id WHERE ANY like IN public_likes "
-      let $expected = [SATISFIES]
-      print $context
-      assert $expected (fields $context)
+    # Suggest SATISFIES after IN array field with underscore
+    let $context = 'FROM hotel SELECT meta().id WHERE EVERY something IN some_array'
+    let $expected = [SATISFIES]
+    print $context
+    assert $expected (fields $context)
+}
 
-      # Suggest nested fields after SATISFIES
-      #let $context = 'FROM hotel SELECT meta().id WHERE ANY review IN reviews SATISFIES '
-      #let $expected = [review.`author` review.`content` review.`date` review.ratings.`Business service` review.ratings.`Business service (e.g., internet access)` review.ratings.`Check in / front desk` review.ratings.`Cleanliness` review.ratings.`Location` review.ratings.`Overall`  review.ratings.`Rooms` review.ratings.`Service` review.ratings.`Sleep Quality` review.ratings.`Value`]
-      #print $context
-      #assert $expected (fields $context)
+export def SATISFIES_tests [] {
+    # Suggest nested fields after SATISFIES
+    #let $context = 'FROM hotel SELECT meta().id WHERE ANY review IN reviews SATISFIES '
+    #let $expected = [review.`author` review.`content` review.`date` review.ratings.`Business service` review.ratings.`Business service (e.g., internet access)` review.ratings.`Check in / front desk` review.ratings.`Cleanliness` review.ratings.`Location` review.ratings.`Overall`  review.ratings.`Rooms` review.ratings.`Service` review.ratings.`Sleep Quality` review.ratings.`Value`]
+    #print $context
+    #assert $expected (fields $context)
 
-      # Suggest operators after nested field in SATISFIES clause
-      let $context = 'FROM hotel SELECT meta().id WHERE EVERY review IN reviews SATISFIES review.ratings.`Service` '
-      let $expected = $operators
-      print $context
-      assert $expected (fields $context)
+    # Suggest operators after nested field in SATISFIES clause
+    let $context = 'FROM hotel SELECT meta().id WHERE EVERY review IN reviews SATISFIES review.ratings.`Service` '
+    let $expected = $operators
+    print $context
+    assert $expected (fields $context)
 
-      # Suggest END after SATISFIES completed
-      let $context = 'FROM hotel SELECT meta().id WHERE EVERY review IN reviews SATISFIES review.something LIKE asdf '
-      let $expected = [END]
-      print $context
-      assert $expected (fields $context)
-
-    # Value for SATISFIES condition contains spaces
-    let $context = "FROM hotel SELECT meta().id WHERE ANY like IN public_likes = 'Julius Tromp I' "
+    # Suggest END after SATISFIES completed
+    let $context = 'FROM hotel SELECT meta().id WHERE EVERY review IN reviews SATISFIES review.something = asdf '
     let $expected = [END]
     print $context
     assert $expected (fields $context)
+
+    # Suggest END after SATISFIES condidtion with spaces
+    let $context = 'FROM hotel SELECT meta().id WHERE EVERY review IN reviews SATISFIES review.something = "something else" '
+    let $expected = [END]
+    print $context
+    assert $expected (fields $context)
+}
+
+
+export def fields_tests [] {
+
+    FROM_tests
+    SELECT_tests
+    WHERE_tests
+    AND_tests
+    ANY_tests
+    EVERY_tests
+    IN_tests
+    SATISFIES_tests
+
 }
 
 def assert [expected: list, result: list] {
