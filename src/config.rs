@@ -3,9 +3,10 @@ use crate::state::Provider;
 use log::debug;
 use log::error;
 use serde::{Deserialize, Serialize};
-use std::fs;
+use std::fmt::Debug;
 use std::path::PathBuf;
 use std::time::Duration;
+use std::{fmt, fs};
 use toml::ser::Error;
 
 pub(crate) const DEFAULT_DATA_TIMEOUT: Duration = Duration::from_millis(5000);
@@ -293,7 +294,7 @@ impl CapellaOrganizationConfig {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct LLMConfig {
     identifier: String,
     api_key: Option<String>,
@@ -321,6 +322,18 @@ impl LLMConfig {
 
     pub fn chat_model(&self) -> Option<String> {
         self.chat_model.clone()
+    }
+}
+
+impl Debug for LLMConfig {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("OrganizationCredentials")
+            .field("identifier", &self.identifier)
+            .field("api_key", &self.api_key.clone().map(|_| "****".to_string()))
+            .field("provider", &self.provider)
+            .field("embed_model", &self.embed_model)
+            .field("chat_model", &self.chat_model)
+            .finish()
     }
 }
 
@@ -545,7 +558,7 @@ impl From<(String, &RemoteCluster)> for ClusterConfig {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct OrganizationCredentials {
     #[serde(default)]
     #[serde(rename(deserialize = "access-key", serialize = "access-key"))]
@@ -555,12 +568,33 @@ pub struct OrganizationCredentials {
     secret_key: String,
 }
 
+impl Debug for OrganizationCredentials {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("OrganizationCredentials")
+            .field("access_key", &"****")
+            .field("secret_key", &"****")
+            .finish()
+    }
+}
+
 impl OrganizationCredentials {}
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct ClusterCredentials {
     username: Option<String>,
     password: Option<String>,
+}
+
+impl Debug for ClusterCredentials {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ClusterCredentials")
+            .field("username", &self.username)
+            .field(
+                "password",
+                &self.password.clone().map(|_| "****".to_string()),
+            )
+            .finish()
+    }
 }
 
 impl ClusterCredentials {
