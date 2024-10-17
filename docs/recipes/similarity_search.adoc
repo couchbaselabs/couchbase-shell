@@ -33,9 +33,10 @@ Now that we have a set of docs containing vectors we can create a vector index o
 
 ```
 👤 Charlie 🏠 remote in ☁️ travel-sample._default._default
-> vector create-index landmark-content-index contentVector
+> vector create-index landmark-content-index contentVector 1536
 ```
 
+Note that the final parameter (dimension of vectors to be indexed) must match the dimension of the vectors in the documents, else no results will be returned when the index is queried.
 Once the index has finished building we can use it to perform similarity searches over all of the contentVector fields.
 This is done using the https://couchbase.sh/docs/#_vector_search[vector search] command as follows:
 

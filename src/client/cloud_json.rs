@@ -215,7 +215,7 @@ impl ClusterCreateRequest {
     ) -> Self {
         Self {
             name,
-            description: Some("A single node cluster created using cbshell".to_string()),
+            description: Some("A cluster created using cbshell".to_string()),
             configuration_type: None,
             cloud_provider: CloudProvider::new(&provider),
             couchbase_server: version.map(CouchbaseServer::new),
@@ -363,6 +363,40 @@ impl Cluster {
     }
     pub fn cmek_id(&self) -> Option<String> {
         self.cmek_id.clone()
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ColumnarClusterCreateRequest {
+    name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    description: Option<String>,
+    cloud_provider: String,
+    region: String,
+    nodes: i32,
+    support: Support,
+    compute: Compute,
+    availability: Availability,
+}
+
+impl ColumnarClusterCreateRequest {
+    pub fn new(name: String, num_of_nodes: i32) -> Self {
+        Self {
+            name,
+            description: Some("A Columnar analytics cluster created using cbshell".to_string()),
+            cloud_provider: "aws".into(),
+            region: "us-east-1".into(),
+            nodes: num_of_nodes,
+            support: Support {
+                plan: "developer pro".into(),
+                timezone: Some("ET".to_string()),
+            },
+            compute: Compute { cpu: 4, ram: 32 },
+            availability: Availability {
+                availability_type: "single".into(),
+            },
+        }
     }
 }
 
