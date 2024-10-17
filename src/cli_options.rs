@@ -6,9 +6,11 @@ use nu_protocol::{
     report_error, Category, Example, IntoPipelineData, PipelineData, ShellError, Signature,
     Spanned, SyntaxShape, Value,
 };
+use std::fmt;
+use std::fmt::Debug;
 use std::io::Write;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct CliOptions {
     pub conn_string: Option<String>,
     pub username: Option<String>,
@@ -28,6 +30,34 @@ pub struct CliOptions {
     pub logger_prefix: Option<String>,
     pub display_name: Option<String>,
     pub no_config_prompt: bool,
+}
+
+impl Debug for CliOptions {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CliOptions")
+            .field("conn_string", &self.conn_string)
+            .field("username", &self.username)
+            .field(
+                "password",
+                &self.password.clone().map(|_| "****".to_string()),
+            )
+            .field("cluster", &self.cluster)
+            .field("bucket", &self.bucket)
+            .field("scope", &self.scope)
+            .field("collection", &self.collection)
+            .field("command", &self.command)
+            .field("script", &self.script)
+            .field("stdin", &self.stdin)
+            .field("no_motd", &self.no_motd)
+            .field("disable_tls", &self.disable_tls)
+            .field("tls_cert_path", &self.tls_cert_path)
+            .field("tls_accept_all_certs", &self.tls_accept_all_certs)
+            .field("config_path", &self.config_path)
+            .field("logger_prefix", &self.logger_prefix)
+            .field("display_name", &self.display_name)
+            .field("no_config_prompt", &self.no_config_prompt)
+            .finish()
+    }
 }
 
 #[derive(Clone)]
