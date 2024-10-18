@@ -37,7 +37,7 @@ use log::{debug, warn};
 use log::{error, info};
 use serde::Deserialize;
 
-use nu_cli::{add_plugin_file, gather_parent_env_vars, read_plugin_file, EvaluateCommandsOpts};
+use nu_cli::{gather_parent_env_vars, read_plugin_file, EvaluateCommandsOpts};
 use nu_cmd_base::util::get_init_cwd;
 use nu_protocol::engine::{EngineState, Stack, StateWorkingSet};
 use nu_protocol::{
@@ -148,7 +148,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     if let Some(c) = opt.command {
         context.generate_nu_constant();
-        add_plugin_file(&mut context, None, CBSHELL_FOLDER);
+        read_plugin_file(&mut context, None, CBSHELL_FOLDER);
         let opts = EvaluateCommandsOpts {
             table_mode: None,
             error_style: None,
@@ -161,7 +161,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     if let Some(filepath) = opt.script {
         context.generate_nu_constant();
-        add_plugin_file(&mut context, None, CBSHELL_FOLDER);
+        read_plugin_file(&mut context, None, CBSHELL_FOLDER);
         nu_cli::evaluate_file(filepath, &args_to_script, &mut context, &mut stack, input)
             .expect("Failed to run script");
 
