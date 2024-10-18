@@ -63,6 +63,7 @@ pub fn create_default_context() -> EngineState {
             Match,
             Module,
             Mut,
+            Try,
             Version,
             While,
             Return,
@@ -385,6 +386,7 @@ pub fn create_default_context() -> EngineState {
         // Generators, from nu_command
         bind_command! {
             Cal,
+            Generate,
             Seq,
             SeqDate,
             SeqChar,
