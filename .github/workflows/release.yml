@@ -116,6 +116,15 @@ jobs:
           7z a -tzip ${{ env.RELEASE_BIN }}-${{ matrix.target }}.zip ./target/release/${{ env.RELEASE_BIN_WINDOWS }} ${{ env.RELEASE_ADDS }}
         if: matrix.os == 'windows-latest'
 
+      - name: Release windows build to NuGet
+        id: releasetonuget
+        run: |
+          choco pack cbsh.nuspec --version ${{ needs.build.outputs.version }}
+          ls
+          choco apikey --key ${{ secrets.ChocolateyKey }}  --source https://push.chocolatey.org/
+          choco push --source https://push.chocolatey.org/
+        if: matrix.os == 'windows-latest'
+
       - name: Create Debian amd package
         id: createdebianpkg
         run: |
