@@ -1,4 +1,5 @@
 # Couchbase Shell - Shell Yeah!
+
 ![CI](https://github.com/couchbaselabs/couchbase-shell/workflows/CI/badge.svg)
 
 Couchbase Shell (`cbsh`) is a modern, productive and fun shell for Couchbase Server and Cloud.
@@ -63,6 +64,16 @@ password = "password"
 After the config is in place, you can run `./cbsh` without any arguments and it will connect to that cluster after start automatically.
 
 The downloaded archive contains an `example` directory which also contains sample configuration files for more information. Also, please see the [docs](https://couchbase.sh/docs/) for full guidance, including information about how to work with multiple clusters at the same time.
+
+## Contributing
+
+Contributions and suggestions are always welcome. If you have suggestions/bugs feel free to file an issue.
+Looking for some issues to tackle yourself? Check the `good first issue` label for some more straightforward ones, or pick any that are of interest.
+If the issue is unclear or vague ask any questions in the comments, and we'll happily elaborate.
+
+Before your PR can be merged we require you to agree to a Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us the rights to use your contribution.
+This can be signed electronically here: https://review.couchbase.org/settings/#Agreements.
+Please use the same e-mail that is linked to your Github.
 
 # cbsh commands
 
