@@ -12,7 +12,7 @@ enclosed in quotation marks, you should use an editor that supports UTF-8, not t
         <projectSourceUrl>https://github.com/couchbaselabs/couchbase-shell</projectSourceUrl>
         <bugTrackerUrl>https://github.com/couchbaselabs/couchbase-shell/issues</bugTrackerUrl>
         <tags>cli portable couchbase</tags>
-        <description>The modern and fun shell for Couchbase server and Cloud</description>
+        <description>The modern and fun shell for Couchbase Server and Couchbase Capella</description>
         <releaseNotes>https://github.com/couchbaselabs/couchbase-shell/releases/tag/v$version$</releaseNotes>
     </metadata>
     <files>

@@ -137,7 +137,7 @@ jobs:
           Maintainer: jack.westwood@couchbase.com
           Architecture: ${{ matrix.arch }}
           Homepage: www.couchbase.sh
-          Description: The modern and fun shell for Couchbase Server and Cloud" > ./couchbase-shell_${{ steps.version.outputs.value }}_${{ matrix.target }}/DEBIAN/control
+          Description: The modern and fun shell for Couchbase Server and Couchbase Capella" > ./couchbase-shell_${{ steps.version.outputs.value }}_${{ matrix.target }}/DEBIAN/control
           cp {LICENSE,LICENSE_AGREEMENT,NOTICES,README.md} ./couchbase-shell_${{ steps.version.outputs.value }}_${{ matrix.target }}/usr/bin
           cp ./target/${{ matrix.target }}/release/${{ env.RELEASE_BIN }} ./couchbase-shell_${{ steps.version.outputs.value }}_${{ matrix.target }}/usr/bin
           dpkg --build ./couchbase-shell_${{ steps.version.outputs.value }}_${{ matrix.target }}
