@@ -42,10 +42,12 @@ use nu_cmd_base::util::get_init_cwd;
 use nu_protocol::engine::{EngineState, Stack, StateWorkingSet};
 use nu_protocol::{
     report_error_new, ByteStream, ByteStreamSource, ByteStreamType, IntoPipelineData, PipelineData,
-    Span, Value,
+    PluginIdentity, RegisteredPlugin, Span, Value,
 };
 
 use crate::client::{RustTlsConfig, CLOUD_URL};
+use nu_path::canonicalize_with;
+use nu_plugin_engine::{GetPlugin, PluginDeclaration};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::error::Error;
@@ -145,6 +147,32 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // This is throwing errors at me, looks like it's something in nu stdlib itself.
     // load_standard_library(&mut context).unwrap();
+    if let Some(plugins) = opt.plugins {
+        let mut working_set = StateWorkingSet::new(&context);
+        for plugin_filename in plugins {
+            // Make sure the plugin filenames are canonicalized
+            let filename = canonicalize_with(&plugin_filename, &init_cwd)?;
+
+            let identity = PluginIdentity::new(&filename, None)
+                .unwrap_or_else(|_| panic!("Invalid plugin name: {}", plugin_filename));
+
+            // Create the plugin and add it to the working set
+            let plugin = nu_plugin_engine::add_plugin_to_working_set(&mut working_set, &identity)?;
+
+            // Spawn the plugin to get the metadata and signatures
+            let interface = plugin.clone().get_plugin(None)?;
+
+            // Set its metadata
+            plugin.set_metadata(Some(interface.get_metadata()?));
+
+            // Add the commands from the signature to the working set
+            for signature in interface.get_signature()? {
+                let decl = PluginDeclaration::new(plugin.clone(), signature);
+                working_set.add_decl(Box::new(decl));
+            }
+        }
+        context.merge_delta(working_set.render())?;
+    }
 
     if let Some(c) = opt.command {
         context.generate_nu_constant();

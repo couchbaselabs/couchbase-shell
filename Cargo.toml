@@ -37,6 +37,7 @@ nu-path = { version = "0.95.0" }
 nu-cli = { version = "0.95.0", features = ["plugin"] }
 nu-engine = { version = "0.95.0" }
 nu-plugin = { version = "0.95.0" }
+nu-plugin-engine = { version = "0.95.0" }
 nu-system = { version = "0.95.0" }
 nu-utils = "0.95.0"
 num-traits = "0.2.19"
