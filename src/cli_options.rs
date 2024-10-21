@@ -30,6 +30,7 @@ pub struct CliOptions {
     pub logger_prefix: Option<String>,
     pub display_name: Option<String>,
     pub no_config_prompt: bool,
+    pub plugins: Option<Vec<String>>,
 }
 
 impl Debug for CliOptions {
@@ -56,6 +57,7 @@ impl Debug for CliOptions {
             .field("logger_prefix", &self.logger_prefix)
             .field("display_name", &self.display_name)
             .field("no_config_prompt", &self.no_config_prompt)
+            .field("plugins", &self.plugins)
             .finish()
     }
 }
@@ -158,6 +160,12 @@ impl Command for Cbsh {
                 "disable the prompt to create a new config",
                 None,
             )
+            .named(
+                "plugins",
+                SyntaxShape::List(Box::new(SyntaxShape::Filepath)),
+                " list of plugin executable files to load, separately from the registry file",
+                None,
+            )
             .category(Category::Custom("couchbase".to_string()))
     }
 
@@ -252,6 +260,7 @@ pub fn parse_commandline_args(
             let no_config_prompt = call.has_flag(context, &mut stack, "disable-config-prompt")?;
             let tls_accept_all_certs =
                 call.has_flag(context, &mut stack, "tls-accept-all-certs")?;
+            let plugins = call.get_flag(context, &mut stack, "plugins")?;
 
             fn extract_contents(
                 expression: Option<&Expression>,
@@ -320,6 +329,7 @@ pub fn parse_commandline_args(
                 display_name,
                 no_config_prompt,
                 tls_accept_all_certs,
+                plugins,
             });
         }
     }

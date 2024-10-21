@@ -1185,6 +1185,7 @@ dependencies = [
  "nu-parser",
  "nu-path",
  "nu-plugin",
+ "nu-plugin-engine",
  "nu-protocol",
  "nu-system",
  "nu-test-support",
