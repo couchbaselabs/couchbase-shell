@@ -59,6 +59,10 @@ impl ServerCertVerifier for InsecureCertVerifier {
 use trust_dns_resolver::config::{ResolverConfig, ResolverOpts};
 use trust_dns_resolver::Resolver;
 
+pub mod json_row_parser;
+pub mod json_row_stream;
+pub mod raw_json_row_streamer;
+
 pub fn try_lookup_srv(addr: String) -> Result<Vec<String>, String> {
     // NOTE: resolver is going to build its own runtime, which is a pain...
     // Construct a new Resolver with default configuration options
