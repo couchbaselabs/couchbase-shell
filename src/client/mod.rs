@@ -26,7 +26,7 @@ mod codec;
 mod crc;
 mod error;
 mod gemini_client;
-mod http_client;
+pub(crate) mod http_client;
 mod http_handler;
 mod kv;
 mod kv_client;

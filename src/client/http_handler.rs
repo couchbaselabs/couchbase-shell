@@ -2,6 +2,8 @@ use crate::cli::CtrlcFuture;
 use crate::client::error::ClientError;
 use crate::client::Endpoint;
 use crate::RustTlsConfig;
+use bytes::Bytes;
+use futures_core::Stream;
 use log::debug;
 use reqwest::ClientBuilder;
 use std::collections::HashMap;
@@ -205,5 +207,103 @@ impl HTTPHandler {
     ) -> Result<(String, u16), ClientError> {
         self.http_do(uri, HttpVerb::Put, payload, headers, deadline, ctrl_c)
             .await
+    }
+
+    // TO DO - add ctrlc cancellation
+    pub(crate) async fn http_post_stream(
+        &self,
+        uri: &str,
+        payload: Option<Vec<u8>>,
+        headers: HashMap<&str, &str>,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<
+        (
+            impl Stream<Item = Result<Bytes, reqwest::Error>> + Sized,
+            u16,
+        ),
+        ClientError,
+    > {
+        self.http_do_stream(uri, HttpVerb::Post, payload, headers, deadline, ctrl_c)
+            .await
+    }
+
+    pub async fn http_do_stream(
+        &self,
+        uri: &str,
+        method: HttpVerb,
+        payload: Option<Vec<u8>>,
+        headers: HashMap<&str, &str>,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<
+        (
+            impl Stream<Item = Result<Bytes, reqwest::Error>> + Sized,
+            u16,
+        ),
+        ClientError,
+    > {
+        let uri = format!("{}://{}", self.http_prefix(), uri);
+        let now = Instant::now();
+        if now >= deadline {
+            debug!("HTTP request timed out before sending {}", uri);
+            return Err(ClientError::Timeout { key: None });
+        }
+        let timeout = deadline.sub(now);
+        let ctrl_c_fut = CtrlcFuture::new(ctrl_c);
+
+        let mut client_builder = ClientBuilder::new();
+
+        if let Some(tls_config) = &self.tls_config {
+            client_builder = client_builder.use_preconfigured_tls(tls_config.config());
+        }
+
+        let client = client_builder.build().map_err(ClientError::from)?;
+        let mut res_builder = match method {
+            HttpVerb::Delete => client.delete(uri),
+            HttpVerb::Get => client.get(uri),
+            HttpVerb::Post => client.post(uri),
+            HttpVerb::Put => client.put(uri),
+        };
+
+        res_builder = res_builder
+            .basic_auth(&self.username, Some(&self.password))
+            .timeout(timeout);
+
+        for (key, value) in headers {
+            res_builder = res_builder.header(key, value);
+        }
+
+        if let Some(p) = payload {
+            res_builder = res_builder.body(p)
+        };
+
+        debug!("Performing http request {:?}", &res_builder);
+
+        let res_fut = res_builder.send();
+
+        select! {
+            result = res_fut => {
+                let response = match result {
+                    Ok(r) => Ok(r),
+                    Err(e) => {
+                        if e.is_timeout() {
+                            Err(ClientError::Timeout {
+                                key: None,
+                            })
+                        } else {
+                            Err(ClientError::RequestFailed {
+                                reason: Some(format!("{}", e)),
+                                key: None,
+                            })
+                        }
+                    }
+                }?;
+                let status = response.status().into();
+                let stream = response.bytes_stream();
+                Ok((stream, status))
+            },
+            () = ctrl_c_fut => Err(ClientError::Cancelled{key: None}),
+        }
     }
 }

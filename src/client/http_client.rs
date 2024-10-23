@@ -2,6 +2,8 @@ use crate::client::error::{ClientError, ConfigurationLoadFailedReason};
 use crate::client::http_handler::{HTTPHandler, HttpResponse, HttpVerb};
 use crate::client::kv_client::NodeExtConfig;
 use crate::RustTlsConfig;
+use bytes::Bytes;
+use futures_core::Stream;
 use log::{debug, trace};
 use rand::Rng;
 use serde::de::DeserializeOwned;
@@ -333,6 +335,61 @@ impl HTTPClient {
             };
 
             Ok(HttpResponse::new(content, status, seed))
+        })
+    }
+
+    pub async fn analytics_query_stream_request(
+        &self,
+        request: AnalyticsQueryRequest,
+        deadline: Instant,
+        ctrl_c: Arc<AtomicBool>,
+    ) -> Result<
+        (
+            impl Stream<Item = Result<Bytes, reqwest::Error>> + Sized,
+            u16,
+        ),
+        ClientError,
+    > {
+        let config: ClusterConfig = HTTPClient::get_config(
+            &self.seeds,
+            self.tls_enabled,
+            &self.http_client,
+            None,
+            deadline,
+            ctrl_c.clone(),
+        )
+        .await?;
+
+        let path = request.path();
+        if let Some(seed) = config.random_analytics_seed(self.tls_enabled) {
+            let uri = format!("{}:{}{}", seed.hostname(), seed.port(), &path);
+            let (stream, status) = match request.verb() {
+                // HttpVerb::Get => self.http_client.http_get(&uri, deadline, ctrl_c).await?,
+                HttpVerb::Post => {
+                    self.http_client
+                        .http_post_stream(
+                            &uri,
+                            request.payload(),
+                            request.headers(),
+                            deadline,
+                            ctrl_c,
+                        )
+                        .await?
+                }
+                _ => {
+                    return Err(ClientError::RequestFailed {
+                        reason: Some("Method not allowed for analytics queries".to_string()),
+                        key: None,
+                    });
+                }
+            };
+
+            return Ok((stream, status));
+        }
+
+        Err(ClientError::RequestFailed {
+            reason: Some("No nodes found for service".to_string()),
+            key: None,
         })
     }
 
@@ -1012,7 +1069,7 @@ impl Endpoint {
 }
 
 #[derive(Deserialize, Debug)]
-struct ClusterConfig {
+pub(crate) struct ClusterConfig {
     // rev: u64,
     #[serde(alias = "nodesExt")]
     nodes_ext: Vec<NodeExtConfig>,
@@ -1120,7 +1177,7 @@ impl ClusterConfig {
         self.random_seed(self.query_seeds(tls))
     }
 
-    fn random_analytics_seed(&self, tls: bool) -> Option<Endpoint> {
+    pub fn random_analytics_seed(&self, tls: bool) -> Option<Endpoint> {
         self.random_seed(self.analytics_seeds(tls))
     }
 
