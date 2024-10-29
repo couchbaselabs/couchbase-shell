@@ -85,13 +85,13 @@ fn buckets(
         _ => {
             return Err(unexpected_status_code_error(
                 response.status(),
-                response.content(),
+                response.content()?,
                 span,
             ));
         }
     }
 
-    let content = serde_json::from_str(response.content())
+    let content = serde_json::from_str(&response.content()?)
         .map_err(|e| deserialize_error(e.to_string(), span))?;
     let converted = convert_json_value_to_nu_value(&content, span)?;
 

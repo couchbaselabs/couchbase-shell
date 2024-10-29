@@ -1,9 +1,7 @@
 use crate::client::error::{ClientError, ConfigurationLoadFailedReason};
-use crate::client::http_handler::{HTTPHandler, HttpResponse, HttpVerb};
+use crate::client::http_handler::{read_stream, HTTPHandler, HttpStreamResponse, HttpVerb};
 use crate::client::kv_client::NodeExtConfig;
 use crate::RustTlsConfig;
-use bytes::Bytes;
-use futures_core::Stream;
 use log::{debug, trace};
 use rand::Rng;
 use serde::de::DeserializeOwned;
@@ -82,14 +80,14 @@ impl HTTPClient {
 
             debug!("Fetching config from {}", uri);
 
-            let (content, status) = match http_agent.http_get(&uri, deadline, ctrl_c.clone()).await
-            {
-                Ok((content, status)) => (content, status),
+            let (stream, status) = match http_agent.http_get(&uri, deadline, ctrl_c.clone()).await {
+                Ok((stream, status)) => (stream, status),
                 Err(e) => {
                     final_error_reason = Some(e.expanded_message());
                     continue;
                 }
             };
+            let content = read_stream(stream).await?;
             if status != 200 {
                 if !content.is_empty() {
                     final_error_reason = Some(content);
@@ -240,9 +238,9 @@ impl HTTPClient {
         request: ManagementRequest,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
-    ) -> Result<HttpResponse, ClientError> {
-        let rt = Runtime::new().unwrap();
-        rt.block_on(async {
+    ) -> Result<HttpStreamResponse, ClientError> {
+        let rt = Arc::new(Runtime::new().unwrap());
+        rt.clone().block_on(async {
             let config: ClusterConfig = HTTPClient::get_config(
                 &self.seeds,
                 self.tls_enabled,
@@ -256,7 +254,7 @@ impl HTTPClient {
             let path = request.path();
             if let Some(seed) = config.random_management_seed(self.tls_enabled) {
                 let uri = format!("{}:{}{}", seed.hostname(), seed.port(), &path);
-                let (content, status) = match request.verb() {
+                let (stream, status) = match request.verb() {
                     HttpVerb::Get => self.http_client.http_get(&uri, deadline, ctrl_c).await?,
                     HttpVerb::Post => {
                         self.http_client
@@ -272,7 +270,7 @@ impl HTTPClient {
                             .await?
                     }
                 };
-                return Ok(HttpResponse::new(content, status, seed));
+                return Ok(HttpStreamResponse::new(stream, status, seed, rt));
             }
 
             Err(ClientError::RequestFailed {
@@ -287,9 +285,9 @@ impl HTTPClient {
         request: QueryRequest,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
-    ) -> Result<HttpResponse, ClientError> {
-        let rt = Runtime::new().unwrap();
-        rt.block_on(async {
+    ) -> Result<HttpStreamResponse, ClientError> {
+        let rt = Arc::new(Runtime::new().unwrap());
+        rt.clone().block_on(async {
             let config: ClusterConfig = HTTPClient::get_config(
                 &self.seeds,
                 self.tls_enabled,
@@ -319,7 +317,7 @@ impl HTTPClient {
 
             let path = request.path();
             let uri = format!("{}:{}{}", seed.hostname(), seed.port(), &path);
-            let (content, status) = match request.verb() {
+            let (stream, status) = match request.verb() {
                 HttpVerb::Get => self.http_client.http_get(&uri, deadline, ctrl_c).await?,
                 HttpVerb::Post => {
                     self.http_client
@@ -334,62 +332,7 @@ impl HTTPClient {
                 }
             };
 
-            Ok(HttpResponse::new(content, status, seed))
-        })
-    }
-
-    pub async fn analytics_query_stream_request(
-        &self,
-        request: AnalyticsQueryRequest,
-        deadline: Instant,
-        ctrl_c: Arc<AtomicBool>,
-    ) -> Result<
-        (
-            impl Stream<Item = Result<Bytes, reqwest::Error>> + Sized,
-            u16,
-        ),
-        ClientError,
-    > {
-        let config: ClusterConfig = HTTPClient::get_config(
-            &self.seeds,
-            self.tls_enabled,
-            &self.http_client,
-            None,
-            deadline,
-            ctrl_c.clone(),
-        )
-        .await?;
-
-        let path = request.path();
-        if let Some(seed) = config.random_analytics_seed(self.tls_enabled) {
-            let uri = format!("{}:{}{}", seed.hostname(), seed.port(), &path);
-            let (stream, status) = match request.verb() {
-                // HttpVerb::Get => self.http_client.http_get(&uri, deadline, ctrl_c).await?,
-                HttpVerb::Post => {
-                    self.http_client
-                        .http_post_stream(
-                            &uri,
-                            request.payload(),
-                            request.headers(),
-                            deadline,
-                            ctrl_c,
-                        )
-                        .await?
-                }
-                _ => {
-                    return Err(ClientError::RequestFailed {
-                        reason: Some("Method not allowed for analytics queries".to_string()),
-                        key: None,
-                    });
-                }
-            };
-
-            return Ok((stream, status));
-        }
-
-        Err(ClientError::RequestFailed {
-            reason: Some("No nodes found for service".to_string()),
-            key: None,
+            Ok(HttpStreamResponse::new(stream, status, seed, rt))
         })
     }
 
@@ -398,9 +341,9 @@ impl HTTPClient {
         request: AnalyticsQueryRequest,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
-    ) -> Result<HttpResponse, ClientError> {
-        let rt = Runtime::new().unwrap();
-        rt.block_on(async {
+        rt: Arc<Runtime>,
+    ) -> Result<HttpStreamResponse, ClientError> {
+        rt.clone().block_on(async {
             let config: ClusterConfig = HTTPClient::get_config(
                 &self.seeds,
                 self.tls_enabled,
@@ -414,7 +357,7 @@ impl HTTPClient {
             let path = request.path();
             if let Some(seed) = config.random_analytics_seed(self.tls_enabled) {
                 let uri = format!("{}:{}{}", seed.hostname(), seed.port(), &path);
-                let (content, status) = match request.verb() {
+                let (stream, status) = match request.verb() {
                     HttpVerb::Get => self.http_client.http_get(&uri, deadline, ctrl_c).await?,
                     HttpVerb::Post => {
                         self.http_client
@@ -429,7 +372,7 @@ impl HTTPClient {
                     }
                 };
 
-                return Ok(HttpResponse::new(content, status, seed));
+                return Ok(HttpStreamResponse::new(stream, status, seed, rt));
             }
 
             Err(ClientError::RequestFailed {
@@ -444,9 +387,9 @@ impl HTTPClient {
         request: impl SearchQueryRequest,
         deadline: Instant,
         ctrl_c: Arc<AtomicBool>,
-    ) -> Result<HttpResponse, ClientError> {
-        let rt = Runtime::new().unwrap();
-        rt.block_on(async {
+    ) -> Result<HttpStreamResponse, ClientError> {
+        let rt = Arc::new(Runtime::new().unwrap());
+        rt.clone().block_on(async {
             let config: ClusterConfig = HTTPClient::get_config(
                 &self.seeds,
                 self.tls_enabled,
@@ -460,7 +403,7 @@ impl HTTPClient {
             let path = request.path();
             if let Some(seed) = config.random_search_seed(self.tls_enabled) {
                 let uri = format!("{}:{}{}", seed.hostname(), seed.port(), &path);
-                let (content, status) = match request.verb() {
+                let (stream, status) = match request.verb() {
                     HttpVerb::Post => {
                         self.http_client
                             .http_post(&uri, request.payload(), request.headers(), deadline, ctrl_c)
@@ -474,7 +417,7 @@ impl HTTPClient {
                     }
                 };
 
-                return Ok(HttpResponse::new(content, status, seed));
+                return Ok(HttpStreamResponse::new(stream, status, seed, rt));
             }
 
             Err(ClientError::RequestFailed {

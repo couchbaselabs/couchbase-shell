@@ -119,7 +119,7 @@ fn grab_bucket_names(
             ctrl_c,
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
-    let resp: Vec<BucketInfo> = serde_json::from_str(response.content())
+    let resp: Vec<BucketInfo> = serde_json::from_str(&response.content()?)
         .map_err(|e| deserialize_error(e.to_string(), span))?;
     Ok(resp.into_iter().map(|b| b.name).collect::<Vec<_>>())
 }
@@ -147,11 +147,11 @@ fn check_autofailover(
     if response.status() != 200 {
         return Err(unexpected_status_code_error(
             response.status(),
-            response.content(),
+            response.content()?,
             span,
         ));
     };
-    let resp: AutoFailoverSettings = serde_json::from_str(response.content())
+    let resp: AutoFailoverSettings = serde_json::from_str(&response.content()?)
         .map_err(|e| deserialize_error(e.to_string(), span))?;
 
     let mut collected = NuValueMap::default();
@@ -198,11 +198,11 @@ fn check_resident_ratio(
     if response.status() != 200 {
         return Err(unexpected_status_code_error(
             response.status(),
-            response.content(),
+            response.content()?,
             span,
         ));
     };
-    let resp: BucketStats = serde_json::from_str(response.content())
+    let resp: BucketStats = serde_json::from_str(&response.content()?)
         .map_err(|e| deserialize_error(e.to_string(), span))?;
     let ratio = match resp.op.samples.active_resident_ratios.last() {
         Some(r) => *r,

@@ -6,7 +6,6 @@ pub use crate::client::http_client::{
     AnalyticsQueryRequest, Endpoint, HTTPClient, ManagementRequest, QueryRequest,
     QueryTransactionRequest, TextSearchQueryRequest, VectorSearchQueryRequest,
 };
-pub use crate::client::http_handler::HttpResponse;
 pub use crate::client::kv_client::{KeyValueRequest, KvClient, KvResponse};
 pub use crate::client::tls::RustTlsConfig;
 use log::debug;
@@ -27,7 +26,7 @@ mod crc;
 mod error;
 mod gemini_client;
 pub(crate) mod http_client;
-mod http_handler;
+pub(crate) mod http_handler;
 mod kv;
 mod kv_client;
 mod llm_client;

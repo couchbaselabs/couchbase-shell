@@ -152,7 +152,7 @@ fn run(
         if response.status() != 200 {
             return Err(unexpected_status_code_error(
                 response.status(),
-                response.content(),
+                response.content()?,
                 span,
             ));
         }
@@ -198,7 +198,7 @@ fn get_bucket_uuid(
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
-    let content: serde_json::Map<String, Value> = serde_json::from_str(response.content())
+    let content: serde_json::Map<String, Value> = serde_json::from_str(&response.content()?)
         .map_err(|e| deserialize_error(e.to_string(), span))?;
     match content.get("uuid") {
         Some(id) => Ok(id.as_str().unwrap().to_string()),

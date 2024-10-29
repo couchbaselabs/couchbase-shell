@@ -146,8 +146,11 @@ fn query(
         guard.end_transaction();
     }
     let response = response?;
+    let status = response.status();
+    let endpoint = response.endpoint();
+    let content = response.content()?;
 
-    if is_http_status(&response, 200, span).is_err() {
+    if is_http_status(status, 200, content.clone(), span).is_err() {
         info!("Ending transaction due to non-200 status code");
         guard.end_transaction();
     };
@@ -160,20 +163,20 @@ fn query(
     };
 
     if statement_type == TransactionStatementType::Start {
-        if let Some(txid) = parse_txid(response.content(), span)? {
+        if let Some(txid) = parse_txid(&content, span)? {
             info!(
                 "Updating state to start transaction for {} on {}",
-                &txid,
-                response.endpoint()
+                &txid, endpoint
             );
-            guard.start_transaction(txid, response.endpoint())?;
+            guard.start_transaction(txid, endpoint)?;
         }
     }
 
     let results = handle_query_response(
         call.has_flag(engine_state, stack, "with-meta")?,
         guard.active(),
-        response,
+        status,
+        content,
         span,
     )?;
 

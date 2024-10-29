@@ -123,12 +123,13 @@ pub fn get_buckets(
     if response.status() != 200 {
         return Err(unexpected_status_code_error(
             response.status(),
-            response.content(),
+            response.content()?,
             span,
         ));
     }
 
-    let content: Vec<JSONBucketSettings> = serde_json::from_str(response.content())
+    let response_content = response.content()?;
+    let content: Vec<JSONBucketSettings> = serde_json::from_str(&response_content)
         .map_err(|e| deserialize_error(e.to_string(), span))?;
 
     let mut buckets: Vec<BucketSettings> = vec![];
@@ -136,7 +137,7 @@ pub fn get_buckets(
         buckets.push(BucketSettings::try_from(bucket).map_err(|e| {
             malformed_response_error(
                 "Could not parse bucket settings",
-                format!("Error: {}, response content: {}", e, response.content()),
+                format!("Error: {}, response content: {}", e, response_content),
                 span,
             )
         })?);

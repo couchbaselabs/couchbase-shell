@@ -84,18 +84,18 @@ fn nodes(
         if response.status() != 200 {
             return Err(unexpected_status_code_error(
                 response.status(),
-                response.content(),
+                response.content()?,
                 span,
             ));
         }
 
         let resp: PoolInfo = match response.status() {
-            200 => serde_json::from_str(response.content())
+            200 => serde_json::from_str(&response.content()?)
                 .map_err(|e| serialize_error(e.to_string(), call.span()))?,
             _ => {
                 return Err(unexpected_status_code_error(
                     response.status(),
-                    response.content(),
+                    response.content()?,
                     call.span(),
                 ));
             }

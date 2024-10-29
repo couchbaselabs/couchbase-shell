@@ -206,7 +206,7 @@ pub fn create_server_bucket(
     if response.status() != 202 {
         return Err(unexpected_status_code_error(
             response.status(),
-            response.content(),
+            response.content()?,
             span,
         ));
     }

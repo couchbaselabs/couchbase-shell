@@ -95,7 +95,8 @@ fn run(
         results.extend(handle_query_response(
             call.has_flag(engine_state, stack, "with-meta")?,
             identifier.clone(),
-            response,
+            response.status(),
+            response.content()?,
             span,
         )?);
     }

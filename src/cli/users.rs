@@ -89,15 +89,13 @@ fn users_get_all(
             )
             .map_err(|e| client_error_to_shell_error(e, span))?;
 
-        let users: Vec<UserAndMetadata> = match response.status() {
-            200 => serde_json::from_str(response.content())
+        let status = response.status();
+        let content = response.content()?;
+        let users: Vec<UserAndMetadata> = match status {
+            200 => serde_json::from_str(&content)
                 .map_err(|e| deserialize_error(e.to_string(), call.span()))?,
             _ => {
-                return Err(unexpected_status_code_error(
-                    response.status(),
-                    response.content(),
-                    call.span(),
-                ));
+                return Err(unexpected_status_code_error(status, content, call.span()));
             }
         };
 

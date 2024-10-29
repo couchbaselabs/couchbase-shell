@@ -13,6 +13,7 @@ use nu_protocol::{
 };
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
+use tokio::runtime::Runtime;
 use tokio::time::Instant;
 
 #[derive(Clone)]
@@ -82,6 +83,7 @@ fn pending_mutations(
                 AnalyticsQueryRequest::PendingMutations,
                 Instant::now().add(active_cluster.timeouts().analytics_timeout()),
                 ctrl_c.clone(),
+                Arc::new(Runtime::new().unwrap()),
             )
             .map_err(|e| client_error_to_shell_error(e, span))?;
 
@@ -90,13 +92,13 @@ fn pending_mutations(
             _ => {
                 return Err(unexpected_status_code_error(
                     response.status(),
-                    response.content(),
+                    response.content()?,
                     span,
                 ));
             }
         }
 
-        let content: serde_json::Value = serde_json::from_str(response.content())
+        let content: serde_json::Value = serde_json::from_str(&response.content()?)
             .map_err(|e| deserialize_error(e.to_string(), span))?;
         let converted = &mut convert_row_to_nu_value(&content, span, identifier.clone())?;
         results.append(converted);

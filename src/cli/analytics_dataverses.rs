@@ -1,4 +1,4 @@
-use crate::cli::analytics::do_analytics_query;
+use crate::cli::analytics::{read_analytics_response, send_analytics_query};
 use crate::cli::util::{cluster_identifiers_from, get_active_cluster};
 use crate::state::State;
 use log::debug;
@@ -9,6 +9,7 @@ use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
 };
 use std::sync::{Arc, Mutex};
+use tokio::runtime::Runtime;
 
 #[derive(Clone)]
 pub struct AnalyticsDataverses {
@@ -73,13 +74,18 @@ fn dataverses(
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
-
-        results.extend(do_analytics_query(
-            identifier.clone(),
+        let resp = send_analytics_query(
             active_cluster,
             None,
             statement,
             ctrl_c.clone(),
+            span,
+            Arc::new(Runtime::new().unwrap()),
+        )?;
+
+        results.extend(read_analytics_response(
+            identifier.clone(),
+            resp,
             span,
             with_meta,
             false,

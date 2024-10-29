@@ -97,15 +97,13 @@ fn run_async(
             )
             .map_err(|e| client_error_to_shell_error(e, span))?;
 
-        let roles: Vec<RoleAndDescription> = match response.status() {
-            200 => serde_json::from_str(response.content())
+        let status = response.status();
+        let content = response.content()?;
+        let roles: Vec<RoleAndDescription> = match status {
+            200 => serde_json::from_str(&content)
                 .map_err(|e| deserialize_error(e.to_string(), span))?,
             _ => {
-                return Err(unexpected_status_code_error(
-                    response.status(),
-                    response.content(),
-                    call.span(),
-                ));
+                return Err(unexpected_status_code_error(status, content, call.span()));
             }
         };
 

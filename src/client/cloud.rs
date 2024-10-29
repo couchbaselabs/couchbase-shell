@@ -5,7 +5,6 @@ use crate::client::cloud_json::{
 };
 use crate::client::error::ClientError;
 use crate::client::http_handler::{HttpResponse, HttpVerb};
-use crate::client::Endpoint;
 use base64::prelude::BASE64_STANDARD;
 use base64::{engine::general_purpose, Engine as _};
 use hmac::{Hmac, Mac};
@@ -165,12 +164,7 @@ impl CapellaClient {
             }
             HttpVerb::Put => self.http_put(request.path().as_str(), request.payload(), ctrl_c)?,
         };
-        // This endpoint is pretty undenyably a hack, but doesn't really matter for now.
-        Ok(HttpResponse::new(
-            content,
-            status,
-            Endpoint::new(self.api_endpoint.to_string(), 443),
-        ))
+        Ok(HttpResponse::new(content, status))
     }
 
     pub fn list_organizations(

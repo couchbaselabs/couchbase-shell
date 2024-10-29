@@ -190,7 +190,7 @@ fn update_server_bucket(
     if response.status() != 200 {
         return Err(unexpected_status_code_error(
             response.status(),
-            response.content(),
+            response.content()?,
             span,
         ));
     }

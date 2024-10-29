@@ -94,7 +94,7 @@ fn users_drop(
             _ => {
                 return Err(unexpected_status_code_error(
                     response.status(),
-                    response.content(),
+                    response.content()?,
                     call.span(),
                 ));
             }
