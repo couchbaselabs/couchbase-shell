@@ -151,12 +151,12 @@ fn get_server_scopes(
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
     let manifest: Manifest = match response.status() {
-        200 => serde_json::from_str(response.content())
+        200 => serde_json::from_str(&response.content()?)
             .map_err(|e| deserialize_error(e.to_string(), span))?,
         _ => {
             return Err(unexpected_status_code_error(
                 response.status(),
-                response.content(),
+                response.content()?,
                 span,
             ));
         }

@@ -3,7 +3,7 @@ use crate::state::State;
 
 use crate::cli::buckets_builder::{BucketSettings, JSONBucketSettings};
 use crate::cli::util::{cluster_identifiers_from, get_active_cluster, NuValueMap};
-use crate::client::{HttpResponse, ManagementRequest};
+use crate::client::ManagementRequest;
 use log::debug;
 use std::convert::TryFrom;
 use std::ops::Add;
@@ -122,43 +122,37 @@ pub fn get_server_bucket(
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
-    check_response(&response, bucket.clone(), span)?;
+    let status = response.status();
+    let content = response.content()?;
+    check_response(status, content.clone(), bucket.clone(), span)?;
 
-    let json: JSONBucketSettings = serde_json::from_str(response.content())
-        .map_err(|e| deserialize_error(e.to_string(), span))?;
+    let json: JSONBucketSettings =
+        serde_json::from_str(&content).map_err(|e| deserialize_error(e.to_string(), span))?;
 
     BucketSettings::try_from(json).map_err(|e| {
         malformed_response_error(
             "Could not parse bucket settings",
-            format!("Error: {}, response content: {:?}", e, response.content()),
+            format!("Error: {}, response content: {:?}", e, content),
             span,
         )
     })
 }
 
 pub(crate) fn check_response(
-    response: &HttpResponse,
+    status: u16,
+    content: String,
     bucket: String,
     span: Span,
 ) -> Result<(), ShellError> {
-    match response.status() {
+    match status {
         200 => {}
         404 => {
-            if response
-                .content()
-                .to_string()
-                .to_lowercase()
-                .contains("resource not found")
-            {
+            if content.to_lowercase().contains("resource not found") {
                 return Err(bucket_not_found_error(bucket, span));
             }
         }
         _ => {
-            return Err(unexpected_status_code_error(
-                response.status(),
-                response.content(),
-                span,
-            ));
+            return Err(unexpected_status_code_error(status, content, span));
         }
     };
     Ok(())

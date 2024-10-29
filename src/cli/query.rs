@@ -3,7 +3,7 @@ use crate::cli::util::{
     cluster_identifiers_from, convert_row_to_nu_value, duration_to_golang_string,
     get_active_cluster, is_http_status,
 };
-use crate::client::{HttpResponse, QueryRequest, QueryTransactionRequest};
+use crate::client::{QueryRequest, QueryTransactionRequest};
 use crate::state::State;
 use log::debug;
 use std::collections::HashMap;
@@ -18,6 +18,7 @@ use crate::cli::error::{
     QueryErrorReason,
 };
 use crate::cli::generic_error;
+use crate::client::http_handler::HttpStreamResponse;
 use crate::RemoteCluster;
 use nu_engine::CallExt;
 use nu_protocol::ast::Call;
@@ -162,10 +163,12 @@ fn query(
         )?;
         drop(guard);
 
+        let status = response.status();
         results.extend(handle_query_response(
             call.has_flag(engine_state, stack, "with-meta")?,
             identifier.clone(),
-            response,
+            status,
+            response.content()?,
             span,
         )?);
     }
@@ -195,7 +198,7 @@ pub fn send_query(
     timeout: impl Into<Option<Duration>>,
     span: Span,
     transaction: impl Into<Option<QueryTransactionRequest>>,
-) -> Result<HttpResponse, ShellError> {
+) -> Result<HttpStreamResponse, ShellError> {
     let timeout = timeout.into().unwrap_or(cluster.timeouts().query_timeout());
     let response = cluster
         .cluster()
@@ -219,19 +222,20 @@ pub fn send_query(
 pub fn handle_query_response(
     with_meta: bool,
     identifier: String,
-    response: HttpResponse,
+    response_status: u16,
+    content: String,
     span: Span,
 ) -> Result<Vec<Value>, ShellError> {
-    is_http_status(&response, 200, span)?;
+    is_http_status(response_status, 200, content.clone(), span)?;
 
     let mut results: Vec<Value> = vec![];
     if with_meta {
-        let content: serde_json::Value = serde_json::from_str(response.content())
+        let content: serde_json::Value = serde_json::from_str(&content.clone())
             .map_err(|e| deserialize_error(e.to_string(), span))?;
         results.append(&mut convert_row_to_nu_value(&content, span, identifier)?);
     } else {
-        let content: HashMap<String, serde_json::Value> = serde_json::from_str(response.content())
-            .map_err(|e| deserialize_error(e.to_string(), span))?;
+        let content: HashMap<String, serde_json::Value> =
+            serde_json::from_str(&content).map_err(|e| deserialize_error(e.to_string(), span))?;
         if let Some(content_errors) = content.get("errors") {
             return if let Some(arr) = content_errors.as_array() {
                 if arr.len() == 1 {

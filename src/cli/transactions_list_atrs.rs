@@ -123,14 +123,14 @@ impl Command for TransactionsListAtrs {
             _ => {
                 return Err(unexpected_status_code_error(
                     response.status(),
-                    response.content(),
+                    response.content()?,
                     span,
                 ));
             }
         }
 
         let mut content: HashMap<String, serde_json::Value> =
-            serde_json::from_str(response.content())
+            serde_json::from_str(&response.content()?)
                 .map_err(|e| deserialize_error(e.to_string(), span))?;
         let removed = if content.contains_key("errors") {
             content.remove("errors").unwrap()

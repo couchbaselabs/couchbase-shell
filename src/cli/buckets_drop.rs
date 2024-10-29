@@ -122,7 +122,7 @@ fn drop_server_bucket(
 
     if response.status() != 200 {
         Err(ClientError::RequestFailed {
-            reason: Some(response.content().into()),
+            reason: Some(response.content()?),
             key: None,
         })
         .map_err(|e| client_error_to_shell_error(e, span))?;

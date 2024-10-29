@@ -152,12 +152,10 @@ fn drop_server_scope(
 
     match response.status() {
         200 => Ok(()),
-        _ => {
-            return Err(unexpected_status_code_error(
-                response.status(),
-                response.content(),
-                span,
-            ));
-        }
+        _ => Err(unexpected_status_code_error(
+            response.status(),
+            response.content()?,
+            span,
+        )),
     }
 }

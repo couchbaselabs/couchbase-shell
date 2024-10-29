@@ -6,7 +6,7 @@ use crate::cli::error::{
 use crate::cli::generic_error;
 use crate::cli::CBShellError::ClusterNotFound;
 use crate::client::cloud_json::Cluster;
-use crate::client::{CapellaClient, HttpResponse};
+use crate::client::CapellaClient;
 use crate::state::State;
 use crate::{read_input, RemoteCluster, RemoteClusterType};
 use nu_engine::CallExt;
@@ -21,13 +21,14 @@ use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 
-pub fn is_http_status(response: &HttpResponse, status: u16, span: Span) -> Result<(), ShellError> {
-    if response.status() != status {
-        return Err(unexpected_status_code_error(
-            response.status(),
-            response.content(),
-            span,
-        ));
+pub fn is_http_status(
+    response_status: u16,
+    status: u16,
+    content: String,
+    span: Span,
+) -> Result<(), ShellError> {
+    if response_status != status {
+        return Err(unexpected_status_code_error(response_status, content, span));
     }
 
     Ok(())

@@ -403,6 +403,9 @@ pub fn analytics_error(
     .into()
 }
 
-pub fn client_error_to_shell_error(error: ClientError, span: Span) -> ShellError {
+pub fn client_error_to_shell_error(
+    error: ClientError,
+    span: impl Into<Option<Span>>,
+) -> ShellError {
     generic_error(error.message(), error.expanded_message(), span)
 }

@@ -227,16 +227,13 @@ fn run(
             )
             .map_err(|e| client_error_to_shell_error(e, span))?;
 
-        let rows: SearchResultData = match response.status() {
-            200 => serde_json::from_str(response.content()).map_err(|_e| {
-                unexpected_status_code_error(response.status(), response.content(), span)
-            })?,
+        let status = response.status();
+        let content = response.content()?;
+        let rows: SearchResultData = match status {
+            200 => serde_json::from_str(&content)
+                .map_err(|_e| unexpected_status_code_error(status, content, span))?,
             _ => {
-                return Err(unexpected_status_code_error(
-                    response.status(),
-                    response.content(),
-                    span,
-                ));
+                return Err(unexpected_status_code_error(status, content, span));
             }
         };
 

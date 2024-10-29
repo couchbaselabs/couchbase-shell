@@ -118,7 +118,8 @@ fn query(
         results.extend(handle_query_response(
             call.has_flag(engine_state, stack, "with-meta")?,
             identifier.clone(),
-            response,
+            response.status(),
+            response.content()?,
             span,
         )?);
     }
@@ -173,13 +174,13 @@ fn index_definitions(
         _ => {
             return Err(unexpected_status_code_error(
                 response.status(),
-                response.content(),
+                response.content()?,
                 span,
             ));
         }
     }
 
-    let defs: IndexStatus = serde_json::from_str(response.content())
+    let defs: IndexStatus = serde_json::from_str(&response.content()?)
         .map_err(|e| deserialize_error(e.to_string(), span))?;
     let n = defs
         .indexes

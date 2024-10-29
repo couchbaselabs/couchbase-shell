@@ -47,37 +47,45 @@ impl Stream for JsonRowStream {
         let this = self.get_mut();
         loop {
             match this.state {
-                State::Collecting => match this.parser.parse_next() {
-                    // We got a value from the parser, propagate it
-                    Ok(Some(value)) => return Poll::Ready(Some(Ok(value))),
-                    // The parser didn't return a value, so poll the I/O stream to see if it's done
-                    Ok(None) => match Pin::new(&mut this.stream).poll_next(cx) {
-                        // The I/O stream isn't done yet, but no data is available
-                        Poll::Pending => return Poll::Pending,
-                        // A chunk is ready from the I/O stream, push it to the parser
-                        Poll::Ready(Some(Ok(chunk))) => {
-                            this.parser.push(&chunk[..]);
-                            continue;
-                        }
-                        // The I/O Stream is finished, and the parser returned None, we're done.
-                        Poll::Ready(None) => return Poll::Ready(None),
-                        // The I/O stream errored, propagate the error
-                        Poll::Ready(Some(Err(e))) => {
+                State::Collecting => {
+                    match this.parser.parse_next() {
+                        // We got a value from the parser, propagate it
+                        Ok(Some(value)) => return Poll::Ready(Some(Ok(value))),
+                        // The parser didn't return a value, so poll the I/O stream to see if it's done
+                        Ok(None) => match Pin::new(&mut this.stream).poll_next(cx) {
+                            // The I/O stream isn't done yet, but no data is available
+                            Poll::Pending => return Poll::Pending,
+                            // A chunk is ready from the I/O stream, push it to the parser
+                            Poll::Ready(Some(Ok(chunk))) => {
+                                this.parser.push(&chunk[..]);
+                                continue;
+                            }
+                            // The I/O Stream is finished, and the parser returned None, we're done.
+                            Poll::Ready(None) => return Poll::Ready(None),
+                            // The I/O stream errored, propagate the error
+                            Poll::Ready(Some(Err(e))) => {
+                                let err = if e.is_timeout() {
+                                    format!("{}: request timed out - timeouts can be changed through config file or using 'cb-env timeout'", e)
+                                } else {
+                                    format!("{}: {:?}", e, e)
+                                };
+
+                                this.state = State::Done;
+                                return Poll::Ready(Some(Err(ShellError::GenericError {
+                                    error: err,
+                                    msg: "".to_string(),
+                                    span: None,
+                                    help: None,
+                                    inner: vec![],
+                                })));
+                            }
+                        },
+                        Err(e) => {
                             this.state = State::Done;
-                            return Poll::Ready(Some(Err(ShellError::GenericError {
-                                error: e.to_string(),
-                                msg: "".to_string(),
-                                span: None,
-                                help: None,
-                                inner: vec![],
-                            })));
+                            return Poll::Ready(Some(Err(e)));
                         }
-                    },
-                    Err(e) => {
-                        this.state = State::Done;
-                        return Poll::Ready(Some(Err(e)));
                     }
-                },
+                }
                 State::Done => return Poll::Ready(None),
             }
         }

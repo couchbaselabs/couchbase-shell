@@ -97,7 +97,7 @@ fn buckets_flush(
             200 => {}
             404 => {
                 if result
-                    .content()
+                    .content()?
                     .to_string()
                     .to_lowercase()
                     .contains("resource not found")
@@ -108,7 +108,7 @@ fn buckets_flush(
             _ => {
                 return Err(unexpected_status_code_error(
                     result.status(),
-                    result.content(),
+                    result.content()?,
                     span,
                 ));
             }

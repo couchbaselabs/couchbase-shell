@@ -150,22 +150,24 @@ fn load_sever_sample(
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
-    match response.status() {
+    let status = response.status();
+    let content = response.content()?;
+    match status {
         202 => Ok(()),
         400 => {
-            if response.content().contains("already loaded") {
+            if content.contains("already loaded") {
                 Err(ClientError::SampleAlreadyLoaded { sample })
-            } else if response.content().contains("not a valid sample") {
+            } else if content.contains("not a valid sample") {
                 Err(ClientError::InvalidSample { sample })
             } else {
                 Err(ClientError::RequestFailed {
-                    reason: Some(response.content().into()),
+                    reason: Some(content),
                     key: None,
                 })
             }
         }
         _ => Err(ClientError::RequestFailed {
-            reason: Some(response.content().into()),
+            reason: Some(content),
             key: None,
         }),
     }
