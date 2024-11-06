@@ -3169,6 +3169,7 @@ dependencies = [
  "log",
  "nu-engine",
  "nu-path",
+ "nu-plugin-engine",
  "nu-protocol",
  "serde_json",
 ]
