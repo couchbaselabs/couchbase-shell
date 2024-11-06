@@ -30,7 +30,7 @@ nu-cmd-base = { version = "0.95.0" }
 nu-cmd-extra = { version = "0.95.0" }
 nu-cmd-lang = { version = "0.95.0" }
 nu-cmd-plugin = { version = "0.95.0" }
-nu-command = { version = "0.95.0" }
+nu-command = { version = "0.95.0", features = ["plugin"] }
 nu-explore = { version = "0.95.0" }
 nu-parser = { version = "0.95.0" }
 nu-path = { version = "0.95.0" }
