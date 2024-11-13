@@ -44,7 +44,7 @@ impl Command for BucketsDrop {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Drops buckets through the HTTP API"
     }
 

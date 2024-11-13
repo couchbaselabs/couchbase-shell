@@ -41,7 +41,7 @@ impl Command for Nodes {
         )
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Lists all nodes of the connected cluster"
     }
 

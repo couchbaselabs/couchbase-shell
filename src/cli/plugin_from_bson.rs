@@ -25,7 +25,7 @@ impl WholeStreamCommand for PluginFromBson {
         self.signature.name.as_str()
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         self.signature.usage.as_str()
     }
 

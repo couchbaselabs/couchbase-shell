@@ -17,7 +17,7 @@ impl nu_engine::WholeStreamCommand for Data {
         Signature::build("data")
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Performs operations against the data service"
     }
 

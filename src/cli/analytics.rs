@@ -68,7 +68,7 @@ impl Command for Analytics {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Performs an analytics query"
     }
 

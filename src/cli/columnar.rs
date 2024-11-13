@@ -15,7 +15,7 @@ impl Command for Columnar {
         Signature::build("columnar").category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Perform mangement operations against Columnar analytics clusters"
     }
 

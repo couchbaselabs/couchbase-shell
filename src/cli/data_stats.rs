@@ -44,7 +44,7 @@ impl nu_engine::WholeStreamCommand for DataStats {
             )
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Loads Key/Value statistics from the cluster"
     }
 

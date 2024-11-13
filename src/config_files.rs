@@ -9,7 +9,7 @@ pub(crate) const CBSHELL_FOLDER: &str = "CouchbaseShell";
 const CONFIG_FILE: &str = "config.nu";
 
 pub(crate) fn read_nu_config_file(engine_state: &mut EngineState, stack: &mut Stack) {
-    if let Some(mut config_path) = nu_path::config_dir() {
+    if let Some(mut config_path) = nu_path::nu_config_dir() {
         config_path.push(CBSHELL_FOLDER);
 
         if !config_path.exists() {

@@ -33,7 +33,7 @@ impl Command for UseCapellaOrganization {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Sets the active capella organization based on its identifier"
     }
 

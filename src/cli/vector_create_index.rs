@@ -72,7 +72,7 @@ impl Command for VectorCreateIndex {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Creates a vector index"
     }
 

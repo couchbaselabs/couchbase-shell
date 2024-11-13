@@ -63,7 +63,7 @@ impl Command for CollectionsCreate {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Creates collections through the HTTP API"
     }
 

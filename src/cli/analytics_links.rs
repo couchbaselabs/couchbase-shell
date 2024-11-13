@@ -39,7 +39,7 @@ impl Command for AnalyticsLinks {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Lists all analytics links"
     }
 

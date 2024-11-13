@@ -30,7 +30,7 @@ impl Command for UseScope {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Sets the active scope based on its name"
     }
 

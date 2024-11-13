@@ -4,7 +4,7 @@ use nu_parser::{escape_quote_string, parse};
 use nu_protocol::ast::{Expr, Expression, PipelineElement};
 use nu_protocol::engine::{Command, EngineState, Stack, StateWorkingSet};
 use nu_protocol::{
-    report_error, Category, Example, IntoPipelineData, PipelineData, ShellError, Signature,
+    report_parse_error, Category, Example, IntoPipelineData, PipelineData, ShellError, Signature,
     Spanned, SyntaxShape, Value,
 };
 use std::fmt;
@@ -73,7 +73,7 @@ impl Command for Cbsh {
 
     fn signature(&self) -> Signature {
         Signature::build("cbsh")
-            .usage("The Couchbase Shell.")
+            .description("The Couchbase Shell.")
             .named(
                 "connstr",
                 SyntaxShape::String,
@@ -170,7 +170,7 @@ impl Command for Cbsh {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Alternative Shell and UI for Couchbase Server and Capella."
     }
 
@@ -214,7 +214,7 @@ pub fn parse_commandline_args(
 
         let output = parse(&mut working_set, None, commandline_args.as_bytes(), false);
         if let Some(err) = working_set.parse_errors.first() {
-            report_error(&working_set, err);
+            report_parse_error(&working_set, err);
 
             std::process::exit(1);
         }

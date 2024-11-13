@@ -49,7 +49,7 @@ impl Command for Buckets {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Perform bucket management operations"
     }
 

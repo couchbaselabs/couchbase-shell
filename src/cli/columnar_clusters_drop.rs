@@ -41,7 +41,7 @@ impl Command for ColumnarClustersDrop {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Deletes a Columnar analytics clusters from the active Capella organization"
     }
 

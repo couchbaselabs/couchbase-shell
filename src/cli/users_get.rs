@@ -47,7 +47,7 @@ impl Command for UsersGet {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Fetches a user"
     }
 

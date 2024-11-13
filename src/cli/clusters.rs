@@ -42,7 +42,7 @@ impl Command for Clusters {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Lists all clusters on the active Capella organisation"
     }
 

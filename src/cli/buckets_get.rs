@@ -52,7 +52,7 @@ impl Command for BucketsGet {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Fetches buckets through the HTTP API"
     }
 

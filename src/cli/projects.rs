@@ -32,7 +32,7 @@ impl Command for Projects {
             .switch("audit", "display audit data for the projects", None)
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Lists all Capella projects"
     }
 

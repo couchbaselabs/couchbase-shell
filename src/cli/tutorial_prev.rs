@@ -25,7 +25,7 @@ impl Command for TutorialPrev {
         Signature::build("tutorial prev").category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Step to the previous page in the Couchbase Shell tutorial"
     }
 
