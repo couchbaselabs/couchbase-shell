@@ -10,13 +10,12 @@ use crate::remote_cluster::RemoteCluster;
 use crate::remote_cluster::RemoteClusterType::Provisioned;
 use crate::state::State;
 use log::debug;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::{Category, PipelineData, ShellError, Signature, Span, SyntaxShape};
+use nu_protocol::{Category, PipelineData, ShellError, Signals, Signature, Span, SyntaxShape};
 use std::convert::TryFrom;
 use std::ops::Add;
-use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::{Duration, Instant};
 
@@ -101,7 +100,7 @@ fn buckets_update(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let name: String = call.req(engine_state, stack, 0)?;
     let ram: Option<i64> = call.get_flag(engine_state, stack, "ram")?;
@@ -118,7 +117,7 @@ fn buckets_update(
     for identifier in cluster_identifiers {
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
-        let mut settings = get_server_bucket(active_cluster, name.clone(), ctrl_c.clone(), span)?;
+        let mut settings = get_server_bucket(active_cluster, name.clone(), signals.clone(), span)?;
 
         update_bucket_settings(
             &mut settings,
@@ -137,7 +136,7 @@ fn buckets_update(
 
             let (org_id, project_id, cluster_id) = find_org_project_cluster_ids(
                 &client,
-                ctrl_c.clone(),
+                signals.clone(),
                 span,
                 identifier.clone(),
                 guard.named_or_active_project(active_cluster.project())?,
@@ -153,11 +152,11 @@ fn buckets_update(
                     cluster_id,
                     settings.name().into(),
                     serde_json::to_string(&json).unwrap(),
-                    ctrl_c.clone(),
+                    signals.clone(),
                 )
                 .map_err(|e| client_error_to_shell_error(e, span))
         } else {
-            update_server_bucket(settings, active_cluster, ctrl_c.clone(), span)
+            update_server_bucket(settings, active_cluster, signals.clone(), span)
         }?;
     }
 
@@ -167,7 +166,7 @@ fn buckets_update(
 fn update_server_bucket(
     settings: BucketSettings,
     cluster: &RemoteCluster,
-    ctrl_c: Arc<AtomicBool>,
+    signals: Signals,
     span: Span,
 ) -> Result<(), ShellError> {
     let form = settings.as_form();
@@ -183,7 +182,7 @@ fn update_server_bucket(
                 payload,
             },
             Instant::now().add(cluster.timeouts().management_timeout()),
-            ctrl_c.clone(),
+            signals.clone(),
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
 

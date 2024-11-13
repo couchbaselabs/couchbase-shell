@@ -12,8 +12,8 @@ use tokio::time::Instant;
 use crate::cli::error::{
     bucket_not_found_error, client_error_to_shell_error, unexpected_status_code_error,
 };
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
 
@@ -68,7 +68,7 @@ fn buckets_flush(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let name: String = call.req(engine_state, stack, 0)?;
@@ -89,7 +89,7 @@ fn buckets_flush(
             .management_request(
                 ManagementRequest::FlushBucket { name: name.clone() },
                 Instant::now().add(cluster.timeouts().management_timeout()),
-                ctrl_c.clone(),
+                signals.clone(),
             )
             .map_err(|e| client_error_to_shell_error(e, span))?;
 

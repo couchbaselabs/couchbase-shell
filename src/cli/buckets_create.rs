@@ -13,13 +13,12 @@ use crate::remote_cluster::RemoteCluster;
 use crate::remote_cluster::RemoteClusterType::Provisioned;
 use crate::state::{RemoteCapellaOrganization, State};
 use log::debug;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::{Category, PipelineData, ShellError, Signature, Span, SyntaxShape};
+use nu_protocol::{Category, PipelineData, ShellError, Signals, Signature, Span, SyntaxShape};
 use std::convert::TryFrom;
 use std::ops::Add;
-use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::{Duration, Instant};
 
@@ -99,7 +98,7 @@ fn buckets_create(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let name: String = call.req(engine_state, stack, 0)?;
     let ram: i64 = call.req(engine_state, stack, 1)?;
@@ -172,7 +171,7 @@ fn buckets_create(
                 active_cluster,
                 identifier.clone(),
                 settings,
-                ctrl_c.clone(),
+                signals.clone(),
                 span,
             )
         } else {
@@ -180,7 +179,7 @@ fn buckets_create(
             let payload = serde_urlencoded::to_string(&form)
                 .map_err(|e| serialize_error(e.to_string(), span))?;
 
-            create_server_bucket(payload, active_cluster, span, ctrl_c.clone())
+            create_server_bucket(payload, active_cluster, span, signals.clone())
         }?;
     }
 
@@ -191,7 +190,7 @@ pub fn create_server_bucket(
     payload: String,
     cluster: &RemoteCluster,
     span: Span,
-    ctrl_c: Arc<AtomicBool>,
+    signals: Signals,
 ) -> Result<(), ShellError> {
     let response = cluster
         .cluster()
@@ -199,7 +198,7 @@ pub fn create_server_bucket(
         .management_request(
             ManagementRequest::CreateBucket { payload },
             Instant::now().add(cluster.timeouts().management_timeout()),
-            ctrl_c.clone(),
+            signals.clone(),
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
@@ -220,16 +219,16 @@ pub fn create_capella_bucket(
     cluster: &RemoteCluster,
     identifier: String,
     settings: &mut BucketSettings,
-    ctrl_c: Arc<AtomicBool>,
+    signals: Signals,
     span: Span,
 ) -> Result<(), ShellError> {
     let client = org.client();
 
-    let org_id = find_org_id(ctrl_c.clone(), &client, span)?;
-    let project_id = find_project_id(ctrl_c.clone(), project, &client, span, org_id.clone())?;
+    let org_id = find_org_id(signals.clone(), &client, span)?;
+    let project_id = find_project_id(signals.clone(), project, &client, span, org_id.clone())?;
     let json_cluster = cluster_from_conn_str(
         identifier.clone(),
-        ctrl_c.clone(),
+        signals.clone(),
         cluster.hostnames().clone(),
         &client,
         span,
@@ -251,7 +250,7 @@ pub fn create_capella_bucket(
             project_id,
             json_cluster.id(),
             serde_json::to_string(&json).unwrap(),
-            ctrl_c,
+            signals,
         )
         .map_err(|e| client_error_to_shell_error(e, span))
 }

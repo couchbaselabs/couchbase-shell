@@ -4,8 +4,8 @@ use log::debug;
 use std::sync::{Arc, Mutex};
 
 use crate::cli::query::{handle_query_response, query_context_from_args, send_query};
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
@@ -64,7 +64,7 @@ fn run(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let statement: String = call.req(engine_state, stack, 0)?;
     let statement = format!("ADVISE {}", statement);
@@ -85,7 +85,7 @@ fn run(
             statement.clone(),
             None,
             maybe_scope,
-            ctrl_c.clone(),
+            signals.clone(),
             None,
             span,
             None,

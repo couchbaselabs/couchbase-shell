@@ -59,6 +59,6 @@ pub(crate) fn read_nu_config_file(engine_state: &mut EngineState, stack: &mut St
         write!(output, "{}", config_file).expect("Unable to write to config file");
         debug!("Config file created at: {}", config_path.to_string_lossy());
 
-        eval_config_contents(config_path, engine_state, stack);
+        eval_config_contents(config_path.into(), engine_state, stack);
     }
 }

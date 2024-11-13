@@ -12,15 +12,14 @@ use crate::state::State;
 use crate::RemoteCluster;
 use futures::StreamExt;
 use log::debug;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
-    Category, ListStream, PipelineData, ShellError, Signature, Span, SyntaxShape, Value,
+    Category, ListStream, PipelineData, ShellError, Signals, Signature, Span, SyntaxShape, Value,
 };
 use std::ops::Add;
 use std::str::from_utf8;
-use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 use tokio::time::Instant;
@@ -134,7 +133,7 @@ fn run(
 
     let guard = state.lock().unwrap();
 
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
     let statement: String = call.req(engine_state, stack, 0)?;
 
     let scope: Option<String> = call.get_flag(engine_state, stack, "scope")?;
@@ -154,7 +153,7 @@ fn run(
             active_cluster,
             maybe_scope,
             statement.clone(),
-            ctrl_c.clone(),
+            signals.clone(),
             span,
             rt.clone(),
         )?;
@@ -182,7 +181,7 @@ fn run(
     Ok(PipelineData::from(ListStream::new(
         result_stream,
         span,
-        Some(ctrl_c.clone()),
+        signals,
     )))
 }
 
@@ -190,7 +189,7 @@ pub fn send_analytics_query(
     active_cluster: &RemoteCluster,
     scope: impl Into<Option<(String, String)>>,
     statement: impl Into<String>,
-    ctrl_c: Arc<AtomicBool>,
+    signals: Signals,
     span: Span,
     rt: Arc<Runtime>,
 ) -> Result<HttpStreamResponse, ShellError> {
@@ -204,7 +203,7 @@ pub fn send_analytics_query(
                 timeout: duration_to_golang_string(active_cluster.timeouts().analytics_timeout()),
             },
             Instant::now().add(active_cluster.timeouts().analytics_timeout()),
-            ctrl_c.clone(),
+            signals.clone(),
             rt.clone(),
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;

@@ -10,13 +10,13 @@ use crate::remote_cluster::RemoteCluster;
 use crate::remote_cluster::RemoteClusterType::Provisioned;
 use crate::state::State;
 use log::debug;
-use nu_protocol::ast::Call;
+use nu_engine::command_prelude::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
-    Category, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape, Value,
+    Category, IntoPipelineData, PipelineData, ShellError, Signals, Signature, Span, SyntaxShape,
+    Value,
 };
 use std::ops::Add;
-use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
@@ -76,7 +76,7 @@ fn run(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
 
@@ -97,7 +97,7 @@ fn run(
 
             let (org_id, project_id, cluster_id) = find_org_project_cluster_ids(
                 &client,
-                ctrl_c.clone(),
+                signals.clone(),
                 span,
                 identifier.clone(),
                 guard.named_or_active_project(active_cluster.project())?,
@@ -110,13 +110,13 @@ fn run(
                     project_id,
                     cluster_id,
                     bucket.clone(),
-                    ctrl_c.clone(),
+                    signals.clone(),
                 )
                 .map_err(|e| client_error_to_shell_error(e, span))?;
 
             scopes.scopes().iter().map(|s| s.name().clone()).collect()
         } else {
-            get_server_scopes(active_cluster, bucket, ctrl_c.clone(), span)?
+            get_server_scopes(active_cluster, bucket, signals.clone(), span)?
         };
 
         for scope in scopes {
@@ -137,7 +137,7 @@ fn run(
 fn get_server_scopes(
     cluster: &RemoteCluster,
     bucket: String,
-    ctrl_c: Arc<AtomicBool>,
+    signals: Signals,
     span: Span,
 ) -> Result<Vec<String>, ShellError> {
     let response = cluster
@@ -146,7 +146,7 @@ fn get_server_scopes(
         .management_request(
             ManagementRequest::GetScopes { bucket },
             Instant::now().add(cluster.timeouts().management_timeout()),
-            ctrl_c.clone(),
+            signals.clone(),
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
 

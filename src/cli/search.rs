@@ -3,8 +3,8 @@ use crate::cli::util::{cluster_identifiers_from, get_active_cluster, NuValueMap}
 use crate::client::TextSearchQueryRequest;
 use crate::state::State;
 use log::debug;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
@@ -70,7 +70,7 @@ fn run(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let index: String = call.req(engine_state, stack, 0)?;
     let query: String = call.req(engine_state, stack, 1)?;
@@ -93,7 +93,7 @@ fn run(
                     timeout: active_cluster.timeouts().search_timeout().as_millis(),
                 },
                 Instant::now().add(active_cluster.timeouts().search_timeout()),
-                ctrl_c.clone(),
+                signals.clone(),
             )
             .map_err(|e| client_error_to_shell_error(e, span))?;
 

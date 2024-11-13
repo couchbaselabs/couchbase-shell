@@ -9,15 +9,15 @@ use crate::client::cloud_json::Cluster;
 use crate::client::CapellaClient;
 use crate::state::State;
 use crate::{read_input, RemoteCluster, RemoteClusterType};
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::{Call, PathMember};
+use nu_protocol::ast::PathMember;
 use nu_protocol::engine::{EngineState, Stack};
-use nu_protocol::Record;
 use nu_protocol::{IntoPipelineData, PipelineData, ShellError, Span, Value};
+use nu_protocol::{Record, Signals};
 use nu_utils::SharedCow;
 use num_traits::cast::ToPrimitive;
 use regex::Regex;
-use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 
@@ -309,7 +309,7 @@ pub fn validate_is_not_cloud(
 // clusters
 pub(crate) fn cluster_from_conn_str(
     identifier: String,
-    ctrl_c: Arc<AtomicBool>,
+    signals: Signals,
     hostnames: Vec<String>,
     client: &Arc<CapellaClient>,
     span: Span,
@@ -317,7 +317,7 @@ pub(crate) fn cluster_from_conn_str(
     project_id: String,
 ) -> Result<Cluster, ShellError> {
     let response = client
-        .list_clusters(org_id, project_id, ctrl_c)
+        .list_clusters(org_id, project_id, signals)
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
     for c in response.items() {
@@ -333,7 +333,7 @@ pub(crate) fn cluster_from_conn_str(
 
 pub(crate) fn find_cluster_id(
     identifier: String,
-    ctrl_c: Arc<AtomicBool>,
+    signals: Signals,
     hostnames: Vec<String>,
     client: &Arc<CapellaClient>,
     span: Span,
@@ -341,21 +341,21 @@ pub(crate) fn find_cluster_id(
     project_id: String,
 ) -> Result<String, ShellError> {
     let cluster = cluster_from_conn_str(
-        identifier, ctrl_c, hostnames, client, span, org_id, project_id,
+        identifier, signals, hostnames, client, span, org_id, project_id,
     )?;
 
     Ok(cluster.id())
 }
 
 pub(crate) fn find_project_id(
-    ctrl_c: Arc<AtomicBool>,
+    signals: Signals,
     name: String,
     client: &Arc<CapellaClient>,
     span: Span,
     org_id: String,
 ) -> Result<String, ShellError> {
     let projects = client
-        .list_projects(org_id, ctrl_c)
+        .list_projects(org_id, signals)
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
     for p in projects.items() {
@@ -368,12 +368,12 @@ pub(crate) fn find_project_id(
 }
 
 pub(crate) fn find_org_id(
-    ctrl_c: Arc<AtomicBool>,
+    signals: Signals,
     client: &Arc<CapellaClient>,
     span: Span,
 ) -> Result<String, ShellError> {
     let orgs = client
-        .list_organizations(ctrl_c.clone())
+        .list_organizations(signals)
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
     let org_id = match orgs.items().first() {
@@ -386,17 +386,17 @@ pub(crate) fn find_org_id(
 
 pub(crate) fn find_org_project_cluster_ids(
     client: &Arc<CapellaClient>,
-    ctrl_c: Arc<AtomicBool>,
+    signals: Signals,
     span: Span,
     identifier: String,
     project: String,
     cluster: &RemoteCluster,
 ) -> Result<(String, String, String), ShellError> {
-    let org_id = find_org_id(ctrl_c.clone(), client, span)?;
-    let project_id = find_project_id(ctrl_c.clone(), project, client, span, org_id.clone())?;
+    let org_id = find_org_id(signals.clone(), client, span)?;
+    let project_id = find_project_id(signals.clone(), project, client, span, org_id.clone())?;
     let cluster_id = find_cluster_id(
         identifier.clone(),
-        ctrl_c.clone(),
+        signals.clone(),
         cluster.hostnames().clone(),
         client,
         span,

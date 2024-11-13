@@ -3,7 +3,7 @@ use crate::cli::generic_error;
 use crate::cli::util::{cluster_identifiers_from, get_active_cluster};
 use crate::state::State;
 use log::debug;
-use nu_protocol::ast::Call;
+use nu_engine::command_prelude::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
@@ -60,7 +60,7 @@ fn columnar_databases(
     call: &Call,
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
     let statement = "SELECT `Database`.* FROM `Metadata`.`Database`";
     let span = call.head;
 
@@ -76,7 +76,7 @@ fn columnar_databases(
             active_cluster,
             None,
             statement,
-            ctrl_c.clone(),
+            signals.clone(),
             span,
             Arc::new(Runtime::new().unwrap()),
         )?;

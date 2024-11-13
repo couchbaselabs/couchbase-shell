@@ -6,7 +6,7 @@ use crate::cli::util::{
 };
 use crate::client::AnalyticsQueryRequest;
 use crate::state::State;
-use nu_protocol::ast::Call;
+use nu_engine::command_prelude::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
@@ -65,7 +65,7 @@ fn pending_mutations(
     call: &Call,
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
     let span = call.head;
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
@@ -82,7 +82,7 @@ fn pending_mutations(
             .analytics_query_request(
                 AnalyticsQueryRequest::PendingMutations,
                 Instant::now().add(active_cluster.timeouts().analytics_timeout()),
-                ctrl_c.clone(),
+                signals.clone(),
                 Arc::new(Runtime::new().unwrap()),
             )
             .map_err(|e| client_error_to_shell_error(e, span))?;

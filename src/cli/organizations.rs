@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use log::debug;
 
 use crate::cli::error::client_error_to_shell_error;
-use nu_protocol::ast::Call;
+use nu_engine::command_prelude::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, IntoPipelineData, PipelineData, ShellError, Signature, Value};
 
@@ -52,7 +52,7 @@ fn organizations(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     debug!("Running organizations");
 
@@ -65,7 +65,7 @@ fn organizations(
         collected.add_string("identifier", identifier, span);
 
         let orgs = client
-            .list_organizations(ctrl_c.clone())
+            .list_organizations(signals.clone())
             .map_err(|e| client_error_to_shell_error(e, span))?;
 
         for org in orgs.items() {

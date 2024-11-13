@@ -4,8 +4,8 @@ use crate::cli::util::convert_nu_value_to_json_value;
 use crate::client::KeyValueRequest;
 use crate::state::State;
 use nu_command::Open;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,

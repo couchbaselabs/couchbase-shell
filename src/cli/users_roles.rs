@@ -7,8 +7,8 @@ use crate::cli::util::{
 };
 use crate::client::ManagementRequest;
 use crate::state::State;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
@@ -73,7 +73,7 @@ fn run_async(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let guard = state.lock().unwrap();
@@ -93,7 +93,7 @@ fn run_async(
                     permission: permission.clone(),
                 },
                 Instant::now().add(active_cluster.timeouts().management_timeout()),
-                ctrl_c.clone(),
+                signals.clone(),
             )
             .map_err(|e| client_error_to_shell_error(e, span))?;
 

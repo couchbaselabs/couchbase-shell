@@ -8,8 +8,8 @@ use crate::cli::util::get_username_and_password;
 use crate::{
     ClusterTimeouts, RemoteCluster, RemoteClusterResources, RemoteClusterType, RustTlsConfig,
 };
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::Value::Nothing;
 use nu_protocol::{Category, PipelineData, ShellError, Signature, Span, SyntaxShape};

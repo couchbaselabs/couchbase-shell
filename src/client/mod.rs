@@ -10,9 +10,8 @@ pub use crate::client::kv_client::{KeyValueRequest, KvClient, KvResponse};
 pub use crate::client::tls::RustTlsConfig;
 use log::debug;
 
+use nu_protocol::Signals;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
-use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
 use tokio::time::Instant;
 
 extern crate utilities;
@@ -83,7 +82,7 @@ impl Client {
         &self,
         bucket: String,
         deadline: Instant,
-        ctrl_c: Arc<AtomicBool>,
+        signals: Signals,
     ) -> Result<KvClient, ClientError> {
         KvClient::connect(
             self.seeds.clone(),
@@ -92,7 +91,7 @@ impl Client {
             self.tls_config.clone(),
             bucket.clone(),
             deadline,
-            ctrl_c,
+            signals,
         )
         .await
     }

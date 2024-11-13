@@ -1,7 +1,7 @@
 use crate::cli::error::{no_active_bucket_error, no_active_cluster_error};
 use crate::state::State;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::Value::Nothing;
 use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};

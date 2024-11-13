@@ -9,14 +9,13 @@ use crate::state::State;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use log::info;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{EngineState, Stack};
-use nu_protocol::{PipelineData, ShellError, Span, Value};
+use nu_protocol::{PipelineData, ShellError, Signals, Span, Value};
 use std::collections::HashSet;
 use std::future::Future;
 use std::ops::Add;
-use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex, MutexGuard};
 use tokio::runtime::Runtime;
 use tokio::time::Instant;
@@ -115,7 +114,7 @@ pub fn run_kv_mutations(
     all_items: Vec<(String, Vec<u8>)>,
     req_builder: fn(String, Vec<u8>, u32) -> KeyValueRequest,
 ) -> Result<Vec<Value>, ShellError> {
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let expiry: i64 = call.get_flag(engine_state, stack, "expiry")?.unwrap_or(0);
     let batch_size: Option<i64> = call.get_flag(engine_state, stack, "batch-size")?;
@@ -145,7 +144,7 @@ pub fn run_kv_mutations(
             bucket_flag.clone(),
             scope_flag.clone(),
             collection_flag.clone(),
-            ctrl_c.clone(),
+            signals.clone(),
             span,
         ) {
             Ok(c) => c,
@@ -176,7 +175,7 @@ pub fn run_kv_mutations(
             for item in items.clone() {
                 let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
 
-                let ctrl_c = ctrl_c.clone();
+                let signals = signals.clone();
 
                 let client = client.clone();
 
@@ -187,7 +186,7 @@ pub fn run_kv_mutations(
                                 req_builder(item.0, item.1, expiry as u32),
                                 cid,
                                 deadline,
-                                ctrl_c,
+                                signals,
                             )
                             .await
                     });
@@ -287,7 +286,7 @@ pub(crate) fn get_active_cluster_client_cid<'a>(
     bucket: Option<String>,
     scope: Option<String>,
     collection: Option<String>,
-    ctrl_c: Arc<AtomicBool>,
+    signals: Signals,
     span: Span,
 ) -> Result<(&'a RemoteCluster, Arc<KvClient>, u32), ShellError> {
     let active_cluster = get_active_cluster(cluster, guard, span)?;
@@ -300,7 +299,7 @@ pub(crate) fn get_active_cluster_client_cid<'a>(
         .block_on(active_cluster.cluster().key_value_client(
             bucket.clone(),
             deadline,
-            ctrl_c.clone(),
+            signals.clone(),
         ))
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
@@ -309,7 +308,7 @@ pub(crate) fn get_active_cluster_client_cid<'a>(
             scope,
             collection,
             Instant::now().add(active_cluster.timeouts().data_timeout()),
-            ctrl_c.clone(),
+            signals.clone(),
         ))
         .map_err(|e| client_error_to_shell_error(e, span))?;
 

@@ -8,7 +8,6 @@ use crate::state::State;
 use log::debug;
 use std::collections::HashMap;
 use std::ops::Add;
-use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::time::Instant;
@@ -20,13 +19,13 @@ use crate::cli::error::{
 use crate::cli::generic_error;
 use crate::client::http_handler::HttpStreamResponse;
 use crate::RemoteCluster;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::Value::Nothing;
 use nu_protocol::{
-    Category, Example, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape,
-    Value,
+    Category, Example, IntoPipelineData, PipelineData, ShellError, Signals, Signature, Span,
+    SyntaxShape, Value,
 };
 
 #[derive(Clone)]
@@ -120,7 +119,7 @@ fn query(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
 
@@ -156,7 +155,7 @@ fn query(
             statement.clone(),
             params.clone(),
             maybe_scope,
-            ctrl_c.clone(),
+            signals.clone(),
             None,
             span,
             None,
@@ -194,7 +193,7 @@ pub fn send_query(
     statement: impl Into<String>,
     parameters: Option<serde_json::Value>,
     scope: Option<(String, String)>,
-    ctrl_c: Arc<AtomicBool>,
+    signals: Signals,
     timeout: impl Into<Option<Duration>>,
     span: Span,
     transaction: impl Into<Option<QueryTransactionRequest>>,
@@ -212,7 +211,7 @@ pub fn send_query(
                 transaction: transaction.into(),
             },
             Instant::now().add(timeout),
-            ctrl_c,
+            signals,
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
 

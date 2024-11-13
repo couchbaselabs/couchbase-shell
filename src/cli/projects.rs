@@ -6,7 +6,7 @@ use nu_engine::CallExt;
 use std::sync::{Arc, Mutex};
 
 use crate::cli::error::client_error_to_shell_error;
-use nu_protocol::ast::Call;
+use nu_engine::command_prelude::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, IntoPipelineData, PipelineData, ShellError, Signature, Value};
 
@@ -55,7 +55,7 @@ fn projects(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
     let audit = call.has_flag(engine_state, stack, "audit")?;
 
     debug!("Running projects");
@@ -64,10 +64,10 @@ fn projects(
     let control = guard.active_capella_org()?;
     let client = control.client();
 
-    let org_id = find_org_id(ctrl_c.clone(), &client, span)?;
+    let org_id = find_org_id(signals.clone(), &client, span)?;
 
     let projects = client
-        .list_projects(org_id, ctrl_c)
+        .list_projects(org_id, signals)
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
     let mut results = vec![];

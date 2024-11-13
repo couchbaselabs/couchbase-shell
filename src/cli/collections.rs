@@ -6,7 +6,6 @@ use crate::state::State;
 use log::debug;
 use serde_derive::Deserialize;
 use std::ops::Add;
-use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::time::Instant;
@@ -20,11 +19,12 @@ use crate::client::cloud::CollectionNamespace;
 use crate::client::cloud_json::Collection;
 use crate::remote_cluster::RemoteClusterType::Provisioned;
 use crate::RemoteCluster;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
-    Category, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape, Value,
+    Category, IntoPipelineData, PipelineData, ShellError, Signals, Signature, Span, SyntaxShape,
+    Value,
 };
 
 #[derive(Clone)]
@@ -84,7 +84,7 @@ fn collections_get(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let guard = state.lock().unwrap();
@@ -109,7 +109,7 @@ fn collections_get(
 
             let (org_id, project_id, cluster_id) = find_org_project_cluster_ids(
                 &client,
-                ctrl_c.clone(),
+                signals.clone(),
                 span,
                 identifier.clone(),
                 guard.named_or_active_project(active_cluster.project())?,
@@ -119,7 +119,7 @@ fn collections_get(
             let namespace = CollectionNamespace::new(org_id, project_id, cluster_id, bucket, scope);
 
             let collections = client
-                .list_collections(namespace, ctrl_c.clone())
+                .list_collections(namespace, signals.clone())
                 .map_err(|e| client_error_to_shell_error(e, span))?;
 
             collections.items()
@@ -128,7 +128,7 @@ fn collections_get(
                 active_cluster,
                 bucket.clone(),
                 scope.clone(),
-                ctrl_c.clone(),
+                signals.clone(),
                 span,
             )?
         };
@@ -219,7 +219,7 @@ fn get_server_collections(
     cluster: &RemoteCluster,
     bucket: String,
     scope: String,
-    ctrl_c: Arc<AtomicBool>,
+    signals: Signals,
     span: Span,
 ) -> Result<Vec<Collection>, ShellError> {
     let response = cluster
@@ -228,7 +228,7 @@ fn get_server_collections(
         .management_request(
             ManagementRequest::GetCollections { bucket },
             Instant::now().add(cluster.timeouts().management_timeout()),
-            ctrl_c.clone(),
+            signals.clone(),
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
 

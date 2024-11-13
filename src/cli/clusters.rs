@@ -1,8 +1,8 @@
 use crate::cli::error::client_error_to_shell_error;
 use crate::cli::util::{convert_json_value_to_nu_value, find_org_id, find_project_id, NuValueMap};
 use crate::state::State;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
@@ -65,7 +65,7 @@ fn clusters(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
     let capella = call.get_flag(engine_state, stack, "capella")?;
 
     let guard = state.lock().unwrap();
@@ -76,11 +76,11 @@ fn clusters(
 
     let client = control.client();
 
-    let org_id = find_org_id(ctrl_c.clone(), &client, span)?;
-    let project_id = find_project_id(ctrl_c.clone(), project, &client, span, org_id.clone())?;
+    let org_id = find_org_id(signals.clone(), &client, span)?;
+    let project_id = find_project_id(signals.clone(), project, &client, span, org_id.clone())?;
 
     let clusters = client
-        .list_clusters(org_id, project_id, ctrl_c)
+        .list_clusters(org_id, project_id, signals)
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
     let mut results = vec![];

@@ -5,7 +5,6 @@ use crate::client::ManagementRequest;
 use crate::state::State;
 use log::debug;
 use std::ops::Add;
-use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
@@ -13,10 +12,10 @@ use crate::cli::collections::get_bucket_or_active;
 use crate::cli::error::{client_error_to_shell_error, unexpected_status_code_error};
 use crate::remote_cluster::RemoteCluster;
 use crate::remote_cluster::RemoteClusterType::Provisioned;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::{Category, PipelineData, ShellError, Signature, Span, SyntaxShape};
+use nu_protocol::{Category, PipelineData, ShellError, Signals, Signature, Span, SyntaxShape};
 
 #[derive(Clone)]
 pub struct ScopesDrop {
@@ -75,7 +74,7 @@ fn run(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let guard = state.lock().unwrap();
@@ -99,7 +98,7 @@ fn run(
 
             let (org_id, project_id, cluster_id) = find_org_project_cluster_ids(
                 &client,
-                ctrl_c.clone(),
+                signals.clone(),
                 span,
                 identifier.clone(),
                 guard.named_or_active_project(active_cluster.project())?,
@@ -113,7 +112,7 @@ fn run(
                     cluster_id,
                     bucket,
                     scope.clone(),
-                    ctrl_c.clone(),
+                    signals.clone(),
                 )
                 .map_err(|e| client_error_to_shell_error(e, span))
         } else {
@@ -121,7 +120,7 @@ fn run(
                 active_cluster,
                 bucket.clone(),
                 scope.clone(),
-                ctrl_c.clone(),
+                signals.clone(),
                 span,
             )
         }?;
@@ -134,7 +133,7 @@ fn drop_server_scope(
     cluster: &RemoteCluster,
     bucket: String,
     scope: String,
-    ctrl_c: Arc<AtomicBool>,
+    signals: Signals,
     span: Span,
 ) -> Result<(), ShellError> {
     let response = cluster
@@ -146,7 +145,7 @@ fn drop_server_scope(
                 name: scope.clone(),
             },
             Instant::now().add(cluster.timeouts().management_timeout()),
-            ctrl_c.clone(),
+            signals.clone(),
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
 

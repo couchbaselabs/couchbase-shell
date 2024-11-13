@@ -3,12 +3,12 @@ use crate::client::http_handler::{read_stream, HTTPHandler, HttpStreamResponse, 
 use crate::client::kv_client::NodeExtConfig;
 use crate::RustTlsConfig;
 use log::{debug, trace};
+use nu_protocol::Signals;
 use rand::Rng;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde_json::json;
 use std::fmt::{Debug, Display, Formatter};
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::time::Duration;
 use std::{collections::HashMap, ops::Sub};
@@ -44,7 +44,7 @@ impl HTTPClient {
         http_agent: &HTTPHandler,
         bucket: impl Into<Option<String>>,
         deadline: Instant,
-        ctrl_c: Arc<AtomicBool>,
+        signals: Signals,
     ) -> Result<T, ClientError>
     where
         T: DeserializeOwned + Debug + Config,
@@ -80,7 +80,8 @@ impl HTTPClient {
 
             debug!("Fetching config from {}", uri);
 
-            let (stream, status) = match http_agent.http_get(&uri, deadline, ctrl_c.clone()).await {
+            let (stream, status) = match http_agent.http_get(&uri, deadline, signals.clone()).await
+            {
                 Ok((stream, status)) => (stream, status),
                 Err(e) => {
                     final_error_reason = Some(e.expanded_message());
@@ -146,10 +147,10 @@ impl HTTPClient {
         address: String,
         service: ServiceType,
         deadline: Instant,
-        ctrl_c: Arc<AtomicBool>,
+        signals: Signals,
     ) -> Result<PingResponse, ClientError> {
         let start = Instant::now();
-        let result = self.http_client.http_get(&uri, deadline, ctrl_c).await;
+        let result = self.http_client.http_get(&uri, deadline, signals).await;
         let end = Instant::now();
 
         let error = match result {
@@ -175,7 +176,7 @@ impl HTTPClient {
     pub fn ping_all_request(
         &self,
         deadline: Instant,
-        ctrl_c: Arc<AtomicBool>,
+        signals: Signals,
     ) -> Result<Vec<PingResponse>, ClientError> {
         let rt = Runtime::new().unwrap();
         rt.block_on(async {
@@ -185,7 +186,7 @@ impl HTTPClient {
                 &self.http_client,
                 None,
                 deadline,
-                ctrl_c.clone(),
+                signals.clone(),
             )
             .await?;
 
@@ -194,15 +195,21 @@ impl HTTPClient {
                 let uri = format!("{}:{}/api/ping", seed.hostname(), seed.port());
                 let address = format!("{}:{}", seed.hostname(), seed.port());
                 results.push(
-                    self.ping_endpoint(uri, address, ServiceType::Search, deadline, ctrl_c.clone())
-                        .await?,
+                    self.ping_endpoint(
+                        uri,
+                        address,
+                        ServiceType::Search,
+                        deadline,
+                        signals.clone(),
+                    )
+                    .await?,
                 );
             }
             for seed in config.query_seeds(self.tls_enabled) {
                 let uri = format!("{}:{}/admin/ping", seed.hostname(), seed.port());
                 let address = format!("{}:{}", seed.hostname(), seed.port());
                 results.push(
-                    self.ping_endpoint(uri, address, ServiceType::Query, deadline, ctrl_c.clone())
+                    self.ping_endpoint(uri, address, ServiceType::Query, deadline, signals.clone())
                         .await?,
                 );
             }
@@ -215,7 +222,7 @@ impl HTTPClient {
                         address,
                         ServiceType::Analytics,
                         deadline,
-                        ctrl_c.clone(),
+                        signals.clone(),
                     )
                     .await?,
                 );
@@ -224,7 +231,7 @@ impl HTTPClient {
                 let uri = format!("{}:{}/", seed.hostname(), seed.port());
                 let address = format!("{}:{}", seed.hostname(), seed.port());
                 results.push(
-                    self.ping_endpoint(uri, address, ServiceType::Views, deadline, ctrl_c.clone())
+                    self.ping_endpoint(uri, address, ServiceType::Views, deadline, signals.clone())
                         .await?,
                 );
             }
@@ -237,7 +244,7 @@ impl HTTPClient {
         &self,
         request: ManagementRequest,
         deadline: Instant,
-        ctrl_c: Arc<AtomicBool>,
+        signals: Signals,
     ) -> Result<HttpStreamResponse, ClientError> {
         let rt = Arc::new(Runtime::new().unwrap());
         rt.clone().block_on(async {
@@ -247,7 +254,7 @@ impl HTTPClient {
                 &self.http_client,
                 None,
                 deadline,
-                ctrl_c.clone(),
+                signals.clone(),
             )
             .await?;
 
@@ -255,18 +262,32 @@ impl HTTPClient {
             if let Some(seed) = config.random_management_seed(self.tls_enabled) {
                 let uri = format!("{}:{}{}", seed.hostname(), seed.port(), &path);
                 let (stream, status) = match request.verb() {
-                    HttpVerb::Get => self.http_client.http_get(&uri, deadline, ctrl_c).await?,
+                    HttpVerb::Get => self.http_client.http_get(&uri, deadline, signals).await?,
                     HttpVerb::Post => {
                         self.http_client
-                            .http_post(&uri, request.payload(), request.headers(), deadline, ctrl_c)
+                            .http_post(
+                                &uri,
+                                request.payload(),
+                                request.headers(),
+                                deadline,
+                                signals,
+                            )
                             .await?
                     }
                     HttpVerb::Delete => {
-                        self.http_client.http_delete(&uri, deadline, ctrl_c).await?
+                        self.http_client
+                            .http_delete(&uri, deadline, signals)
+                            .await?
                     }
                     HttpVerb::Put => {
                         self.http_client
-                            .http_put(&uri, request.payload(), request.headers(), deadline, ctrl_c)
+                            .http_put(
+                                &uri,
+                                request.payload(),
+                                request.headers(),
+                                deadline,
+                                signals,
+                            )
                             .await?
                     }
                 };
@@ -284,7 +305,7 @@ impl HTTPClient {
         &self,
         request: QueryRequest,
         deadline: Instant,
-        ctrl_c: Arc<AtomicBool>,
+        signals: Signals,
     ) -> Result<HttpStreamResponse, ClientError> {
         let rt = Arc::new(Runtime::new().unwrap());
         rt.clone().block_on(async {
@@ -294,7 +315,7 @@ impl HTTPClient {
                 &self.http_client,
                 None,
                 deadline,
-                ctrl_c.clone(),
+                signals.clone(),
             )
             .await?;
 
@@ -318,10 +339,16 @@ impl HTTPClient {
             let path = request.path();
             let uri = format!("{}:{}{}", seed.hostname(), seed.port(), &path);
             let (stream, status) = match request.verb() {
-                HttpVerb::Get => self.http_client.http_get(&uri, deadline, ctrl_c).await?,
+                HttpVerb::Get => self.http_client.http_get(&uri, deadline, signals).await?,
                 HttpVerb::Post => {
                     self.http_client
-                        .http_post(&uri, request.payload(), request.headers(), deadline, ctrl_c)
+                        .http_post(
+                            &uri,
+                            request.payload(),
+                            request.headers(),
+                            deadline,
+                            signals,
+                        )
                         .await?
                 }
                 _ => {
@@ -340,7 +367,7 @@ impl HTTPClient {
         &self,
         request: AnalyticsQueryRequest,
         deadline: Instant,
-        ctrl_c: Arc<AtomicBool>,
+        signals: Signals,
         rt: Arc<Runtime>,
     ) -> Result<HttpStreamResponse, ClientError> {
         rt.clone().block_on(async {
@@ -350,7 +377,7 @@ impl HTTPClient {
                 &self.http_client,
                 None,
                 deadline,
-                ctrl_c.clone(),
+                signals.clone(),
             )
             .await?;
 
@@ -358,10 +385,16 @@ impl HTTPClient {
             if let Some(seed) = config.random_analytics_seed(self.tls_enabled) {
                 let uri = format!("{}:{}{}", seed.hostname(), seed.port(), &path);
                 let (stream, status) = match request.verb() {
-                    HttpVerb::Get => self.http_client.http_get(&uri, deadline, ctrl_c).await?,
+                    HttpVerb::Get => self.http_client.http_get(&uri, deadline, signals).await?,
                     HttpVerb::Post => {
                         self.http_client
-                            .http_post(&uri, request.payload(), request.headers(), deadline, ctrl_c)
+                            .http_post(
+                                &uri,
+                                request.payload(),
+                                request.headers(),
+                                deadline,
+                                signals,
+                            )
                             .await?
                     }
                     _ => {
@@ -386,7 +419,7 @@ impl HTTPClient {
         &self,
         request: impl SearchQueryRequest,
         deadline: Instant,
-        ctrl_c: Arc<AtomicBool>,
+        signals: Signals,
     ) -> Result<HttpStreamResponse, ClientError> {
         let rt = Arc::new(Runtime::new().unwrap());
         rt.clone().block_on(async {
@@ -396,7 +429,7 @@ impl HTTPClient {
                 &self.http_client,
                 None,
                 deadline,
-                ctrl_c.clone(),
+                signals.clone(),
             )
             .await?;
 
@@ -406,7 +439,13 @@ impl HTTPClient {
                 let (stream, status) = match request.verb() {
                     HttpVerb::Post => {
                         self.http_client
-                            .http_post(&uri, request.payload(), request.headers(), deadline, ctrl_c)
+                            .http_post(
+                                &uri,
+                                request.payload(),
+                                request.headers(),
+                                deadline,
+                                signals,
+                            )
                             .await?
                     }
                     _ => {

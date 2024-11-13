@@ -13,8 +13,8 @@ use uuid::Uuid;
 
 use crate::cli::{client_error_to_shell_error, generic_error};
 use crate::client::{ClientError, LLMClients};
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::Command;
 use nu_protocol::engine::{EngineState, Stack};
 use nu_protocol::{
@@ -142,15 +142,15 @@ fn vector_enrich_text(
         let batch_start = SystemTime::now();
         println!("Embedding batch {:?}/{} ", i + 1, batches.len());
 
-        let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
-        let ctrl_c_fut = CtrlcFuture::new(ctrl_c);
+        let signals = engine_state.signals().clone();
+        let signals_fut = CtrlcFuture::new(signals);
         let rt = Runtime::new().unwrap();
         let embeddings = rt.block_on(async {
             select! {
                 result = client.embed(batch, dim, model.clone()) => {
                     result
                 },
-                () = ctrl_c_fut =>
+                () = signals_fut =>
                     Err(client_error_to_shell_error(ClientError::Cancelled{key: None}, span)),
             }
         })?;

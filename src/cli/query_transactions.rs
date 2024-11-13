@@ -8,8 +8,8 @@ use std::time::Duration;
 
 use crate::cli::error::{deserialize_error, generic_error, no_active_cluster_error};
 use crate::cli::query::{handle_query_response, query_context_from_args, send_query};
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::Value::Nothing;
 use nu_protocol::{
@@ -78,7 +78,7 @@ fn query(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
     let statement: String = call.req(engine_state, stack, 0)?;
 
     validate_statement(&statement, span)?;
@@ -136,7 +136,7 @@ fn query(
         statement.clone(),
         None,
         maybe_scope,
-        ctrl_c.clone(),
+        signals.clone(),
         timeout,
         span,
         txn_request,

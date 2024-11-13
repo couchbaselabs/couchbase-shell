@@ -7,8 +7,8 @@ use tokio::select;
 
 use crate::cli::{client_error_to_shell_error, generic_error, no_llm_configured};
 use crate::CtrlcFuture;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
@@ -171,8 +171,8 @@ pub fn ask(
 
     let client = LLMClients::new(state, None)?;
 
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
-    let ctrl_c_fut = CtrlcFuture::new(ctrl_c);
+    let signals = engine_state.signals().clone();
+    let signals_fut = CtrlcFuture::new(signals);
     let rt = Runtime::new().unwrap();
     let answer = match rt.block_on(async {
         select! {
@@ -182,7 +182,7 @@ pub fn ask(
                     Err(e) => Err(e),
                 }
             },
-            () = ctrl_c_fut =>
+            () = signals_fut =>
                 Err(client_error_to_shell_error(ClientError::Cancelled{key: None}, span)),
         }
     }) {
