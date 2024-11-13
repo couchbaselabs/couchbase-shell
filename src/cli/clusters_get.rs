@@ -4,8 +4,8 @@ use std::sync::{Arc, Mutex};
 
 use crate::cli::error::client_error_to_shell_error;
 use crate::cli::util::{convert_json_value_to_nu_value, find_org_id, find_project_id, NuValueMap};
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
 
@@ -66,7 +66,7 @@ fn clusters_get(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let name: String = call.req(engine_state, stack, 0)?;
     let capella = call.get_flag(engine_state, stack, "capella")?;
@@ -81,11 +81,11 @@ fn clusters_get(
 
     let client = control.client();
 
-    let org_id = find_org_id(ctrl_c.clone(), &client, span)?;
-    let project_id = find_project_id(ctrl_c.clone(), project, &client, span, org_id.clone())?;
+    let org_id = find_org_id(signals.clone(), &client, span)?;
+    let project_id = find_project_id(signals.clone(), project, &client, span, org_id.clone())?;
 
     let cluster = client
-        .get_cluster(name, org_id.clone(), project_id.clone(), ctrl_c.clone())
+        .get_cluster(name, org_id.clone(), project_id.clone(), signals.clone())
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
     let mut collected = NuValueMap::default();

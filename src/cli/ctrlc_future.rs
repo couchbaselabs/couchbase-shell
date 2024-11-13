@@ -1,3 +1,4 @@
+use nu_protocol::Signals;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -11,15 +12,15 @@ pub struct CtrlcFuture {
 }
 
 struct CtrlcState {
-    interrupt: Arc<AtomicBool>,
+    interrupt: Signals,
     waker: Option<Waker>,
     halt: Arc<AtomicBool>,
 }
 
 impl CtrlcFuture {
-    pub fn new(ctrl_c: Arc<AtomicBool>) -> CtrlcFuture {
+    pub fn new(signals: Signals) -> CtrlcFuture {
         let state = Arc::new(Mutex::new(CtrlcState {
-            interrupt: ctrl_c,
+            interrupt: signals,
             waker: None,
             halt: Arc::new(AtomicBool::new(false)),
         }));
@@ -30,7 +31,7 @@ impl CtrlcFuture {
             if state.halt.load(Ordering::SeqCst) {
                 return;
             }
-            if state.interrupt.load(Ordering::SeqCst) {
+            if state.interrupt.interrupted() {
                 if let Some(waker) = state.waker.take() {
                     waker.wake()
                 }
@@ -50,7 +51,7 @@ impl Future for CtrlcFuture {
 
     fn poll(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
         let mut state = self.state.lock().unwrap();
-        if state.interrupt.load(Ordering::SeqCst) {
+        if state.interrupt.interrupted() {
             Poll::Ready(())
         } else {
             state.waker = Some(ctx.waker().clone());

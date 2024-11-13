@@ -5,14 +5,13 @@ use crate::cli::{
 use crate::client::ManagementRequest;
 use crate::remote_cluster::RemoteCluster;
 use crate::state::State;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::{Category, PipelineData, ShellError, Signature, Span, SyntaxShape};
+use nu_protocol::{Category, PipelineData, ShellError, Signals, Signature, Span, SyntaxShape};
 use serde_json::{json, Value};
 use std::convert::TryFrom;
 use std::ops::Add;
-use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
@@ -96,7 +95,7 @@ fn run(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let name: String = call.req(engine_state, stack, 0)?;
     let field: String = call.req(engine_state, stack, 1)?;
@@ -124,7 +123,7 @@ fn run(
             span,
         )?;
 
-        let uuid = get_bucket_uuid(cluster, bucket.clone(), ctrl_c.clone(), span)?;
+        let uuid = get_bucket_uuid(cluster, bucket.clone(), signals.clone(), span)?;
         let json = create_index_json(
             &name,
             (bucket.clone(), scope.clone(), collection.clone()),
@@ -145,7 +144,7 @@ fn run(
                     payload: json.to_string(),
                 },
                 Instant::now().add(cluster.timeouts().search_timeout()),
-                ctrl_c.clone(),
+                signals.clone(),
             )
             .map_err(|e| client_error_to_shell_error(e, span))?;
 
@@ -185,7 +184,7 @@ impl TryFrom<&str> for SimilarityMetric {
 fn get_bucket_uuid(
     cluster: &RemoteCluster,
     bucket: String,
-    ctrl_c: Arc<AtomicBool>,
+    signals: Signals,
     span: Span,
 ) -> Result<String, ShellError> {
     let response = cluster
@@ -194,7 +193,7 @@ fn get_bucket_uuid(
         .management_request(
             ManagementRequest::GetBucket { name: bucket },
             Instant::now().add(cluster.timeouts().management_timeout()),
-            ctrl_c.clone(),
+            signals.clone(),
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
 

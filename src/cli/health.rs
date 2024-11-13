@@ -8,14 +8,14 @@ use crate::client::ManagementRequest;
 use crate::state::State;
 use crate::RemoteCluster;
 use log::warn;
-use nu_protocol::ast::Call;
+use nu_engine::command_prelude::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
-    Category, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape, Value,
+    Category, IntoPipelineData, PipelineData, ShellError, Signals, Signature, Span, SyntaxShape,
+    Value,
 };
 use serde::Deserialize;
 use std::ops::Add;
-use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
@@ -69,7 +69,7 @@ fn health(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
 
@@ -82,17 +82,17 @@ fn health(
         converted.push(check_autofailover(
             &identifier,
             cluster,
-            ctrl_c.clone(),
+            signals.clone(),
             span,
         )?);
 
-        let bucket_names = grab_bucket_names(cluster, ctrl_c.clone(), span)?;
+        let bucket_names = grab_bucket_names(cluster, signals.clone(), span)?;
         for bucket_name in bucket_names {
             converted.push(check_resident_ratio(
                 &bucket_name,
                 &identifier,
                 cluster,
-                ctrl_c.clone(),
+                signals.clone(),
                 span,
             )?);
         }
@@ -107,7 +107,7 @@ fn health(
 
 fn grab_bucket_names(
     cluster: &RemoteCluster,
-    ctrl_c: Arc<AtomicBool>,
+    signals: Signals,
     span: Span,
 ) -> Result<Vec<String>, ShellError> {
     let response = cluster
@@ -116,7 +116,7 @@ fn grab_bucket_names(
         .management_request(
             ManagementRequest::GetBuckets,
             Instant::now().add(cluster.timeouts().management_timeout()),
-            ctrl_c,
+            signals,
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
     let resp: Vec<BucketInfo> = serde_json::from_str(&response.content()?)
@@ -132,7 +132,7 @@ struct BucketInfo {
 fn check_autofailover(
     identifier: &str,
     cluster: &RemoteCluster,
-    ctrl_c: Arc<AtomicBool>,
+    signals: Signals,
     span: Span,
 ) -> Result<Value, ShellError> {
     let response = cluster
@@ -141,7 +141,7 @@ fn check_autofailover(
         .management_request(
             ManagementRequest::SettingsAutoFailover,
             Instant::now().add(cluster.timeouts().management_timeout()),
-            ctrl_c,
+            signals,
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
     if response.status() != 200 {
@@ -181,7 +181,7 @@ fn check_resident_ratio(
     bucket_name: &str,
     identifier: &str,
     cluster: &RemoteCluster,
-    ctrl_c: Arc<AtomicBool>,
+    signals: Signals,
     span: Span,
 ) -> Result<Value, ShellError> {
     let response = cluster
@@ -192,7 +192,7 @@ fn check_resident_ratio(
                 name: bucket_name.to_string(),
             },
             Instant::now().add(cluster.timeouts().management_timeout()),
-            ctrl_c,
+            signals,
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
     if response.status() != 200 {

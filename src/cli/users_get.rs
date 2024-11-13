@@ -12,8 +12,8 @@ use tokio::time::Instant;
 use crate::cli::error::{
     client_error_to_shell_error, deserialize_error, unexpected_status_code_error,
 };
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
@@ -70,7 +70,7 @@ fn users_get(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
     let username: String = call.req(engine_state, stack, 0)?;
 
     debug!("Running users get {}", username);
@@ -91,7 +91,7 @@ fn users_get(
                     username: username.clone(),
                 },
                 Instant::now().add(active_cluster.timeouts().management_timeout()),
-                ctrl_c.clone(),
+                signals.clone(),
             )
             .map_err(|e| client_error_to_shell_error(e, span))?;
 

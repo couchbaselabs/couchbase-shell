@@ -8,12 +8,11 @@ use crate::remote_cluster::RemoteCluster;
 use crate::remote_cluster::RemoteClusterType::Provisioned;
 use crate::state::State;
 use log::debug;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::{Category, PipelineData, ShellError, Signature, Span, SyntaxShape};
+use nu_protocol::{Category, PipelineData, ShellError, Signals, Signature, Span, SyntaxShape};
 use std::ops::Add;
-use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
@@ -68,7 +67,7 @@ fn buckets_drop(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let name: String = call.req(engine_state, stack, 0)?;
@@ -86,7 +85,7 @@ fn buckets_drop(
 
             let (org_id, project_id, cluster_id) = find_org_project_cluster_ids(
                 &client,
-                ctrl_c.clone(),
+                signals.clone(),
                 span,
                 identifier.clone(),
                 guard.named_or_active_project(active_cluster.project())?,
@@ -94,10 +93,16 @@ fn buckets_drop(
             )?;
 
             client
-                .delete_bucket(org_id, project_id, cluster_id, name.clone(), ctrl_c.clone())
+                .delete_bucket(
+                    org_id,
+                    project_id,
+                    cluster_id,
+                    name.clone(),
+                    signals.clone(),
+                )
                 .map_err(|e| client_error_to_shell_error(e, span))
         } else {
-            drop_server_bucket(active_cluster, name.clone(), ctrl_c.clone(), span)
+            drop_server_bucket(active_cluster, name.clone(), signals.clone(), span)
         }?;
     }
 
@@ -107,7 +112,7 @@ fn buckets_drop(
 fn drop_server_bucket(
     cluster: &RemoteCluster,
     name: String,
-    ctrl_c: Arc<AtomicBool>,
+    signals: Signals,
     span: Span,
 ) -> Result<(), ShellError> {
     let response = cluster
@@ -116,7 +121,7 @@ fn drop_server_bucket(
         .management_request(
             ManagementRequest::DropBucket { name },
             Instant::now().add(cluster.timeouts().management_timeout()),
-            ctrl_c.clone(),
+            signals.clone(),
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
 

@@ -25,21 +25,21 @@ humantime-serde = "1.1.1"
 lazy_static = "1.5.0"
 log = "0.4.22"
 nix = { version = "0.28.0", features = ["signal"] }
-nu-protocol = { version = "0.95.0" }
-nu-cmd-base = { version = "0.95.0" }
-nu-cmd-extra = { version = "0.95.0" }
-nu-cmd-lang = { version = "0.95.0" }
-nu-cmd-plugin = { version = "0.95.0" }
-nu-command = { version = "0.95.0", features = ["plugin"] }
-nu-explore = { version = "0.95.0" }
-nu-parser = { version = "0.95.0" }
-nu-path = { version = "0.95.0" }
-nu-cli = { version = "0.95.0", features = ["plugin"] }
-nu-engine = { version = "0.95.0" }
-nu-plugin = { version = "0.95.0" }
-nu-plugin-engine = { version = "0.95.0" }
-nu-system = { version = "0.95.0" }
-nu-utils = "0.95.0"
+nu-protocol = { version = "0.97.1" }
+nu-cmd-base = { version = "0.97.1" }
+nu-cmd-extra = { version = "0.97.1" }
+nu-cmd-lang = { version = "0.97.1" }
+nu-cmd-plugin = { version = "0.97.1" }
+nu-command = { version = "0.97.1", features = ["plugin"] }
+nu-explore = { version = "0.97.1" }
+nu-parser = { version = "0.97.1" }
+nu-path = { version = "0.97.1" }
+nu-cli = { version = "0.97.1", features = ["plugin"] }
+nu-engine = { version = "0.97.1" }
+nu-plugin = { version = "0.97.1" }
+nu-plugin-engine = { version = "0.97.1" }
+nu-system = { version = "0.97.1" }
+nu-utils = "0.97.1"
 num-traits = "0.2.19"
 rand = "0.8.5"
 regex = "1.10.5"
@@ -61,10 +61,10 @@ toml = "0.8.14"
 uuid = { version = "1.9.1", features = ["v4"] }
 utilities = { path = "utilities" }
 webpki-roots = "0.26.3"
-futures-core = "0.3.30"
+futures-core = "0.3.31"
 time = "0.3.36"
 tokio-stream = "0.1.15"
-futures-util = "0.3.31"
+futures-util = "0.3.30"
 
 [target.'cfg(not(any(target_os = "macos", target_os = "windows")))'.dependencies]
 # Our dependencies don't use OpenSSL on Macos

@@ -3,7 +3,7 @@
 use crate::cli::doc_common::run_kv_store_ops;
 use crate::client::KeyValueRequest;
 use crate::state::State;
-use nu_protocol::ast::Call;
+use nu_engine::command_prelude::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,

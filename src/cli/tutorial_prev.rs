@@ -1,7 +1,7 @@
 use crate::state::State;
 use std::sync::{Arc, Mutex};
 
-use nu_protocol::ast::Call;
+use nu_engine::command_prelude::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, IntoPipelineData, PipelineData, ShellError, Signature, Value};
 

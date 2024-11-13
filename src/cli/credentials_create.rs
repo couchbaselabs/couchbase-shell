@@ -5,8 +5,8 @@ use crate::cli::util::{
 use crate::cli::{client_error_to_shell_error, generic_error};
 use crate::client::cloud_json::CredentialsCreateRequest;
 use crate::state::State;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
 use std::sync::{Arc, Mutex};
@@ -79,7 +79,7 @@ fn credentials_create(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let read = call.has_flag(engine_state, stack, "read")?;
     let write = call.has_flag(engine_state, stack, "write")?;
@@ -105,10 +105,10 @@ fn credentials_create(
 
         let client = org.client();
 
-        let org_id = find_org_id(ctrl_c.clone(), &client, span)?;
+        let org_id = find_org_id(signals.clone(), &client, span)?;
 
         let project_id = find_project_id(
-            ctrl_c.clone(),
+            signals.clone(),
             guard.active_project().unwrap(),
             &client,
             span,
@@ -117,7 +117,7 @@ fn credentials_create(
 
         let json_cluster = cluster_from_conn_str(
             identifier,
-            ctrl_c.clone(),
+            signals.clone(),
             cluster.hostnames().clone(),
             &client,
             span,
@@ -152,7 +152,7 @@ fn credentials_create(
                 project_id,
                 json_cluster.id(),
                 serde_json::to_string(&payload).unwrap(),
-                ctrl_c.clone(),
+                signals.clone(),
             )
             .map_err(|e| client_error_to_shell_error(e, span))?;
     }

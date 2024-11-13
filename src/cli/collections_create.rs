@@ -7,7 +7,6 @@ use crate::client::ManagementRequest::CreateCollection;
 use crate::state::State;
 use log::debug;
 use std::ops::Add;
-use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
@@ -18,10 +17,10 @@ use crate::cli::error::{
 use crate::client::cloud::CollectionNamespace;
 use crate::remote_cluster::RemoteCluster;
 use crate::remote_cluster::RemoteClusterType::Provisioned;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::{Category, PipelineData, ShellError, Signature, Span, SyntaxShape};
+use nu_protocol::{Category, PipelineData, ShellError, Signals, Signature, Span, SyntaxShape};
 
 #[derive(Clone)]
 pub struct CollectionsCreate {
@@ -87,7 +86,7 @@ fn collections_create(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let guard = state.lock().unwrap();
@@ -114,7 +113,7 @@ fn collections_create(
 
             let (org_id, project_id, cluster_id) = find_org_project_cluster_ids(
                 &client,
-                ctrl_c.clone(),
+                signals.clone(),
                 span,
                 identifier,
                 guard.named_or_active_project(active_cluster.project())?,
@@ -124,7 +123,7 @@ fn collections_create(
             let namespace = CollectionNamespace::new(org_id, project_id, cluster_id, bucket, scope);
 
             client
-                .create_collection(collection.clone(), expiry, namespace, ctrl_c.clone())
+                .create_collection(collection.clone(), expiry, namespace, signals.clone())
                 .map_err(|e| client_error_to_shell_error(e, span))
         } else {
             create_server_collection(
@@ -133,7 +132,7 @@ fn collections_create(
                 bucket.clone(),
                 collection.clone(),
                 expiry,
-                ctrl_c.clone(),
+                signals.clone(),
                 span,
             )
         }?
@@ -148,7 +147,7 @@ fn create_server_collection(
     bucket: String,
     collection: String,
     expiry: i64,
-    ctrl_c: Arc<AtomicBool>,
+    signals: Signals,
     span: Span,
 ) -> Result<(), ShellError> {
     let mut form = vec![("name", collection.clone())];
@@ -169,7 +168,7 @@ fn create_server_collection(
                 payload: form_encoded,
             },
             Instant::now().add(cluster.timeouts().management_timeout()),
-            ctrl_c.clone(),
+            signals.clone(),
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
 

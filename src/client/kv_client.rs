@@ -10,12 +10,11 @@ use bytes::{Buf, Bytes};
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use log::{debug, trace};
+use nu_protocol::Signals;
 use serde::Deserialize;
 use serde_json::json;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
 use std::{collections::HashMap, ops::Sub};
 use tokio::select;
 use tokio::time::{sleep, Instant, Sleep};
@@ -60,7 +59,7 @@ impl KvClient {
         tls_config: Option<RustTlsConfig>,
         bucket: String,
         deadline: Instant,
-        ctrl_c: Arc<AtomicBool>,
+        signals: Signals,
     ) -> Result<Self, ClientError> {
         let now = Instant::now();
         if now >= deadline {
@@ -69,8 +68,8 @@ impl KvClient {
         let deadline_sleep = sleep(deadline.sub(now));
         tokio::pin!(deadline_sleep);
 
-        let ctrl_c_fut = CtrlcFuture::new(ctrl_c.clone());
-        tokio::pin!(ctrl_c_fut);
+        let ctrlc_fut = CtrlcFuture::new(signals.clone());
+        tokio::pin!(ctrlc_fut);
 
         let http_agent = HTTPHandler::new(username.clone(), password.clone(), tls_config.clone());
         let config: BucketConfig = HTTPClient::get_config(
@@ -79,7 +78,7 @@ impl KvClient {
             &http_agent,
             bucket.clone(),
             deadline,
-            ctrl_c.clone(),
+            signals.clone(),
         )
         .await?;
 
@@ -114,7 +113,7 @@ impl KvClient {
                     }
                 },
                 () = &mut deadline_sleep => Err(ClientError::Timeout{key: None}),
-                () = &mut ctrl_c_fut => Err(ClientError::Cancelled{key: None}),
+                () = &mut ctrlc_fut => Err(ClientError::Cancelled{key: None}),
                 else => {break}
             }?;
             endpoints.insert(endpoint.remote(), endpoint);
@@ -147,7 +146,7 @@ impl KvClient {
     pub async fn ping_all(
         &mut self,
         deadline: Instant,
-        ctrl_c: Arc<AtomicBool>,
+        signals: Signals,
     ) -> Result<Vec<PingResponse>, ClientError> {
         let now = Instant::now();
         if now >= deadline {
@@ -157,8 +156,8 @@ impl KvClient {
         tokio::pin!(deadline_sleep);
         tokio::pin!(deadline_sleep);
 
-        let ctrl_c_fut = CtrlcFuture::new(ctrl_c.clone());
-        tokio::pin!(ctrl_c_fut);
+        let ctrlc_fut = CtrlcFuture::new(signals.clone());
+        tokio::pin!(ctrlc_fut);
 
         let mut results: Vec<PingResponse> = Vec::new();
         for seed in self.config.key_value_seeds(self.tls_enabled) {
@@ -175,7 +174,7 @@ impl KvClient {
             let result = select! {
                 res = op => res,
                 () = &mut deadline_sleep => Err(ClientError::Timeout{key: None}),
-                () = &mut ctrl_c_fut => Err(ClientError::Cancelled{key: None}),
+                () = &mut ctrlc_fut => Err(ClientError::Cancelled{key: None}),
             };
             let end = Instant::now();
 
@@ -211,7 +210,7 @@ impl KvClient {
         request: KeyValueRequest,
         cid: u32,
         deadline: Instant,
-        ctrl_c: Arc<AtomicBool>,
+        signals: Signals,
     ) -> Result<KvResponse, ClientError> {
         let now = Instant::now();
         if now >= deadline {
@@ -223,8 +222,8 @@ impl KvClient {
         let deadline_sleep = sleep(deadline);
         tokio::pin!(deadline_sleep);
 
-        let ctrl_c_fut = CtrlcFuture::new(ctrl_c.clone());
-        tokio::pin!(ctrl_c_fut);
+        let ctrlc_fut = CtrlcFuture::new(signals.clone());
+        tokio::pin!(ctrlc_fut);
 
         let key = match request {
             KeyValueRequest::Get { ref key } => key.clone(),
@@ -248,43 +247,43 @@ impl KvClient {
             KeyValueRequest::Get { key } => {
                 let op = ep.get(key.clone(), partition as u16, cid);
 
-                self.handle_op_future(key, op, deadline_sleep, ctrl_c_fut)
+                self.handle_op_future(key, op, deadline_sleep, ctrlc_fut)
                     .await
             }
             KeyValueRequest::Set { key, value, expiry } => {
                 let op = ep.set(key.clone(), value, expiry, partition as u16, cid);
 
-                self.handle_op_future(key, op, deadline_sleep, ctrl_c_fut)
+                self.handle_op_future(key, op, deadline_sleep, ctrlc_fut)
                     .await
             }
             KeyValueRequest::Insert { key, value, expiry } => {
                 let op = ep.add(key.clone(), value, expiry, partition as u16, cid);
 
-                self.handle_op_future(key, op, deadline_sleep, ctrl_c_fut)
+                self.handle_op_future(key, op, deadline_sleep, ctrlc_fut)
                     .await
             }
             KeyValueRequest::Replace { key, value, expiry } => {
                 let op = ep.replace(key.clone(), value, expiry, partition as u16, cid);
 
-                self.handle_op_future(key, op, deadline_sleep, ctrl_c_fut)
+                self.handle_op_future(key, op, deadline_sleep, ctrlc_fut)
                     .await
             }
             KeyValueRequest::Remove { key } => {
                 let op = ep.remove(key.clone(), partition as u16, cid);
 
-                self.handle_op_future(key, op, deadline_sleep, ctrl_c_fut)
+                self.handle_op_future(key, op, deadline_sleep, ctrlc_fut)
                     .await
             }
             KeyValueRequest::SubDocGet { key, path } => {
                 let op = ep.sub_doc_get(key.clone(), partition as u16, cid, path);
 
-                self.handle_op_future(key, op, deadline_sleep, ctrl_c_fut)
+                self.handle_op_future(key, op, deadline_sleep, ctrlc_fut)
                     .await
             }
             KeyValueRequest::SubdocMultiLookup { key, paths } => {
                 let op = ep.sub_doc_multi_lookup(key.clone(), partition as u16, cid, paths);
 
-                self.handle_op_future(key, op, deadline_sleep, ctrl_c_fut)
+                self.handle_op_future(key, op, deadline_sleep, ctrlc_fut)
                     .await
             }
         };
@@ -354,7 +353,7 @@ impl KvClient {
         scope: String,
         collection: String,
         deadline: Instant,
-        ctrl_c: Arc<AtomicBool>,
+        signals: Signals,
     ) -> Result<u32, ClientError> {
         if !KvClient::is_non_default_scope_collection(scope.clone(), collection.clone()) {
             trace!(
@@ -379,8 +378,8 @@ impl KvClient {
         let deadline_sleep = sleep(deadline.sub(Instant::now()));
         tokio::pin!(deadline_sleep);
 
-        let ctrl_c_fut = CtrlcFuture::new(ctrl_c.clone());
-        tokio::pin!(ctrl_c_fut);
+        let ctrlc_fut = CtrlcFuture::new(signals.clone());
+        tokio::pin!(ctrlc_fut);
 
         let (addr, port) = self.node_for_partition(0);
         let ep = self
@@ -391,7 +390,7 @@ impl KvClient {
         let op = ep.get_cid(scope_name, collection_name);
 
         let resp = self
-            .handle_op_future(None, op, deadline_sleep, ctrl_c_fut)
+            .handle_op_future(None, op, deadline_sleep, ctrlc_fut)
             .await;
 
         let mut result = self.handle_op_result(resp)?;
@@ -422,13 +421,13 @@ impl KvClient {
         key: impl Into<Option<String>>,
         op: impl Future<Output = Result<protocol::KvResponse, ClientError>>,
         mut deadline_sleep: Pin<&mut Sleep>,
-        mut ctrl_c: Pin<&mut CtrlcFuture>,
+        mut ctrlc_fut: Pin<&mut CtrlcFuture>,
     ) -> Result<(protocol::KvResponse, Option<String>), ClientError> {
         let key = key.into();
         let res = select! {
             res = op => res,
             () = &mut deadline_sleep => Err(ClientError::Timeout{key: key.clone()}),
-            () = &mut ctrl_c => Err(ClientError::Cancelled{key: key.clone()}),
+            () = &mut ctrlc_fut => Err(ClientError::Cancelled{key: key.clone()}),
         }?;
 
         Ok((res, key))

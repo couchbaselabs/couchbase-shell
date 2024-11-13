@@ -6,13 +6,12 @@ use bytes::Bytes;
 use futures_core::Stream;
 use futures_util::stream::StreamExt;
 use log::debug;
-use nu_protocol::ShellError;
+use nu_protocol::{ShellError, Signals};
 use reqwest::ClientBuilder;
 use std::collections::HashMap;
 use std::ops::Sub;
 use std::pin::Pin;
 use std::str::from_utf8;
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
 use tokio::{select, time::Instant};
@@ -131,7 +130,7 @@ impl HTTPHandler {
         payload: Option<Vec<u8>>,
         headers: HashMap<&str, &str>,
         deadline: Instant,
-        ctrl_c: Arc<AtomicBool>,
+        signals: Signals,
     ) -> Result<(ResultStream, u16), ClientError> {
         let uri = format!("{}://{}", self.http_prefix(), uri);
         let now = Instant::now();
@@ -140,7 +139,7 @@ impl HTTPHandler {
             return Err(ClientError::Timeout { key: None });
         }
         let timeout = deadline.sub(now);
-        let ctrl_c_fut = CtrlcFuture::new(ctrl_c);
+        let signals_fut = CtrlcFuture::new(signals);
 
         let mut client_builder = ClientBuilder::new();
 
@@ -193,7 +192,7 @@ impl HTTPHandler {
                 let stream = Box::pin(response.bytes_stream());
                 Ok((stream, status))
             },
-            () = ctrl_c_fut => Err(ClientError::Cancelled{key: None}),
+            () = signals_fut => Err(ClientError::Cancelled{key: None}),
         }
     }
 
@@ -201,9 +200,9 @@ impl HTTPHandler {
         &self,
         uri: &str,
         deadline: Instant,
-        ctrl_c: Arc<AtomicBool>,
+        signals: Signals,
     ) -> Result<(ResultStream, u16), ClientError> {
-        self.http_do(uri, HttpVerb::Get, None, HashMap::new(), deadline, ctrl_c)
+        self.http_do(uri, HttpVerb::Get, None, HashMap::new(), deadline, signals)
             .await
     }
 
@@ -211,7 +210,7 @@ impl HTTPHandler {
         &self,
         uri: &str,
         deadline: Instant,
-        ctrl_c: Arc<AtomicBool>,
+        signals: Signals,
     ) -> Result<(ResultStream, u16), ClientError> {
         self.http_do(
             uri,
@@ -219,7 +218,7 @@ impl HTTPHandler {
             None,
             HashMap::new(),
             deadline,
-            ctrl_c,
+            signals,
         )
         .await
     }
@@ -230,9 +229,9 @@ impl HTTPHandler {
         payload: Option<Vec<u8>>,
         headers: HashMap<&str, &str>,
         deadline: Instant,
-        ctrl_c: Arc<AtomicBool>,
+        signals: Signals,
     ) -> Result<(ResultStream, u16), ClientError> {
-        self.http_do(uri, HttpVerb::Put, payload, headers, deadline, ctrl_c)
+        self.http_do(uri, HttpVerb::Put, payload, headers, deadline, signals)
             .await
     }
 
@@ -242,9 +241,9 @@ impl HTTPHandler {
         payload: Option<Vec<u8>>,
         headers: HashMap<&str, &str>,
         deadline: Instant,
-        ctrl_c: Arc<AtomicBool>,
+        signals: Signals,
     ) -> Result<(ResultStream, u16), ClientError> {
-        self.http_do(uri, HttpVerb::Post, payload, headers, deadline, ctrl_c)
+        self.http_do(uri, HttpVerb::Post, payload, headers, deadline, signals)
             .await
     }
 }

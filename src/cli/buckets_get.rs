@@ -7,7 +7,6 @@ use crate::client::ManagementRequest;
 use log::debug;
 use std::convert::TryFrom;
 use std::ops::Add;
-use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
@@ -17,11 +16,12 @@ use crate::cli::error::{
 };
 use crate::remote_cluster::RemoteCluster;
 use crate::remote_cluster::RemoteClusterType::Provisioned;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
-    Category, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape, Value,
+    Category, IntoPipelineData, PipelineData, ShellError, Signals, Signature, Span, SyntaxShape,
+    Value,
 };
 
 #[derive(Clone)]
@@ -75,7 +75,7 @@ fn buckets_get(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let bucket: String = call.req(engine_state, stack, 0)?;
@@ -87,7 +87,7 @@ fn buckets_get(
         let guard = state.lock().unwrap();
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
-        let content = get_server_bucket(active_cluster, bucket.clone(), ctrl_c.clone(), span)?;
+        let content = get_server_bucket(active_cluster, bucket.clone(), signals.clone(), span)?;
 
         results.push(bucket_to_nu_value(
             content,
@@ -107,7 +107,7 @@ fn buckets_get(
 pub fn get_server_bucket(
     cluster: &RemoteCluster,
     bucket: String,
-    ctrl_c: Arc<AtomicBool>,
+    signals: Signals,
     span: Span,
 ) -> Result<BucketSettings, ShellError> {
     let response = cluster
@@ -118,7 +118,7 @@ pub fn get_server_bucket(
                 name: bucket.clone(),
             },
             Instant::now().add(cluster.timeouts().query_timeout()),
-            ctrl_c.clone(),
+            signals.clone(),
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
 

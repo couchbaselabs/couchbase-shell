@@ -5,8 +5,8 @@ use crate::cli::util::{
 };
 use crate::state::State;
 use log::{debug, info};
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape, Value};
 use std::sync::{Arc, Mutex};
@@ -66,7 +66,7 @@ fn allow_ip(
     input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let guard = state.lock().unwrap();
@@ -105,10 +105,10 @@ fn allow_ip(
         let org = guard.named_or_active_org(cluster.capella_org())?;
         let client = org.client();
 
-        let org_id = find_org_id(ctrl_c.clone(), &client, span)?;
+        let org_id = find_org_id(signals.clone(), &client, span)?;
 
         let project_id = find_project_id(
-            ctrl_c.clone(),
+            signals.clone(),
             guard.named_or_active_project(cluster.project())?,
             &client,
             span,
@@ -117,7 +117,7 @@ fn allow_ip(
 
         let json_cluster = cluster_from_conn_str(
             identifier,
-            ctrl_c.clone(),
+            signals.clone(),
             cluster.hostnames().clone(),
             &client,
             span,
@@ -131,7 +131,7 @@ fn allow_ip(
                 project_id,
                 json_cluster.id(),
                 ip_address.clone(),
-                ctrl_c.clone(),
+                signals.clone(),
             )
             .map_err(|e| client_error_to_shell_error(e, span))?;
     }

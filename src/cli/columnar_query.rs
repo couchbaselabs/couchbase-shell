@@ -2,8 +2,8 @@ use crate::cli::analytics::{read_analytics_response, send_analytics_query};
 use crate::cli::util::{cluster_identifiers_from, get_active_cluster};
 use crate::state::State;
 use log::debug;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
@@ -74,7 +74,7 @@ fn columnar_query(
     call: &Call,
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
     let statement: String = call.req(engine_state, stack, 0)?;
     let span = call.head;
 
@@ -98,7 +98,7 @@ fn columnar_query(
             active_cluster,
             maybe_scope,
             statement.clone(),
-            ctrl_c.clone(),
+            signals.clone(),
             span,
             Arc::new(Runtime::new().unwrap()),
         )?;

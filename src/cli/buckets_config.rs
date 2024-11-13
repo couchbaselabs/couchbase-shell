@@ -5,8 +5,8 @@ use crate::cli::error::{
 use crate::cli::util::convert_json_value_to_nu_value;
 use crate::client::ManagementRequest;
 use crate::state::State;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape};
 use std::ops::Add;
@@ -58,7 +58,7 @@ fn buckets(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let name: String = call.req(engine_state, stack, 0)?;
 
@@ -76,7 +76,7 @@ fn buckets(
         .management_request(
             ManagementRequest::GetBucket { name },
             Instant::now().add(active_cluster.timeouts().management_timeout()),
-            ctrl_c,
+            signals,
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
 

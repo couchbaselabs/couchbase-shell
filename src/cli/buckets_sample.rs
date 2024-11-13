@@ -6,14 +6,14 @@ use crate::client::{ClientError, ManagementRequest};
 use crate::remote_cluster::RemoteCluster;
 use crate::remote_cluster::RemoteClusterType::Provisioned;
 use crate::state::State;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
-    Category, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape, Value,
+    Category, IntoPipelineData, PipelineData, ShellError, Signals, Signature, Span, SyntaxShape,
+    Value,
 };
 use std::ops::Add;
-use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
@@ -72,7 +72,7 @@ fn load_sample_bucket(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let guard = state.lock().unwrap();
@@ -89,7 +89,7 @@ fn load_sample_bucket(
 
             let (org_id, project_id, cluster_id) = find_org_project_cluster_ids(
                 &client,
-                ctrl_c.clone(),
+                signals.clone(),
                 span,
                 identifier.clone(),
                 guard.named_or_active_project(active_cluster.project())?,
@@ -102,11 +102,11 @@ fn load_sample_bucket(
                     project_id,
                     cluster_id,
                     bucket_name.clone(),
-                    ctrl_c.clone(),
+                    signals.clone(),
                 )
                 .map_err(|e| client_error_to_shell_error(e, span))
         } else {
-            load_sever_sample(active_cluster, bucket_name.clone(), ctrl_c.clone(), span)
+            load_sever_sample(active_cluster, bucket_name.clone(), signals.clone(), span)
         };
 
         let mut collected = NuValueMap::default();
@@ -135,7 +135,7 @@ fn load_sample_bucket(
 fn load_sever_sample(
     cluster: &RemoteCluster,
     sample: String,
-    ctrl_c: Arc<AtomicBool>,
+    signals: Signals,
     span: Span,
 ) -> Result<(), ShellError> {
     let response = cluster
@@ -146,7 +146,7 @@ fn load_sever_sample(
                 name: format!("[\"{}\"]", sample),
             },
             Instant::now().add(cluster.timeouts().management_timeout()),
-            ctrl_c,
+            signals,
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
 

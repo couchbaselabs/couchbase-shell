@@ -42,7 +42,7 @@ use nu_cmd_base::util::get_init_cwd;
 use nu_protocol::engine::{EngineState, Stack, StateWorkingSet};
 use nu_protocol::{
     report_error_new, ByteStream, ByteStreamSource, ByteStreamType, IntoPipelineData, PipelineData,
-    PluginIdentity, RegisteredPlugin, Span, Value,
+    PluginIdentity, RegisteredPlugin, Signals, Span, Value,
 };
 
 use crate::client::{RustTlsConfig, CLOUD_URL};
@@ -54,7 +54,7 @@ use std::error::Error;
 use std::fs::File;
 use std::io::{BufReader, Write};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -64,7 +64,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let init_cwd = get_init_cwd();
     let mut context = create_default_context();
 
-    gather_parent_env_vars(&mut context, &init_cwd);
+    gather_parent_env_vars(&mut context, init_cwd.as_path().as_ref());
     let mut stack = Stack::new();
 
     let (shell_commandline_args, args_to_script) = parse_shell_args();
@@ -99,16 +99,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         fetch_and_print_motd();
     }
 
-    let ctrlc = Arc::new(AtomicBool::new(false));
-    let handler_ctrlc = ctrlc.clone();
-    let context_ctrlc = ctrlc.clone();
+    let signals = Signals::new(Arc::new(AtomicBool::new(false)));
+    let handler_signals = signals.clone();
+    let context_signals = signals.clone();
 
     ctrlc::set_handler(move || {
-        handler_ctrlc.store(true, Ordering::SeqCst);
+        handler_signals.trigger();
     })
     .expect("Error setting Ctrl-C handler");
 
-    context.ctrlc = Some(context_ctrlc);
+    context.set_signals(context_signals);
 
     merge_couchbase_delta(&mut context, state);
 
@@ -119,7 +119,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             ByteStream::new(
                 ByteStreamSource::Read(Box::new(buf_reader)),
                 Span::new(0, 0),
-                Some(ctrlc),
+                signals,
                 ByteStreamType::String,
             ),
             None,

@@ -7,15 +7,15 @@ use crate::client::ManagementRequest;
 use crate::state::State;
 use crate::RemoteCluster;
 use log::debug;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
-    Category, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape, Value,
+    Category, IntoPipelineData, PipelineData, ShellError, Signals, Signature, Span, SyntaxShape,
+    Value,
 };
 use serde::Deserialize;
 use std::ops::Add;
-use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
@@ -76,7 +76,7 @@ fn query(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
 
@@ -98,7 +98,7 @@ fn query(
 
         if fetch_defs {
             let mut defs =
-                index_definitions(active_cluster, ctrl_c.clone(), identifier.clone(), span)?;
+                index_definitions(active_cluster, signals.clone(), identifier.clone(), span)?;
             results.append(&mut defs);
             continue;
         }
@@ -108,7 +108,7 @@ fn query(
             statement.clone(),
             None,
             maybe_scope,
-            ctrl_c.clone(),
+            signals.clone(),
             None,
             span,
             None,
@@ -153,7 +153,7 @@ struct IndexStatus {
 
 fn index_definitions(
     cluster: &RemoteCluster,
-    ctrl_c: Arc<AtomicBool>,
+    signals: Signals,
     identifier: String,
     span: Span,
 ) -> Result<Vec<Value>, ShellError> {
@@ -165,7 +165,7 @@ fn index_definitions(
         .management_request(
             ManagementRequest::IndexStatus,
             Instant::now().add(cluster.timeouts().query_timeout()),
-            ctrl_c,
+            signals,
         )
         .map_err(|e| client_error_to_shell_error(e, span))?;
 

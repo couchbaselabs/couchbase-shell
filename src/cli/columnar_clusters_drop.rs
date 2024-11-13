@@ -1,8 +1,8 @@
 use crate::cli::client_error_to_shell_error;
 use crate::cli::util::{find_org_id, find_project_id};
 use crate::state::State;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
 use std::sync::{Arc, Mutex};
@@ -64,7 +64,7 @@ fn columnar_clusters_drop(
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
     let name: String = call.req(engine_state, stack, 0)?;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let guard = state.lock().unwrap();
     let control =
@@ -74,15 +74,15 @@ fn columnar_clusters_drop(
         guard.named_or_active_project(call.get_flag(engine_state, stack, "project")?)?;
     let client = control.client();
 
-    let org_id = find_org_id(ctrl_c.clone(), &client, span)?;
-    let project_id = find_project_id(ctrl_c.clone(), project, &client, span, org_id.clone())?;
+    let org_id = find_org_id(signals.clone(), &client, span)?;
+    let project_id = find_project_id(signals.clone(), project, &client, span, org_id.clone())?;
 
     let cluster = client
-        .get_columnar_cluster(name, org_id.clone(), project_id.clone(), ctrl_c.clone())
+        .get_columnar_cluster(name, org_id.clone(), project_id.clone(), signals.clone())
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
     client
-        .delete_columnar_cluster(org_id, project_id, cluster.id(), ctrl_c)
+        .delete_columnar_cluster(org_id, project_id, cluster.id(), signals)
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
     Ok(PipelineData::empty())

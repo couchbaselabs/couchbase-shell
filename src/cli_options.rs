@@ -1,6 +1,7 @@
+use nu_engine::command_prelude::Call;
 use nu_engine::{get_full_help, CallExt};
 use nu_parser::{escape_quote_string, parse};
-use nu_protocol::ast::{Call, Expr, Expression, PipelineElement};
+use nu_protocol::ast::{Expr, Expression, PipelineElement};
 use nu_protocol::engine::{Command, EngineState, Stack, StateWorkingSet};
 use nu_protocol::{
     report_error, Category, Example, IntoPipelineData, PipelineData, ShellError, Signature,

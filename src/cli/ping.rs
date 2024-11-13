@@ -10,8 +10,8 @@ use tokio::runtime::Runtime;
 use tokio::time::Instant;
 
 use crate::cli::error::{client_error_to_shell_error, no_active_bucket_error};
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
@@ -73,7 +73,7 @@ fn run_ping(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
 
@@ -89,7 +89,7 @@ fn run_ping(
         let deadline = Instant::now().add(cluster.timeouts().management_timeout());
 
         let client = cluster.cluster().http_client();
-        let result = client.ping_all_request(deadline, ctrl_c.clone());
+        let result = client.ping_all_request(deadline, signals.clone());
         match result {
             Ok(res) => {
                 for ping in res {
@@ -133,11 +133,11 @@ fn run_ping(
             .block_on(cluster.cluster().key_value_client(
                 bucket_name.clone(),
                 kv_deadline,
-                ctrl_c.clone(),
+                signals.clone(),
             ))
             .map_err(|e| client_error_to_shell_error(e, span))?;
 
-        let kv_result = rt.block_on(client.ping_all(kv_deadline, ctrl_c.clone()));
+        let kv_result = rt.block_on(client.ping_all(kv_deadline, signals.clone()));
         match kv_result {
             Ok(res) => {
                 for ping in res {

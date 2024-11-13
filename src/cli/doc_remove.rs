@@ -8,8 +8,8 @@ use crate::cli::util::cluster_identifiers_from;
 use crate::client::KeyValueRequest;
 use crate::state::State;
 use futures::stream::FuturesUnordered;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
@@ -97,13 +97,13 @@ fn run_remove(
     input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let id_column = call
         .get_flag(engine_state, stack, "id-column")?
         .unwrap_or_else(|| String::from("id"));
 
-    let ids = ids_from_input(input, id_column.clone(), call.positional_nth(0))?;
+    let ids = ids_from_input(input, id_column.clone(), call.positional_nth(stack, 0))?;
     let batch_size: Option<i64> = call.get_flag(engine_state, stack, "batch-size")?;
     let mut all_ids: Vec<Vec<String>> = vec![];
     if let Some(size) = batch_size {
@@ -129,7 +129,7 @@ fn run_remove(
             bucket_flag.clone(),
             scope_flag.clone(),
             collection_flag.clone(),
-            ctrl_c.clone(),
+            signals.clone(),
             span,
         ) {
             Ok(c) => c,
@@ -159,13 +159,12 @@ fn run_remove(
         for items in all_ids.clone() {
             for item in items.clone() {
                 let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
-                let ctrl_c = ctrl_c.clone();
-
+                let signal = signals.clone();
                 let client = client.clone();
 
                 workers.push(async move {
                     client
-                        .request(KeyValueRequest::Remove { key: item }, cid, deadline, ctrl_c)
+                        .request(KeyValueRequest::Remove { key: item }, cid, deadline, signal)
                         .await
                 });
             }

@@ -15,8 +15,8 @@ use tokio::runtime::Runtime;
 use tokio::time::Instant;
 
 use crate::cli::error::generic_error;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, Example, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape,
@@ -115,14 +115,14 @@ fn run_get(
     input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
     let batch_size: Option<i64> = call.get_flag(engine_state, stack, "batch-size")?;
     let id_column: String = call
         .get_flag(engine_state, stack, "id-column")?
         .unwrap_or_else(|| "id".to_string());
-    let ids = ids_from_input(input, id_column.clone(), call.positional_nth(0))?;
+    let ids = ids_from_input(input, id_column.clone(), call.positional_nth(stack, 0))?;
 
     let mut workers = FuturesUnordered::new();
     let guard = state.lock().unwrap();
@@ -147,7 +147,7 @@ fn run_get(
             bucket_flag.clone(),
             scope_flag.clone(),
             collection_flag.clone(),
-            ctrl_c.clone(),
+            signals.clone(),
             span,
         ) {
             Ok(c) => c,
@@ -175,14 +175,14 @@ fn run_get(
             for id in ids {
                 let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
 
-                let ctrl_c = ctrl_c.clone();
+                let signals = signals.clone();
                 let id = id.clone();
 
                 let client = client.clone();
 
                 workers.push(async move {
                     client
-                        .request(KeyValueRequest::Get { key: id }, cid, deadline, ctrl_c)
+                        .request(KeyValueRequest::Get { key: id }, cid, deadline, signals)
                         .await
                 });
             }

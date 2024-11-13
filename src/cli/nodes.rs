@@ -12,7 +12,7 @@ use crate::cli::error::{
     client_error_to_shell_error, serialize_error, unexpected_status_code_error,
 };
 use crate::remote_cluster::RemoteClusterType::Provisioned;
-use nu_protocol::ast::Call;
+use nu_engine::command_prelude::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value};
 
@@ -63,7 +63,7 @@ fn nodes(
     call: &Call,
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
     let span = call.head;
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
@@ -78,7 +78,7 @@ fn nodes(
             .management_request(
                 ManagementRequest::GetNodes,
                 Instant::now().add(active_cluster.timeouts().management_timeout()),
-                ctrl_c.clone(),
+                signals.clone(),
             )
             .map_err(|e| client_error_to_shell_error(e, span))?;
         if response.status() != 200 {

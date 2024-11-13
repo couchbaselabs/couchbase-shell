@@ -5,8 +5,8 @@ use crate::cli::error::{
 use crate::cli::util::{convert_json_value_to_nu_value, duration_to_golang_string};
 use crate::client::QueryRequest;
 use crate::state::State;
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
@@ -64,7 +64,7 @@ impl Command for TransactionsListAtrs {
         _input: PipelineData,
     ) -> Result<PipelineData, ShellError> {
         let span = call.head;
-        let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+        let signals = engine_state.signals().clone();
 
         let guard = self.state.lock().unwrap();
         let active_cluster = match guard.active_cluster() {
@@ -114,7 +114,7 @@ impl Command for TransactionsListAtrs {
                     transaction: None,
                 },
                 Instant::now().add(active_cluster.timeouts().query_timeout()),
-                ctrl_c,
+                signals,
             )
             .map_err(|e| client_error_to_shell_error(e, span))?;
 

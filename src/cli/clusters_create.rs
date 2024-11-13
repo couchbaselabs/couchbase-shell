@@ -7,8 +7,8 @@ use std::sync::{Arc, Mutex};
 use crate::cli::error::{client_error_to_shell_error, serialize_error};
 use crate::cli::generic_error;
 use crate::cli::util::{find_org_id, find_project_id};
+use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
-use nu_protocol::ast::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{Category, Example, PipelineData, ShellError, Signature, SyntaxShape, Value};
 use uuid::Uuid;
@@ -98,7 +98,7 @@ fn clusters_create(
     input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
-    let ctrl_c = engine_state.ctrlc.as_ref().unwrap().clone();
+    let signals = engine_state.signals().clone();
 
     let definition = match input.into_value(span)? {
         Value::Nothing { .. } => {
@@ -146,13 +146,13 @@ fn clusters_create(
     let project =
         guard.named_or_active_project(call.get_flag(engine_state, stack, "project")?)?;
 
-    let org_id = find_org_id(ctrl_c.clone(), &client, span)?;
-    let project_id = find_project_id(ctrl_c.clone(), project, &client, span, org_id.clone())?;
+    let org_id = find_org_id(signals.clone(), &client, span)?;
+    let project_id = find_project_id(signals.clone(), project, &client, span, org_id.clone())?;
 
     let payload =
         serde_json::to_string(&definition).map_err(|e| serialize_error(e.to_string(), span))?;
     client
-        .create_cluster(org_id, project_id, payload, ctrl_c)
+        .create_cluster(org_id, project_id, payload, signals)
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
     Ok(PipelineData::empty())
