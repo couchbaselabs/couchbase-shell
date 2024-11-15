@@ -27,9 +27,11 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-22.04
             arch: amd64
+            rpmarch: x86_64
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-22.04
             arch: arm64
+            rpmarch: aarch64
           - target: aarch64-apple-darwin
             os: macos-latest
           - target: x86_64-apple-darwin
@@ -53,6 +55,10 @@ jobs:
       - name: Install aarch64-linux gcc
         run: sudo apt-get update &&  sudo apt-get install gcc-aarch64-linux-gnu -y
         if: matrix.target == 'aarch64-unknown-linux-gnu'
+
+      - name: Install rpmdevtools
+        run: sudo apt-get install rpm
+        if: matrix.os == 'ubuntu-22.04'
 
       - uses: SebRollen/toml-action@v1.0.1
         id: version
@@ -86,11 +92,11 @@ jobs:
           RUSTFLAGS: -Ctarget-feature=+crt-static
         if: matrix.os == 'windows-latest'
 
-      #    - name: Test
-      #      uses: actions-rs/cargo@v1
-      #      with:
-      #        command: test
-      #        args: --verbose
+      #      - name: Test
+      #        uses: actions-rs/cargo@v1
+      #        with:
+      #          command: test
+      #          args: --verbose
 
       - name: Create archive for Linux
         id: createarchivelinux
@@ -116,7 +122,7 @@ jobs:
           7z a -tzip ${{ env.RELEASE_BIN }}-${{ matrix.target }}.zip ./target/release/${{ env.RELEASE_BIN_WINDOWS }} ${{ env.RELEASE_ADDS }}
         if: matrix.os == 'windows-latest'
 
-      - name: Create Debian amd package
+      - name: Create Debian package
         id: createdebianpkg
         run: |
           mkdir couchbase-shell_${{ steps.version.outputs.value }}_${{ matrix.target }}
@@ -135,11 +141,72 @@ jobs:
           dpkg-deb --info ./couchbase-shell_${{ steps.version.outputs.value }}_${{ matrix.target }}.deb
         if: matrix.os == 'ubuntu-22.04'
 
+      - name: Create rpm packages
+        id: createrpmpkgs
+        run: |
+          mkdir /home/runner/rpmbuild
+          mkdir /home/runner/rpmbuild/BUILD
+          mkdir /home/runner/rpmbuild/RPMS
+          mkdir /home/runner/rpmbuild/SOURCES
+          mkdir /home/runner/rpmbuild/SPECS
+          mkdir /home/runner/rpmbuild/SPRMS
+          mkdir couchbase-shell-${{ steps.version.outputs.value }}
+          mkdir couchbase-shell-${{ steps.version.outputs.value }}/usr
+          mkdir couchbase-shell-${{ steps.version.outputs.value }}/usr/bin
+          cp ./target/${{ matrix.target }}/release/${{ env.RELEASE_BIN }} ./couchbase-shell-${{ steps.version.outputs.value }}/usr/bin/couchbase-shell
+          cp {LICENSE,LICENSE_AGREEMENT,NOTICES,README.md} ./couchbase-shell-${{ steps.version.outputs.value }}/usr/bin
+          tar --create --file couchbase-shell-${{ steps.version.outputs.value }}-${{ matrix.rpmarch }}.tar.gz couchbase-shell-${{ steps.version.outputs.value }}
+          mv couchbase-shell-${{ steps.version.outputs.value }}-${{ matrix.rpmarch }}.tar.gz /home/runner/rpmbuild/SOURCES
+          echo "%define debug_package %{nil}
+          %define __strip /bin/true
+          
+          Name:        couchbase-shell
+          Release: 1
+          Summary: The modern and fun shell for Couchbase Server and Cloud
+          Source0: %{name}-${{ steps.version.outputs.value }}-%{_arch}.tar.gz
+          License: Apache Software License 2.0
+          Version: ${{ steps.version.outputs.value }}
+          Vendor: Couchbase
+          %description
+          The modern and fun shell for Couchbase Server and Cloud
+          
+          %define debug_package %{nil}
+          %define __strip /bin/true
+          
+          %prep
+          %setup -q
+          
+          %install
+          rm -rf $RPM_BUILD_ROOT
+          mkdir -p /home/runner/rpmbuild/BUILDROOT/%{name}-${{ steps.version.outputs.value }}-1.%{_arch}/%{_bindir}
+          cp ./%{_bindir}/* /home/runner/rpmbuild/BUILDROOT/%{name}-${{ steps.version.outputs.value }}-1.%{_arch}/%{_bindir}
+
+          %clean
+          rm -rf $RPM_BUILD_ROOT
+          
+          %files
+          %{_bindir}/%{name}
+          %doc %{_bindir}/README.md
+          %license %{_bindir}/LICENSE
+          %{_bindir}/NOTICES
+          %{_bindir}/LICENSE_AGREEMENT" > /home/runner/rpmbuild/SPECS/couchbase-shell.spec
+          rpmbuild -bb /home/runner/rpmbuild/SPECS/couchbase-shell.spec --target ${{ matrix.rpmarch }} --define "_bindir /usr/bin"
+        if: matrix.os == 'ubuntu-22.04'
+
       - name: Upload Debian artifacts
         uses: actions/upload-artifact@v4
         with:
           name: couchbase-shell_${{ steps.version.outputs.value }}_${{ matrix.target }}.deb
           path: ./couchbase-shell_${{ steps.version.outputs.value }}_${{ matrix.target }}.deb
+          if-no-files-found: error
+          compression-level: 0
+        if: matrix.os == 'ubuntu-22.04'
+
+      - name: Upload rpm artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: couchbase-shell-${{ steps.version.outputs.value }}-1.${{ matrix.rpmarch }}.rpm
+          path: /home/runner/rpmbuild/RPMS/${{ matrix.rpmarch }}/couchbase-shell-${{ steps.version.outputs.value }}-1.${{ matrix.rpmarch }}.rpm
           if-no-files-found: error
           compression-level: 0
         if: matrix.os == 'ubuntu-22.04'
@@ -174,6 +241,7 @@ jobs:
           files: |
             ${{ env.RELEASE_BIN }}*/*
             */*.deb
+            */*.rpm
           tag_name: v${{ needs.build.outputs.version }}
           draft: true
           prerelease: false
@@ -181,3 +249,4 @@ jobs:
           name: Release v${{ needs.build.outputs.version }}
           fail_on_unmatched_files: true
           body: ${{ steps.tag_version.changelog }}
+          
