@@ -1,4 +1,4 @@
-use crate::cli::analytics::{read_analytics_response, send_analytics_query};
+use crate::cli::analytics_common::{read_analytics_response, send_analytics_query};
 
 use crate::cli::util::{cluster_identifiers_from, get_active_cluster};
 use crate::state::State;
