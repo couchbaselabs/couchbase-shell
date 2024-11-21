@@ -1,6 +1,7 @@
 mod allow_ip;
 mod analytics;
 mod analytics_buckets;
+mod analytics_common;
 mod analytics_datasets;
 mod analytics_dataverses;
 mod analytics_indexes;
