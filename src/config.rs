@@ -1,4 +1,4 @@
-use crate::remote_cluster::{RemoteCluster, RemoteClusterType};
+use crate::remote_cluster::{ClusterTimeouts, RemoteCluster, RemoteClusterType};
 use crate::state::Provider;
 use log::debug;
 use log::error;
@@ -251,25 +251,6 @@ pub struct CapellaOrganizationConfig {
 }
 
 impl CapellaOrganizationConfig {
-    pub fn new(
-        identifier: String,
-        secret_key: String,
-        access_key: String,
-        management_timeout: Option<Duration>,
-        default_project: Option<String>,
-        api_endpoint: Option<String>,
-    ) -> Self {
-        Self {
-            identifier,
-            credentials: OrganizationCredentials {
-                access_key,
-                secret_key,
-            },
-            management_timeout,
-            default_project,
-            api_endpoint,
-        }
-    }
     pub fn identifier(&self) -> String {
         self.identifier.clone()
     }
@@ -511,6 +492,55 @@ impl ClusterConfig {
     }
 }
 
+impl From<ClusterTimeouts> for ClusterConfigTimeouts {
+    fn from(timeouts: ClusterTimeouts) -> Self {
+        let data_timeout = if timeouts.data_timeout() == DEFAULT_DATA_TIMEOUT {
+            None
+        } else {
+            Some(timeouts.data_timeout())
+        };
+
+        let query_timeout = if timeouts.query_timeout() == DEFAULT_QUERY_TIMEOUT {
+            None
+        } else {
+            Some(timeouts.query_timeout())
+        };
+
+        let analytics_timeout = if timeouts.analytics_timeout() == DEFAULT_ANALYTICS_TIMEOUT {
+            None
+        } else {
+            Some(timeouts.analytics_timeout())
+        };
+
+        let search_timeout = if timeouts.search_timeout() == DEFAULT_SEARCH_TIMEOUT {
+            None
+        } else {
+            Some(timeouts.search_timeout())
+        };
+
+        let management_timeout = if timeouts.management_timeout() == DEFAULT_MANAGEMENT_TIMEOUT {
+            None
+        } else {
+            Some(timeouts.management_timeout())
+        };
+
+        let transaction_timeout = if timeouts.transaction_timeout() == DEFAULT_TRANSACTION_TIMEOUT {
+            None
+        } else {
+            Some(timeouts.transaction_timeout())
+        };
+
+        Self {
+            data_timeout,
+            query_timeout,
+            analytics_timeout,
+            search_timeout,
+            management_timeout,
+            transaction_timeout,
+        }
+    }
+}
+
 impl From<(String, &RemoteCluster)> for ClusterConfig {
     fn from(cluster: (String, &RemoteCluster)) -> Self {
         let cloud = cluster.1.capella_org();
@@ -529,20 +559,19 @@ impl From<(String, &RemoteCluster)> for ClusterConfig {
             }
         };
 
+        let kv_batch_size = if cluster.1.kv_batch_size() == DEFAULT_KV_BATCH_SIZE {
+            None
+        } else {
+            Some(cluster.1.kv_batch_size())
+        };
+
         Self {
             identifier: cluster.0,
             conn_string: cluster.1.hostnames().join(","),
             default_collection: cluster.1.active_collection(),
             default_scope: cluster.1.active_scope(),
             default_bucket: cluster.1.active_bucket(),
-            timeouts: ClusterConfigTimeouts {
-                data_timeout: Some(cluster.1.timeouts().data_timeout()),
-                query_timeout: Some(cluster.1.timeouts().query_timeout()),
-                analytics_timeout: Some(cluster.1.timeouts().analytics_timeout()),
-                search_timeout: Some(cluster.1.timeouts().search_timeout()),
-                management_timeout: Some(cluster.1.timeouts().management_timeout()),
-                transaction_timeout: Some(cluster.1.timeouts().transaction_timeout()),
-            },
+            timeouts: ClusterConfigTimeouts::from(cluster.1.timeouts()),
             tls: tls_config,
             credentials: ClusterCredentials {
                 username: Some(cluster.1.username().to_string()),
@@ -550,7 +579,7 @@ impl From<(String, &RemoteCluster)> for ClusterConfig {
             },
             capella_org: cloud,
             project: cluster.1.project(),
-            kv_batch_size: Some(cluster.1.kv_batch_size()),
+            kv_batch_size,
             display_name: cluster.1.display_name(),
             // This is a config option for dev ony so we won't want to write to file
             cluster_type: None,
@@ -562,9 +591,11 @@ impl From<(String, &RemoteCluster)> for ClusterConfig {
 pub struct OrganizationCredentials {
     #[serde(default)]
     #[serde(rename(deserialize = "access-key", serialize = "access-key"))]
+    #[serde(skip_serializing_if = "String::is_empty")]
     access_key: String,
     #[serde(default)]
     #[serde(rename(deserialize = "secret-key", serialize = "secret-key"))]
+    #[serde(skip_serializing_if = "String::is_empty")]
     secret_key: String,
 }
 

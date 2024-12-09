@@ -1,13 +1,13 @@
-use crate::cli::cbenv_register::update_config_file;
+use crate::cli::util::{read_config_file, update_config_file};
 use crate::state::State;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use crate::cli::error::{cluster_not_found_error, generic_error};
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::Value::Nothing;
-use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
+use nu_protocol::{Category, PipelineData, ShellError, Signature, Span, SyntaxShape};
 
 #[derive(Clone)]
 pub struct CbEnvUnregister {
@@ -63,7 +63,7 @@ fn clusters_unregister(
     _input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
     let identifier: String = call.req(engine_state, stack, 0)?;
-    let save = call.get_flag(engine_state, stack, "save")?.unwrap_or(false);
+    let save = call.has_flag(engine_state, stack, "save")?;
 
     let mut guard = state.lock().unwrap();
     if guard.active() == identifier {
@@ -79,7 +79,7 @@ fn clusters_unregister(
     };
 
     if save {
-        update_config_file(&mut guard, call.head)?;
+        remove_cluster_config(&mut guard, call.head, identifier)?;
     };
 
     Ok(PipelineData::Value(
@@ -88,4 +88,25 @@ fn clusters_unregister(
         },
         None,
     ))
+}
+
+fn remove_cluster_config(
+    guard: &mut MutexGuard<State>,
+    span: Span,
+    identifier: String,
+) -> Result<(), ShellError> {
+    let mut config = read_config_file(guard, span)?;
+    let clusters = config.clusters_mut();
+
+    if let Some(cluster_index) = clusters.iter().position(|c| c.identifier() == identifier) {
+        clusters.remove(cluster_index);
+    } else {
+        return Err(generic_error(
+            format!("cluster {} not in config file", identifier),
+            None,
+            span,
+        ));
+    }
+
+    update_config_file(guard, span, config)
 }

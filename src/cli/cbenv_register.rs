@@ -1,10 +1,7 @@
-use crate::config::{CapellaOrganizationConfig, ClusterConfig, ShellConfig, DEFAULT_KV_BATCH_SIZE};
-use crate::state::State;
-use std::fs;
-use std::sync::{Arc, Mutex, MutexGuard};
-
 use crate::cli::error::generic_error;
-use crate::cli::util::get_username_and_password;
+use crate::cli::util::{get_username_and_password, read_config_file, update_config_file};
+use crate::config::{ClusterConfig, DEFAULT_KV_BATCH_SIZE};
+use crate::state::State;
 use crate::{
     ClusterTimeouts, RemoteCluster, RemoteClusterResources, RemoteClusterType, RustTlsConfig,
 };
@@ -13,6 +10,7 @@ use nu_engine::CallExt;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::Value::Nothing;
 use nu_protocol::{Category, PipelineData, ShellError, Signature, Span, SyntaxShape};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 #[derive(Clone)]
 pub struct CbEnvRegister {
@@ -151,7 +149,7 @@ fn clusters_register(
         .get_flag(engine_state, stack, "tls-accept-all-certs")?
         .unwrap_or(true);
     let cert_path = call.get_flag(engine_state, stack, "tls-cert-path")?;
-    let save = call.get_flag(engine_state, stack, "save")?.unwrap_or(false);
+    let save = call.has_flag(engine_state, stack, "save")?;
     let capella = call.get_flag(engine_state, stack, "capella-organization")?;
     let project = call.get_flag(engine_state, stack, "project")?;
     let display_name = call.get_flag(engine_state, stack, "display-name")?;
@@ -193,10 +191,10 @@ fn clusters_register(
     );
 
     let mut guard = state.lock().unwrap();
-    guard.add_cluster(identifier, cluster)?;
+    guard.add_cluster(identifier.clone(), cluster)?;
 
     if save {
-        update_config_file(&mut guard, call.head)?;
+        save_new_cluster_config(&mut guard, call.head, identifier)?;
     }
 
     Ok(PipelineData::Value(
@@ -207,42 +205,28 @@ fn clusters_register(
     ))
 }
 
-pub fn update_config_file(guard: &mut MutexGuard<State>, span: Span) -> Result<(), ShellError> {
-    let path = match guard.config_path() {
-        Some(p) => p,
-        None => {
-            return Err(generic_error(
-                "A config path must be discoverable to save config",
-                None,
-                span,
-            ));
-        }
-    };
-    let mut cluster_configs = Vec::new();
-    for (identifier, cluster) in guard.clusters() {
-        cluster_configs.push(ClusterConfig::from((identifier.clone(), cluster)))
-    }
-    let mut capella_configs = Vec::new();
-    for (identifier, c) in guard.capella_orgs() {
-        capella_configs.push(CapellaOrganizationConfig::new(
-            identifier.clone(),
-            c.secret_key(),
-            c.access_key(),
-            Some(c.timeout()),
-            c.default_project(),
+fn save_new_cluster_config(
+    guard: &mut MutexGuard<State>,
+    span: Span,
+    identifier: String,
+) -> Result<(), ShellError> {
+    let mut config = read_config_file(guard, span)?;
+    let clusters = config.clusters_mut();
+
+    if clusters.iter().any(|c| c.identifier() == identifier) {
+        return Err(generic_error(
+            format!(
+                "failed to update config file: cluster with identifier {} already exists",
+                identifier
+            ),
             None,
-        ))
+            span,
+        ));
     }
 
-    let config = ShellConfig::new_from_clusters(cluster_configs, capella_configs);
+    let new_cluster = guard.clusters().get(&identifier).unwrap();
 
-    fs::write(
-        path,
-        config
-            .to_str()
-            .map_err(|e| generic_error(format!("Failed to write config file {}", e), None, span))?,
-    )
-    .map_err(|e| generic_error(format!("Failed to write config file {}", e), None, span))?;
+    clusters.push(ClusterConfig::from((identifier.clone(), new_cluster)));
 
-    Ok(())
+    update_config_file(guard, span, config)
 }
