@@ -356,14 +356,6 @@ impl RemoteCapellaOrganization {
         }
     }
 
-    pub fn secret_key(&self) -> String {
-        self.secret_key.clone()
-    }
-
-    pub fn access_key(&self) -> String {
-        self.access_key.clone()
-    }
-
     pub fn client(&self) -> Arc<CapellaClient> {
         let mut c = self.client.lock().unwrap();
         if c.is_none() {

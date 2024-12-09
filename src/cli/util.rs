@@ -7,8 +7,10 @@ use crate::cli::generic_error;
 use crate::cli::CBShellError::ClusterNotFound;
 use crate::client::cloud_json::Cluster;
 use crate::client::CapellaClient;
+use crate::config::ShellConfig;
 use crate::state::State;
 use crate::{read_input, RemoteCluster, RemoteClusterType};
+use log::debug;
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
 use nu_protocol::ast::PathMember;
@@ -18,6 +20,7 @@ use nu_protocol::{Record, Signals};
 use nu_utils::SharedCow;
 use num_traits::cast::ToPrimitive;
 use regex::Regex;
+use std::fs;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 
@@ -524,6 +527,60 @@ pub fn get_username_and_password(
     )?;
 
     Ok((username, password))
+}
+
+pub fn read_config_file(
+    guard: &mut MutexGuard<State>,
+    span: Span,
+) -> Result<ShellConfig, ShellError> {
+    let path = match guard.config_path() {
+        Some(p) => p,
+        None => {
+            return Err(generic_error(
+                "A config path must be discoverable to save config",
+                None,
+                span,
+            ));
+        }
+    };
+
+    let config = fs::read(path)
+        .map_err(|e| generic_error(format!("Could not read current config: {}", e), None, span))?;
+
+    let shell_config = ShellConfig::from_str(std::str::from_utf8(&config).unwrap());
+
+    debug!("config read from {:?} - {:?}", path, shell_config);
+
+    Ok(shell_config)
+}
+
+pub fn update_config_file(
+    guard: &mut MutexGuard<State>,
+    span: Span,
+    config: ShellConfig,
+) -> Result<(), ShellError> {
+    let path = match guard.config_path() {
+        Some(p) => p,
+        None => {
+            return Err(generic_error(
+                "A config path must be discoverable to save config",
+                None,
+                span,
+            ));
+        }
+    };
+
+    debug!("updating config at {:?} to {:?}", path, config);
+
+    fs::write(
+        path,
+        config
+            .to_str()
+            .map_err(|e| generic_error(format!("Failed to write config file {}", e), None, span))?,
+    )
+    .map_err(|e| generic_error(format!("Failed to write config file {}", e), None, span))?;
+
+    Ok(())
 }
 
 #[cfg(test)]
