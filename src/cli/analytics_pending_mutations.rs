@@ -1,9 +1,7 @@
 use crate::cli::error::{
     client_error_to_shell_error, deserialize_error, unexpected_status_code_error,
 };
-use crate::cli::util::{
-    cluster_identifiers_from, convert_row_to_nu_value, get_active_cluster, validate_is_not_cloud,
-};
+use crate::cli::util::{cluster_identifiers_from, convert_row_to_nu_value, get_active_cluster};
 use crate::client::AnalyticsQueryRequest;
 use crate::state::State;
 use nu_engine::command_prelude::Call;
@@ -74,8 +72,6 @@ fn pending_mutations(
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
-        validate_is_not_cloud(active_cluster, "analytics pending-mutations", span)?;
-
         let response = active_cluster
             .cluster()
             .http_client()
