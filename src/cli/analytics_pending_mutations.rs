@@ -74,8 +74,6 @@ fn pending_mutations(
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
-        validate_is_not_cloud(active_cluster, "analytics pending-mutations", span)?;
-
         let response = active_cluster
             .cluster()
             .http_client()
