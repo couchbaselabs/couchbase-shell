@@ -1,0 +1,239 @@
+=== analytics
+
+The `analytics` commands are used to perform operations through the analytics service.
+
+==== `analytics`
+
+Executes an analytics query against the active cluster.
+This can be done against a Couchbase cluster running the analytics service, or against a Columnar analytics cluster.
+
+```
+👤 Charlie 🏠 remote in ☁️ default._default._default
+> analytics `SELECT "Hello, data!" AS greeting;`
+╭───┬──────────────┬─────────╮
+│ # │   greeting   │ cluster │
+├───┼──────────────┼─────────┤
+│ 0 │ Hello, data! │ remote  │
+╰───┴──────────────┴─────────╯
+```
+
+The `analytics` command returns the query results as a stream, which can be very useful when the query results are too large to be stored in memory.
+Take the following example analytics query:
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+> analytics "FROM range(0,10) AS r SELECT repeat("testing", 1) AS x1"
+╭────┬─────────┬─────────╮
+│  # │   x1    │ cluster │
+├────┼─────────┼─────────┤
+│  0 │ testing │ local   │
+│  1 │ testing │ local   │
+│  2 │ testing │ local   │
+│  3 │ testing │ local   │
+│  4 │ testing │ local   │
+│  5 │ testing │ local   │
+│  6 │ testing │ local   │
+│  7 │ testing │ local   │
+│  8 │ testing │ local   │
+│  9 │ testing │ local   │
+│ 10 │ testing │ local   │
+╰────┴─────────┴─────────╯
+```
+
+To stream these results directly to a file we first need to convert them to an appropriate format, for example csv:
+
+```
+👤 Administrator 🏠 local in 🗄 travel-sample._default._default
+> analytics "FROM range(0,10) AS r SELECT repeat("testing", 1) AS x1" | to csv --columns [x1, cluster]
+x1,cluster
+testing,local
+testing,local
+testing,local
+testing,local
+testing,local
+testing,local
+testing,local
+testing,local
+testing,local
+testing,local
+testing,local
+```
+
+The `--columns` flag is very important here as without it the `to csv` command will consume the stream, reading it all to memory.
+This is because the `to csv` command needs to determine what the headers of the columns are, and since the inputs could be irregular `to csv` needs to read all the results first.
+The `columns` flag avoids this, and the `to csv` command will not consume the stream.
+
+Finally now that we have our query results in an appropriate format we can use the `save` command to save our results to file:
+
+```
+👤 Administrator 🏠 local in 🗄 travel-sample._default._default
+> analytics "FROM range(0,10) AS r SELECT repeat("testing", 1) AS x1" | to csv --columns [x1, cluster] | save results.csv --raw
+x1,cluster
+testing,local
+testing,local
+testing,local
+testing,local
+testing,local
+testing,local
+testing,local
+testing,local
+testing,local
+testing,local
+testing,local
+```
+
+The `--raw` flag is necessary here, otherwise the save command will consume the stream to try and determine the format of the data.
+Without the `raw` flag the `save` command will convert it's input as appropriate depending on the file type the input is being saved to.
+In doing so it will read the input stream into memory, which is why we need to convert first and save with the `--raw` flag which avoids the consumption of the stream.
+
+We can see the meta data related to the query using the `with-meta` flag:
+
+[options="nowrap"]
+```
+👤 Charlie 🏠 remote in ☁️ default._default._default
+> analytics `SELECT "Hello, data!" AS greeting;` --with-meta
+╭───┬──────────────────────────────────────┬───────────┬──────────────────────┬───────────────────┬─────────┬───────────────────────────────────┬─────────╮
+│ # │              requestID               │ signature │       results        │       plans       │ status  │              metrics              │ cluster │
+├───┼──────────────────────────────────────┼───────────┼──────────────────────┼───────────────────┼─────────┼───────────────────────────────────┼─────────┤
+│ 0 │ e0811a97-9bf9-4d20-bde3-735df78fbb78 │ ╭───┬───╮ │ ╭───┬──────────────╮ │ {record 0 fields} │ success │ ╭──────────────────┬────────────╮ │ remote  │
+│   │                                      │ │ * │ * │ │ │ # │   greeting   │ │                   │         │ │ elapsedTime      │ 7.072192ms │ │         │
+│   │                                      │ ╰───┴───╯ │ ├───┼──────────────┤ │                   │         │ │ executionTime    │ 5.874556ms │ │         │
+│   │                                      │           │ │ 0 │ Hello, data! │ │                   │         │ │ compileTime      │ 1.762146ms │ │         │
+│   │                                      │           │ ╰───┴──────────────╯ │                   │         │ │ queueWaitTime    │ 0ns        │ │         │
+│   │                                      │           │                      │                   │         │ │ resultCount      │ 1          │ │         │
+│   │                                      │           │                      │                   │         │ │ resultSize       │ 27         │ │         │
+│   │                                      │           │                      │                   │         │ │ processedObjects │ 0          │ │         │
+│   │                                      │           │                      │                   │         │ ╰──────────────────┴────────────╯ │         │
+╰───┴──────────────────────────────────────┴───────────┴──────────────────────┴───────────────────┴─────────┴───────────────────────────────────┴─────────╯
+```
+
+Note that using this flag requires the `analytics` command to consume the results stream, so if you wish to stream results to a file then the with-meta flag cannot be used.
+
+==== `analytics buckets`
+
+Lists all the analytics buckets on the active cluster.
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+> analytics buckets
+╭───┬─────────────────────────┬──────────┬───────────────┬──────┬───────────┬─────────╮
+│ # │      DataverseName      │ LinkName │     Name      │ UUID │ IsRunning │ cluster │
+├───┼─────────────────────────┼──────────┼───────────────┼──────┼───────────┼─────────┤
+│ 0 │ travel-sample/inventory │ Local    │ travel-sample │      │ false     │ local   │
+╰───┴─────────────────────────┴──────────┴───────────────┴──────┴───────────┴─────────╯
+```
+
+==== `analytics datasets`
+
+Lists all the analytics datasets on the active cluster.
+
+[options="nowrap"]
+```
+👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+> analytics datasets
+╭─────┬──────────────────────────┬─────────────────────────┬──────────────────────────┬────────────────────────────────┬──────────────┬───────────────────────────────────┬──────────────────┬───────────────────────────────────────────┬─────╮
+│   # │      DataverseName       │       DatasetName       │  DatatypeDataverseName   │          DatatypeName          │ DatasetType  │             GroupName             │ CompactionPolicy │        CompactionPolicyProperties         │ ... │
+├─────┼──────────────────────────┼─────────────────────────┼──────────────────────────┼────────────────────────────────┼──────────────┼───────────────────────────────────┼──────────────────┼───────────────────────────────────────────┼─────┤
+│   0 │ travel-sample/inventory  │ airline                 │ Metadata                 │ AnyObject                      │ INTERNAL     │ travel-sample/inventory.airline   │ concurrent       │ ╭───┬───────────────────────────┬───────╮ │ ... │
+│     │                          │                         │                          │                                │              │                                   │                  │ │ # │           Name            │ Value │ │     │
+│     │                          │                         │                          │                                │              │                                   │                  │ ├───┼───────────────────────────┼───────┤ │     │
+│     │                          │                         │                          │                                │              │                                   │                  │ │ 0 │ max-component-count       │ 30    │ │     │
+│     │                          │                         │                          │                                │              │                                   │                  │ │ 1 │ min-merge-component-count │ 3     │ │     │
+│     │                          │                         │                          │                                │              │                                   │                  │ │ 2 │ max-merge-component-count │ 10    │ │     │
+│     │                          │                         │                          │                                │              │                                   │                  │ │ 3 │ size-ratio                │ 1.2   │ │     │
+│     │                          │                         │                          │                                │              │                                   │                  │ ╰───┴───────────────────────────┴───────╯ │     │
+│   1 │ travel-sample/inventory  │ airline_view            │ travel-sample/inventory  │ $d$t$i$airline_view            │ VIEW         │ MetadataGroup                     │                  │ [list 0 items]                            │ ... │
+│ ... │ ...                      │ ...                     │ ...                      │ ...                            │ ...          │ ...                               │ ...              │ ...                                       │ ... │
+│  12 │ travel-sample/inventory  │ route_view              │ travel-sample/inventory  │ $d$t$i$route_view              │ VIEW         │ MetadataGroup                     │                  │ [list 0 items]                            │ ... │
+╰─────┴──────────────────────────┴─────────────────────────┴──────────────────────────┴────────────────────────────────┴──────────────┴───────────────────────────────────┴──────────────────┴───────────────────────────────────────────┴─────╯
+```
+
+==== `analytics dataverses`
+
+Lists all of the analytics dataverses on the active cluster.
+
+[options="nowrap"]
+```
+👤 Administrator 🏠 local in 🗄 travel-sample._default._default
+> analytics dataverses
+╭───┬─────────────────────────┬────────────────────────────────────────────────────────┬──────────────────────────────┬───────────┬─────────╮
+│ # │      DataverseName      │                       DataFormat                       │          Timestamp           │ PendingOp │ cluster │
+├───┼─────────────────────────┼────────────────────────────────────────────────────────┼──────────────────────────────┼───────────┼─────────┤
+│ 0 │ Default                 │ org.apache.asterix.runtime.formats.NonTaggedDataFormat │ Wed Dec 04 13:31:56 GMT 2024 │         0 │ local   │
+│ 1 │ travel-sample/inventory │ org.apache.asterix.runtime.formats.NonTaggedDataFormat │ Mon Dec 09 10:30:56 GMT 2024 │         0 │ local   │
+╰───┴─────────────────────────┴────────────────────────────────────────────────────────┴──────────────────────────────┴───────────┴─────────╯
+```
+
+==== `analytics indexes`
+
+Lists all the analytics indexes on the active cluster.
+
+[options="nowrap"]
+```
+👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+>  analytics indexes
+╭───┬─────────────────────────┬─────────────┬───────────┬────────────────┬────────────────────┬───────────┬──────────────────────────────┬───────────┬──────────────────────────┬─────────╮
+│ # │      DataverseName      │ DatasetName │ IndexName │ IndexStructure │     SearchKey      │ IsPrimary │          Timestamp           │ PendingOp │ SearchKeySourceIndicator │ cluster │
+├───┼─────────────────────────┼─────────────┼───────────┼────────────────┼────────────────────┼───────────┼──────────────────────────────┼───────────┼──────────────────────────┼─────────┤
+│ 0 │ travel-sample/inventory │ airline     │ airline   │ BTREE          │ ╭───┬────────────╮ │ true      │ Mon Dec 09 10:30:56 GMT 2024 │         0 │ ╭───┬───╮                │ local   │
+│   │                         │             │           │                │ │ 0 │ ╭───┬────╮ │ │           │                              │           │ │ 0 │ 1 │                │         │
+│   │                         │             │           │                │ │   │ │ 0 │ id │ │ │           │                              │           │ ╰───┴───╯                │         │
+│   │                         │             │           │                │ │   │ ╰───┴────╯ │ │           │                              │           │                          │         │
+│   │                         │             │           │                │ ╰───┴────────────╯ │           │                              │           │                          │         │
+│ 1 │ travel-sample/inventory │ airport     │ airport   │ BTREE          │ ╭───┬────────────╮ │ true      │ Mon Dec 09 10:30:56 GMT 2024 │         0 │ ╭───┬───╮                │ local   │
+│   │                         │             │           │                │ │ 0 │ ╭───┬────╮ │ │           │                              │           │ │ 0 │ 1 │                │         │
+│   │                         │             │           │                │ │   │ │ 0 │ id │ │ │           │                              │           │ ╰───┴───╯                │         │
+│   │                         │             │           │                │ │   │ ╰───┴────╯ │ │           │                              │           │                          │         │
+│   │                         │             │           │                │ ╰───┴────────────╯ │           │                              │           │                          │         │
+│ 2 │ travel-sample/inventory │ hotel       │ hotel     │ BTREE          │ ╭───┬────────────╮ │ true      │ Mon Dec 09 10:30:56 GMT 2024 │         0 │ ╭───┬───╮                │ local   │
+│   │                         │             │           │                │ │ 0 │ ╭───┬────╮ │ │           │                              │           │ │ 0 │ 1 │                │         │
+│   │                         │             │           │                │ │   │ │ 0 │ id │ │ │           │                              │           │ ╰───┴───╯                │         │
+│   │                         │             │           │                │ │   │ ╰───┴────╯ │ │           │                              │           │                          │         │
+│   │                         │             │           │                │ ╰───┴────────────╯ │           │                              │           │                          │         │
+│ 3 │ travel-sample/inventory │ landmark    │ landmark  │ BTREE          │ ╭───┬────────────╮ │ true      │ Mon Dec 09 10:30:56 GMT 2024 │         0 │ ╭───┬───╮                │ local   │
+│   │                         │             │           │                │ │ 0 │ ╭───┬────╮ │ │           │                              │           │ │ 0 │ 1 │                │         │
+│   │                         │             │           │                │ │   │ │ 0 │ id │ │ │           │                              │           │ ╰───┴───╯                │         │
+│   │                         │             │           │                │ │   │ ╰───┴────╯ │ │           │                              │           │                          │         │
+│   │                         │             │           │                │ ╰───┴────────────╯ │           │                              │           │                          │         │
+│ 4 │ travel-sample/inventory │ route       │ route     │ BTREE          │ ╭───┬────────────╮ │ true      │ Mon Dec 09 10:30:56 GMT 2024 │         0 │ ╭───┬───╮                │ local   │
+│   │                         │             │           │                │ │ 0 │ ╭───┬────╮ │ │           │                              │           │ │ 0 │ 1 │                │         │
+│   │                         │             │           │                │ │   │ │ 0 │ id │ │ │           │                              │           │ ╰───┴───╯                │         │
+│   │                         │             │           │                │ │   │ ╰───┴────╯ │ │           │                              │           │                          │         │
+│   │                         │             │           │                │ ╰───┴────────────╯ │           │                              │           │                          │         │
+╰───┴─────────────────────────┴─────────────┴───────────┴────────────────┴────────────────────┴───────────┴──────────────────────────────┴───────────┴──────────────────────────┴─────────╯
+```
+
+==== `analytics links`
+
+Lists all of the analytics links on the active cluster.
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+> analytics links
+╭───┬─────────────────────────┬───────┬──────────┬─────────╮
+│ # │      DataverseName      │ Name  │ IsActive │ cluster │
+├───┼─────────────────────────┼───────┼──────────┼─────────┤
+│ 0 │ Default                 │ Local │ true     │ local   │
+│ 1 │ travel-sample/inventory │ Local │ true     │ local   │
+╰───┴─────────────────────────┴───────┴──────────┴─────────╯
+```
+
+==== `analytics pending-mutations`
+
+Lists all of the analytics pending mutations for the active cluster.
+
+```
+👤 Administrator 🏠 local in 🗄 travel-sample._default._default
+> analytics pending-mutations
+╭───┬───────────────────────────┬─────────╮
+│ # │ `travel-sample`.inventory │ cluster │
+├───┼───────────────────────────┼─────────┤
+│ 0 │ ╭──────────┬───╮          │ local   │
+│   │ │ hotel    │ 0 │          │         │
+│   │ │ airport  │ 0 │          │         │
+│   │ │ route    │ 0 │          │         │
+│   │ │ airline  │ 0 │          │         │
+│   │ │ landmark │ 0 │          │         │
+│   │ ╰──────────┴───╯          │         │
+╰───┴───────────────────────────┴─────────╯
+```
