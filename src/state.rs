@@ -153,7 +153,7 @@ impl State {
 
         {
             let mut guard = self.active.lock().unwrap();
-            *guard = active.clone();
+            guard.clone_from(&active)
         }
 
         if let Some(remote) = self.active_cluster() {
