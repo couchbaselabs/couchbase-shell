@@ -204,7 +204,7 @@ fn vector_enrich_doc(
                     let mut content_column = "".to_string();
                     for column in rec.columns() {
                         if column != "cluster" && *column != id_column {
-                            content_column = column.clone();
+                            content_column.clone_from(column)
                         }
                     }
 

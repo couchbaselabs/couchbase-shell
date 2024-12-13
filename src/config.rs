@@ -80,10 +80,10 @@ impl ShellConfig {
                 for cred in &standalone.clusters {
                     if cred.identifier() == identifier {
                         if config_credentials.username.is_none() && cred.username.is_some() {
-                            config_credentials.username = cred.username.clone()
+                            config_credentials.username.clone_from(&cred.username)
                         }
                         if config_credentials.password.is_none() && cred.password.is_some() {
-                            config_credentials.password = cred.password.clone()
+                            config_credentials.password.clone_from(&cred.password)
                         }
                     }
                 }
@@ -96,10 +96,10 @@ impl ShellConfig {
                 for cred in &standalone.capella_orgs {
                     if cred.identifier() == identifier {
                         if config_credentials.secret_key.is_empty() && !cred.secret_key.is_empty() {
-                            config_credentials.secret_key = cred.secret_key.clone()
+                            config_credentials.secret_key.clone_from(&cred.secret_key)
                         }
                         if config_credentials.access_key.is_empty() && !cred.access_key.is_empty() {
-                            config_credentials.access_key = cred.access_key.clone()
+                            config_credentials.access_key.clone_from(&cred.access_key)
                         }
                     }
                 }
