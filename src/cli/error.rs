@@ -307,10 +307,6 @@ pub fn no_active_project_error(span: Option<Span>) -> ShellError {
     CBShellError::NoActiveProject { span }.into()
 }
 
-pub fn no_active_scope_error(span: Span) -> ShellError {
-    CBShellError::NoActiveScope { span }.into()
-}
-
 pub fn cluster_not_found_error(name: String, span: Span) -> ShellError {
     CBShellError::ClusterNotFoundInConfig { name, span }.into()
 }
