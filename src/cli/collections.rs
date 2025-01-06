@@ -14,7 +14,6 @@ use crate::cli::error::{
     client_error_to_shell_error, deserialize_error, no_active_bucket_error,
     unexpected_status_code_error,
 };
-use crate::cli::no_active_scope_error;
 use crate::client::cloud::CollectionNamespace;
 use crate::client::cloud_json::Collection;
 use crate::remote_cluster::RemoteClusterType::Provisioned;
@@ -187,7 +186,7 @@ pub fn get_scope_or_active(
         Some(v) => Ok(v),
         None => match active_cluster.active_scope() {
             Some(s) => Ok(s),
-            None => Err(no_active_scope_error(call.span())),
+            None => Ok("_default".to_string()),
         },
     }
 }
