@@ -3,17 +3,21 @@
 The following sections discuss the individual Couchbase specific commands in greater detail. Remember, you can always mix and match
 them with built-in other shell commands as well as executable programs from your environment.
 
+include::commands/allow_ip.adoc[]
+
 include::commands/buckets.adoc[]
+
+include::commands/collections.adoc[]
 
 include::commands/clusters.adoc[]
 
 include::commands/columnar.adoc[]
 
-include::commands/scopes.adoc[]
-
-include::commands/collections.adoc[]
+include::commands/credentials.adoc[]
 
 include::commands/doc.adoc[]
+
+include::commands/scopes.adoc[]
 
 === `nodes`
 
