@@ -175,12 +175,18 @@ impl CapellaClient {
         let request = CapellaRequest::OrganizationList {};
         let response = self.capella_request(request, signals)?;
 
-        if response.status() != 200 {
-            return Err(ClientError::RequestFailed {
-                reason: Some(response.content().into()),
-                key: None,
-            });
-        };
+        match response.status() {
+            200 => {}
+            401 => {
+                return Err(ClientError::RequestUnauthorized {});
+            }
+            _ => {
+                return Err(ClientError::RequestFailed {
+                    reason: Some(response.content().into()),
+                    key: None,
+                });
+            }
+        }
 
         let resp: OrganizationsResponse = serde_json::from_str(response.content())?;
         Ok(resp)
@@ -298,13 +304,7 @@ impl CapellaClient {
         };
         let response = self.capella_request(request, signals)?;
 
-        if response.status() != 202 {
-            return Err(ClientError::RequestFailed {
-                reason: Some(response.content().into()),
-                key: None,
-            });
-        }
-        Ok(())
+        handle_cluster_management_response(response)
     }
 
     pub fn delete_cluster(
@@ -321,13 +321,7 @@ impl CapellaClient {
         };
         let response = self.capella_request(request, signals)?;
 
-        if response.status() != 202 {
-            return Err(ClientError::RequestFailed {
-                reason: Some(response.content().into()),
-                key: None,
-            });
-        }
-        Ok(())
+        handle_cluster_management_response(response)
     }
 
     pub fn create_columnar_cluster(
@@ -344,13 +338,7 @@ impl CapellaClient {
         };
         let response = self.capella_request(request, signals)?;
 
-        if response.status() != 202 {
-            return Err(ClientError::RequestFailed {
-                reason: Some(response.content().into()),
-                key: None,
-            });
-        }
-        Ok(())
+        handle_cluster_management_response(response)
     }
 
     pub fn list_columnar_clusters(
@@ -405,13 +393,7 @@ impl CapellaClient {
         };
         let response = self.capella_request(request, signals)?;
 
-        if response.status() != 202 {
-            return Err(ClientError::RequestFailed {
-                reason: Some(response.content().into()),
-                key: None,
-            });
-        }
-        Ok(())
+        handle_cluster_management_response(response)
     }
 
     pub fn create_credentials(
@@ -1150,6 +1132,21 @@ impl CapellaRequest {
             Self::CollectionCreate { payload, .. } => Some(payload.as_bytes().into()),
             Self::CredentialsCreate { payload, .. } => Some(payload.as_bytes().into()),
             _ => None,
+        }
+    }
+}
+
+fn handle_cluster_management_response(response: HttpResponse) -> Result<(), ClientError> {
+    match response.status() {
+        202 => {Ok(())}
+        403 => return Err(ClientError::AccessDenied {
+            reason: "Make sure that the API key has the Cluster Manager role enabled for the target project".to_string()
+        }),
+        _ => {
+            return Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            })
         }
     }
 }

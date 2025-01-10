@@ -94,6 +94,10 @@ pub enum ClientError {
     SampleAlreadyLoaded {
         sample: String,
     },
+    RequestUnauthorized {},
+    AccessDenied {
+        reason: String,
+    },
 }
 
 impl ClientError {
@@ -158,6 +162,8 @@ impl ClientError {
             Self::PathNotFound { .. } => "Path not found".to_string(),
             Self::InvalidSample { .. } => "Invalid sample bucket".to_string(),
             Self::SampleAlreadyLoaded { .. } => "Sample bucket already loaded".to_string(),
+            Self::RequestUnauthorized {} => "Request unauthorized".to_string(),
+            Self::AccessDenied { .. } => "Access Denied".to_string(),
         }
     }
 
@@ -220,6 +226,12 @@ impl ClientError {
             }
             Self::SampleAlreadyLoaded { sample} => {
                 format!("Sample bucket {} is already loaded", sample)
+            }
+            Self::RequestUnauthorized {} => {
+                "Make sure the API key exists and the client IP that is trying to access the resource using the API key is in the API key allowlist".to_string()
+            }
+            Self::AccessDenied {reason} => {
+                reason.to_string()
             }
         }
     }

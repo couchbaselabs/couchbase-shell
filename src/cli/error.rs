@@ -229,7 +229,7 @@ impl From<CBShellError> for ShellError {
             ),
             CBShellError::ProjectNotFound { name, span } => spanned_shell_error(
                 format!("Project {} was not found", name),
-                "Check that the project exists on Capella".to_string(),
+                "Check that the project exists on Capella and that the API key being used has access to it".to_string(),
                 span,
             ),
             CBShellError::RequestSerializationError { message, span } => {
