@@ -465,6 +465,14 @@ impl NuValueMap {
         });
     }
 
+    pub fn add_vec(&mut self, name: impl Into<String>, vec: Vec<Value>, span: Span) {
+        self.cols.push(name.into());
+        self.vals.push(Value::List {
+            vals: vec,
+            internal_span: span,
+        });
+    }
+
     pub fn into_value(self, span: Span) -> Value {
         Value::Record {
             val: SharedCow::new(

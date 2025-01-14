@@ -1,7 +1,8 @@
 use crate::cli::CtrlcFuture;
 use crate::client::cloud_json::{
     Cluster, ClustersResponse, Collection, CollectionsResponse, ColumnarCluster,
-    ColumnarClustersResponse, OrganizationsResponse, ProjectsResponse, ScopesResponse,
+    ColumnarClustersResponse, CredentialsResponse, OrganizationsResponse, ProjectsResponse,
+    ScopesResponse,
 };
 use crate::client::error::ClientError;
 use crate::client::http_handler::{HttpResponse, HttpVerb};
@@ -419,6 +420,31 @@ impl CapellaClient {
             });
         }
         Ok(())
+    }
+
+    pub fn list_credentials(
+        &self,
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+        signals: Signals,
+    ) -> Result<CredentialsResponse, ClientError> {
+        let request = CapellaRequest::CredentialsList {
+            org_id,
+            project_id,
+            cluster_id,
+        };
+        let response = self.capella_request(request, signals)?;
+
+        if response.status() != 200 {
+            return Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            });
+        }
+
+        let resp: CredentialsResponse = serde_json::from_str(response.content())?;
+        Ok(resp)
     }
 
     pub fn create_bucket(
@@ -852,6 +878,11 @@ pub enum CapellaRequest {
         cluster_id: String,
         payload: String,
     },
+    CredentialsList {
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+    },
 }
 
 impl CapellaRequest {
@@ -1086,6 +1117,16 @@ impl CapellaRequest {
                     org_id, project_id, cluster_id
                 )
             }
+            Self::CredentialsList {
+                org_id,
+                project_id,
+                cluster_id,
+            } => {
+                format!(
+                    "/v4/organizations/{}/projects/{}/clusters/{}/users",
+                    org_id, project_id, cluster_id
+                )
+            }
         }
     }
 
@@ -1116,6 +1157,7 @@ impl CapellaRequest {
             Self::CollectionDelete { .. } => HttpVerb::Delete,
             Self::CollectionList { .. } => HttpVerb::Get,
             Self::CredentialsCreate { .. } => HttpVerb::Post,
+            Self::CredentialsList { .. } => HttpVerb::Get,
         }
     }
 
@@ -1139,11 +1181,11 @@ impl CapellaRequest {
 fn handle_cluster_management_response(response: HttpResponse) -> Result<(), ClientError> {
     match response.status() {
         202 => {Ok(())}
-        403 => return Err(ClientError::AccessDenied {
+        403 => Err(ClientError::AccessDenied {
             reason: "Make sure that the API key has the Cluster Manager role enabled for the target project".to_string()
         }),
         _ => {
-            return Err(ClientError::RequestFailed {
+             Err(ClientError::RequestFailed {
                 reason: Some(response.content().into()),
                 key: None,
             })
