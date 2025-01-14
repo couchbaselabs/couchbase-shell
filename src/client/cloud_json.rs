@@ -498,9 +498,42 @@ pub(crate) struct CredentialsCreateRequest {
     access: Vec<Access>,
 }
 
-#[derive(Debug, Serialize)]
-struct Access {
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub(crate) struct Access {
     privileges: Vec<String>,
+    resources: Resources,
+}
+
+impl Access {
+    pub fn privileges(&self) -> Vec<String> {
+        self.privileges.clone()
+    }
+
+    // Although resources holds a list of buckets the list only ever has one bucket in it,
+    // hence the hardcoded buckets[0] below
+    pub fn bucket(&self) -> String {
+        self.resources.buckets[0].name.clone()
+    }
+
+    pub fn scopes(&self) -> Vec<String> {
+        if let Some(scopes) = self.resources.buckets[0].scopes.clone() {
+            scopes.iter().map(|s| s.name.clone()).collect()
+        } else {
+            // If no scopes are listed in the response the access applies to all the scopes
+            vec!["*".to_string()]
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct Resources {
+    buckets: Vec<Bucket>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct Bucket {
+    name: String,
+    scopes: Option<Vec<Scope>>,
 }
 
 impl CredentialsCreateRequest {
@@ -518,8 +551,51 @@ impl CredentialsCreateRequest {
         Self {
             name,
             password,
-            access: vec![Access { privileges }],
+            access: vec![Access {
+                privileges,
+                resources: Resources {
+                    buckets: vec![Bucket {
+                        name: "*".to_string(),
+                        scopes: Some(vec![Scope {
+                            name: "*".to_string(),
+                        }]),
+                    }],
+                },
+            }],
         }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct CredentialsResponse {
+    data: Vec<Credential>,
+}
+
+impl CredentialsResponse {
+    pub fn data(&self) -> Vec<Credential> {
+        self.data.clone()
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub(crate) struct Credential {
+    id: String,
+    name: String,
+    audit: AuditData,
+    access: Vec<Access>,
+}
+
+impl Credential {
+    pub fn id(&self) -> String {
+        self.id.clone()
+    }
+
+    pub fn name(&self) -> String {
+        self.name.clone()
+    }
+
+    pub fn access(&self) -> Vec<Access> {
+        self.access.clone()
     }
 }
 
@@ -534,7 +610,7 @@ impl ScopesResponse {
     }
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Scope {
     name: String,
 }
