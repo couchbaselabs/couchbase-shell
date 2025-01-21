@@ -447,6 +447,31 @@ impl CapellaClient {
         Ok(resp)
     }
 
+    pub fn drop_credentials(
+        &self,
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+        credential_id: String,
+        signals: Signals,
+    ) -> Result<(), ClientError> {
+        let request = CapellaRequest::CredentialsDrop {
+            org_id,
+            project_id,
+            cluster_id,
+            credential_id,
+        };
+        let response = self.capella_request(request, signals)?;
+
+        if response.status() != 204 {
+            return Err(ClientError::RequestFailed {
+                reason: Some(response.content().into()),
+                key: None,
+            });
+        }
+        Ok(())
+    }
+
     pub fn create_bucket(
         &self,
         org_id: String,
@@ -883,6 +908,12 @@ pub enum CapellaRequest {
         project_id: String,
         cluster_id: String,
     },
+    CredentialsDrop {
+        org_id: String,
+        project_id: String,
+        cluster_id: String,
+        credential_id: String,
+    },
 }
 
 impl CapellaRequest {
@@ -1127,6 +1158,17 @@ impl CapellaRequest {
                     org_id, project_id, cluster_id
                 )
             }
+            Self::CredentialsDrop {
+                org_id,
+                project_id,
+                cluster_id,
+                credential_id,
+            } => {
+                format!(
+                    "/v4/organizations/{}/projects/{}/clusters/{}/users/{}",
+                    org_id, project_id, cluster_id, credential_id
+                )
+            }
         }
     }
 
@@ -1158,6 +1200,7 @@ impl CapellaRequest {
             Self::CollectionList { .. } => HttpVerb::Get,
             Self::CredentialsCreate { .. } => HttpVerb::Post,
             Self::CredentialsList { .. } => HttpVerb::Get,
+            Self::CredentialsDrop { .. } => HttpVerb::Delete,
         }
     }
 
