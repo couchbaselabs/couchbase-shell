@@ -16,13 +16,13 @@ pub struct CredentialsCreate {
     state: Arc<Mutex<State>>,
 }
 
-impl crate::cli::CredentialsCreate {
+impl CredentialsCreate {
     pub fn new(state: Arc<Mutex<State>>) -> Self {
         Self { state }
     }
 }
 
-impl Command for crate::cli::CredentialsCreate {
+impl Command for CredentialsCreate {
     fn name(&self) -> &str {
         "credentials create"
     }
