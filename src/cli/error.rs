@@ -173,6 +173,9 @@ pub enum CBShellError {
     },
     NoLLMConfigured {},
     EmbedModelMissing {},
+    InsufficientColumnarPermissions {
+        span: Span,
+    },
 }
 
 impl From<CBShellError> for ShellError {
@@ -268,6 +271,9 @@ impl From<CBShellError> for ShellError {
                 spanned_shell_error("no embed model provided", "supply the embed_model in the config file or using the --model flag"
                     .to_string(), None)
             }
+            CBShellError::InsufficientColumnarPermissions {span} => {
+                spanned_shell_error("Insufficient permissions or the requested object does not exist", "The `sys_data_reader` role must be assigned to your access account to execute queries against the columnar cluster, this can be done through the Capella UI".to_string(), span)
+            }
         }
     }
 }
@@ -341,6 +347,10 @@ pub fn no_llm_configured() -> ShellError {
 
 pub fn embed_model_missing() -> ShellError {
     CBShellError::EmbedModelMissing {}.into()
+}
+
+pub fn insufficient_columnar_permissions_error(span: Span) -> ShellError {
+    CBShellError::InsufficientColumnarPermissions { span }.into()
 }
 
 pub fn malformed_response_error(

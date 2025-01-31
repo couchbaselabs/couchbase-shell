@@ -23,7 +23,8 @@ impl fmt::Display for ConfigurationLoadFailedReason {
                     .to_string(),
             },
             ConfigurationLoadFailedReason::Unauthorized => {
-                "Unauthorized, does the user exist?".to_string()
+                "Unauthorized, check that cluster access has been created with the same credentials as in the config file."
+                    .to_string()
             }
             ConfigurationLoadFailedReason::Forbidden => {
                 "Forbidden, does the user have the correct permissions?".to_string()
