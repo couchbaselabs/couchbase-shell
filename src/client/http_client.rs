@@ -117,7 +117,7 @@ impl HTTPClient {
             404 => ConfigurationLoadFailedReason::NotFound { bucket },
             _ => match final_error_reason {
                 Some(reason) => {
-                    if reason.contains("timed out") {
+                    if reason.contains("timed out") || reason.contains("timeout") {
                         return Err(ClientError::ClusterNotContactable {
                             cluster: seeds.join(","),
                             reason: "timeout".to_string(),

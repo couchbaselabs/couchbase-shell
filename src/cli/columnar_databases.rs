@@ -1,4 +1,4 @@
-use crate::cli::analytics_common::{read_analytics_response, send_analytics_query};
+use crate::cli::analytics_common::{read_analytics_response, send_columnar_query};
 use crate::cli::generic_error;
 use crate::cli::util::{cluster_identifiers_from, get_active_cluster};
 use crate::state::State;
@@ -72,28 +72,31 @@ fn columnar_databases(
     let mut results: Vec<Value> = vec![];
     for identifier in cluster_identifiers {
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
-        let resp = send_analytics_query(
+        let resp = send_columnar_query(
             active_cluster,
             None,
             statement,
             signals.clone(),
             span,
             Arc::new(Runtime::new().unwrap()),
-        )?;
+        )
+        .map_err(|e| {
+            if e.to_string().contains("No nodes found for service")
+                || format!("{:?}", e).contains("Cannot find analytics collection Database")
+            {
+                cluster_not_columnar(identifier.clone())
+            } else {
+                e
+            }
+        })?;
 
-        results.extend(
-            read_analytics_response(identifier.clone(), resp, span, false, false).map_err(|e| {
-                if e.to_string().contains("No nodes found for service")
-                    || format!("{:?}", e).contains("Cannot find analytics collection Database")
-                {
-                    cluster_not_columnar(identifier)
-                } else {
-                    e
-                }
-            })?,
-        );
-
-        // Handle collection Databases not found here
+        results.extend(read_analytics_response(
+            identifier.clone(),
+            resp,
+            span,
+            false,
+            false,
+        )?);
     }
 
     Ok(Value::List {
@@ -106,7 +109,7 @@ fn columnar_databases(
 fn cluster_not_columnar(identifier: String) -> ShellError {
     generic_error(
         format!("{} not a Columnar cluster", identifier),
-        "columnar commnands are only supported against Columnar clusters".to_string(),
+        "columnar commands are only supported against Columnar clusters".to_string(),
         None,
     )
 }

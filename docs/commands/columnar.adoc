@@ -1,6 +1,9 @@
 === columnar
 
-The `columnar` commands are used to perform management operations against Columnar analytics clusters.
+The `columnar` commands are used to perform management operations and execute queries against Columnar analytics clusters.
+The columnar cluster management commands require an https://docs.couchbase.com/cloud/management-api-guide/management-api-start.html#:~:text=API%20keys%20are%20associated%20with,an%20allowed%20IP%20Address%20list[API key] to be registered with access to the relevant project.
+The `columnar databases` or `columnar query` commands require the creation of an https://docs.couchbase.com/cloud/clusters/manage-database-users.html[Access Control account] on the columnar cluster with the credentials contained for the cluster in the Shell <<_the_config_dotfiles, config file>>.
+The Access Control account will require at least the `sys_data_reader` role to be assigned for queries to be executed successfully.
 
 ==== `columnar clusters`
 

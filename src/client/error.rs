@@ -23,7 +23,8 @@ impl fmt::Display for ConfigurationLoadFailedReason {
                     .to_string(),
             },
             ConfigurationLoadFailedReason::Unauthorized => {
-                "Unauthorized, does the user exist?".to_string()
+                "Unauthorized, check that cluster access has been created with the same credentials as in the config file."
+                    .to_string()
             }
             ConfigurationLoadFailedReason::Forbidden => {
                 "Forbidden, does the user have the correct permissions?".to_string()
@@ -179,7 +180,7 @@ impl ClientError {
                 format!("Collection with ID {} unknown during request for key {}. Were the collection or scope deleted?", cid, key)
             },
             Self::ClusterNotContactable { cluster, reason } => format!(
-                "Cluster ({}) not contactable ({}) - check server ports and cluster encryption setting.",
+                "Cluster ({}) not contactable ({}) - check server ports, cluster encryption setting and ensure client IP address is on the allow list.",
                 cluster,
                 reason
             ),
