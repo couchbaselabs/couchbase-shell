@@ -1,7 +1,8 @@
 use crate::cli::util::{convert_row_to_nu_value, duration_to_golang_string};
 use crate::cli::{
-    analytics_error, client_error_to_shell_error, deserialize_error, malformed_response_error,
-    unexpected_status_code_error, AnalyticsErrorReason,
+    analytics_error, client_error_to_shell_error, deserialize_error,
+    insufficient_columnar_permissions_error, malformed_response_error, unexpected_status_code_error,
+    AnalyticsErrorReason,
 };
 use crate::client::http_handler::HttpStreamResponse;
 use crate::client::AnalyticsQueryRequest;
@@ -11,6 +12,40 @@ use std::ops::Add;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
 use tokio::time::Instant;
+
+pub fn send_columnar_query(
+    active_cluster: &RemoteCluster,
+    scope: impl Into<Option<(String, String)>>,
+    statement: impl Into<String>,
+    signals: Signals,
+    span: Span,
+    rt: Arc<Runtime>,
+) -> Result<HttpStreamResponse, ShellError> {
+    let response = active_cluster
+        .cluster()
+        .http_client()
+        .analytics_query_request(
+            AnalyticsQueryRequest::Execute {
+                statement: statement.into(),
+                scope: scope.into(),
+                timeout: duration_to_golang_string(active_cluster.timeouts().analytics_timeout()),
+            },
+            Instant::now().add(active_cluster.timeouts().analytics_timeout()),
+            signals.clone(),
+            rt.clone(),
+        )
+        .map_err(|e| client_error_to_shell_error(e, span))?;
+
+    match response.status() {
+        200 => Ok(response),
+        403 => Err(insufficient_columnar_permissions_error(span)),
+        _ => Err(unexpected_status_code_error(
+            response.status(),
+            response.content()?,
+            span,
+        )),
+    }
+}
 
 pub fn send_analytics_query(
     active_cluster: &RemoteCluster,
