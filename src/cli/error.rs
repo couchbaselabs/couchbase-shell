@@ -176,6 +176,10 @@ pub enum CBShellError {
     InsufficientColumnarPermissions {
         span: Span,
     },
+    ColumnarClustersNotFound {
+        project: String,
+        span: Span,
+    },
 }
 
 impl From<CBShellError> for ShellError {
@@ -274,6 +278,9 @@ impl From<CBShellError> for ShellError {
             CBShellError::InsufficientColumnarPermissions {span} => {
                 spanned_shell_error("Insufficient permissions or the requested object does not exist", "The `sys_data_reader` role must be assigned to your access account to execute queries against the columnar cluster, this can be done through the Capella UI".to_string(), span)
             }
+            CBShellError::ColumnarClustersNotFound {project, span} => {
+                spanned_shell_error(format!("No columnar clusters found in project {}", project), "You can change the active project with the `cb-env project` command".to_string(), span)
+            }
         }
     }
 }
@@ -351,6 +358,10 @@ pub fn embed_model_missing() -> ShellError {
 
 pub fn insufficient_columnar_permissions_error(span: Span) -> ShellError {
     CBShellError::InsufficientColumnarPermissions { span }.into()
+}
+
+pub fn columnar_clusters_not_found_error(project: String, span: Span) -> ShellError {
+    CBShellError::ColumnarClustersNotFound { project, span }.into()
 }
 
 pub fn malformed_response_error(

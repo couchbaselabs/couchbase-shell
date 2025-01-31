@@ -1,5 +1,5 @@
-use crate::cli::client_error_to_shell_error;
 use crate::cli::util::{convert_json_value_to_nu_value, find_org_id, find_project_id, NuValueMap};
+use crate::cli::{client_error_to_shell_error, columnar_clusters_not_found_error};
 use crate::state::State;
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
@@ -77,7 +77,13 @@ fn columnar_clusters(
     let client = control.client();
 
     let org_id = find_org_id(signals.clone(), &client, span)?;
-    let project_id = find_project_id(signals.clone(), project, &client, span, org_id.clone())?;
+    let project_id = find_project_id(
+        signals.clone(),
+        project.clone(),
+        &client,
+        span,
+        org_id.clone(),
+    )?;
 
     let clusters = client
         .list_columnar_clusters(org_id, project_id, signals)
@@ -127,6 +133,10 @@ fn columnar_clusters(
         }
 
         results.push(collected.into_value(span))
+    }
+
+    if results.len() == 0 {
+        return Err(columnar_clusters_not_found_error(project, span));
     }
 
     Ok(Value::List {
