@@ -173,7 +173,7 @@ impl ClientError {
                 format!("Collection with ID {} unknown during request for key {}. Were the collection or scope deleted?", cid, key)
             },
             Self::ClusterNotContactable { cluster, reason } => format!(
-                "Cluster ({}) not contactable ({}) - check server ports and cluster encryption setting.",
+                "Cluster ({}) not contactable ({}) - check server ports, cluster encryption setting and ensure client IP address is on the allow list.",
                 cluster,
                 reason
             ),
