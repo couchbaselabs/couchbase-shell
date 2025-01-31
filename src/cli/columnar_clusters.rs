@@ -135,7 +135,7 @@ fn columnar_clusters(
         results.push(collected.into_value(span))
     }
 
-    if results.len() == 0 {
+    if results.is_empty() {
         return Err(columnar_clusters_not_found_error(project, span));
     }
 
