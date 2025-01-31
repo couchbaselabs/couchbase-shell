@@ -1,5 +1,6 @@
 use crate::common::playground::CBPlayground;
 use nu_test_support::pipeline;
+use std::thread;
 
 mod common;
 

@@ -1,8 +1,8 @@
 use crate::cli::util::{convert_row_to_nu_value, duration_to_golang_string};
 use crate::cli::{
     analytics_error, client_error_to_shell_error, deserialize_error,
-    insufficient_columnar_permissions_error, malformed_response_error, unexpected_status_code_error,
-    AnalyticsErrorReason,
+    insufficient_columnar_permissions_error, malformed_response_error,
+    unexpected_status_code_error, AnalyticsErrorReason,
 };
 use crate::client::http_handler::HttpStreamResponse;
 use crate::client::AnalyticsQueryRequest;
