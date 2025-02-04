@@ -2,7 +2,7 @@
 
 === Installation
 
-The current latest version is *1.0.0*.
+The current latest version is *1.1.0*.
 
 There are a couple ways you can get access to `cbsh`.
 
@@ -10,11 +10,11 @@ There are a couple ways you can get access to `cbsh`.
 
 Download our pre-built binaries for your platform of choice:
 
- - Linux: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0/cbsh-x86_64-unknown-linux-gnu.tar.gz[cbsh-x86_64-unknown-linux-gnu.tar.gz]
- - macOS: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0/cbsh-x86_64-apple-darwin.zip[cbsh-x86_64-apple-darwin.zip]
- - Linux aarch64: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0/cbsh-aarch64-unknown-linux-gnu.tar.gz[cbsh-aarch64-unknown-linux-gnu.tar.gz]
- - macOS aarch64: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0/cbsh-aarch64-apple-darwin.zip[cbsh-aarch64-apple-darwin.zip]
- - Windows: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0/cbsh-x86_64-pc-windows-msvc.zip[cbsh-x86_64-pc-windows-msvc.zip]
+ - Linux: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.1.0/cbsh-x86_64-unknown-linux-gnu.tar.gz[cbsh-x86_64-unknown-linux-gnu.tar.gz]
+ - macOS: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.1.0/cbsh-x86_64-apple-darwin.zip[cbsh-x86_64-apple-darwin.zip]
+ - Linux aarch64: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.1.0/cbsh-aarch64-unknown-linux-gnu.tar.gz[cbsh-aarch64-unknown-linux-gnu.tar.gz]
+ - macOS aarch64: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.1.0/cbsh-aarch64-apple-darwin.zip[cbsh-aarch64-apple-darwin.zip]
+ - Windows: https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.1.0/cbsh-x86_64-pc-windows-msvc.zip[cbsh-x86_64-pc-windows-msvc.zip]
 
 Once you've downloaded the `zip` file, extract it and switch into the just created directory.
 The following example shows it for mac, but it works very similar if you are on linux (just align the commands with the file you just downloaded):
@@ -29,7 +29,7 @@ You can now run the `cbsh` binary:
 
 ```
 ❯ ./cbsh --version
-The Couchbase Shell 1.0.0
+The Couchbase Shell 1.1.0
 ```
 
 TIP: If you are running a recent macOS release (i.e. 10.15.x), you'll likely see an error similar to *"cbsh" was blocked from use because it is not from an identified developer*.
