@@ -1979,7 +1979,7 @@ Imagine that we want to perform some general health checks on this set of cluste
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 localdev in 🗄 travel-sample._default._default
-&gt; nodes --clusters *
+&gt; nodes --clusters .*
 ╭────┬─────────────────────────┬─────────────────────────────────────────────────────────────┬─────────┬──────────────────────────┬───────────────────────┬───────────────────────────┬──────────────┬─────────────┬─────╮
 │  # │         cluster         │                                       hostname              │ status  │         services         │        version        │            os             │ memory_total │ memory_free │ ... │
 ├────┼─────────────────────────┼─────────────────────────────────────────────────────────────┼─────────┼──────────────────────────┼───────────────────────┼───────────────────────────┼──────────────┼─────────────┼─────┤
@@ -2004,7 +2004,7 @@ To focus on the free memory that each cluster has, we can <a href="https://www.n
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>👤 Charlie 🏠 localdev in 🗄 travel-sample._default._default
-&gt; nodes --clusters * | select cluster memory_free
+&gt; nodes --clusters .* | select cluster memory_free
 ╭────┬────────────┬─────────────╮
 │  # │  cluster   │ memory_free │
 ├────┼────────────┼─────────────┤
@@ -2028,7 +2028,7 @@ For example we could convert the <code>memory_free</code> values from bytes to g
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 localdev in 🗄 travel-sample._default._default
-&gt; nodes --clusters * | each {|n| $n | update memory_free ($n.memory_free * 1B)} | select cluster memory_free
+&gt; nodes --clusters .* | each {|n| $n | update memory_free ($n.memory_free * 1B)} | select cluster memory_free
 ╭───┬─────────────┬─────────────╮
 │  # │  cluster   │ memory_free │
 ├───┼─────────────┼─────────────┤
@@ -2056,7 +2056,7 @@ There are two columns that can be used to calculate this: <code>memory_free</cod
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 localdev in 🗄 travel-sample._default._default
-&gt;  nodes --clusters * | each {|n| $n | insert utilization ((($n.memory_total - $n.memory_free) / $n.memory_total) * 100 ) } | select cluster utilization | sort-by utilization --reverse
+&gt;  nodes --clusters .* | each {|n| $n | insert utilization ((($n.memory_total - $n.memory_free) / $n.memory_total) * 100 ) } | select cluster utilization | sort-by utilization --reverse
 ╭───┬────────────┬─────────────╮
 │ # │  cluster   │ utilization │
 ├───┼────────────┼─────────────┤
@@ -2092,7 +2092,7 @@ We can use <code>nodes</code> to find the cluster with the most free memory and 
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 localdev in 🗄 travel-sample._default._default
-&gt; nodes --clusters * | sort-by memory_free --reverse | first | get cluster | buckets create BigBucket 1000 --clusters $in</code></pre>
+&gt; nodes --clusters .* | sort-by memory_free --reverse | first | get cluster | buckets create BigBucket 1000 --clusters $in</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -2103,7 +2103,7 @@ To double check the success and see where our bucket was created we can do:</p>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 localdev in 🗄 travel-sample._default._default
-&gt; buckets --clusters a* | where name == &quot;BigBucket&quot;
+&gt; buckets --clusters .* | where name == &quot;BigBucket&quot;
 ╭───┬─────────┬───────────┬───────────┬──────────┬──────────────────────┬────────────┬───────────────┬───────┬────────────╮
 │ # │ cluster │   name    │   type    │ replicas │ min_durability_level │ ram_quota  │ flush_enabled │ cloud │ max_expiry │
 ├───┼─────────┼───────────┼───────────┼──────────┼──────────────────────┼────────────┼───────────────┼───────┼────────────┤
@@ -3033,11 +3033,12 @@ Finally we pipe the output directly into <a href="https://couchbase.sh/docs/#_do
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ travel-sample._default._default
-&gt; vector create-index landmark-content-index contentVector</code></pre>
+&gt; vector create-index landmark-content-index contentVector 1536</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Once the index has finished building we can use it to perform similarity searches over all of the contentVector fields.
+<p>Note that the final parameter (dimension of vectors to be indexed) must match the dimension of the vectors in the documents, else no results will be returned when the index is queried.
+Once the index has finished building we can use it to perform similarity searches over all of the contentVector fields.
 This is done using the <a href="https://couchbase.sh/docs/#_vector_search">vector search</a> command as follows:</p>
 </div>
 <div class="listingblock">
@@ -3383,7 +3384,7 @@ A good example here is migrating from an on-premise cluster to a Capella cluster
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-10-02 13:38:55 UTC
+Last updated 2025-02-04 09:11:55 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':

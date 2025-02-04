@@ -62,23 +62,17 @@
 </li>
 <li><a href="#_couchbase_commands">4. Couchbase Commands</a>
 <ul class="sectlevel2">
-<li><a href="#_buckets">4.1. buckets</a>
+<li><a href="#_allow_ip">4.1. <code>allow ip</code></a></li>
+<li><a href="#_buckets">4.2. buckets</a>
 <ul class="sectlevel3">
-<li><a href="#_buckets_2">4.1.1. <code>buckets</code></a></li>
-<li><a href="#_buckets_config">4.1.2. <code>buckets config</code></a></li>
-<li><a href="#_buckets_create">4.1.3. <code>buckets create</code></a></li>
-<li><a href="#_buckets_drop">4.1.4. <code>buckets drop</code></a></li>
-<li><a href="#_buckets_flush">4.1.5. <code>buckets flush</code></a></li>
-<li><a href="#_buckets_get">4.1.6. <code>buckets get</code></a></li>
-<li><a href="#_buckets_load_sample">4.1.7. <code>buckets load-sample</code></a></li>
-<li><a href="#_buckets_update">4.1.8. <code>buckets update</code></a></li>
-</ul>
-</li>
-<li><a href="#_scopes">4.2. scopes</a>
-<ul class="sectlevel3">
-<li><a href="#_scopes_2">4.2.1. <code>scopes</code></a></li>
-<li><a href="#_scopes_create">4.2.2. <code>scopes create</code></a></li>
-<li><a href="#_scopes_drop">4.2.3. <code>scopes drop</code></a></li>
+<li><a href="#_buckets_2">4.2.1. <code>buckets</code></a></li>
+<li><a href="#_buckets_config">4.2.2. <code>buckets config</code></a></li>
+<li><a href="#_buckets_create">4.2.3. <code>buckets create</code></a></li>
+<li><a href="#_buckets_drop">4.2.4. <code>buckets drop</code></a></li>
+<li><a href="#_buckets_flush">4.2.5. <code>buckets flush</code></a></li>
+<li><a href="#_buckets_get">4.2.6. <code>buckets get</code></a></li>
+<li><a href="#_buckets_load_sample">4.2.7. <code>buckets load-sample</code></a></li>
+<li><a href="#_buckets_update">4.2.8. <code>buckets update</code></a></li>
 </ul>
 </li>
 <li><a href="#_collections">4.3. collections</a>
@@ -88,35 +82,66 @@
 <li><a href="#_collections_drop">4.3.3. <code>collections drop</code></a></li>
 </ul>
 </li>
-<li><a href="#_doc">4.4. doc</a>
+<li><a href="#_clusters">4.4. clusters</a>
 <ul class="sectlevel3">
-<li><a href="#_doc_get">4.4.1. <code>doc get</code></a></li>
-<li><a href="#_doc_import">4.4.2. <code>doc import</code></a></li>
-<li><a href="#_doc_insert">4.4.3. <code>doc insert</code></a></li>
-<li><a href="#_doc_remove">4.4.4. <code>doc remove</code></a></li>
-<li><a href="#_doc_replace">4.4.5. <code>doc replace</code></a></li>
-<li><a href="#_doc_upsert">4.4.6. <code>doc upsert</code></a></li>
+<li><a href="#_clusters_2">4.4.1. <code>clusters</code></a></li>
+<li><a href="#_clusters_create">4.4.2. <code>clusters create</code></a></li>
+<li><a href="#_clusters_drop">4.4.3. <code>clusters drop</code></a></li>
+<li><a href="#_clusters_get">4.4.4. <code>clusters get</code></a></li>
 </ul>
 </li>
-<li><a href="#_nodes">4.5. <code>nodes</code></a></li>
-<li><a href="#_subdoc_get">4.6. <code>subdoc get</code></a></li>
-<li><a href="#_query">4.7. query</a>
+<li><a href="#_columnar">4.5. columnar</a>
 <ul class="sectlevel3">
-<li><a href="#_query_2">4.7.1. <code>query</code></a></li>
-<li><a href="#_query_advise">4.7.2. <code>query advise</code></a></li>
-<li><a href="#_query_indexes">4.7.3. <code>query indexes</code></a></li>
+<li><a href="#_columnar_clusters">4.5.1. <code>columnar clusters</code></a></li>
+<li><a href="#_columnar_clusters_create">4.5.2. <code>columnar clusters create</code></a></li>
+<li><a href="#_columnar_clusters_drop">4.5.3. <code>columnar clusters drop</code></a></li>
+<li><a href="#_columnar_databases">4.5.4. <code>columnar databases</code></a></li>
+<li><a href="#_columnar_query">4.5.5. <code>columnar query</code></a></li>
 </ul>
 </li>
-<li><a href="#_vector">4.8. vector</a>
+<li><a href="#_credentials">4.6. <code>credentials</code></a>
 <ul class="sectlevel3">
-<li><a href="#_vector_search">4.8.1. <code>vector search</code></a></li>
-<li><a href="#_vector_create_index">4.8.2. <code>vector create-index</code></a></li>
-<li><a href="#_vector_enrich_doc">4.8.3. <code>vector enrich-doc</code></a></li>
-<li><a href="#_vector_enrich_text">4.8.4. <code>vector enrich-text</code></a></li>
+<li><a href="#_credentials_2">4.6.1. <code>credentials</code></a></li>
+<li><a href="#_credentials_create">4.6.2. <code>credentials create</code></a></li>
+<li><a href="#_credentials_drop">4.6.3. <code>credentials drop</code></a></li>
 </ul>
 </li>
-<li><a href="#_ask">4.9. <code>ask</code></a></li>
-<li><a href="#_version">4.10. <code>version</code></a></li>
+<li><a href="#_doc">4.7. doc</a>
+<ul class="sectlevel3">
+<li><a href="#_doc_get">4.7.1. <code>doc get</code></a></li>
+<li><a href="#_doc_import">4.7.2. <code>doc import</code></a></li>
+<li><a href="#_doc_insert">4.7.3. <code>doc insert</code></a></li>
+<li><a href="#_doc_remove">4.7.4. <code>doc remove</code></a></li>
+<li><a href="#_doc_replace">4.7.5. <code>doc replace</code></a></li>
+<li><a href="#_doc_upsert">4.7.6. <code>doc upsert</code></a></li>
+</ul>
+</li>
+<li><a href="#_scopes">4.8. scopes</a>
+<ul class="sectlevel3">
+<li><a href="#_scopes_2">4.8.1. <code>scopes</code></a></li>
+<li><a href="#_scopes_create">4.8.2. <code>scopes create</code></a></li>
+<li><a href="#_scopes_drop">4.8.3. <code>scopes drop</code></a></li>
+</ul>
+</li>
+<li><a href="#_nodes">4.9. <code>nodes</code></a></li>
+<li><a href="#_subdoc_get">4.10. <code>subdoc get</code></a></li>
+<li><a href="#_query">4.11. query</a>
+<ul class="sectlevel3">
+<li><a href="#_query_2">4.11.1. <code>query</code></a></li>
+<li><a href="#_query_advise">4.11.2. <code>query advise</code></a></li>
+<li><a href="#_query_indexes">4.11.3. <code>query indexes</code></a></li>
+</ul>
+</li>
+<li><a href="#_vector">4.12. vector</a>
+<ul class="sectlevel3">
+<li><a href="#_vector_search">4.12.1. <code>vector search</code></a></li>
+<li><a href="#_vector_create_index">4.12.2. <code>vector create-index</code></a></li>
+<li><a href="#_vector_enrich_doc">4.12.3. <code>vector enrich-doc</code></a></li>
+<li><a href="#_vector_enrich_text">4.12.4. <code>vector enrich-text</code></a></li>
+</ul>
+</li>
+<li><a href="#_ask">4.13. <code>ask</code></a></li>
+<li><a href="#_version">4.14. <code>version</code></a></li>
 </ul>
 </li>
 <li><a href="#_reference">5. Reference</a>
@@ -125,12 +150,22 @@
 <li><a href="#_credentials_file_format">5.2. Credentials File Format</a></li>
 </ul>
 </li>
-<li><a href="#_release_notes">6. Release Notes</a>
+<li><a href="#_debugging">6. Debugging</a>
 <ul class="sectlevel2">
-<li><a href="#_1_0_0_2024_09_11">6.1. 1.0.0 - 2024-09-11</a></li>
-<li><a href="#_0_75_2_2023_04_10">6.2. 0.75.2 - 2023-04-10</a></li>
-<li><a href="#_0_75_1_2023_04_13">6.3. 0.75.1 - 2023-04-13</a></li>
-<li><a href="#_0_75_0_2023_02_09">6.4. 0.75.0 - 2023-02-09</a></li>
+<li><a href="#_error">6.1. error</a></li>
+<li><a href="#_warn">6.2. warn</a></li>
+<li><a href="#_info">6.3. info</a></li>
+<li><a href="#_debug">6.4. debug</a></li>
+<li><a href="#_trace">6.5. trace</a></li>
+</ul>
+</li>
+<li><a href="#_release_notes">7. Release Notes</a>
+<ul class="sectlevel2">
+<li><a href="#_1_1_0_2025_04_02">7.1. 1.1.0 - 2025-04-02</a></li>
+<li><a href="#_1_0_0_2024_09_11">7.2. 1.0.0 - 2024-09-11</a></li>
+<li><a href="#_0_75_2_2023_04_10">7.3. 0.75.2 - 2023-04-10</a></li>
+<li><a href="#_0_75_1_2023_04_13">7.4. 0.75.1 - 2023-04-13</a></li>
+<li><a href="#_0_75_0_2023_02_09">7.5. 0.75.0 - 2023-02-09</a></li>
 </ul>
 </li>
 </ul>
@@ -158,7 +193,7 @@ We are providing community support through this <a href="https://github.com/couc
 <div class="sect2">
 <h3 id="_installation">1.1. Installation</h3>
 <div class="paragraph">
-<p>The current latest version is <strong>1.0.0</strong>.</p>
+<p>The current latest version is <strong>1.1.0</strong>.</p>
 </div>
 <div class="paragraph">
 <p>There are a couple ways you can get access to <code>cbsh</code>.</p>
@@ -171,19 +206,19 @@ We are providing community support through this <a href="https://github.com/couc
 <div class="ulist">
 <ul>
 <li>
-<p>Linux: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0/cbsh-x86_64-unknown-linux-gnu.tar.gz">cbsh-x86_64-unknown-linux-gnu.tar.gz</a></p>
+<p>Linux: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.1.0/cbsh-x86_64-unknown-linux-gnu.tar.gz">cbsh-x86_64-unknown-linux-gnu.tar.gz</a></p>
 </li>
 <li>
-<p>macOS: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0/cbsh-x86_64-apple-darwin.zip">cbsh-x86_64-apple-darwin.zip</a></p>
+<p>macOS: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.1.0/cbsh-x86_64-apple-darwin.zip">cbsh-x86_64-apple-darwin.zip</a></p>
 </li>
 <li>
-<p>Linux aarch64: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0/cbsh-aarch64-unknown-linux-gnu.tar.gz">cbsh-aarch64-unknown-linux-gnu.tar.gz</a></p>
+<p>Linux aarch64: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.1.0/cbsh-aarch64-unknown-linux-gnu.tar.gz">cbsh-aarch64-unknown-linux-gnu.tar.gz</a></p>
 </li>
 <li>
-<p>macOS aarch64: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0/cbsh-aarch64-apple-darwin.zip">cbsh-aarch64-apple-darwin.zip</a></p>
+<p>macOS aarch64: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.1.0/cbsh-aarch64-apple-darwin.zip">cbsh-aarch64-apple-darwin.zip</a></p>
 </li>
 <li>
-<p>Windows: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.0.0/cbsh-x86_64-pc-windows-msvc.zip">cbsh-x86_64-pc-windows-msvc.zip</a></p>
+<p>Windows: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.1.0/cbsh-x86_64-pc-windows-msvc.zip">cbsh-x86_64-pc-windows-msvc.zip</a></p>
 </li>
 </ul>
 </div>
@@ -204,7 +239,7 @@ cbsh LICENSE LICENSE_AGREEMENT  README.md</code></pre>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>❯ ./cbsh --version
-The Couchbase Shell 1.0.0</code></pre>
+The Couchbase Shell 1.1.0</code></pre>
 </div>
 </div>
 <div class="admonitionblock tip">
@@ -1269,13 +1304,47 @@ For example:</p>
 them with built-in other shell commands as well as executable programs from your environment.</p>
 </div>
 <div class="sect2">
-<h3 id="_buckets">4.1. buckets</h3>
+<h3 id="_allow_ip">4.1. <code>allow ip</code></h3>
+<div class="paragraph">
+<p>Adds the given IP address to the active Capella cluster&#8217;s allow list.
+Note that this command will not work against locally hosted Couchbase Server clusters.</p>
+</div>
+<div class="paragraph">
+<p>The IP address can be supplied as a positional parameter:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in 🗄 travel-sample._default._default
+&gt; allow ip 143.159.160.194
+[INFO] 2025-01-07 09:24:48.168 IP address supplied without a subnet mask, defaulting to '/32'</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Allowed IP addresses require a subnet mask, and if one is not specified CBShell will default to <code>/32</code>.</p>
+</div>
+<div class="paragraph">
+<p>Alternatively the IP address can be piped into the command.
+For example we can use one command to get our IP address and pipe the result into <code>allow ip</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Administrator 🏠 remote in 🗄 travel-sample._default._default
+&gt; curl ifconfig.me | allow ip
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100    15  100    15    0     0    101      0 --:--:-- --:--:-- --:--:--   101
+[INFO] 2025-01-07 09:23:49.079 IP address supplied without a subnet mask, defaulting to '/32'</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_buckets">4.2. buckets</h3>
 <div class="paragraph">
 <p>The <code>buckets</code> commands are used to perform bucket management operations.
 They can be particularly powerful combined with the <a href="https://couchbase.sh/docs/#_the_clusters_flag">--clusters</a> flag.</p>
 </div>
 <div class="sect3">
-<h4 id="_buckets_2">4.1.1. <code>buckets</code></h4>
+<h4 id="_buckets_2">4.2.1. <code>buckets</code></h4>
 <div class="paragraph">
 <p>Lists all the buckets from your active cluster:</p>
 </div>
@@ -1297,7 +1366,7 @@ They can be particularly powerful combined with the <a href="https://couchbase.s
 </div>
 </div>
 <div class="sect3">
-<h4 id="_buckets_config">4.1.2. <code>buckets config</code></h4>
+<h4 id="_buckets_config">4.2.2. <code>buckets config</code></h4>
 <div class="paragraph">
 <p>Retrieves the full config for the named bucket:</p>
 </div>
@@ -1345,7 +1414,7 @@ They can be particularly powerful combined with the <a href="https://couchbase.s
 </div>
 </div>
 <div class="sect3">
-<h4 id="_buckets_create">4.1.3. <code>buckets create</code></h4>
+<h4 id="_buckets_create">4.2.3. <code>buckets create</code></h4>
 <div class="paragraph">
 <p>Creates a bucket with the specified RAM quota on the active cluster:</p>
 </div>
@@ -1367,7 +1436,7 @@ They can be particularly powerful combined with the <a href="https://couchbase.s
 </div>
 </div>
 <div class="sect3">
-<h4 id="_buckets_drop">4.1.4. <code>buckets drop</code></h4>
+<h4 id="_buckets_drop">4.2.4. <code>buckets drop</code></h4>
 <div class="paragraph">
 <p>Drops the named bucket:</p>
 </div>
@@ -1391,7 +1460,7 @@ They can be particularly powerful combined with the <a href="https://couchbase.s
 </div>
 </div>
 <div class="sect3">
-<h4 id="_buckets_flush">4.1.5. <code>buckets flush</code></h4>
+<h4 id="_buckets_flush">4.2.5. <code>buckets flush</code></h4>
 <div class="paragraph">
 <p>Deletes all docs from the named buckets:</p>
 </div>
@@ -1412,7 +1481,7 @@ They can be particularly powerful combined with the <a href="https://couchbase.s
 </div>
 </div>
 <div class="sect3">
-<h4 id="_buckets_get">4.1.6. <code>buckets get</code></h4>
+<h4 id="_buckets_get">4.2.6. <code>buckets get</code></h4>
 <div class="paragraph">
 <p>Gets the named bucket:</p>
 </div>
@@ -1428,7 +1497,7 @@ They can be particularly powerful combined with the <a href="https://couchbase.s
 </div>
 </div>
 <div class="sect3">
-<h4 id="_buckets_load_sample">4.1.7. <code>buckets load-sample</code></h4>
+<h4 id="_buckets_load_sample">4.2.7. <code>buckets load-sample</code></h4>
 <div class="paragraph">
 <p>Loads the named <a href="https://docs.couchbase.com/server/current/manage/manage-settings/install-sample-buckets.html">sample bucket</a> onto the active cluster:</p>
 </div>
@@ -1452,7 +1521,7 @@ They can be particularly powerful combined with the <a href="https://couchbase.s
 </div>
 </div>
 <div class="sect3">
-<h4 id="_buckets_update">4.1.8. <code>buckets update</code></h4>
+<h4 id="_buckets_update">4.2.8. <code>buckets update</code></h4>
 <div class="paragraph">
 <p>Updates the settings of an existing bucket:</p>
 </div>
@@ -1474,89 +1543,6 @@ They can be particularly powerful combined with the <a href="https://couchbase.s
 ├───┼─────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼───────┼────────────┤
 │ 0 │ local   │ travel-sample │ couchbase │        2 │ none                 │ 200.0 MiB │ true          │ false │        100 │
 ╰───┴─────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴───────┴────────────╯</code></pre>
-</div>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_scopes">4.2. scopes</h3>
-<div class="paragraph">
-<p>The <code>scopes</code> commands are used to manage scopes.</p>
-</div>
-<div class="sect3">
-<h4 id="_scopes_2">4.2.1. <code>scopes</code></h4>
-<div class="paragraph">
-<p>Lists all of the scopes in the active bucket:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample._default._default
-&gt; scopes
-╭───┬─────────────────┬─────────╮
-│ # │      scope      │ cluster │
-├───┼─────────────────┼─────────┤
-│ 0 │ inventory       │ local   │
-│ 1 │ tenant_agent_00 │ local   │
-│ 2 │ tenant_agent_01 │ local   │
-│ 3 │ tenant_agent_02 │ local   │
-│ 4 │ tenant_agent_03 │ local   │
-│ 5 │ tenant_agent_04 │ local   │
-│ 6 │ _default        │ local   │
-╰───┴─────────────────┴─────────╯</code></pre>
-</div>
-</div>
-</div>
-<div class="sect3">
-<h4 id="_scopes_create">4.2.2. <code>scopes create</code></h4>
-<div class="paragraph">
-<p>Creates a scope with the name supplied:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 default._default._default
-&gt; scopes
-╭───┬──────────┬─────────╮
-│ # │  scope   │ cluster │
-├───┼──────────┼─────────┤
-│ 0 │ _default │ local   │
-╰───┴──────────┴─────────╯
-👤 Charlie 🏠 local in 🗄 default._default._default
-&gt; scopes create new-scope
-👤 Charlie 🏠 local in 🗄 default._default._default
-&gt; scopes
-╭───┬───────────┬─────────╮
-│ # │   scope   │ cluster │
-├───┼───────────┼─────────┤
-│ 0 │ new-scope │ local   │
-│ 1 │ _default  │ local   │
-╰───┴───────────┴─────────╯</code></pre>
-</div>
-</div>
-</div>
-<div class="sect3">
-<h4 id="_scopes_drop">4.2.3. <code>scopes drop</code></h4>
-<div class="paragraph">
-<p>Deletes the scope matching the given name:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 default._default._default
-&gt; scopes
-╭───┬───────────┬─────────╮
-│ # │   scope   │ cluster │
-├───┼───────────┼─────────┤
-│ 0 │ new-scope │ local   │
-│ 1 │ _default  │ local   │
-╰───┴───────────┴─────────╯
-👤 Charlie 🏠 local in 🗄 default._default._default
-&gt; scopes drop new-scope
-👤 Charlie 🏠 local in 🗄 default._default._default
-&gt; scopes
-╭───┬──────────┬─────────╮
-│ # │  scope   │ cluster │
-├───┼──────────┼─────────┤
-│ 0 │ _default │ local   │
-╰───┴──────────┴─────────╯</code></pre>
 </div>
 </div>
 </div>
@@ -1637,12 +1623,647 @@ They can be particularly powerful combined with the <a href="https://couchbase.s
 </div>
 </div>
 <div class="sect2">
-<h3 id="_doc">4.4. doc</h3>
+<h3 id="_clusters">4.4. clusters</h3>
+<div class="paragraph">
+<p>The <code>clusters</code> commands are used to perform management operations against Capella clusters.
+In order to use these commands you will need to configure a Capella organization in the <a href="https://couchbase.sh/docs/#_the_config_dotfiles">config file</a>.</p>
+</div>
+<div class="sect3">
+<h4 id="_clusters_2">4.4.1. <code>clusters</code></h4>
+<div class="paragraph">
+<p>Lists all the Capella clusters in the active project/Organization.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; clusters
+╭───┬────────────────────────────────────┬──────────────────────────────────────┬───────────────┬───────────────────────────╮
+│ # │                name                │                  id                  │     state     │      cloud provider       │
+├───┼────────────────────────────────────┼──────────────────────────────────────┼───────────────┼───────────────────────────┤
+│ 0 │ calmgeorgenovacky                  │ 88e66a4e-d166-43d5-9840-64ce14ac872f │ destroyFailed │ ╭────────┬──────────────╮ │
+│   │                                    │                                      │               │ │ type   │ gcp          │ │
+│   │                                    │                                      │               │ │ region │ us-east4     │ │
+│   │                                    │                                      │               │ │ cidr   │ 10.0.15.0/24 │ │
+│   │                                    │                                      │               │ ╰────────┴──────────────╯ │
+│ 1 │ carefulalbertociaramella           │ 701eac0c-e3a1-450d-b3ff-7f1edbdce830 │ healthy       │ ╭────────┬──────────────╮ │
+│   │                                    │                                      │               │ │ type   │ aws          │ │
+│   │                                    │                                      │               │ │ region │ us-east-1    │ │
+│   │                                    │                                      │               │ │ cidr   │ 10.0.19.0/24 │ │
+│   │                                    │                                      │               │ ╰────────┴──────────────╯ │
+│ 2 │ daringmarioszegedy                 │ 091fe3fa-0304-4574-87d1-e12ae8586dd1 │ healthy       │ ╭────────┬──────────────╮ │
+│   │                                    │                                      │               │ │ type   │ aws          │ │
+│   │                                    │                                      │               │ │ region │ us-east-1    │ │
+│   │                                    │                                      │               │ │ cidr   │ 10.0.20.0/24 │ │
+│   │                                    │                                      │               │ ╰────────┴──────────────╯ │
+│ 3 │ saicharan-politecharlesstarkdraper │ ca209e7d-4d39-4356-9a9e-decab12b20e4 │ healthy       │ ╭────────┬──────────────╮ │
+│   │                                    │                                      │               │ │ type   │ aws          │ │
+│   │                                    │                                      │               │ │ region │ us-east-1    │ │
+│   │                                    │                                      │               │ │ cidr   │ 10.0.17.0/24 │ │
+│   │                                    │                                      │               │ ╰────────┴──────────────╯ │
+╰───┴────────────────────────────────────┴──────────────────────────────────────┴───────────────┴───────────────────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Check this <a href="https://couchbase.sh/docs/recipes/#_register_clusters">recipe</a> for how to register all the clusters in a project for use with the shell.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_clusters_create">4.4.2. <code>clusters create</code></h4>
+<div class="paragraph">
+<p>Creates a cluster from either a full definition piped in or from values chosen using flags.
+The minimum required is for the user to choose a cloud provider, this can be aws, gcp or azure:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; clusters create --provider aws
+👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; clusters
+╭───┬────────────────────────┬──────────────────────────────────────┬───────────┬───────────────────────────╮
+│ # │          name          │                  id                  │   state   │      cloud provider       │
+├───┼────────────────────────┼──────────────────────────────────────┼───────────┼───────────────────────────┤
+│ 0 │ cbshell-cluster-2cd8d6 │ 1e3b86a6-f039-479e-be60-12330af49e67 │ deploying │ ╭────────┬──────────────╮ │
+│   │                        │                                      │           │ │ type   │ aws          │ │
+│   │                        │                                      │           │ │ region │ us-east-1    │ │
+│   │                        │                                      │           │ │ cidr   │ 10.0.23.0/24 │ │
+│   │                        │                                      │           │ ╰────────┴──────────────╯ │
+╰───┴────────────────────────┴──────────────────────────────────────┴───────────┴───────────────────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This will create a single node cluster, running the index, data query and search services.
+The full list of flags supported by <code>clusters create</code> is:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>  --name &lt;String&gt; - the name of the cluster
+  --provider &lt;String&gt; - the cloud provider
+  --version &lt;String&gt; - the couchbase server version
+  --capella &lt;String&gt; - the Capella organization to use
+  --nodes &lt;Int&gt; - the number of nodes in the cluster
+  --project &lt;String&gt; - the Capella project to use</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>If you want complete control over the structure of the cluster then you can pipe a JSON cluster definition into the command:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; cat gcp-cluster-def.json
+{
+  &quot;name&quot;: &quot;GCP-CBShell&quot;,
+  &quot;description&quot;: &quot;A gcp cluster created using cbshell&quot;,
+  &quot;cloudProvider&quot;: {
+    &quot;type&quot;: &quot;gcp&quot;,
+    &quot;region&quot;: &quot;us-east1&quot;
+  },
+  &quot;serviceGroups&quot;: [
+    {
+      &quot;node&quot;: {
+        &quot;compute&quot;: {
+          &quot;cpu&quot;: 4,
+          &quot;ram&quot;: 16
+        },
+        &quot;disk&quot;: {
+          &quot;storage&quot;: 64,
+          &quot;type&quot;: &quot;pd-ssd&quot;
+        }
+      },
+      &quot;numOfNodes&quot;: 3,
+      &quot;services&quot;: [
+        &quot;data&quot;,
+        &quot;query&quot;,
+        &quot;index&quot;,
+        &quot;search&quot;
+      ]
+    }
+  ],
+  &quot;availability&quot;: {
+    &quot;type&quot;: &quot;multi&quot;
+  },
+  &quot;support&quot;: {
+    &quot;plan&quot;: &quot;developer pro&quot;,
+    &quot;timezone&quot;: &quot;PT&quot;
+  }
+}
+👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; cat gcp-cluster-def.json | clusters create
+👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; clusters
+╭───┬─────────────┬──────────────────────────────────────┬───────────┬───────────────────────────╮
+│ # │    name     │                  id                  │   state   │      cloud provider       │
+├───┼─────────────┼──────────────────────────────────────┼───────────┼───────────────────────────┤
+│ 0 │ GCP-CBShell │ c60b070f-6656-4e25-9b22-0cee497bea6a │ deploying │ ╭────────┬──────────────╮ │
+│   │             │                                      │           │ │ type   │ gcp          │ │
+│   │             │                                      │           │ │ region │ us-east1     │ │
+│   │             │                                      │           │ │ cidr   │ 10.0.23.0/24 │ │
+│   │             │                                      │           │ ╰────────┴──────────────╯ │
+╰───┴─────────────┴──────────────────────────────────────┴───────────┴───────────────────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>See the <a href="https://docs.couchbase.com/cloud/management-api-reference/index.html#tag/Clusters/operation/postCluster">Capella API docs</a> for more examples of cluster definitions with different providers.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_clusters_drop">4.4.3. <code>clusters drop</code></h4>
+<div class="paragraph">
+<p>This deletes a cluster with the given name in the active project.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; clusters
+╭───┬─────────────┬──────────────────────────────────────┬───────────┬───────────────────────────╮
+│ # │    name     │                  id                  │   state   │      cloud provider       │
+├───┼─────────────┼──────────────────────────────────────┼───────────┼───────────────────────────┤
+│ 0 │ GCP-CBShell │ c60b070f-6656-4e25-9b22-0cee497bea6a │  healthy  │ ╭────────┬──────────────╮ │
+│   │             │                                      │           │ │ type   │ gcp          │ │
+│   │             │                                      │           │ │ region │ us-east1     │ │
+│   │             │                                      │           │ │ cidr   │ 10.0.23.0/24 │ │
+│   │             │                                      │           │ ╰────────┴──────────────╯ │
+╰───┴─────────────┴──────────────────────────────────────┴───────────┴───────────────────────────╯
+👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; clusters drop GCP-CBShell
+👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; clusters
+╭────────────╮
+│ empty list │
+╰────────────╯</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_clusters_get">4.4.4. <code>clusters get</code></h4>
+<div class="paragraph">
+<p>Gets the full details of a named cluster.
+Say we have the following clusters in our project:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; clusters
+╭───┬────────────────────────────────────┬──────────────────────────────────────┬───────────────┬───────────────────────────╮
+│ # │                name                │                  id                  │     state     │      cloud provider       │
+├───┼────────────────────────────────────┼──────────────────────────────────────┼───────────────┼───────────────────────────┤
+│ 0 │ calmgeorgenovacky                  │ 88e66a4e-d166-43d5-9840-64ce14ac872f │ destroyFailed │ ╭────────┬──────────────╮ │
+│   │                                    │                                      │               │ │ type   │ gcp          │ │
+│   │                                    │                                      │               │ │ region │ us-east4     │ │
+│   │                                    │                                      │               │ │ cidr   │ 10.0.15.0/24 │ │
+│   │                                    │                                      │               │ ╰────────┴──────────────╯ │
+│ 1 │ carefulalbertociaramella           │ 701eac0c-e3a1-450d-b3ff-7f1edbdce830 │ healthy       │ ╭────────┬──────────────╮ │
+│   │                                    │                                      │               │ │ type   │ aws          │ │
+│   │                                    │                                      │               │ │ region │ us-east-1    │ │
+│   │                                    │                                      │               │ │ cidr   │ 10.0.19.0/24 │ │
+│   │                                    │                                      │               │ ╰────────┴──────────────╯ │
+│ 2 │ daringmarioszegedy                 │ 091fe3fa-0304-4574-87d1-e12ae8586dd1 │ healthy       │ ╭────────┬──────────────╮ │
+│   │                                    │                                      │               │ │ type   │ aws          │ │
+│   │                                    │                                      │               │ │ region │ us-east-1    │ │
+│   │                                    │                                      │               │ │ cidr   │ 10.0.20.0/24 │ │
+│   │                                    │                                      │               │ ╰────────┴──────────────╯ │
+│ 3 │ saicharan-politecharlesstarkdraper │ ca209e7d-4d39-4356-9a9e-decab12b20e4 │ healthy       │ ╭────────┬──────────────╮ │
+│   │                                    │                                      │               │ │ type   │ aws          │ │
+│   │                                    │                                      │               │ │ region │ us-east-1    │ │
+│   │                                    │                                      │               │ │ cidr   │ 10.0.17.0/24 │ │
+│   │                                    │                                      │               │ ╰────────┴──────────────╯ │
+╰───┴────────────────────────────────────┴──────────────────────────────────────┴───────────────┴───────────────────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>We can get the details about <code>carefulalbertociaramella</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; clusters get carefulalbertociaramella
+╭────────────────────┬───────────────────────────────────────────────────────────────────────╮
+│ name               │ carefulalbertociaramella                                              │
+│ id                 │ 701eac0c-e3a1-450d-b3ff-7f1edbdce830                                  │
+│ description        │                                                                       │
+│ state              │ healthy                                                               │
+│ connection string  │ cb.ldznce3jxg5tav5u.cloud.couchbase.com                               │
+│ configuration type │ singleNode                                                            │
+│                    │ ╭─────────┬───────╮                                                   │
+│ server             │ │ version │ 7.6.3 │                                                   │
+│                    │ ╰─────────┴───────╯                                                   │
+│                    │ ╭────────┬──────────────╮                                             │
+│ cloud provider     │ │ type   │ aws          │                                             │
+│                    │ │ region │ us-east-1    │                                             │
+│                    │ │ cidr   │ 10.0.19.0/24 │                                             │
+│                    │ ╰────────┴──────────────╯                                             │
+│                    │ ╭───┬──────────────────────────────────┬────────────┬───────────────╮ │
+│ service groups     │ │ # │               node               │ numOfNodes │   services    │ │
+│                    │ ├───┼──────────────────────────────────┼────────────┼───────────────┤ │
+│                    │ │ 0 │ ╭─────────┬────────────────────╮ │          1 │ ╭───┬───────╮ │ │
+│                    │ │   │ │         │ ╭─────┬────╮       │ │            │ │ 0 │ index │ │ │
+│                    │ │   │ │ compute │ │ cpu │ 4  │       │ │            │ │ 1 │ data  │ │ │
+│                    │ │   │ │         │ │ ram │ 16 │       │ │            │ │ 2 │ query │ │ │
+│                    │ │   │ │         │ ╰─────┴────╯       │ │            │ ╰───┴───────╯ │ │
+│                    │ │   │ │         │ ╭─────────┬──────╮ │ │            │               │ │
+│                    │ │   │ │ disk    │ │ type    │ gp3  │ │ │            │               │ │
+│                    │ │   │ │         │ │ storage │ 50   │ │ │            │               │ │
+│                    │ │   │ │         │ │ iops    │ 3000 │ │ │            │               │ │
+│                    │ │   │ │         │ ╰─────────┴──────╯ │ │            │               │ │
+│                    │ │   │ ╰─────────┴────────────────────╯ │            │               │ │
+│                    │ ╰───┴──────────────────────────────────┴────────────┴───────────────╯ │
+│                    │ ╭──────┬────────╮                                                     │
+│ availability       │ │ type │ single │                                                     │
+│                    │ ╰──────┴────────╯                                                     │
+│                    │ ╭──────────┬───────────────╮                                          │
+│ support            │ │ plan     │ developer pro │                                          │
+│                    │ │ timezone │ PT            │                                          │
+│                    │ ╰──────────┴───────────────╯                                          │
+╰────────────────────┴───────────────────────────────────────────────────────────────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>One of the particularly useful fields returned by <code>clusters get</code> is the <code>connection string</code>.
+Check this <a href="https://couchbase.sh/docs/recipes/#_register_clusters">recipe</a> for how we can use the connection string from <code>clusters get</code> to register new clusters for use with the shell.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_columnar">4.5. columnar</h3>
+<div class="paragraph">
+<p>The <code>columnar</code> commands are used to perform management operations and execute queries against Columnar analytics clusters.
+The columnar cluster management commands require an <a href="https://docs.couchbase.com/cloud/management-api-guide/management-api-start.html#:~:text=API%20keys%20are%20associated%20with,an%20allowed%20IP%20Address%20list">API key</a> to be registered with access to the relevant project.
+The <code>columnar databases</code> or <code>columnar query</code> commands require the creation of an <a href="https://docs.couchbase.com/cloud/clusters/manage-database-users.html">Access Control account</a> on the columnar cluster with the credentials contained for the cluster in the Shell <a href="#_the_config_dotfiles">config file</a>.
+The Access Control account will require at least the <code>sys_data_reader</code> role to be assigned for queries to be executed successfully.</p>
+</div>
+<div class="sect3">
+<h4 id="_columnar_clusters">4.5.1. <code>columnar clusters</code></h4>
+<div class="paragraph">
+<p>Lists all of the Columnar analytics clusters in the active project.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; columnar clusters
+╭───┬──────────────────────┬──────────────────────────────────────┬───────────┬─────────────────┬──────────┬───────────╮
+│ # │         name         │                  id                  │   state   │ number of nodes │ provider │  region   │
+├───┼──────────────────────┼──────────────────────────────────────┼───────────┼─────────────────┼──────────┼───────────┤
+│ 0 │ rockpaperscissor     │ 0168a1cc-0490-4303-a046-dcafd2e4fc88 │ turnedOff │               1 │ AWS      │ us-east-1 │
+│ 1 │ quietjonmichaeldunn  │ 16c2071e-fc98-4eb7-9129-0c8825c78a1f │ healthy   │               1 │ AWS      │ us-east-1 │
+│ 2 │ wisejohngeorgekemeny │ 3866697b-cd4d-42a3-9160-fda4372f3853 │ healthy   │               1 │ AWS      │ us-east-1 │
+│ 3 │ perfectthewayyouare  │ 83f6bf73-3063-48ae-834a-2ad82bdf54b8 │ healthy   │               1 │ AWS      │ us-east-1 │
+╰───┴──────────────────────┴──────────────────────────────────────┴───────────┴─────────────────┴──────────┴───────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>--details</code> flag can be used to return the full information about the clusters:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; columnar clusters --details
+╭───┬──────────────────────┬──────────────────────────────────────┬───────────┬─────────────────┬──────────┬───────────┬──────────────┬───────────────────┬──────────────────────────────╮
+│ # │         name         │                  id                  │   state   │ number of nodes │ provider │  region   │   compute    │   availability    │           support            │
+├───┼──────────────────────┼──────────────────────────────────────┼───────────┼─────────────────┼──────────┼───────────┼──────────────┼───────────────────┼──────────────────────────────┤
+│ 0 │ rockpaperscissor     │ 0168a1cc-0490-4303-a046-dcafd2e4fc88 │ turnedOff │               1 │ AWS      │ us-east-1 │ ╭─────┬────╮ │ ╭──────┬────────╮ │ ╭──────────┬───────────────╮ │
+│   │                      │                                      │           │                 │          │           │ │ cpu │ 4  │ │ │ type │ single │ │ │ plan     │ developer pro │ │
+│   │                      │                                      │           │                 │          │           │ │ ram │ 32 │ │ ╰──────┴────────╯ │ │ timezone │ PT            │ │
+│   │                      │                                      │           │                 │          │           │ ╰─────┴────╯ │                   │ ╰──────────┴───────────────╯ │
+│ 1 │ quietjonmichaeldunn  │ 16c2071e-fc98-4eb7-9129-0c8825c78a1f │ healthy   │               1 │ AWS      │ us-east-1 │ ╭─────┬────╮ │ ╭──────┬────────╮ │ ╭──────────┬───────────────╮ │
+│   │                      │                                      │           │                 │          │           │ │ cpu │ 8  │ │ │ type │ single │ │ │ plan     │ developer pro │ │
+│   │                      │                                      │           │                 │          │           │ │ ram │ 32 │ │ ╰──────┴────────╯ │ │ timezone │ PT            │ │
+│   │                      │                                      │           │                 │          │           │ ╰─────┴────╯ │                   │ ╰──────────┴───────────────╯ │
+│ 2 │ wisejohngeorgekemeny │ 3866697b-cd4d-42a3-9160-fda4372f3853 │ healthy   │               1 │ AWS      │ us-east-1 │ ╭─────┬────╮ │ ╭──────┬────────╮ │ ╭──────────┬───────────────╮ │
+│   │                      │                                      │           │                 │          │           │ │ cpu │ 4  │ │ │ type │ single │ │ │ plan     │ developer pro │ │
+│   │                      │                                      │           │                 │          │           │ │ ram │ 32 │ │ ╰──────┴────────╯ │ │ timezone │ PT            │ │
+│   │                      │                                      │           │                 │          │           │ ╰─────┴────╯ │                   │ ╰──────────┴───────────────╯ │
+│ 3 │ perfectthewayyouare  │ 83f6bf73-3063-48ae-834a-2ad82bdf54b8 │ healthy   │               1 │ AWS      │ us-east-1 │ ╭─────┬────╮ │ ╭──────┬────────╮ │ ╭──────────┬───────────────╮ │
+│   │                      │                                      │           │                 │          │           │ │ cpu │ 4  │ │ │ type │ single │ │ │ plan     │ developer pro │ │
+│   │                      │                                      │           │                 │          │           │ │ ram │ 32 │ │ ╰──────┴────────╯ │ │ timezone │ PT            │ │
+│   │                      │                                      │           │                 │          │           │ ╰─────┴────╯ │                   │ ╰──────────┴───────────────╯ │
+╰───┴──────────────────────┴──────────────────────────────────────┴───────────┴─────────────────┴──────────┴───────────┴──────────────┴───────────────────┴──────────────────────────────╯</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_columnar_clusters_create">4.5.2. <code>columnar clusters create</code></h4>
+<div class="paragraph">
+<p>Creates a Columnar analytics cluster in the active Organization and Project.
+When called with no arguments a cluster with one node and a random name is created:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; columnar clusters create
+[INFO] 2024-10-08 08:08:23.240 Cluster name not specified, a randomly generated name will be used
+[INFO] 2024-10-08 08:08:23.240 Number of nodes not specified, defaulting to 1
+👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; columnar clusters
+╭───┬────────────────────────┬──────────────────────────────────────┬───────────┬─────────────────┬──────────┬───────────╮
+│ # │          name          │                  id                  │   state   │ number of nodes │ provider │  region   │
+├───┼────────────────────────┼──────────────────────────────────────┼───────────┼─────────────────┼──────────┼───────────┤
+│ 0 │ cbshell-cluster-a5f9f5 │ d9a6a38f-8a6d-439b-83ac-165cc9a385dd │ deploying │               1 │ AWS      │ us-east-1 │
+╰───┴────────────────────────┴──────────────────────────────────────┴───────────┴─────────────────┴──────────┴───────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Or flags can be used to specify the cluster name and number of nodes:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; columnar clusters create --name MyAnalytics --nodes 4
+👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; columnar clusters
+╭───┬─────────────┬──────────────────────────────────────┬───────────┬─────────────────┬──────────┬───────────╮
+│ # │    name     │                  id                  │   state   │ number of nodes │ provider │  region   │
+├───┼─────────────┼──────────────────────────────────────┼───────────┼─────────────────┼──────────┼───────────┤
+│ 0 │ MyAnalytics │ 5c5d548e-43ee-4a26-99a6-195208bb8b57 │ deploying │               4 │ AWS      │ us-east-1 │
+╰───┴─────────────┴──────────────────────────────────────┴───────────┴─────────────────┴──────────┴───────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>If you want to specify all aspects of the Columnar cluster then a full cluster definition can be piped into the create command:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; cat columnar-cluster-def.json
+{
+  &quot;name&quot;: &quot;MySpecificAnalytics&quot;,
+  &quot;description&quot;: &quot;A Columnar cluster all of my own&quot;,
+  &quot;cloudProvider&quot;: &quot;aws&quot;,
+  &quot;region&quot;: &quot;us-west-2&quot;,
+  &quot;nodes&quot;: 8,
+  &quot;support&quot;: {
+    &quot;plan&quot;: &quot;enterprise&quot;,
+    &quot;timezone&quot;: &quot;GMT&quot;
+  },
+  &quot;compute&quot;: {
+    &quot;cpu&quot;: 4,
+    &quot;ram&quot;: 32
+  },
+  &quot;availability&quot;: {
+    &quot;type&quot;: &quot;single&quot;
+  }
+}
+👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; cat columnar-cluster-def.json | columnar clusters create
+👤 Administrator 🏠 remote in ☁️ default._default._default
+&gt; columnar clusters
+╭───┬─────────────────────┬──────────────────────────────────────┬───────────┬─────────────────┬──────────┬───────────╮
+│ # │        name         │                  id                  │   state   │ number of nodes │ provider │  region   │
+├───┼─────────────────────┼──────────────────────────────────────┼───────────┼─────────────────┼──────────┼───────────┤
+│ 0 │ MySpecificAnalytics │ 779de9cb-264e-4349-86ec-8df2afdb8b2d │ deploying │               8 │ AWS      │ us-west-2 │
+╰───┴─────────────────────┴──────────────────────────────────────┴───────────┴─────────────────┴──────────┴───────────╯</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_columnar_clusters_drop">4.5.3. <code>columnar clusters drop</code></h4>
+<div class="paragraph">
+<p>Deletes the named Columnar analytics cluster from the active organization/project.
+Say we have the following Columnar cluster running:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; columnar clusters
+╭───┬──────────────┬──────────────────────────────────────┬───────────┬─────────────────┬──────────┬───────────╮
+│ # │     name     │                  id                  │   state   │ number of nodes │ provider │  region   │
+├───┼──────────────┼──────────────────────────────────────┼───────────┼─────────────────┼──────────┼───────────┤
+│ 0 │ My_Analytics │ 41d77658-0a4c-4f59-9af4-09f76656f905 │ deploying │               4 │ AWS      │ us-east-1 │
+╰───┴──────────────┴──────────────────────────────────────┴───────────┴─────────────────┴──────────┴───────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>It can be dropped as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; columnar clusters drop My_Analytics
+👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; columnar clusters
+╭────────────╮
+│ empty list │
+╰────────────╯</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_columnar_databases">4.5.4. <code>columnar databases</code></h4>
+<div class="paragraph">
+<p>Lists all the Databases on a Columnar analytics cluster:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 columnar in ☁️ default._default._default
+&gt; columnar databases
+╭───┬───────────────┬────────────────┬──────────────────────────────┬───────────┬──────────╮
+│ # │ DatabaseName  │ SystemDatabase │          Timestamp           │ PendingOp │ cluster  │
+├───┼───────────────┼────────────────┼──────────────────────────────┼───────────┼──────────┤
+│ 0 │ Default       │ false          │ Tue Oct 08 07:17:33 UTC 2024 │         0 │ columnar │
+│ 1 │ System        │ true           │ Tue Oct 08 07:17:33 UTC 2024 │         0 │ columnar │
+│ 2 │ travel-sample │ false          │ Tue Oct 08 07:51:51 UTC 2024 │         0 │ columnar │
+╰───┴───────────────┴────────────────┴──────────────────────────────┴───────────┴──────────╯</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_columnar_query">4.5.5. <code>columnar query</code></h4>
+<div class="paragraph">
+<p>Executes a query against a Columnar analytics cluster:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>👤 Administrator 🏠 columnar in ☁️ travel-sample._default._default
+&gt; columnar query &quot;FROM `travel-sample`.inventory.airline AS a WHERE a.country = 'United States' SELECT a.name AS airline_name LIMIT 5&quot;
+╭───┬───────────────────────────────────┬──────────╮
+│ # │           airline_name            │ cluster  │
+├───┼───────────────────────────────────┼──────────┤
+│ 0 │ Gulfstream International Airlines │ columnar │
+│ 1 │ Bering Air                        │ columnar │
+│ 2 │ Compass Airlines                  │ columnar │
+│ 3 │ Midwest Airlines                  │ columnar │
+│ 4 │ NetJets                           │ columnar │
+╰───┴───────────────────────────────────┴──────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>--with-meta</code> flag can be used to see the query metadata:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>👤 Administrator 🏠 columnar in ☁️ travel-sample._default._default
+&gt; columnar query &quot;FROM `travel-sample`.inventory.airline AS a WHERE a.country = 'United States' SELECT a.name AS airline_name LIMIT 5&quot; --with-meta
+╭───┬──────────────────────────────────────┬───────────┬───────────────────────────────────────┬───────────────────┬─────────┬────────────────────────────────────────────┬──────────╮
+│ # │              requestID               │ signature │                results                │       plans       │ status  │                  metrics                   │ cluster  │
+├───┼──────────────────────────────────────┼───────────┼───────────────────────────────────────┼───────────────────┼─────────┼────────────────────────────────────────────┼──────────┤
+│ 0 │ 64bddcb1-2984-4f9d-b08f-ac27b6631f3b │ ╭───┬───╮ │ ╭───┬───────────────────────────────╮ │ {record 0 fields} │ success │ ╭──────────────────────────┬─────────────╮ │ columnar │
+│   │                                      │ │ * │ * │ │ │ # │         airline_name          │ │                   │         │ │ elapsedTime              │ 26.04155ms  │ │          │
+│   │                                      │ ╰───┴───╯ │ ├───┼───────────────────────────────┤ │                   │         │ │ executionTime            │ 24.184986ms │ │          │
+│   │                                      │           │ │ 0 │ Piedmont Airlines (1948-1989) │ │                   │         │ │ compileTime              │ 6.757744ms  │ │          │
+│   │                                      │           │ │ 1 │ Orbit Regional Airlines       │ │                   │         │ │ queueWaitTime            │ 0ns         │ │          │
+│   │                                      │           │ │ 2 │ Rainbow Air US                │ │                   │         │ │ resultCount              │ 5           │ │          │
+│   │                                      │           │ │ 3 │ All America                   │ │                   │         │ │ resultSize               │ 195         │ │          │
+│   │                                      │           │ │ 4 │ American Eagle Airlines       │ │                   │         │ │ processedObjects         │ 171         │ │          │
+│   │                                      │           │ ╰───┴───────────────────────────────╯ │                   │         │ │ bufferCacheHitRatio      │ 100.00%     │ │          │
+│   │                                      │           │                                       │                   │         │ │ bufferCachePageReadCount │ 531         │ │          │
+│   │                                      │           │                                       │                   │         │ ╰──────────────────────────┴─────────────╯ │          │
+╰───┴──────────────────────────────────────┴───────────┴───────────────────────────────────────┴───────────────────┴─────────┴────────────────────────────────────────────┴──────────╯</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_credentials">4.6. <code>credentials</code></h3>
+<div class="paragraph">
+<p>The <code>credentials</code> commands are used to perform credential management operations against Capella clusters.</p>
+</div>
+<div class="sect3">
+<h4 id="_credentials_2">4.6.1. <code>credentials</code></h4>
+<div class="paragraph">
+<p>Lists all the credentials on the active cluster:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 remote
+&gt; credentials
+╭───┬──────────────────────────────────────┬────────────────┬─────────┬───────────────────────────────────────────────────────────────────────╮
+│ # │                  id                  │      name      │ cluster │                                access                                 │
+├───┼──────────────────────────────────────┼────────────────┼─────────┼───────────────────────────────────────────────────────────────────────┤
+│ 0 │ 354dd662-4d6a-4e1c-80f3-6c78eafa405a │ Administrator  │ remote  │ ╭───┬───────────────┬─────────────────────────┬─────────────────────╮ │
+│   │                                      │                │         │ │ # │    bucket     │         scopes          │     privileges      │ │
+│   │                                      │                │         │ ├───┼───────────────┼─────────────────────────┼─────────────────────┤ │
+│   │                                      │                │         │ │ 0 │ testing       │ ╭───┬───╮               │ ╭───┬─────────────╮ │ │
+│   │                                      │                │         │ │   │               │ │ 0 │ * │               │ │ 0 │ data_reader │ │ │
+│   │                                      │                │         │ │   │               │ ╰───┴───╯               │ ╰───┴─────────────╯ │ │
+│   │                                      │                │         │ │ 1 │ travel-sample │ ╭───┬─────────────────╮ │ ╭───┬─────────────╮ │ │
+│   │                                      │                │         │ │   │               │ │ 0 │ inventory       │ │ │ 0 │ data_reader │ │ │
+│   │                                      │                │         │ │   │               │ │ 1 │ tenant_agent_00 │ │ │ 1 │ data_writer │ │ │
+│   │                                      │                │         │ │   │               │ ╰───┴─────────────────╯ │ ╰───┴─────────────╯ │ │
+│   │                                      │                │         │ ╰───┴───────────────┴─────────────────────────┴─────────────────────╯ │
+│ 1 │ f0668638-0cf1-417c-8521-abbd1cbf0624 │ Administrator2 │ remote  │ ╭───┬────────┬───────────┬─────────────────────╮                      │
+│   │                                      │                │         │ │ # │ bucket │  scopes   │     privileges      │                      │
+│   │                                      │                │         │ ├───┼────────┼───────────┼─────────────────────┤                      │
+│   │                                      │                │         │ │ 0 │ *      │ ╭───┬───╮ │ ╭───┬─────────────╮ │                      │
+│   │                                      │                │         │ │   │        │ │ 0 │ * │ │ │ 0 │ data_reader │ │                      │
+│   │                                      │                │         │ │   │        │ ╰───┴───╯ │ ╰───┴─────────────╯ │                      │
+│   │                                      │                │         │ ╰───┴────────┴───────────┴─────────────────────╯                      │
+╰───┴──────────────────────────────────────┴────────────────┴─────────┴───────────────────────────────────────────────────────────────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In the access section the wild card <code>*</code> means that these credentials have access to all those types of resource.
+To list the credentials of a cluster other than the active cluster you can use the <code>--clusters</code> flag.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_credentials_create">4.6.2. <code>credentials create</code></h4>
+<div class="paragraph">
+<p>Creates credentials using the given username and password against the active Capella cluster.
+Note that this command will not work against locally hosted Couchbase Server clusters.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in 🗄 travel-sample._default._default
+&gt; credentials create --read --write
+Please enter username:
+Administrator
+Password:</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Credentials must be created with read and/or write access using the appropriate flags, failure to provide either will result in an error.
+When running the command as above you will be prompted to type in the username and password that you want to use.
+The Username will be displayed in plaintext, while the Password is hidden for security.</p>
+</div>
+<div class="paragraph">
+<p>The username and password can also be passed via the appropriate flags:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in 🗄 travel-sample._default._default
+&gt; credentials create --username Administrator --password Password1! --read</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This can be useful if you have a nu script that creates credentials without continuous user interaction.</p>
+</div>
+<div class="paragraph">
+<p>Finally you can use the <code>--registered</code> flag to create credentials using the username and password specified when the cluster was registered with CBShell.
+Imagine you have the following entry for a Capella cluster in your <a href="https://couchbase.sh/docs/#_the_config_dotfiles">config file</a>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>[[cluster]]
+identifier = &quot;remote&quot;
+connstr = &quot;couchbases://cb.x78igwqntgo1evov.cloud.couchbase.com&quot;
+capella-organization = &quot;my-org&quot;
+username = &quot;Administrator&quot;
+password = &quot;Password1!&quot;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Then you could create credentials using the username and password above as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in 🗄 travel-sample._default._default
+&gt; credentials create --read --write --registered</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This can be useful to avoid entering the username and password multiple times when registering new clusters with the <code>cb-env register</code> command as shown <a href="https://couchbase.sh/docs/recipes/#_register_clusters">here</a>.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_credentials_drop">4.6.3. <code>credentials drop</code></h4>
+<div class="paragraph">
+<p>Deletes the credentials with the given ID.
+For example if you have the following credentials on the cluster:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote
+&gt; credentials
+╭───┬──────────────────────────────────────┬───────────────┬─────────┬──────────────────────────────────────────────────╮
+│ # │                  id                  │     name      │ cluster │                      access                      │
+├───┼──────────────────────────────────────┼───────────────┼─────────┼──────────────────────────────────────────────────┤
+│ 0 │ 4df58dbc-0cc7-4aeb-869b-a3f0a154e3dd │ Administrator │ remote  │ ╭───┬────────┬───────────┬─────────────────────╮ │
+│   │                                      │               │         │ │ # │ bucket │  scopes   │     privileges      │ │
+│   │                                      │               │         │ ├───┼────────┼───────────┼─────────────────────┤ │
+│   │                                      │               │         │ │ 0 │ *      │ ╭───┬───╮ │ ╭───┬─────────────╮ │ │
+│   │                                      │               │         │ │   │        │ │ 0 │ * │ │ │ 0 │ data_writer │ │ │
+│   │                                      │               │         │ │   │        │ ╰───┴───╯ │ │ 1 │ data_reader │ │ │
+│   │                                      │               │         │ │   │        │           │ ╰───┴─────────────╯ │ │
+│   │                                      │               │         │ ╰───┴────────┴───────────┴─────────────────────╯ │
+╰───┴──────────────────────────────────────┴───────────────┴─────────┴──────────────────────────────────────────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Then you can delete using the <code>id</code> like this:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote
+&gt; credentials drop 4df58dbc-0cc7-4aeb-869b-a3f0a154e3dd
+👤 Charlie 🏠 remote
+&gt; credentials
+╭────────────╮
+│ empty list │
+╰────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Like most other commands you can use the <code>--clusters</code> flag to run the command against clusters other than the active cluster.
+However only one cluster can be specified at a time since credentials only exist on one cluster.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_doc">4.7. doc</h3>
 <div class="paragraph">
 <p>The <code>doc</code> commands are for managing the documents stored in the registered clusters.</p>
 </div>
 <div class="sect3">
-<h4 id="_doc_get">4.4.1. <code>doc get</code></h4>
+<h4 id="_doc_get">4.7.1. <code>doc get</code></h4>
 <div class="paragraph">
 <p>Gets a doc from the active cluster, bucket, scope and collection:</p>
 </div>
@@ -1714,7 +2335,7 @@ But the <code>id</code> can be extracted from a different input column using the
 </div>
 </div>
 <div class="sect3">
-<h4 id="_doc_import">4.4.2. <code>doc import</code></h4>
+<h4 id="_doc_import">4.7.2. <code>doc import</code></h4>
 <div class="paragraph">
 <p>The simplest way to import data into the active cluster.
 The data can be in any of the formats supported by the <a href="https://www.nushell.sh/commands/docs/from.html">from</a> command.</p>
@@ -1794,7 +2415,7 @@ With this simple tool at hand you are able to load many different data formats q
 </div>
 </div>
 <div class="sect3">
-<h4 id="_doc_insert">4.4.3. <code>doc insert</code></h4>
+<h4 id="_doc_insert">4.7.3. <code>doc insert</code></h4>
 <div class="paragraph">
 <p>Inserts document into the active bucket/scope/collection:</p>
 </div>
@@ -1838,7 +2459,7 @@ With this simple tool at hand you are able to load many different data formats q
 </div>
 </div>
 <div class="sect3">
-<h4 id="_doc_remove">4.4.4. <code>doc remove</code></h4>
+<h4 id="_doc_remove">4.7.4. <code>doc remove</code></h4>
 <div class="paragraph">
 <p>Removes the document with the given key from the active collection.
 For example say we have the following stored:</p>
@@ -1902,7 +2523,7 @@ For example say we have the following stored:</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_doc_replace">4.4.5. <code>doc replace</code></h4>
+<h4 id="_doc_replace">4.7.5. <code>doc replace</code></h4>
 <div class="paragraph">
 <p>Replaces the document in Couchbase matching the key id of the new one, if there is no document matching the <code>id</code> then an error is returned.
 Say we have the following document stored in the connected cluster:</p>
@@ -1981,7 +2602,7 @@ If there was no document with the <code>id</code> Michael, then the replace woul
 </div>
 </div>
 <div class="sect3">
-<h4 id="_doc_upsert">4.4.6. <code>doc upsert</code></h4>
+<h4 id="_doc_upsert">4.7.6. <code>doc upsert</code></h4>
 <div class="paragraph">
 <p>This is the most robust way to import data into the cluster since it will work whether or not there is an existing doc in the cluster with a matching <code>id</code>.
 If there is no document already in the cluster with a matching <code>id</code> then it behaves the same as <a href="#_doc_insert">doc insert</a>:</p>
@@ -2071,7 +2692,90 @@ If there is no document already in the cluster with a matching <code>id</code> t
 </div>
 </div>
 <div class="sect2">
-<h3 id="_nodes">4.5. <code>nodes</code></h3>
+<h3 id="_scopes">4.8. scopes</h3>
+<div class="paragraph">
+<p>The <code>scopes</code> commands are used to manage scopes.</p>
+</div>
+<div class="sect3">
+<h4 id="_scopes_2">4.8.1. <code>scopes</code></h4>
+<div class="paragraph">
+<p>Lists all of the scopes in the active bucket:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample._default._default
+&gt; scopes
+╭───┬─────────────────┬─────────╮
+│ # │      scope      │ cluster │
+├───┼─────────────────┼─────────┤
+│ 0 │ inventory       │ local   │
+│ 1 │ tenant_agent_00 │ local   │
+│ 2 │ tenant_agent_01 │ local   │
+│ 3 │ tenant_agent_02 │ local   │
+│ 4 │ tenant_agent_03 │ local   │
+│ 5 │ tenant_agent_04 │ local   │
+│ 6 │ _default        │ local   │
+╰───┴─────────────────┴─────────╯</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_scopes_create">4.8.2. <code>scopes create</code></h4>
+<div class="paragraph">
+<p>Creates a scope with the name supplied:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 default._default._default
+&gt; scopes
+╭───┬──────────┬─────────╮
+│ # │  scope   │ cluster │
+├───┼──────────┼─────────┤
+│ 0 │ _default │ local   │
+╰───┴──────────┴─────────╯
+👤 Charlie 🏠 local in 🗄 default._default._default
+&gt; scopes create new-scope
+👤 Charlie 🏠 local in 🗄 default._default._default
+&gt; scopes
+╭───┬───────────┬─────────╮
+│ # │   scope   │ cluster │
+├───┼───────────┼─────────┤
+│ 0 │ new-scope │ local   │
+│ 1 │ _default  │ local   │
+╰───┴───────────┴─────────╯</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_scopes_drop">4.8.3. <code>scopes drop</code></h4>
+<div class="paragraph">
+<p>Deletes the scope matching the given name:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 default._default._default
+&gt; scopes
+╭───┬───────────┬─────────╮
+│ # │   scope   │ cluster │
+├───┼───────────┼─────────┤
+│ 0 │ new-scope │ local   │
+│ 1 │ _default  │ local   │
+╰───┴───────────┴─────────╯
+👤 Charlie 🏠 local in 🗄 default._default._default
+&gt; scopes drop new-scope
+👤 Charlie 🏠 local in 🗄 default._default._default
+&gt; scopes
+╭───┬──────────┬─────────╮
+│ # │  scope   │ cluster │
+├───┼──────────┼─────────┤
+│ 0 │ _default │ local   │
+╰───┴──────────┴─────────╯</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_nodes">4.9. <code>nodes</code></h3>
 <div class="paragraph">
 <p>The <code>nodes</code> command allows you to list all the nodes of the cluster you are currently connected to.</p>
 </div>
@@ -2089,7 +2793,7 @@ If there is no document already in the cluster with a matching <code>id</code> t
 </div>
 </div>
 <div class="sect2">
-<h3 id="_subdoc_get">4.6. <code>subdoc get</code></h3>
+<h3 id="_subdoc_get">4.10. <code>subdoc get</code></h3>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; subdoc get --help
@@ -2165,12 +2869,12 @@ Parameters:
 </div>
 </div>
 <div class="sect2">
-<h3 id="_query">4.7. query</h3>
+<h3 id="_query">4.11. query</h3>
 <div class="paragraph">
 <p>The query commands can be used to explore/create indexes and execute queries.</p>
 </div>
 <div class="sect3">
-<h4 id="_query_2">4.7.1. <code>query</code></h4>
+<h4 id="_query_2">4.11.1. <code>query</code></h4>
 <div class="paragraph">
 <p>Takes a N1QL statement and executes it against the active cluster.</p>
 </div>
@@ -2256,7 +2960,7 @@ The following finds any IDs that match the regex 'hotel1002*'.</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_query_advise">4.7.2. <code>query advise</code></h4>
+<h4 id="_query_advise">4.11.2. <code>query advise</code></h4>
 <div class="paragraph">
 <p>Helps you to learn about the indexes that your queries are using, and what indexes
 you could create to make them faster. For example we can take the first query from the <code>query</code> examples:</p>
@@ -2303,7 +3007,7 @@ you could create to make them faster. For example we can take the first query fr
 </div>
 </div>
 <div class="sect3">
-<h4 id="_query_indexes">4.7.3. <code>query indexes</code></h4>
+<h4 id="_query_indexes">4.11.3. <code>query indexes</code></h4>
 <div class="paragraph">
 <p>Lists all of the query indexes.
 If we had just created the recommended index at the end of the <code>query advise</code> section, the nushell command <code>find</code> can be used in conjunction with <code>query indexes</code> to check it was successfully created.</p>
@@ -2339,13 +3043,13 @@ If we had just created the recommended index at the end of the <code>query advis
 </div>
 </div>
 <div class="sect2">
-<h3 id="_vector">4.8. vector</h3>
+<h3 id="_vector">4.12. vector</h3>
 <div class="paragraph">
 <p>The vector commands make it easy to explore the value that vector search can add to your data.
 Check the recipes for how the vector commands can be combined to implement <a href="https://couchbase.sh/docs/recipes.html#_similarity_search">similarity search</a> or <a href="https://couchbase.sh/docs/recipes.html#_simple_rag">simple RAG</a>.</p>
 </div>
 <div class="sect3">
-<h4 id="_vector_search">4.8.1. <code>vector search</code></h4>
+<h4 id="_vector_search">4.12.1. <code>vector search</code></h4>
 <div class="paragraph">
 <p>Performs a vector search against a named vector index.
 Requires a vector to be used as the source of the search which can be supplied in a couple of formats.</p>
@@ -2540,7 +3244,7 @@ Error:   × Unexpected status code
 </div>
 </div>
 <div class="sect3">
-<h4 id="_vector_create_index">4.8.2. <code>vector create-index</code></h4>
+<h4 id="_vector_create_index">4.12.2. <code>vector create-index</code></h4>
 <div class="paragraph">
 <p>Creates a vector index against the active bucket/scope or the bucket/scope specified with the corresponding flags.
 For example the following will create an index named new-vector-index over the field fieldName in documents in the bucket <code>default</code> and the scope <code>_default</code>:</p>
@@ -2591,7 +3295,7 @@ Whereas in the latter the environment values need to be overwritten with the <co
 </div>
 </div>
 <div class="sect3">
-<h4 id="_vector_enrich_doc">4.8.3. <code>vector enrich-doc</code></h4>
+<h4 id="_vector_enrich_doc">4.12.3. <code>vector enrich-doc</code></h4>
 <div class="paragraph">
 <p>Enriches an existing json document by generating an embedding using the <a href="#_cb_env_llm">active llm</a> from a named field and storing it in a new field in the same document.</p>
 </div>
@@ -2720,7 +3424,7 @@ For example to use the "name" field as the id of the resulting documents do:</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_vector_enrich_text">4.8.4. <code>vector enrich-text</code></h4>
+<h4 id="_vector_enrich_text">4.12.4. <code>vector enrich-text</code></h4>
 <div class="paragraph">
 <p>Generates an embedding from the input text using the <a href="#_cb_env_llm">active_llm</a> and outputs a json document containing the source text and the embedding.</p>
 </div>
@@ -2832,7 +3536,7 @@ Check this <a href="https://couchbase.sh/docs/recipes.html#_simple_rag">recipe</
 </div>
 </div>
 <div class="sect2">
-<h3 id="_ask">4.9. <code>ask</code></h3>
+<h3 id="_ask">4.13. <code>ask</code></h3>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; ask --help
@@ -2909,7 +3613,7 @@ At the new restaurant, you can enjoy the following activities:
 </div>
 </div>
 <div class="sect2">
-<h3 id="_version">4.10. <code>version</code></h3>
+<h3 id="_version">4.14. <code>version</code></h3>
 <div class="paragraph">
 <p>The <code>version</code> command lists the version of the Couchbase shell.</p>
 </div>
@@ -2996,10 +3700,285 @@ password = &quot;password&quot;
 </div>
 </div>
 <div class="sect1">
-<h2 id="_release_notes">6. Release Notes</h2>
+<h2 id="_debugging">6. Debugging</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>If you encounter unexpected behaviour when using or developing <code>cbsh</code> the best way to start debugging is to increase the log level.
+This is done through an environment variable called <code>CBSH_LOG</code>.
+By default the log level is set to <code>warn</code>, but there are various levels available, all outlined in this section.</p>
+</div>
+<div class="sect2">
+<h3 id="_error">6.1. error</h3>
+<div class="paragraph">
+<p>This is the lowest level, lower than the default (warn), so not much use for debugging since only errors will be logged.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>➜  export CBSH_LOG=error
+➜  ./cbsh
+👤 Charlie 🏠 local
+&gt;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>There are no log messages when starting the shell, because there were no errors.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_warn">6.2. warn</h3>
+<div class="paragraph">
+<p>This is the level above error, and is the default log level.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>➜  export CBSH_LOG=warn
+➜  ./cbsh
+
+[WARN] 2024-10-09 07:57:46.708 Using PLAIN authentication for cluster local, credentials will sent in plaintext - configure tls to disable this warning
+👤 Charlie 🏠 local
+&gt;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Now when we start the shell we see a [WARN] message about our tls configuration.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_info">6.3. info</h3>
+<div class="paragraph">
+<p>This level returns a large amount of information, not just from cbsh but logs from Nushell, on which <code>cbsh</code> is built, will be printed:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>➜  export CBSH_LOG=info
+➜  ./cbsh
+[WARN] 2024-10-09 08:01:50.553 Using PLAIN authentication for cluster local, credentials will sent in plaintext - configure tls to disable this warning
+[INFO] 2024-10-09 08:01:50.791 Thanks for trying CBSH!
+[INFO] 2024-10-09 08:01:50.801 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/config_files.rs:60:9 add plugin file to engine_state took 457.375µs
+[INFO] 2024-10-09 08:01:50.833 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/config_files.rs:144:13 read plugin file /Users/charlie/Library/Application Support/CouchbaseShell/plugin.msgpackz took 31.719292ms
+[INFO] 2024-10-09 08:01:50.833 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/config_files.rs:163:13 load plugin file /Users/charlie/Library/Application Support/CouchbaseShell/plugin.msgpackz took 779.833µs
+[INFO] 2024-10-09 08:01:50.840 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/util.rs:235:9 eval_source /Users/charlie/Library/Application Support/CouchbaseShell/config.nu took 5.679334ms
+[INFO] 2024-10-09 08:01:50.841 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:96:9 translate env vars took 154.458µs
+[INFO] 2024-10-09 08:01:50.841 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:232:9 setup reedline took 105.834µs
+[INFO] 2024-10-09 08:01:50.841 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:246:13 setup history took 724.959µs
+[INFO] 2024-10-09 08:01:50.842 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:296:9 merge env took 14.958µs
+[INFO] 2024-10-09 08:01:50.842 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:310:9 reset ctrlc took 208ns
+[INFO] 2024-10-09 08:01:50.842 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:327:9 pre-prompt hook took 1.583µs
+[INFO] 2024-10-09 08:01:50.842 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:343:9 env-change hook took 417ns
+[INFO] 2024-10-09 08:01:50.842 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:362:9 get config/cursor config took 208ns
+[INFO] 2024-10-09 08:01:50.842 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:401:9 reedline builder took 8.333µs
+[INFO] 2024-10-09 08:01:50.842 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:423:9 reedline coloring/style_computer took 1.917µs
+[INFO] 2024-10-09 08:01:50.843 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:440:9 reedline adding menus took 879.583µs
+[INFO] 2024-10-09 08:01:50.843 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:464:9 reedline buffer_editor took 84.875µs
+[INFO] 2024-10-09 08:01:50.844 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:481:13 sync_history took 712.209µs
+[INFO] 2024-10-09 08:01:50.844 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:495:9 keybindings took 156.833µs
+[INFO] 2024-10-09 08:01:50.845 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:519:9 update_prompt took 1.218917ms
+👤 Charlie 🏠 local
+&gt;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>If you only want to see the logs from <code>cbsh</code> itself, not Nushell, that are info and below this can be done by setting <code>CBSH_LOG</code> to <code>cbsh=info</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>➜  export CBSH_LOG=cbsh=info
+➜  ./cbsh
+[WARN] 2024-10-09 08:11:15.012 Using PLAIN authentication for cluster local, credentials will sent in plaintext - configure tls to disable this warning
+[INFO] 2024-10-09 08:11:15.233 Thanks for trying CBSH!
+👤 Charlie 🏠 local
+&gt;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Now the <code>cbsh</code> welcome is the only [INFO] message printed.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_debug">6.4. debug</h3>
+<div class="paragraph">
+<p>The log level can be set to <code>debug</code> as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>➜  export CBSH_LOG=debug</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This is the most useful level for debugging, as it gives good insight into what requests are being made and where they are being sent.
+For example here are the logs when running the <code>buckets</code> command with this log level.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 local
+&gt; buckets
+[INFO] 2024-10-09 08:04:32.053 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:553:9 line_editor setup took 1.402728208s
+[INFO] 2024-10-09 08:04:32.054 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:597:17 pre_execution_hook took 708ns
+[DEBUG] 2024-10-09 08:04:32.054 Running buckets
+[DEBUG] 2024-10-09 08:04:32.055 Fetching config from 192.168.107.128:8091/pools/default/nodeServices
+[DEBUG] 2024-10-09 08:04:32.055 Performing http request RequestBuilder { method: GET, url: Url { scheme: &quot;http&quot;, cannot_be_a_base: false, username: &quot;&quot;, password: None, host: Some(Ipv4(192.168.107.128)), port: Some(8091), path: &quot;/pools/default/nodeServices&quot;, query: None, fragment: None }, headers: {&quot;authorization&quot;: Sensitive} }
+[DEBUG] 2024-10-09 08:04:32.055 starting new connection: http://192.168.107.128:8091/
+[DEBUG] 2024-10-09 08:04:32.057 Performing http request RequestBuilder { method: GET, url: Url { scheme: &quot;http&quot;, cannot_be_a_base: false, username: &quot;&quot;, password: None, host: Some(Ipv4(192.168.107.129)), port: Some(8091), path: &quot;/pools/default/buckets&quot;, query: None, fragment: None }, headers: {&quot;authorization&quot;: Sensitive} }
+[DEBUG] 2024-10-09 08:04:32.058 starting new connection: http://192.168.107.129:8091/
+╭───┬─────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬───────┬────────────╮
+│ # │ cluster │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ cloud │ max_expiry │
+├───┼─────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼───────┼────────────┤
+│ 0 │ local   │ travel-sample │ couchbase │        1 │ none                 │ 200.0 MiB │ false         │ false │          0 │
+╰───┴─────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴───────┴────────────╯
+[INFO] 2024-10-09 08:04:32.073 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/util.rs:235:9 eval_source entry #3 took 19.071625ms
+[INFO] 2024-10-09 08:04:32.073 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:776:9 processing line editor input took 19.348083ms
+[INFO] 2024-10-09 08:04:32.073 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:785:9 time between prompts in line editor loop took 1.428516792s
+[INFO] 2024-10-09 08:04:32.073 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:296:9 merge env took 20.875µs
+[INFO] 2024-10-09 08:04:32.073 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:310:9 reset ctrlc took 250ns
+[INFO] 2024-10-09 08:04:32.073 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:327:9 pre-prompt hook took 417ns
+[INFO] 2024-10-09 08:04:32.073 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:343:9 env-change hook took 458ns
+[INFO] 2024-10-09 08:04:32.074 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:362:9 get config/cursor config took 416ns
+[INFO] 2024-10-09 08:04:32.074 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:401:9 reedline builder took 47.667µs
+[INFO] 2024-10-09 08:04:32.074 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:423:9 reedline coloring/style_computer took 1.5µs
+[INFO] 2024-10-09 08:04:32.075 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:440:9 reedline adding menus took 913.583µs
+[INFO] 2024-10-09 08:04:32.075 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:464:9 reedline buffer_editor took 108.5µs
+[INFO] 2024-10-09 08:04:32.076 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:481:13 sync_history took 1.022ms
+[INFO] 2024-10-09 08:04:32.076 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:495:9 keybindings took 142.417µs
+[INFO] 2024-10-09 08:04:32.076 perf: /Users/charlie/.cargo/registry/src/index.crates.io-6f17d22bba15001f/nu-cli-0.95.0/src/repl.rs:519:9 update_prompt took 284.125µs</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>As you can see it is not only debug level messages but also messages at any lower log level, such as info.
+This includes the messages logged by Nushell, which can lead to a lot of clutter.
+In order to only see the messages at debug and below that originate from <code>cbsh</code> do:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>➜  export CBSH_LOG=cbsh=debug</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Now we sill still see the <code>debug</code> messages from <code>cbsh</code> but without all of the Nushell <code>info</code> level messages:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 local
+&gt; buckets
+[DEBUG] 2024-10-09 08:19:50.503 Running buckets
+[DEBUG] 2024-10-09 08:19:50.504 Fetching config from 192.168.107.128:8091/pools/default/nodeServices
+[DEBUG] 2024-10-09 08:19:50.505 Performing http request RequestBuilder { method: GET, url: Url { scheme: &quot;http&quot;, cannot_be_a_base: false, username: &quot;&quot;, password: None, host: Some(Ipv4(192.168.107.128)), port: Some(8091), path: &quot;/pools/default/nodeServices&quot;, query: None, fragment: None }, headers: {&quot;authorization&quot;: Sensitive} }
+[DEBUG] 2024-10-09 08:19:50.511 Performing http request RequestBuilder { method: GET, url: Url { scheme: &quot;http&quot;, cannot_be_a_base: false, username: &quot;&quot;, password: None, host: Some(Ipv4(192.168.107.128)), port: Some(8091), path: &quot;/pools/default/buckets&quot;, query: None, fragment: None }, headers: {&quot;authorization&quot;: Sensitive} }
+╭───┬─────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬───────┬────────────╮
+│ # │ cluster │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ cloud │ max_expiry │
+├───┼─────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼───────┼────────────┤
+│ 0 │ local   │ travel-sample │ couchbase │        1 │ none                 │ 200.0 MiB │ false         │ false │          0 │
+╰───┴─────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴───────┴────────────╯</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_trace">6.5. trace</h3>
+<div class="paragraph">
+<p>The highest log level available is <code>trace</code> and can be chosen in the same way as the others.
+This returns a huge amount of information, even when simply starting the shell:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>➜  export CBSH_LOG=trace
+➜  ./cbsh
+[DEBUG] 2024-10-09 08:08:16.095 Effective CliOptions { conn_string: None, username: None, password: None, cluster: None, bucket: None, scope: None, collection: None, command: None, script: None, stdin: false, no_motd: false, disable_tls: false, tls_cert_path: None, tls_accept_all_certs: false, config_path: None, logger_prefix: None, display_name: None, no_config_prompt: false }
+[WARN] 2024-10-09 08:08:16.097 Using PLAIN authentication for cluster local, credentials will sent in plaintext - configure tls to disable this warning
+[DEBUG] 2024-10-09 08:08:16.097 Was not able to parse cb.euej8ya-xthijfpn.cloud.com
+[DEBUG] 2024-10-09 08:08:16.097 Address cb.euej8ya-xthijfpn.cloud.com is not an ip v6 address
+[DEBUG] 2024-10-09 08:08:16.097 Address cb.euej8ya-xthijfpn.cloud.com is not an ip v4 address
+[TRACE] 2024-10-09 08:08:16.097 registering event source with poller: token=Token(1), interests=READABLE
+[TRACE] 2024-10-09 08:08:16.098 registering event source with poller: token=Token(4867532416), interests=READABLE | WRITABLE
+[TRACE] 2024-10-09 08:08:16.098 registering event source with poller: token=Token(4867532800), interests=READABLE | WRITABLE
+[TRACE] 2024-10-09 08:08:16.115 deregistering event source from poller
+[TRACE] 2024-10-09 08:08:16.115 deregistering event source from poller
+[DEBUG] 2024-10-09 08:08:16.115 Server lookup failed, falling back to hostnames: no record found for Query { name: Name(&quot;_couchbases._tcp.cb.euej8ya-xthijfpn.cloud.com.&quot;), query_type: SRV, query_class: IN }
+[TRACE] 2024-10-09 08:08:16.116 (ThreadId(1)) park without timeout
+[TRACE] 2024-10-09 08:08:16.116 registering event source with poller: token=Token(1), interests=READABLE
+[TRACE] 2024-10-09 08:08:16.116 (ThreadId(2)) start runtime::block_on
+[TRACE] 2024-10-09 08:08:16.118 wait at most 500ms
+[TRACE] 2024-10-09 08:08:16.118 (ThreadId(1)) park timeout 499.997792ms
+[DEBUG] 2024-10-09 08:08:16.119 starting new connection: http://motd.couchbase.sh/
+[TRACE] 2024-10-09 08:08:16.121 registering event source with poller: token=Token(4867529088), interests=READABLE | WRITABLE
+[TRACE] 2024-10-09 08:08:16.313 wait at most 500ms
+[TRACE] 2024-10-09 08:08:16.314 closing runtime thread (ThreadId(2))
+[TRACE] 2024-10-09 08:08:16.314 signaled close for runtime thread (ThreadId(2))
+[TRACE] 2024-10-09 08:08:16.314 (ThreadId(2)) Receiver is shutdown
+[TRACE] 2024-10-09 08:08:16.314 (ThreadId(2)) end runtime::block_on
+[TRACE] 2024-10-09 08:08:16.314 deregistering event source from poller
+[TRACE] 2024-10-09 08:08:16.316 (ThreadId(2)) finished
+[TRACE] 2024-10-09 08:08:16.316 closed runtime thread (ThreadId(2))
+[INFO] 2024-10-09 08:08:16.316 Thanks for trying CBSH!
+...
+[TRACE] 2024-10-09 08:08:16.401 registering event source with poller: token=Token(0), interests=READABLE
+[TRACE] 2024-10-09 08:08:16.401 registering event source with poller: token=Token(1), interests=READABLE
+[TRACE] 2024-10-09 08:08:16.435 highlighting:
+[TRACE] 2024-10-09 08:08:16.435 parse
+[TRACE] 2024-10-09 08:08:16.435 parsing block: LiteBlock { block: [] }
+👤 Charlie 🏠 local
+&gt;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The vast majority of these <code>trace</code> messages are from Nushell itself, and do not originate from the <code>cbsh</code> code.
+Fortunately these can be turned off so that we only see the <code>traces</code> originating from <code>cbsh</code> directly:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight nowrap"><code>➜  export CBSH_LOG=cbsh=trace
+➜  ./cbsh
+[DEBUG] 2024-10-09 08:25:09.276 Effective CliOptions { conn_string: None, username: None, password: None, cluster: None, bucket: None, scope: None, collection: None, command: None, script: None, stdin: false, no_motd: false, disable_tls: false, tls_cert_path: None, tls_accept_all_certs: false, config_path: None, logger_prefix: None, display_name: None, no_config_prompt: false }
+[WARN] 2024-10-09 08:25:09.277 Using PLAIN authentication for cluster local, credentials will sent in plaintext - configure tls to disable this warning
+[DEBUG] 2024-10-09 08:25:09.277 Was not able to parse cb.euej8ya-xthijfpn.cloud.com
+[DEBUG] 2024-10-09 08:25:09.277 Address cb.euej8ya-xthijfpn.cloud.com is not an ip v6 address
+[DEBUG] 2024-10-09 08:25:09.277 Address cb.euej8ya-xthijfpn.cloud.com is not an ip v4 address
+[DEBUG] 2024-10-09 08:25:09.296 Server lookup failed, falling back to hostnames: no record found for Query { name: Name(&quot;_couchbases._tcp.cb.euej8ya-xthijfpn.cloud.com.&quot;), query_type: SRV, query_class: IN }
+[INFO] 2024-10-09 08:25:09.497 Thanks for trying CBSH!
+[DEBUG] 2024-10-09 08:25:09.523 Config file found at /Users/charlie/Library/Application Support/CouchbaseShell/config.nu, removing
+[DEBUG] 2024-10-09 08:25:09.523 Config file created at: /Users/charlie/Library/Application Support/CouchbaseShell/config.nu
+👤 Charlie 🏠 local
+&gt; buckets
+[DEBUG] 2024-10-09 08:25:17.209 Running buckets
+[DEBUG] 2024-10-09 08:25:17.210 Fetching config from 192.168.107.128:8091/pools/default/nodeServices
+[DEBUG] 2024-10-09 08:25:17.211 Performing http request RequestBuilder { method: GET, url: Url { scheme: &quot;http&quot;, cannot_be_a_base: false, username: &quot;&quot;, password: None, host: Some(Ipv4(192.168.107.128)), port: Some(8091), path: &quot;/pools/default/nodeServices&quot;, query: None, fragment: None }, headers: {&quot;authorization&quot;: Sensitive} }
+[TRACE] 2024-10-09 08:25:17.215 Fetched config ClusterConfig { nodes_ext: [NodeExtConfig { services: {&quot;ftsSSL&quot;: 18094, &quot;mgmtSSL&quot;: 18091, &quot;ftsGRPC&quot;: 9130, &quot;capi&quot;: 8092, &quot;indexAdmin&quot;: 9100, &quot;indexHttps&quot;: 19102, &quot;indexScan&quot;: 9101, &quot;indexStreamMaint&quot;: 9105, &quot;capiSSL&quot;: 18092, &quot;ftsGRPCSSL&quot;: 19130, &quot;fts&quot;: 8094, &quot;indexStreamCatchup&quot;: 9104, &quot;n1ql&quot;: 8093, &quot;n1qlSSL&quot;: 18093, &quot;mgmt&quot;: 8091, &quot;indexHttp&quot;: 9102, &quot;kv&quot;: 11210, &quot;projector&quot;: 9999, &quot;indexStreamInit&quot;: 9103, &quot;kvSSL&quot;: 11207}, hostname: Some(&quot;192.168.107.128&quot;), alternate_addresses: {} }, NodeExtConfig { services: {&quot;indexAdmin&quot;: 9100, &quot;kv&quot;: 11210, &quot;fts&quot;: 8094, &quot;capiSSL&quot;: 18092, &quot;indexScan&quot;: 9101, &quot;indexHttp&quot;: 9102, &quot;indexStreamInit&quot;: 9103, &quot;mgmtSSL&quot;: 18091, &quot;n1ql&quot;: 8093, &quot;kvSSL&quot;: 11207, &quot;projector&quot;: 9999, &quot;ftsGRPC&quot;: 9130, &quot;capi&quot;: 8092, &quot;indexStreamCatchup&quot;: 9104, &quot;ftsGRPCSSL&quot;: 19130, &quot;indexStreamMaint&quot;: 9105, &quot;mgmt&quot;: 8091, &quot;ftsSSL&quot;: 18094, &quot;indexHttps&quot;: 19102, &quot;n1qlSSL&quot;: 18093}, hostname: Some(&quot;192.168.107.129&quot;), alternate_addresses: {} }, NodeExtConfig { services: {&quot;capi&quot;: 8092, &quot;indexHttp&quot;: 9102, &quot;indexStreamCatchup&quot;: 9104, &quot;mgmtSSL&quot;: 18091, &quot;n1qlSSL&quot;: 18093, &quot;projector&quot;: 9999, &quot;indexHttps&quot;: 19102, &quot;ftsSSL&quot;: 18094, &quot;indexAdmin&quot;: 9100, &quot;indexScan&quot;: 9101, &quot;mgmt&quot;: 8091, &quot;ftsGRPC&quot;: 9130, &quot;kv&quot;: 11210, &quot;capiSSL&quot;: 18092, &quot;indexStreamMaint&quot;: 9105, &quot;fts&quot;: 8094, &quot;ftsGRPCSSL&quot;: 19130, &quot;indexStreamInit&quot;: 9103, &quot;kvSSL&quot;: 11207, &quot;n1ql&quot;: 8093}, hostname: Some(&quot;192.168.107.130&quot;), alternate_addresses: {} }], loaded_from: Some(&quot;192.168.107.128&quot;) }
+[DEBUG] 2024-10-09 08:25:17.215 Performing http request RequestBuilder { method: GET, url: Url { scheme: &quot;http&quot;, cannot_be_a_base: false, username: &quot;&quot;, password: None, host: Some(Ipv4(192.168.107.130)), port: Some(8091), path: &quot;/pools/default/buckets&quot;, query: None, fragment: None }, headers: {&quot;authorization&quot;: Sensitive} }
+╭───┬─────────┬───────────────┬───────────┬──────────┬──────────────────────┬───────────┬───────────────┬───────┬────────────╮
+│ # │ cluster │     name      │   type    │ replicas │ min_durability_level │ ram_quota │ flush_enabled │ cloud │ max_expiry │
+├───┼─────────┼───────────────┼───────────┼──────────┼──────────────────────┼───────────┼───────────────┼───────┼────────────┤
+│ 0 │ local   │ travel-sample │ couchbase │        1 │ none                 │ 200.0 MiB │ false         │ false │          0 │
+╰───┴─────────┴───────────────┴───────────┴──────────┴──────────────────────┴───────────┴───────────────┴───────┴────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This will give you a much more manageable amount of information.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_release_notes">7. Release Notes</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_1_0_0_2024_09_11">6.1. 1.0.0 - 2024-09-11</h3>
+<h3 id="_1_1_0_2025_04_02">7.1. 1.1.0 - 2025-04-02</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Added support for Columnar cluster management and queries</p>
+</li>
+<li>
+<p>Added commands to list and delete cluster credentials</p>
+</li>
+<li>
+<p>Analytics query results are now streamed</p>
+</li>
+<li>
+<p>Nushell bumped to 0.97.1</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_1_0_0_2024_09_11">7.2. 1.0.0 - 2024-09-11</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -3057,7 +4036,7 @@ password = &quot;password&quot;
 </div>
 </div>
 <div class="sect2">
-<h3 id="_0_75_2_2023_04_10">6.2. 0.75.2 - 2023-04-10</h3>
+<h3 id="_0_75_2_2023_04_10">7.3. 0.75.2 - 2023-04-10</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -3070,7 +4049,7 @@ password = &quot;password&quot;
 </div>
 </div>
 <div class="sect2">
-<h3 id="_0_75_1_2023_04_13">6.3. 0.75.1 - 2023-04-13</h3>
+<h3 id="_0_75_1_2023_04_13">7.4. 0.75.1 - 2023-04-13</h3>
 <div class="paragraph">
 <p><strong>This release contains a number of breaking changes, which are explicitly called out below.</strong>
 As our versioning continues to track the underlying Nushell minor version this has required breaking changes in a patch version.</p>
@@ -3172,7 +4151,7 @@ As our versioning continues to track the underlying Nushell minor version this h
 </div>
 </div>
 <div class="sect2">
-<h3 id="_0_75_0_2023_02_09">6.4. 0.75.0 - 2023-02-09</h3>
+<h3 id="_0_75_0_2023_02_09">7.5. 0.75.0 - 2023-02-09</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -3222,7 +4201,7 @@ As our versioning continues to track the underlying Nushell minor version this h
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2024-10-02 13:38:55 UTC
+Last updated 2025-02-04 09:11:55 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':

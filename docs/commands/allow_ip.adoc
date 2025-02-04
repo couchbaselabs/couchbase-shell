@@ -1,0 +1,26 @@
+=== `allow ip`
+
+Adds the given IP address to the active Capella cluster's allow list.
+Note that this command will not work against locally hosted Couchbase Server clusters.
+
+The IP address can be supplied as a positional parameter:
+
+```
+👤 Charlie 🏠 remote in 🗄 travel-sample._default._default
+> allow ip 143.159.160.194
+[INFO] 2025-01-07 09:24:48.168 IP address supplied without a subnet mask, defaulting to '/32'
+```
+
+Allowed IP addresses require a subnet mask, and if one is not specified CBShell will default to `/32`.
+
+Alternatively the IP address can be piped into the command.
+For example we can use one command to get our IP address and pipe the result into `allow ip`:
+
+```
+👤 Administrator 🏠 remote in 🗄 travel-sample._default._default
+> curl ifconfig.me | allow ip
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100    15  100    15    0     0    101      0 --:--:-- --:--:-- --:--:--   101
+[INFO] 2025-01-07 09:23:49.079 IP address supplied without a subnet mask, defaulting to '/32'
+```
