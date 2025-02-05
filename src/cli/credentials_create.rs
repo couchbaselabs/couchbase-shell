@@ -8,7 +8,7 @@ use crate::state::State;
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
 use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
+use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape, Value};
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
@@ -53,6 +53,16 @@ impl Command for CredentialsCreate {
             SyntaxShape::String,
             "the clusters which should be contacted",
             None,
+            ).named(
+                "bucket",
+                SyntaxShape::String,
+                "the bucket the created credentials have access to, leave empty to allow access to all buckets",
+                None,
+            ).named(
+            "scopes",
+            SyntaxShape::List(Box::new(SyntaxShape::String)),
+            "the scopes the created credentials have access to, leave empty to allow access to all scopes",
+            None,
         )
     }
 
@@ -84,6 +94,44 @@ fn credentials_create(
     let read = call.has_flag(engine_state, stack, "read")?;
     let write = call.has_flag(engine_state, stack, "write")?;
     let use_registered = call.has_flag(engine_state, stack, "registered")?;
+    let bucket = call.get_flag(engine_state, stack, "bucket")?;
+    let scopes_flag: Option<Value> = call.get_flag(engine_state, stack, "scopes")?;
+
+    let scopes = if let Some(scopes) = scopes_flag {
+        if bucket.is_none() {
+            return Err(ShellError::GenericError {
+                error: "--scopes cannot be used without specifying a bucket".to_string(),
+                msg: "".to_string(),
+                span: None,
+                help: Some(
+                    "Use the --bucket flag to specify a bucket the credentials are allowed to access"
+                        .to_string(),
+                ),
+                inner: vec![],
+            });
+        }
+
+        match scopes {
+            Value::String { val, .. } => {
+                Ok(vec!(val))
+            },
+            Value::List { vals, .. } => {
+                vals.iter().map(|v| v.as_str().map(|s| s.to_string())).collect()
+            }
+            _ => Err(ShellError::GenericError {
+                error: "--scopes cannot be used without specifying a bucket".to_string(),
+                msg: "".to_string(),
+                span: None,
+                help: Some(
+                    "Use the --bucket flag to specify a bucket the credentials are allowed to access"
+                        .to_string(),
+                ),
+                inner: vec![],
+            })
+        }?
+    } else {
+        vec!["*".to_string()]
+    };
 
     if !read && !write {
         return Err(ShellError::GenericError {
@@ -144,7 +192,14 @@ fn credentials_create(
             get_username_and_password(username_flag, password_flag)?
         };
 
-        let payload = CredentialsCreateRequest::new(name.clone(), password.clone(), read, write);
+        let payload = CredentialsCreateRequest::new(
+            name.clone(),
+            password.clone(),
+            read,
+            write,
+            bucket.clone(),
+            scopes.clone(),
+        );
 
         client
             .create_credentials(
