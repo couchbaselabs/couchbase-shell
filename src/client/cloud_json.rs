@@ -537,7 +537,14 @@ struct Bucket {
 }
 
 impl CredentialsCreateRequest {
-    pub fn new(name: String, password: String, read: bool, write: bool) -> Self {
+    pub fn new(
+        name: String,
+        password: String,
+        read: bool,
+        write: bool,
+        bucket: Option<String>,
+        scopes: Vec<String>,
+    ) -> Self {
         let mut privileges = vec![];
 
         if read {
@@ -555,10 +562,8 @@ impl CredentialsCreateRequest {
                 privileges,
                 resources: Resources {
                     buckets: vec![Bucket {
-                        name: "*".to_string(),
-                        scopes: Some(vec![Scope {
-                            name: "*".to_string(),
-                        }]),
+                        name: bucket.unwrap_or("*".to_string()),
+                        scopes: Some(scopes.iter().map(|s| Scope { name: s.into() }).collect()),
                     }],
                 },
             }],
