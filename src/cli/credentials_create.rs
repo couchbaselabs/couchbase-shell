@@ -97,41 +97,33 @@ fn credentials_create(
     let bucket = call.get_flag(engine_state, stack, "bucket")?;
     let scopes_flag: Option<Value> = call.get_flag(engine_state, stack, "scopes")?;
 
-    let scopes = if let Some(scopes) = scopes_flag {
-        if bucket.is_none() {
-            return Err(ShellError::GenericError {
-                error: "--scopes cannot be used without specifying a bucket".to_string(),
-                msg: "".to_string(),
-                span: None,
-                help: Some(
-                    "Use the --bucket flag to specify a bucket the credentials are allowed to access"
-                        .to_string(),
-                ),
-                inner: vec![],
-            });
-        }
-
-        match scopes {
-            Value::String { val, .. } => {
-                Ok(vec!(val))
-            },
-            Value::List { vals, .. } => {
-                vals.iter().map(|v| v.as_str().map(|s| s.to_string())).collect()
-            }
+    let scopes = match scopes_flag {
+        Some(_) if bucket.is_none() => Err(ShellError::GenericError {
+            error: "--scopes cannot be used without specifying a bucket".to_string(),
+            msg: "".to_string(),
+            span: None,
+            help: Some(
+                "Use the --bucket flag to specify a bucket the credentials are allowed to access"
+                    .to_string(),
+            ),
+            inner: vec![],
+        }),
+        Some(val) => match val {
+            Value::String { val, .. } => Ok(vec![val]),
+            Value::List { vals, .. } => vals
+                .iter()
+                .map(|v| v.as_str().map(|s| s.to_string()))
+                .collect(),
             _ => Err(ShellError::GenericError {
-                error: "--scopes cannot be used without specifying a bucket".to_string(),
+                error: "failed to parse scopes".to_string(),
                 msg: "".to_string(),
                 span: None,
-                help: Some(
-                    "Use the --bucket flag to specify a bucket the credentials are allowed to access"
-                        .to_string(),
-                ),
+                help: Some("--scopes must be a string or a list of strings".to_string()),
                 inner: vec![],
-            })
-        }?
-    } else {
-        vec!["*".to_string()]
-    };
+            }),
+        },
+        None => Ok(vec!["*".to_string()]),
+    }?;
 
     if !read && !write {
         return Err(ShellError::GenericError {
