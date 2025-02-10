@@ -7,7 +7,6 @@ use crate::cli::util::{
 };
 use crate::client::ManagementRequest;
 use crate::remote_cluster::RemoteCluster;
-use crate::remote_cluster::RemoteClusterType::Provisioned;
 use crate::state::State;
 use log::debug;
 use nu_engine::command_prelude::Call;
@@ -90,7 +89,7 @@ fn run(
 
         debug!("Running scopes get for bucket {:?}", &bucket);
 
-        let scopes = if active_cluster.cluster_type() == Provisioned {
+        let scopes = if active_cluster.is_capella() {
             let client = guard
                 .named_or_active_org(active_cluster.capella_org())?
                 .client();

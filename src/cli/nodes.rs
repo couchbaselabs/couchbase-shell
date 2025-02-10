@@ -11,7 +11,6 @@ use tokio::time::Instant;
 use crate::cli::error::{
     client_error_to_shell_error, serialize_error, unexpected_status_code_error,
 };
-use crate::remote_cluster::RemoteClusterType::Provisioned;
 use nu_engine::command_prelude::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value};
@@ -121,11 +120,7 @@ fn nodes(
                 collected.add_string("os", n.os, call.head);
                 collected.add_i64("memory_total", n.memory_total as i64, call.head);
                 collected.add_i64("memory_free", n.memory_free as i64, call.head);
-                collected.add_bool(
-                    "capella",
-                    active_cluster.cluster_type() == Provisioned,
-                    call.head,
-                );
+                collected.add_bool("capella", active_cluster.is_capella(), call.head);
 
                 collected.into_value(call.head)
             })

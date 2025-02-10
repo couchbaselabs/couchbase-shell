@@ -10,7 +10,6 @@ use crate::cli::util::{
 };
 use crate::client::ManagementRequest;
 use crate::remote_cluster::RemoteCluster;
-use crate::remote_cluster::RemoteClusterType::Provisioned;
 use crate::state::{RemoteCapellaOrganization, State};
 use log::debug;
 use nu_engine::command_prelude::Call;
@@ -159,10 +158,10 @@ fn buckets_create(
     for identifier in cluster_identifiers {
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
         settings
-            .validate(active_cluster.cluster_type() == Provisioned)
+            .validate(active_cluster.is_capella())
             .map_err(|e| generic_error("Invalid argument", e.to_string(), span))?;
 
-        if active_cluster.cluster_type() == Provisioned {
+        if active_cluster.is_capella() {
             let org = guard.named_or_active_org(active_cluster.capella_org())?;
 
             create_capella_bucket(

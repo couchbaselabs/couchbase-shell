@@ -9,7 +9,7 @@ use crate::client::cloud_json::Cluster;
 use crate::client::CapellaClient;
 use crate::config::ShellConfig;
 use crate::state::State;
-use crate::{read_input, RemoteCluster, RemoteClusterType};
+use crate::{read_input, RemoteCluster};
 use log::debug;
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
@@ -298,14 +298,14 @@ pub fn validate_is_not_cloud(
     command_name: impl Into<String>,
     span: Span,
 ) -> Result<(), ShellError> {
-    match cluster.cluster_type() {
-        RemoteClusterType::Other => Ok(()),
-        _ => Err(MustNotBeCapella {
+    if cluster.is_capella() {
+        return Err(MustNotBeCapella {
             command_name: command_name.into(),
             span,
         }
-        .into()),
+        .into());
     }
+    Ok(())
 }
 
 // We take a conn_string instead of name since cluster local identfiers can differ from names of

@@ -16,7 +16,6 @@ use crate::cli::error::{
 };
 use crate::client::cloud::CollectionNamespace;
 use crate::remote_cluster::RemoteCluster;
-use crate::remote_cluster::RemoteClusterType::Provisioned;
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -106,7 +105,7 @@ fn collections_create(
             &collection, &bucket, &scope
         );
 
-        if active_cluster.cluster_type() == Provisioned {
+        if active_cluster.is_capella() {
             let client = guard
                 .named_or_active_org(active_cluster.capella_org())?
                 .client();

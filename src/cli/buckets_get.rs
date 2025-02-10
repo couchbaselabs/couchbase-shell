@@ -15,7 +15,6 @@ use crate::cli::error::{
     malformed_response_error, unexpected_status_code_error,
 };
 use crate::remote_cluster::RemoteCluster;
-use crate::remote_cluster::RemoteClusterType::Provisioned;
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -92,7 +91,7 @@ fn buckets_get(
         results.push(bucket_to_nu_value(
             content,
             identifier,
-            active_cluster.cluster_type() == Provisioned,
+            active_cluster.is_capella(),
             span,
         ));
     }

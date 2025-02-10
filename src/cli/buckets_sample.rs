@@ -4,7 +4,6 @@ use crate::cli::util::{
 };
 use crate::client::{ClientError, ManagementRequest};
 use crate::remote_cluster::RemoteCluster;
-use crate::remote_cluster::RemoteClusterType::Provisioned;
 use crate::state::State;
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
@@ -82,7 +81,7 @@ fn load_sample_bucket(
     for identifier in cluster_identifiers {
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
-        let result = if active_cluster.cluster_type() == Provisioned {
+        let result = if active_cluster.is_capella() {
             let client = guard
                 .named_or_active_org(active_cluster.capella_org())?
                 .client();
