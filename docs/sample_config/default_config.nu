@@ -8,7 +8,7 @@ export def build_collection_prompt [] {
     let collection = $"($content | get collection)"
     let cluster_type = $"($content | get cluster_type)"
 
- let bucket_symbol = if $cluster_type == "provisioned" {
+    let bucket_symbol = if $cluster_type == "provisioned" {
         "☁️"
     } else {
         "🗄"

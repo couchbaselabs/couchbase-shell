@@ -6,7 +6,6 @@ export def build_collection_prompt [] {
     let bucket = $"($content | get bucket)"
     let scope = $"($content | get scope)"
     let collection = $"($content | get collection)"
-    let cluster_type = $"($content | get cluster_type)"
 
     let bucket_prompt = if $bucket == "" {
         ""
