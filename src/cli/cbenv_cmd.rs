@@ -120,7 +120,7 @@ fn use_cmd(
                         .unwrap_or_else(|| String::from("_default")),
                     span,
                 );
-                results.add_string("cluster_type", active.cluster_type(), span);
+                results.add_bool("is capella", active.is_capella(), span);
                 if let Some(co) = active.capella_org() {
                     results.add_string("capella-organization", co, span);
                 }
