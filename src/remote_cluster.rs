@@ -186,6 +186,10 @@ impl RemoteCluster {
         self.kv_batch_size
     }
 
+    pub fn cluster_type(&self) -> RemoteClusterType {
+        self.cluster_type
+    }
+
     pub fn is_capella(&self) -> bool {
         self.cluster_type == Provisioned
     }
