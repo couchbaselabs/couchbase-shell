@@ -14,7 +14,6 @@ use crate::cli::collections::{get_bucket_or_active, get_scope_or_active};
 use crate::cli::error::{client_error_to_shell_error, unexpected_status_code_error};
 use crate::client::cloud::CollectionNamespace;
 use crate::remote_cluster::RemoteCluster;
-use crate::remote_cluster::RemoteClusterType::Provisioned;
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -95,7 +94,7 @@ fn collections_drop(
             &collection, &bucket, &scope
         );
 
-        if active_cluster.cluster_type() == Provisioned {
+        if active_cluster.is_capella() {
             let client = guard
                 .named_or_active_org(active_cluster.capella_org())?
                 .client();

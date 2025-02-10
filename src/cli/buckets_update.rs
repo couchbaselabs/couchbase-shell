@@ -7,7 +7,6 @@ use crate::cli::util::{
 };
 use crate::client::ManagementRequest;
 use crate::remote_cluster::RemoteCluster;
-use crate::remote_cluster::RemoteClusterType::Provisioned;
 use crate::state::State;
 use log::debug;
 use nu_engine::command_prelude::Call;
@@ -129,7 +128,7 @@ fn buckets_update(
             span,
         )?;
 
-        if active_cluster.cluster_type() == Provisioned {
+        if active_cluster.is_capella() {
             let client = guard
                 .named_or_active_org(active_cluster.capella_org())?
                 .client();

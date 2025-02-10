@@ -1,4 +1,5 @@
 use crate::client::{Client, RustTlsConfig, CAPELLA_SRV_SUFFIX};
+use crate::remote_cluster::RemoteClusterType::Provisioned;
 use crate::{
     DEFAULT_ANALYTICS_TIMEOUT, DEFAULT_DATA_TIMEOUT, DEFAULT_MANAGEMENT_TIMEOUT,
     DEFAULT_QUERY_TIMEOUT, DEFAULT_SEARCH_TIMEOUT, DEFAULT_TRANSACTION_TIMEOUT,
@@ -185,9 +186,8 @@ impl RemoteCluster {
         self.kv_batch_size
     }
 
-    #[allow(dead_code)]
-    pub fn cluster_type(&self) -> RemoteClusterType {
-        self.cluster_type
+    pub fn is_capella(&self) -> bool {
+        self.cluster_type == Provisioned
     }
 
     pub fn display_name(&self) -> Option<String> {

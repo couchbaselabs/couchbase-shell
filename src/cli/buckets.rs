@@ -14,7 +14,6 @@ use crate::cli::error::{
     unexpected_status_code_error,
 };
 use crate::remote_cluster::RemoteCluster;
-use crate::remote_cluster::RemoteClusterType::Provisioned;
 use nu_engine::command_prelude::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
@@ -83,16 +82,11 @@ fn buckets_get_all(
     for identifier in cluster_identifiers {
         let cluster = get_active_cluster(identifier.clone(), &guard, span)?;
 
-        let (buckets, is_cloud) = (
-            get_buckets(cluster, signals.clone(), span)?,
-            cluster.cluster_type() == Provisioned,
-        );
-
-        for bucket in buckets {
+        for bucket in get_buckets(cluster, signals.clone(), span)? {
             results.push(bucket_to_nu_value(
                 bucket,
                 identifier.clone(),
-                is_cloud,
+                cluster.is_capella(),
                 span,
             ));
         }
