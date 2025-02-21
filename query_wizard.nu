@@ -143,8 +143,15 @@ export def fields [context: string] {
     }
 }
 
+# is_number determines if a string is actually a string representation of an int or float
+def is_number [possible_string: string] {
+    # Try to convert the input to an int to see if it is actually a string representation of an int/float
+    let $possible_int = (do --ignore-shell-errors { $possible_string | into int })
+    ($possible_int != null)
+}
+
 # parse_after_where is responsible for correctly formatting the condition values by adding speech marks around any strings
-# this is done by iterating over all of the fields after then where clause, determining the type
+# this is done by iterating over all of the fields after WHERE and determining the strings
 def parse_after_where [fields: list] {
     # Find the index of WHERE
     let $where_index = ($fields | enumerate | each {|it| if ($it.item == WHERE) {$it.index}})
@@ -152,20 +159,18 @@ def parse_after_where [fields: list] {
     # Get the query after WHERE, since this will hold all the conditions
     let $after_where = ($fields | skip ($where_index.0 + 1))
 
-    # Get all of the values in the condition clauses, the values are determined as being the values that follow operators
-    let $condition_values = ($after_where | enumerate | each {|it| if ($it.item in $operators) {($after_where | get ($it.index + 1))}})
+    # Get all of the values in the condition clauses, the values are determined as being the items that follow operators
+    # return a table containing the index of the value in $after_where and the corresponding value
+    let $condition_values = ($after_where | enumerate | each {|it| if ($it.item in $operators) {($after_where | get ($it.index + 1)) | [[index value]; [($it.index + 1) $in]]}}) | flatten
 
-    # For each word after the where clause
-    #   if the word is not a condition value
-    #       if the word is an operator
-    #           get the following word (this will be a condition value)
-    #           try to convert the word to an int
-    #           if you cannot, then it is a string
-    #               if the condition value is a string then wrap the string in quotes and return
-    #
-    let $parsed_after_where = (($after_where | enumerate | each {|it| if ($it.item not-in $condition_values) { if ($it.item in $operators) { [$it.item, ($after_where | get ($it.index + 1) | do --ignore-shell-errors {$in | into int} | length | if ($in == 0) {['"' ($after_where | get ($it.index + 1)) '"'] | str join} else {($after_where | get ($it.index + 1))})]} else {$it.item}}}) | flatten)
-    print $parsed_after_where
-    $parsed_after_where
+    mut $formatted_after_where = $after_where
+    for item in $condition_values {
+        # Iterate over all condition values and wrap any non-numbers (strings) in quote marks
+        let $formatted_value = (if (is_number $item.value) {$item.value} else {['"' $item.value '"'] | str join})
+        $formatted_after_where = ($formatted_after_where | update $item.index $formatted_value)
+    }
+
+    $formatted_after_where
 }
 
 # parse_return_fields takes the list of fields to be returned from the documents as a list and formats them into a single string by:
