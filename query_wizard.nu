@@ -1,8 +1,19 @@
 # query_wizard.nu
+
+# key_words are n1ql query keywords
 const $key_words = [FROM SELECT WHERE AND ANY EVERY IN SATISFIES END LIMIT]
+
+# operators are the operators that can be used in conditions in a where clause
 const $operators = [!= <= >= > < = LIKE]
 
-# Returns a table with two columns, field and type
+# cli_operators are the operators that can be suggested to the user as custom completions
+# the only difference between $operators and ¢cli_operators is the = -> ==. This is because =
+# is reserved in nushell and cannot be used as an argument to FROM
+const $cli_operators = [!= <= >= > < == LIKE]
+
+# collection_fields returns a table with two columns:
+#     field - the name of the field in the documents in that collection
+#     type - the type of the data contained in that field
 export def collection_fields [context: string] {
     let $collection = ($context | split words | $in.1)
     let $name_space = (cb-env | ["`" $in.bucket "`" . $in.scope . $collection] | str join)
@@ -12,7 +23,7 @@ export def collection_fields [context: string] {
     $fields | each {|it| $infer_result | get properties | get $it | get type | flatten | last | [[field type]; [$it $in]]} | flatten
 }
 
-# Returns list of next valid strings given a partial query
+# fields returns the list of valid next words given a partial query
 export def fields [context: string] {
     let $last = ($context | split row " " | drop | last)
     if $last == * {
@@ -34,7 +45,7 @@ export def fields [context: string] {
                 let $after_where = ($context | split row WHERE | last)
                 let $conditions = ($after_where | split row AND | drop)
                 # Check what fields with spaces in have to be enclosed with this assumes it is `
-                let $fields_in_conditions = ($conditions | each {|cond| $operators | each {|op| if (($cond | split row $op | length) > 1) {$cond | split row $op | first | str trim | str trim --char '`' } } | first})
+                let $fields_in_conditions = ($conditions | each {|cond| $cli_operators | each {|op| if (($cond | split row $op | length) > 1) {$cond | split row $op | first | str trim | str trim --char '`' } } | first})
                 return (collection_fields $context | get field | filter {|x| $x not-in $fields_in_conditions} | prepend [EVERY ANY])
             }
             ANY => {return}
@@ -75,7 +86,7 @@ export def fields [context: string] {
         }
         WHERE => {
             # If an operator is last argument suggest nothing
-            if ($last in $operators) {
+            if ($last in $cli_operators) {
                 return
             }
 
@@ -83,27 +94,27 @@ export def fields [context: string] {
 
              # WHERE x #operator y
              # If an operator has been given after where but is not the last, then suggest AND
-             if (($after_last_keyword | split row " " | filter {|x| $x in $operators} | length) != 0) {
+             if (($after_last_keyword | split row " " | filter {|x| $x in $cli_operators} | length) != 0) {
                 return [AND LIMIT]
              }
 
             # WHERE x
-            return $operators
+            return $cli_operators
         }
         AND => {
             # If an operator is last argument suggest nothing
-            if ($last in $operators) {
+            if ($last in $cli_operators) {
                 return
             }
 
             # If an operator has been given after AND but is not the last, then suggest AND LIMIT
-            if (($after_last_keyword | split row " " | filter {|x| $x in $operators} | length) != 0) {
+            if (($after_last_keyword | split row " " | filter {|x| $x in $cli_operators} | length) != 0) {
                 # To do - should check if all fields have been used in conditions, if so only suggest LIMIT
                 return [AND LIMIT]
             }
 
-            # AND x => $operators
-            return $operators
+            # AND x => $cli_operators
+            return $cli_operators
         }
         ANY => [IN]
         EVERY => [IN]
@@ -117,30 +128,61 @@ export def fields [context: string] {
         }
         SATISFIES => {
             # If an operator is last argument suggest nothing
-            if ($last in $operators) {
+            if ($last in $cli_operators) {
                 return
             }
 
             # `Satisfies person.age <operator> <value> ` => END
-            if (($after_last_keyword | split row " " | filter {|x| $x in $operators} | length) != 0) {
+            if (($after_last_keyword | split row " " | filter {|x| $x in $cli_operators} | length) != 0) {
                 return [END]
             }
 
-            # `SATISFIES person.age ` => $operators
-            return $operators
+            # `SATISFIES person.age ` => $cli_operators
+            return $cli_operators
         }
     }
 }
 
+# parse_after_where is responsible for correctly formatting the condition values by adding speech marks around any strings
+# this is done by iterating over all of the fields after then where clause, determining the type
 def parse_after_where [fields: list] {
+    # Find the index of WHERE
     let $where_index = ($fields | enumerate | each {|it| if ($it.item == WHERE) {$it.index}})
+
+    # Get the query after WHERE, since this will hold all the conditions
     let $after_where = ($fields | skip ($where_index.0 + 1))
 
+    # Get all of the values in the condition clauses, the values are determined as being the values that follow operators
     let $condition_values = ($after_where | enumerate | each {|it| if ($it.item in $operators) {($after_where | get ($it.index + 1))}})
+
+    # For each word after the where clause
+    #   if the word is not a condition value
+    #       if the word is an operator
+    #           get the following word (this will be a condition value)
+    #           try to convert the word to an int
+    #           if you cannot, then it is a string
+    #               if the condition value is a string then wrap the string in quotes and return
+    #
     let $parsed_after_where = (($after_where | enumerate | each {|it| if ($it.item not-in $condition_values) { if ($it.item in $operators) { [$it.item, ($after_where | get ($it.index + 1) | do --ignore-shell-errors {$in | into int} | length | if ($in == 0) {['"' ($after_where | get ($it.index + 1)) '"'] | str join} else {($after_where | get ($it.index + 1))})]} else {$it.item}}}) | flatten)
+    print $parsed_after_where
     $parsed_after_where
 }
 
+# parse_return_fields takes the list of fields to be returned from the documents as a list and formats them into a single string by:
+#   1) Wrapping all field names in backticks, required if they contain a space
+#   2) Concatenates fields into a single comma seperated string
+def format_return_fields [fields: list] {
+    # We format the last field separately since we don't want the final field followed by a comma
+    # Also we cannot wrap * in backticks else the query will fail
+    let $formatted_last_field = ($fields | last | if ($in == "*") {$in} else {["`" $in "`"] | str join})
+    let $other_fields = ($fields | drop)
+    let $formatted_other_fields = ($other_fields | each {|it| if ($it == "*") {[$it ","]} else {["`" $it "`"]} | str join})
+    ($formatted_other_fields | append $formatted_last_field | str join " ")
+}
+
+# FROM is the top level function that users will interact with to generate a query
+# It starts with FROM instead of SELECT since we need to know the collection first so that we can suggest appropriate fields after the SELECT
+# The custom completions are (tab suggestions) are generated from the fields function based on the input so far
 export def FROM [
 field1?: string@fields
 field2?: string@fields
@@ -160,17 +202,22 @@ field15?: string@fields
 --print_query
 ] {
     # The brackets in meta().id get dropped so we need to add them back in
-    let $inputs = [$field1 $field2 $field3 $field4 $field5 $field6 $field7 $field8 $field9 $field10 $field11 $field12 $field13 $field14 $field15] | each {|it| if ($it == "meta.id") {"meta().id"} else {$it}}
+    # Also == needs to be replaced with =
+    let $inputs = [$field1 $field2 $field3 $field4 $field5 $field6 $field7 $field8 $field9 $field10 $field11 $field12 $field13 $field14 $field15] | each {|it| if ($it == "meta.id") {"meta().id"} else if ($it == "==") {"="} else {$it}}
+
+    # Find the index of WHERE and then split the input into before and after the WHERE clause
     let $where_index = ($inputs | enumerate | each {|it| if ($it.item == WHERE) {$it.index}})
     let $after_where = ($inputs | skip ($where_index.0 + 1))
 
-    let $condition_values = ($after_where | enumerate | each {|it| if ($it.item in $operators) {($after_where | get ($it.index + 1))}})
+    # The conditions need to be parsed and any string condition values wrapped in speech marks
     let $parsed_after_where = (parse_after_where $inputs)
 
-    let $select_fields = ($inputs | drop ($inputs | length | $in - $where_index.0) | skip 2)
+    # Extract the fields to be returned from the document and format them
+    let $return_fields = ($inputs | drop ($inputs | length | $in - $where_index.0) | skip 2)
+    let $formatted_return_fields = format_return_fields $return_fields
 
-    let $select_section = [SELECT] | append ($select_fields | enumerate | each {|it| if ($it.index != ($select_fields | length | $in - 1)) { [$it.item `,`] | str join } else { $it.item }}) | str join " "
-    let $query = [$select_section FROM $field1 WHERE] | append $parsed_after_where | str join " "
+    # Finally construct the query from the starting section and the parsed conditions
+    let $query = [SELECT $formatted_return_fields FROM $field1 WHERE] | append $parsed_after_where | str join " "
 
     if $print_query {
         print $query
@@ -184,7 +231,7 @@ field15?: string@fields
 export def FROM_tests [] {
         # Expect list of collections after FROM
         let $context = "FROM "
-        let $expected = [route landmark hotel airport airline]
+        let $expected = [airline route landmark hotel airport]
         print $context
         assert $expected (fields $context)
 
@@ -236,30 +283,30 @@ export def WHERE_tests [] {
 
     # Suggest operators after field
     let $context = "FROM route SELECT * WHERE airline "
-    let $expected = $operators
+    let $expected = $cli_operators
     print $context
     assert $expected (fields $context)
 
      # Suggest operators after WHERE meta().id
     let $context = 'FROM hotel SELECT meta().id WHERE meta().id '
-    let $expected = $operators
+    let $expected = $cli_operators
     print $context
     assert $expected (fields $context)
 
     # Suggest operator after WHERE field with spaces
     let $context = "FROM route SELECT * WHERE `some field` "
-    let $expected = $operators
+    let $expected = $cli_operators
     print $context
     assert $expected (fields $context)
 
     # Suggest operator after WHERE field with underscore
     let $context = "FROM route SELECT * WHERE some_field "
-    let $expected = $operators
+    let $expected = $cli_operators
     print $context
     assert $expected (fields $context)
 
     # Suggest noting after operator
-    let $context = "FROM route SELECT airline distance schedule type WHERE airline = "
+    let $context = "FROM route SELECT airline distance schedule type WHERE airline == "
     let $expected = null
     let $result = ((fields $context) == $expected)
     print $context
@@ -272,13 +319,13 @@ export def WHERE_tests [] {
     }
 
     # Suggest AND after condition value
-    let $context = "FROM route SELECT airline distance schedule type WHERE airline = someAirline "
+    let $context = "FROM route SELECT airline distance schedule type WHERE airline == someAirline "
     let $expected = [AND LIMIT]
     print $context
     assert $expected (fields $context)
 
     # Condition value with spaces
-    let $context = 'FROM route SELECT airline distance schedule type WHERE airline = "Best Airline" '
+    let $context = 'FROM route SELECT airline distance schedule type WHERE airline == "Best Airline" '
     let $expected = [AND LIMIT]
     print $context
     assert $expected (fields $context)
@@ -286,19 +333,19 @@ export def WHERE_tests [] {
 
 export def AND_tests [] {
     # Remove field once used in condition
-    let $context = "FROM route SELECT airline distance schedule type WHERE airline = someAirline AND "
+    let $context = "FROM route SELECT airline distance schedule type WHERE airline == someAirline AND "
     let $expected = [EVERY ANY airlineid destinationairport distance equipment id schedule sourceairport stops type]
     print $context
     assert $expected (fields $context)
 
     # Remove fields once used in condition
-    let $context = "FROM route SELECT airline distance schedule type WHERE airline = someAirline AND type = someType AND "
+    let $context = "FROM route SELECT airline distance schedule type WHERE airline == someAirline AND type == someType AND "
     let $expected = [EVERY ANY airlineid destinationairport distance equipment id schedule sourceairport stops]
     print $context
     assert $expected (fields $context)
 
     # Condition values with spaces
-    let $context = 'FROM route SELECT airline distance schedule type WHERE airline = "Best Airline" AND type = "some things" AND '
+    let $context = 'FROM route SELECT airline distance schedule type WHERE airline == "Best Airline" AND type == "some things" AND '
     let $expected = [EVERY ANY airlineid destinationairport distance equipment id schedule sourceairport stops]
     print $context
     assert $expected (fields $context)
@@ -381,18 +428,18 @@ export def SATISFIES_tests [] {
 
     # Suggest operators after nested field in SATISFIES clause
     let $context = 'FROM hotel SELECT meta().id WHERE EVERY review IN reviews SATISFIES review.ratings.`Service` '
-    let $expected = $operators
+    let $expected = $cli_operators
     print $context
     assert $expected (fields $context)
 
     # Suggest END after SATISFIES completed
-    let $context = 'FROM hotel SELECT meta().id WHERE EVERY review IN reviews SATISFIES review.something = asdf '
+    let $context = 'FROM hotel SELECT meta().id WHERE EVERY review IN reviews SATISFIES review.something == asdf '
     let $expected = [END]
     print $context
     assert $expected (fields $context)
 
     # Suggest END after SATISFIES condidtion with spaces
-    let $context = 'FROM hotel SELECT meta().id WHERE EVERY review IN reviews SATISFIES review.something = "something else" '
+    let $context = 'FROM hotel SELECT meta().id WHERE EVERY review IN reviews SATISFIES review.something == "something else" '
     let $expected = [END]
     print $context
     assert $expected (fields $context)
