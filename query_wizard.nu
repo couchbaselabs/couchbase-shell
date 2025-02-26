@@ -178,10 +178,10 @@ def parse_after_where [fields: list] {
 #   2) Concatenates fields into a single comma seperated string
 def format_return_fields [fields: list] {
     # We format the last field separately since we don't want the final field followed by a comma
-    # Also we cannot wrap * in backticks else the query will fail
-    let $formatted_last_field = ($fields | last | if ($in == "*") {$in} else {["`" $in "`"] | str join})
+    # Also we cannot wrap * or meta().id in backticks else the query will fail
+    let $formatted_last_field = ($fields | last | if ($in in [* "meta().id"]) {$in} else {["`" $in "`"] | str join})
     let $other_fields = ($fields | drop)
-    let $formatted_other_fields = ($other_fields | each {|it| if ($it == "*") {[$it ","]} else {["`" $it "`"]} | str join})
+    let $formatted_other_fields = ($other_fields | each {|it| if ($in in [* "meta().id"]) {[$it ","]} else {["`" $it "`"]} | str join})
     ($formatted_other_fields | append $formatted_last_field | str join " ")
 }
 
@@ -206,9 +206,21 @@ field14?: string@fields
 field15?: string@fields
 --print_query
 ] {
+    let $inputs = [$field1 $field2 $field3 $field4 $field5 $field6 $field7 $field8 $field9 $field10 $field11 $field12 $field13 $field14 $field15]
+
+    let $query = format_query $inputs
+
+    if $print_query {
+        return $query
+    }
+
+    query $query
+}
+
+def format_query [inputs: list] {
     # The brackets in meta().id get dropped so we need to add them back in
     # Also == needs to be replaced with =
-    let $inputs = [$field1 $field2 $field3 $field4 $field5 $field6 $field7 $field8 $field9 $field10 $field11 $field12 $field13 $field14 $field15] | each {|it| if ($it == "meta.id") {"meta().id"} else if ($it == "==") {"="} else {$it}}
+    let $inputs = ($inputs | each {|it| if ($it == "meta.id") {"meta().id"} else if ($it == "==") {"="} else {$it}})
 
     # Find the index of WHERE and then split the input into before and after the WHERE clause
     let $where_index = ($inputs | enumerate | each {|it| if ($it.item == WHERE) {$it.index}})
@@ -222,12 +234,8 @@ field15?: string@fields
     let $formatted_return_fields = format_return_fields $return_fields
 
     # Finally construct the query from the starting section and the parsed conditions
-    let $query = [SELECT $formatted_return_fields FROM $field1 WHERE] | append $parsed_after_where | str join " "
-
-    if $print_query {
-        print $query
-    }
-    query $query
+    let $query = [SELECT $formatted_return_fields FROM $inputs.0 WHERE] | append $parsed_after_where | str join " "
+    return $query
 }
 
 # TESTS
@@ -452,7 +460,6 @@ export def SATISFIES_tests [] {
 
 
 export def fields_tests [] {
-
     FROM_tests
     SELECT_tests
     WHERE_tests
@@ -461,7 +468,6 @@ export def fields_tests [] {
     EVERY_tests
     IN_tests
     SATISFIES_tests
-
 }
 
 def assert [expected: list, result: list] {
@@ -471,5 +477,109 @@ def assert [expected: list, result: list] {
         print "RESULT: " $result
     } else {
         print (ansi green_bold) passed (ansi reset)
+    }
+}
+
+def assert_string [expected: string, actual: string] {
+     if (not ($expected == $actual)) {
+        print (ansi red_bold) failed (ansi reset)
+        print "EXPECTED: " $expected
+        print "ACTUAL: " $actual
+        print
+    } else {
+        print (ansi green_bold) passed (ansi reset)
+    }
+}
+
+export def format_query_tests [] {
+
+    let test_cases = [
+    {
+         # Don't wrap wildcard or meta().id in backticks
+        input: [col SELECT * meta().id WHERE field == stringValue]
+        expected: 'SELECT *, meta().id FROM col WHERE field = "stringValue"'
+    }
+    {
+         # Don't wrap wildcard or meta().id in backticks with meta().id first
+        input: [col SELECT meta().id * WHERE field = stringValue]
+        expected: 'SELECT meta().id, * FROM col WHERE field = "stringValue"'
+    }
+    {
+        # Field name with spaces
+        input: [col SELECT 'space field' WHERE field == value]
+        expected: 'SELECT `space field` FROM col WHERE field = "value"'
+    }
+    {
+        # Condition value with spaces
+        input: [col SELECT * WHERE field == 'some value']
+        expected: 'SELECT * FROM col WHERE field = "some value"'
+    }
+    {
+        # Multiple fields
+        input: [col SELECT field1 field2 WHERE field3 == value]
+        expected: 'SELECT `field1` `field2` FROM col WHERE field3 = "value"'
+    }
+    {
+        # Don't wrap int or float condition values in quote marks
+        # Note that we quote the numbers in the list because they will be passed to format_query as strings
+        input: [col SELECT field WHERE field1 == '10' AND field2 == '10.5']
+        expected: 'SELECT `field` FROM col WHERE field1 = 10 AND field2 = 10.5'
+    }
+    {
+         # ANY IN basic test
+         input: [col SELECT field WHERE ANY element IN array == value]
+         expected: 'SELECT `field` FROM col WHERE ANY element IN array = "value"'
+    }
+    {
+        # ANY IN - float
+        input: [col SELECT field WHERE ANY element IN array < '10.123']
+        expected: 'SELECT `field` FROM col WHERE ANY element IN array < 10.123'
+    }
+    {
+        # ANY IN - string with spaces
+        input: [col SELECT field WHERE ANY element IN array != 'some value']
+        expected: 'SELECT `field` FROM col WHERE ANY element IN array != "some value"'
+    }
+    {
+        # ANY IN AND - string with spaces
+        input: [col SELECT field WHERE ANY element IN array != 'some value' AND field2 == value2]
+        expected: 'SELECT `field` FROM col WHERE ANY element IN array != "some value" AND field2 = "value2"'
+    }
+    {
+         # EVERY IN basic test
+         input: [col SELECT field WHERE EVERY element IN array == value]
+         expected: 'SELECT `field` FROM col WHERE EVERY element IN array = "value"'
+    }
+    {
+        # EVERY IN - float
+        input: [col SELECT field WHERE EVERY element IN array < '10.123']
+        expected: 'SELECT `field` FROM col WHERE EVERY element IN array < 10.123'
+    }
+    {
+        # EVERY IN - string with spaces
+        input: [col SELECT field WHERE EVERY element IN array != 'some value']
+        expected: 'SELECT `field` FROM col WHERE EVERY element IN array != "some value"'
+    }
+    {
+        # LIMIT test
+        input: [col SELECT * WHERE field == value LIMIT '1']
+        expected: 'SELECT * FROM col WHERE field = "value" LIMIT 1'
+    }
+    {
+        # SATISFIES basic test
+        input: [col SELECT * WHERE ANY e IN array SATISFIES e.something == value]
+        expected: 'SELECT * FROM col WHERE ANY e IN array SATISFIES e.something = "value"'
+    }
+    {
+        # SATISFIES where nested field contains space
+        input: [col SELECT * WHERE EVERY e IN array SATISFIES e.'some field' == '10']
+        expected: "SELECT * FROM col WHERE EVERY e IN array SATISFIES e.'some field' = 10"
+    }
+    ]
+
+    for test in $test_cases {
+        print ($test.input | prepend "FROM" | str join " ")
+        let $result = format_query $test.input
+        assert_string $test.expected $result
     }
 }
