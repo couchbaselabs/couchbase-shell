@@ -45,6 +45,11 @@ const SELECT_tests = [
         input: "FROM route SELECT airline meta().id distance schedule type "
         expected: [WHERE * airlineid destinationairport equipment id sourceairport stops]
     }
+    {
+        # Handle fields with spaces in the names
+        input: "FROM route SELECT airline 'space field' distance schedule type "
+        expected: [WHERE * airlineid destinationairport equipment id sourceairport stops]
+    }
 ]
 
 const WHERE_tests = [
