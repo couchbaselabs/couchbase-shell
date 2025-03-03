@@ -1,5 +1,5 @@
 # key_words are n1ql query keywords
-const $key_words = [FROM SELECT WHERE AND LIMIT]
+const $key_words = [FROM SELECT WHERE AND LIMIT ANY EVERY IN SATISFIES END]
 
 # cli_operators are the operators that can be suggested to the user as custom completions
 # the only difference between $operators and ¢cli_operators is the = -> ==. This is because =
@@ -20,11 +20,11 @@ export def main [context: string] {
             FROM => {return (collections | get collection)}
             SELECT => {
                 let $collection = ($context | split words | $in.1)
-                return (collection_fields $collection | prepend *)
+                return (collection_fields $collection | get fields | prepend *)
             }
             WHERE => {
                 let $collection = ($context | split words | $in.1)
-                return (collection_fields $collection)
+                return (collection_fields $collection | get fields | prepend [ANY EVERY])
             }
             AND => {
                 # Need to suggest list of fields after WHERE that have not been used in conditions yet
@@ -34,8 +34,31 @@ export def main [context: string] {
                 # If they contain an operator then we split the condition on that operator and return the first word, this will be the name of the field
                 let $fields_in_conditions = ($conditions | each {|cond| $cli_operators | each {|op| if ($cond | str contains $op) {$cond | split row $op | first | str trim} } | first})
                 let $collection = ($context | split words | $in.1)
-                return (collection_fields $collection | filter {|x| $x not-in $fields_in_conditions})
+                return (collection_fields $collection | get fields | filter {|x| $x not-in $fields_in_conditions} | prepend [ANY EVERY])
             }
+            ANY => {return}
+            EVERY => {return}
+            IN => {
+                let $collection = ($context | split words | $in.1)
+                return (collection_fields $collection| filter {|it| $it.type == array} | get fields)
+            }
+            SATISFIES => {
+                # When the last word is satisfies we need to return a list of fields of the objects in the array
+                # appended to the alias of the array members given before IN
+
+                # context will be "... review IN reviews SATISFIES " so we get alias, array from either side of "IN"
+                let $in_index = ($context | split row " " | enumerate | each {|it| if ($it.item == IN) {$it.index}})
+                let $alias = ($context | split row " " | get ($in_index.0 - 1))
+                let $array = ($context | split row " " | get ($in_index.0 + 1) | str trim --char "`")
+
+                let $collection = ($context | split words | get 1)
+
+                # Gets the infer results for the JSON objects in the array
+                let $array_object_fields = ([infer $collection] | str join " " | query $in | get properties | get $array | get items | get properties)
+                let $formatted_array_fields = ($array_object_fields | columns | each {|it| $array_object_fields | get $it | columns | if ("properties" in $in) {$array_object_fields | get $it | get properties | columns | each {|prop| [$alias . $it . '`' $prop '`'] | str join }} else { [$alias . '`' $it '`'] | str join} } | flatten | append " ")
+                return { options: {sort: false}, completions: $formatted_array_fields}
+            }
+            END => [AND LIMIT]
         }
     }
 
@@ -48,7 +71,7 @@ export def main [context: string] {
             # collection_fields
             let $selected_fields = ($after_last_keyword | split row "`" | each {|field| if (not ($field | str contains "*")) {["`" $field "`"] | str join} else {"*"}})
             let $collection = ($context | split words | $in.1)
-            let $remaining_fields = (collection_fields $collection | prepend * | each {|it| if ($it not-in $selected_fields) {$it}} | flatten)
+            let $remaining_fields = (collection_fields $collection | get fields | prepend * | each {|it| if ($it not-in $selected_fields) {$it}} | flatten)
             return ($remaining_fields | prepend [WHERE LIMIT])
         }
         WHERE => {
@@ -83,13 +106,41 @@ export def main [context: string] {
             # AND x => $cli_operators
             return $cli_operators
         }
+        ANY => [IN]
+        EVERY => [IN]
+        IN => {
+            # Cases
+            # either
+            # IN y => [SATISFIES]
+            # IN x <operator> => Nothing
+            # IN x <operator> y
+            [SATISFIES]
+        }
+        SATISFIES => {
+            return [HERE]
+            # If an operator is last argument suggest nothing
+            if ($last in $cli_operators) {
+                return
+            }
+
+            # `Satisfies person.age <operator> <value> ` => END
+            if (($after_last_keyword | split row " " | filter {|x| $x in $cli_operators} | length) != 0) {
+                return [END]
+            }
+
+            # `SATISFIES person.age ` => $cli_operators
+            return $cli_operators
+        }
     }
 }
 
-# collection_fields returns a list of the fields in a collection
-# each field is wrapped in backticks to avoid thinking single field names containing spaces are multiple fields
+# collection_fields returns a table with two columns:
+#     fields - the name of the field in the documents in that collection
+#     type - the type of the data contained in that field
 export def collection_fields [collection: string] {
     let $name_space = (cb-env | ["`" $in.bucket "`" . $in.scope . $collection] | str join)
     let $infer_result = [infer $name_space] | str join " " | query $in
-    ($infer_result | get properties | columns | each {|field| ["`" $field "`"] | str join})
+    let $fields = ($infer_result | get properties | columns)
+    # For each field get its type from the results of the infer query and construct a table
+    $fields | each {|it| $infer_result | get properties | get $it | get type | flatten | last | [[fields type]; [(["`" $it "`"] | str join) $in]]} | flatten
 }
