@@ -23,44 +23,44 @@ const SELECT_tests = [
     {
         # Suggest list of fields after SELECT
         input: "FROM route SELECT "
-        expected: [* airline airlineid destinationairport distance equipment id schedule sourceairport stops type]
+        expected: [* "`airline`" "`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`" "`type`"]
     }
     {
         # Suggest WHERE and all other fields after *
         input: "FROM route SELECT * "
-        expected: [WHERE airline airlineid destinationairport distance equipment id schedule sourceairport stops type]
+        expected: [WHERE "`airline`" "`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`" "`type`"]
     }
     {
         # Suggest list of fields and WHERE after SELECT meta().id
         input: "FROM route SELECT meta().id "
-        expected: [WHERE * airline airlineid destinationairport distance equipment id schedule sourceairport stops type]
+        expected: [WHERE * "`airline`" "`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`" "`type`"]
     }
     {
         # Don't suggest used fields
-        input: "FROM route SELECT airline distance schedule type "
-        expected: [WHERE * airlineid destinationairport equipment id sourceairport stops]
+        input: "FROM route SELECT `airline` `distance` `schedule` `type` "
+        expected: [WHERE * "`airlineid`" "`destinationairport`" "`equipment`" "`id`" "`sourceairport`" "`stops`"]
     }
     {
         # Correctly detect used fields when meta().id present
-        input: "FROM route SELECT airline meta().id distance schedule type "
-        expected: [WHERE * airlineid destinationairport equipment id sourceairport stops]
+        input: "FROM route SELECT `airline` meta().id `distance` `schedule` `type` "
+        expected: [WHERE * "`airlineid`" "`destinationairport`" "`equipment`" "`id`" "`sourceairport`" "`stops`"]
     }
     {
         # Handle fields with spaces in the names
-        input: "FROM route SELECT airline 'space field' distance schedule type "
-        expected: [WHERE * airlineid destinationairport equipment id sourceairport stops]
+        input: "FROM route SELECT `airline` `space field` `distance` `schedule` `type` "
+        expected: [WHERE * "`airlineid`" "`destinationairport`" "`equipment`" "`id`" "`sourceairport`" "`stops`"]
     }
 ]
 
 const WHERE_tests = [
     {
         # Suggest all fields after WHERE
-        input: "FROM route SELECT airline distance schedule type WHERE "
-        expected: [airline airlineid destinationairport distance equipment id schedule sourceairport stops type]
+        input: "FROM route SELECT `airline` `distance` `schedule` `type` WHERE "
+        expected: ["`airline`" "`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`" "`type`"]
     }
     {
         # Suggest operators after field
-        input: "FROM route SELECT * WHERE airline "
+        input: "FROM route SELECT * WHERE `airline` "
         expected: $cli_operators
     }
     {
@@ -75,12 +75,12 @@ const WHERE_tests = [
     }
     {
          # Suggest operator after WHERE field with underscore
-         input: "FROM route SELECT * WHERE some_field "
+         input: "FROM route SELECT * WHERE `some_field` "
          expected: $cli_operators
     }
     {
         # Suggest nothing after operator
-        input: "FROM route SELECT airline distance schedule type WHERE airline == "
+        input: "FROM route SELECT `airline` `distance` `schedule` `type` WHERE `airline` == "
         expected: null
     }
 ]

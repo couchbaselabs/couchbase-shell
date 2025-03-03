@@ -47,11 +47,19 @@ def format_after_where [fields: list] {
     # return a table containing the index of the value in $after_where and the corresponding value
     let $condition_values = ($after_where | enumerate | each {|it| if ($it.item in $operators) {($after_where | get ($it.index + 1)) | [[index value]; [($it.index + 1) $in]]}}) | flatten
 
+    # Get all of the fields in the condition clauses, the values are determined as being the items that proceed operators
+    # return a table containing the index of the field names in $after_where and the corresponding field name wrapped in backticks
+    let $condition_fields = ($after_where | enumerate | each {|it| if ($it.item in $operators) {($after_where | get ($it.index - 1)) | [[index value]; [($it.index - 1) (["`" $in "`"] | str join)]]}}) | flatten
+
     mut $formatted_after_where = $after_where
     for item in $condition_values {
         # Iterate over all condition values and wrap any non-numbers (strings) in quote marks
         let $formatted_value = (if (is_number $item.value) {$item.value} else {['"' $item.value '"'] | str join})
         $formatted_after_where = ($formatted_after_where | update $item.index $formatted_value)
+    }
+
+    for $item in $condition_fields {
+        $formatted_after_where = ($formatted_after_where | update $item.index $item.value)
     }
 
     $formatted_after_where

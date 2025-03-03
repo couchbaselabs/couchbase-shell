@@ -33,28 +33,28 @@ const WHERE_tests = [
     {
         # Basic query with WHERE clause
         input: [col SELECT * WHERE field == value]
-        expected: 'SELECT * FROM col WHERE field = "value"'
+        expected: 'SELECT * FROM col WHERE `field` = "value"'
     }
     {
         # Multiple fields
         input: [col SELECT field1 field2 WHERE field3 == value]
-        expected: 'SELECT `field1`, `field2` FROM col WHERE field3 = "value"'
+        expected: 'SELECT `field1`, `field2` FROM col WHERE `field3` = "value"'
     }
     {
         # Condition value with spaces
         input: [col SELECT * WHERE field == 'some value']
-        expected: 'SELECT * FROM col WHERE field = "some value"'
+        expected: 'SELECT * FROM col WHERE `field` = "some value"'
     }
     {
         # Don't wrap int or float condition values in quote marks
         # Note that we quote the numbers in the list because they will be passed to format_query as strings
         input: [col SELECT field WHERE field1 == '10' AND field2 == '10.5']
-        expected: 'SELECT `field` FROM col WHERE field1 = 10 AND field2 = 10.5'
+        expected: 'SELECT `field` FROM col WHERE `field1` = 10 AND `field2` = 10.5'
     }
     {
         # LIKE with wildcard
         input: [col SELECT * WHERE field LIKE '%alue']
-        expected: 'SELECT * FROM col WHERE field LIKE "%alue"'
+        expected: 'SELECT * FROM col WHERE `field` LIKE "%alue"'
     }
 ]
 
