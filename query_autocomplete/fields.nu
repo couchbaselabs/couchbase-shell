@@ -34,8 +34,9 @@ export def main [context: string] {
     match $last_keyword {
         FROM => {return [SELECT]}
         SELECT => {
-            # TO DO - make this work with fields with spaces in
-            let $selected_fields = ($after_last_keyword | split row " ")
+            # Find the list of fields already specified, wrapping them in backticks so they can be matched with the output of
+            # collection_fields
+            let $selected_fields = ($after_last_keyword | split row "`" | each {|field| if (not ($field | str contains "*")) {["`" $field "`"] | str join} else {"*"}})
             let $collection = ($context | split words | $in.1)
             let $remaining_fields = (collection_fields $collection | prepend * | each {|it| if ($it not-in $selected_fields) {$it}} | flatten)
             return ($remaining_fields | prepend [WHERE])
@@ -61,8 +62,9 @@ export def main [context: string] {
 }
 
 # collection_fields returns a list of the fields in a collection
-def collection_fields [collection: string] {
+# each field is wrapped in backticks to avoid thinking single field names containing spaces are multiple fields
+export def collection_fields [collection: string] {
     let $name_space = (cb-env | ["`" $in.bucket "`" . $in.scope . $collection] | str join)
     let $infer_result = [infer $name_space] | str join " " | query $in
-    ($infer_result | get properties | columns)
+    ($infer_result | get properties | columns | each {|field| ["`" $field "`"] | str join})
 }
