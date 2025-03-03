@@ -1,5 +1,5 @@
 # key_words are n1ql query keywords
-const $key_words = [FROM SELECT WHERE]
+const $key_words = [FROM SELECT WHERE AND LIMIT]
 
 # cli_operators are the operators that can be suggested to the user as custom completions
 # the only difference between $operators and ¢cli_operators is the = -> ==. This is because =
@@ -26,6 +26,16 @@ export def main [context: string] {
                 let $collection = ($context | split words | $in.1)
                 return (collection_fields $collection)
             }
+            AND => {
+                # Need to suggest list of fields after WHERE that have not been used in conditions yet
+                let $after_where = ($context | split row WHERE | last)
+                let $conditions = ($after_where | split row AND | drop)
+                # Here we iterate over the condition clauses and try to separate with each operator
+                # If they contain an operator then we split the condition on that operator and return the first word, this will be the name of the field
+                let $fields_in_conditions = ($conditions | each {|cond| $cli_operators | each {|op| if ($cond | str contains $op) {$cond | split row $op | first | str trim} } | first})
+                let $collection = ($context | split words | $in.1)
+                return (collection_fields $collection | filter {|x| $x not-in $fields_in_conditions})
+            }
         }
     }
 
@@ -39,7 +49,7 @@ export def main [context: string] {
             let $selected_fields = ($after_last_keyword | split row "`" | each {|field| if (not ($field | str contains "*")) {["`" $field "`"] | str join} else {"*"}})
             let $collection = ($context | split words | $in.1)
             let $remaining_fields = (collection_fields $collection | prepend * | each {|it| if ($it not-in $selected_fields) {$it}} | flatten)
-            return ($remaining_fields | prepend [WHERE])
+            return ($remaining_fields | prepend [WHERE LIMIT])
         }
         WHERE => {
             # If an operator is last argument suggest nothing
@@ -56,6 +66,21 @@ export def main [context: string] {
              }
 
             # WHERE x
+            return $cli_operators
+        }
+         AND => {
+            # If an operator is last argument suggest nothing
+            if ($last in $cli_operators) {
+                return
+            }
+
+            # If an operator has been given after AND but is not the last, then suggest AND LIMIT
+            if (($after_last_keyword | split row " " | filter {|x| $x in $cli_operators} | length) != 0) {
+                # To do - should check if all fields have been used in conditions, if so only suggest LIMIT
+                return [AND LIMIT]
+            }
+
+            # AND x => $cli_operators
             return $cli_operators
         }
     }
