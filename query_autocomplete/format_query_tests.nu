@@ -46,15 +46,18 @@ const WHERE_tests = [
         expected: 'SELECT * FROM col WHERE `field` = "some value"'
     }
     {
+        # LIKE with wildcard
+        input: [col SELECT * WHERE field LIKE '%alue']
+        expected: 'SELECT * FROM col WHERE `field` LIKE "%alue"'
+    }
+]
+
+const AND_tests = [
+    {
         # Don't wrap int or float condition values in quote marks
         # Note that we quote the numbers in the list because they will be passed to format_query as strings
         input: [col SELECT field WHERE field1 == '10' AND field2 == '10.5']
         expected: 'SELECT `field` FROM col WHERE `field1` = 10 AND `field2` = 10.5'
-    }
-    {
-        # LIKE with wildcard
-        input: [col SELECT * WHERE field LIKE '%alue']
-        expected: 'SELECT * FROM col WHERE `field` LIKE "%alue"'
     }
 ]
 
