@@ -18,7 +18,6 @@ use nu_protocol::engine::{EngineState, Stack};
 use nu_protocol::{IntoPipelineData, PipelineData, ShellError, Span, Value};
 use nu_protocol::{Record, Signals};
 use nu_utils::SharedCow;
-use num_traits::cast::ToPrimitive;
 use regex::Regex;
 use std::fs;
 use std::sync::{Arc, Mutex, MutexGuard};

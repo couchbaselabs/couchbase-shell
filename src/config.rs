@@ -59,12 +59,8 @@ impl ShellConfig {
 
             (config, standalone_credentials)
         } else {
-            let config = match try_config_from_dot_path(std::env::current_dir().unwrap())
-                .or_else(|| try_config_from_dot_path(dirs::home_dir().unwrap()))
-            {
-                Some(c) => c,
-                None => return None,
-            };
+            let config = try_config_from_dot_path(std::env::current_dir().unwrap())
+                .or_else(|| try_config_from_dot_path(dirs::home_dir().unwrap()))?;
 
             let standalone_credentials =
                 try_credentials_from_dot_path(std::env::current_dir().unwrap())
