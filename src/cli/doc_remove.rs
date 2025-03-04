@@ -87,6 +87,10 @@ impl Command for DocRemove {
     ) -> Result<PipelineData, ShellError> {
         run_remove(self.state.clone(), engine_state, stack, call, input)
     }
+
+    fn requires_ast_for_arguments(&self) -> bool {
+        true
+    }
 }
 
 fn run_remove(

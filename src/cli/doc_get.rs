@@ -105,6 +105,10 @@ impl Command for DocGet {
             },
         ]
     }
+
+    fn requires_ast_for_arguments(&self) -> bool {
+        true
+    }
 }
 
 fn run_get(

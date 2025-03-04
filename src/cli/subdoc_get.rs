@@ -112,6 +112,10 @@ impl Command for SubDocGet {
             },
         ]
     }
+
+    fn requires_ast_for_arguments(&self) -> bool {
+        true
+    }
 }
 
 fn run_subdoc_lookup(
