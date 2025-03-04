@@ -156,9 +156,9 @@ pub fn convert_nu_value_to_json_value(
 ) -> Result<serde_json::Value, ShellError> {
     Ok(match v {
         Value::Bool { val, .. } => serde_json::Value::Bool(*val),
-        Value::Filesize { val, .. } => serde_json::Value::Number(serde_json::Number::from(
-            val.to_u64().expect("What about really big numbers"),
-        )),
+        Value::Filesize { val, .. } => {
+            serde_json::Value::Number(serde_json::Number::from(val.get()))
+        }
         Value::Duration { val, .. } => serde_json::Value::String(val.to_string()),
         Value::Date { val, .. } => serde_json::Value::String(val.to_string()),
         Value::Float { val, .. } => {

@@ -102,7 +102,6 @@ pub fn create_default_context() -> EngineState {
             First,
             Flatten,
             Get,
-            Group,
             GroupBy,
             Headers,
             Insert,

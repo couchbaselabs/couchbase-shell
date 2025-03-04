@@ -19,8 +19,8 @@ use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
-    Category, IntoPipelineData, PipelineData, ShellError, Signals, Signature, Span, SyntaxShape,
-    Value,
+    Category, Filesize, IntoPipelineData, PipelineData, ShellError, Signals, Signature, Span,
+    SyntaxShape, Value,
 };
 
 #[derive(Clone)]
@@ -176,7 +176,7 @@ pub(crate) fn bucket_to_nu_value(
     collected.add(
         "ram_quota",
         Value::Filesize {
-            val: (bucket.ram_quota_mb() * 1024 * 1024) as i64,
+            val: Filesize::new((bucket.ram_quota_mb() * 1024 * 1024) as i64),
             internal_span: span,
         },
     );

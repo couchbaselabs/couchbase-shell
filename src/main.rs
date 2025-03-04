@@ -38,11 +38,10 @@ use log::{error, info};
 use serde::Deserialize;
 
 use nu_cli::{gather_parent_env_vars, read_plugin_file, EvaluateCommandsOpts};
-use nu_cmd_base::util::get_init_cwd;
 use nu_protocol::engine::{EngineState, Stack, StateWorkingSet};
 use nu_protocol::{
-    report_error_new, ByteStream, ByteStreamSource, ByteStreamType, IntoPipelineData, PipelineData,
-    PluginIdentity, RegisteredPlugin, Signals, Span, Value,
+    report_shell_error, ByteStream, ByteStreamSource, ByteStreamType, IntoPipelineData,
+    PipelineData, PluginIdentity, RegisteredPlugin, Signals, Span, Spanned, Value,
 };
 
 use crate::client::{RustTlsConfig, CLOUD_URL};
@@ -61,7 +60,7 @@ use std::time::Duration;
 fn main() -> Result<(), Box<dyn Error>> {
     let entire_start_time = std::time::Instant::now();
 
-    let init_cwd = get_init_cwd();
+    let init_cwd = current_dir_from_environment();
     let mut context = create_default_context();
 
     gather_parent_env_vars(&mut context, init_cwd.as_path().as_ref());
@@ -176,7 +175,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     if let Some(c) = opt.command {
         context.generate_nu_constant();
-        read_plugin_file(&mut context, None, CBSHELL_FOLDER);
+        read_plugin_file(&mut context, None);
         let opts = EvaluateCommandsOpts {
             table_mode: None,
             error_style: None,
@@ -189,7 +188,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     if let Some(filepath) = opt.script {
         context.generate_nu_constant();
-        read_plugin_file(&mut context, None, CBSHELL_FOLDER);
+        read_plugin_file(&mut context, None);
         nu_cli::evaluate_file(filepath, &args_to_script, &mut context, &mut stack, input)
             .expect("Failed to run script");
 
@@ -201,19 +200,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     // This is required else we encounter a bug where a shell hangs on a missing command
     #[cfg(unix)]
     terminal::acquire();
-
-    read_plugin_file(&mut context, None, CBSHELL_FOLDER);
+    read_plugin_file(&mut context, None);
     read_nu_config_file(&mut context, &mut stack);
 
-    nu_cli::evaluate_repl(
-        &mut context,
-        stack,
-        "CouchbaseShell",
-        None,
-        None,
-        entire_start_time,
-    )
-    .expect("evaluate loop failed");
+    nu_cli::evaluate_repl(&mut context, stack, None, None, entire_start_time)
+        .expect("evaluate loop failed");
     // nu_cli::evaluate_repl(&mut context, None, false).expect("evaluate loop failed");
     Ok(())
 }
@@ -833,6 +824,27 @@ fn merge_couchbase_delta(context: &mut EngineState, state: Arc<Mutex<State>>) {
     };
 
     if let Err(err) = context.merge_delta(delta) {
-        report_error_new(context, &err);
+        report_shell_error(context, &err);
     }
+}
+
+/// Get the directory where the Nushell executable is located.
+fn current_exe_directory() -> PathBuf {
+    let mut path = std::env::current_exe().expect("current_exe() should succeed");
+    path.pop();
+    path
+}
+
+/// Get the current working directory from the environment.
+fn current_dir_from_environment() -> PathBuf {
+    if let Ok(cwd) = std::env::current_dir() {
+        return cwd;
+    }
+    if let Ok(cwd) = std::env::var("PWD") {
+        return cwd.into();
+    }
+    if let Some(home) = nu_path::home_dir() {
+        return home.into_std_path_buf();
+    }
+    current_exe_directory()
 }
