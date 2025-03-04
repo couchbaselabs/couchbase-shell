@@ -52,7 +52,7 @@ impl Command for TransactionsListAtrs {
         )*/
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Lists all active transaction records"
     }
 

@@ -37,7 +37,7 @@ impl Command for UseCmd {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Modify the default execution environment of commands"
     }
 

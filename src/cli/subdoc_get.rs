@@ -84,7 +84,7 @@ impl Command for SubDocGet {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Fetches the value of the provided path in the specified document through the data service"
     }
 

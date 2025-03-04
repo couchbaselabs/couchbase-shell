@@ -33,7 +33,7 @@ impl Command for CbEnvCluster {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Sets the active cluster based on its identifier"
     }
 

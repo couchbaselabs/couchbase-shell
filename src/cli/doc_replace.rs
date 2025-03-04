@@ -78,7 +78,7 @@ impl Command for DocReplace {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Replace a document through the data service"
     }
 

@@ -50,7 +50,7 @@ impl Command for ScopesDrop {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Deletes scopes through the HTTP API"
     }
 

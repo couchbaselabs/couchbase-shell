@@ -52,7 +52,7 @@ impl Command for ColumnarQuery {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Performs a query against a Columnar analytics cluster"
     }
 

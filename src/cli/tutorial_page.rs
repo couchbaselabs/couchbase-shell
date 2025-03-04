@@ -31,7 +31,7 @@ impl Command for TutorialPage {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Step to a specific page in the Couchbase Shell tutorial"
     }
 

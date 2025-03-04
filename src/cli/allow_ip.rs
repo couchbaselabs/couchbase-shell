@@ -43,7 +43,7 @@ impl Command for crate::cli::AllowIP {
             )
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Adds IP address to allowlist on a Capella cluster"
     }
 

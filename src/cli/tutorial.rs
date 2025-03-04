@@ -25,7 +25,7 @@ impl Command for Tutorial {
         Signature::build("tutorial").category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Run the Couchbase Shell tutorial"
     }
 

@@ -50,7 +50,7 @@ impl Command for Ping {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Ping available services in the cluster"
     }
 

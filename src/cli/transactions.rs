@@ -15,7 +15,7 @@ impl Command for Transactions {
         Signature::build("transactions").category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Perform transaction-related operations and tasks"
     }
 

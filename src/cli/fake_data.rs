@@ -67,7 +67,7 @@ impl Command for FakeData {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Creates fake data from a template"
     }
 

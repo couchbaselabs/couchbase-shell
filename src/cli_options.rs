@@ -73,7 +73,7 @@ impl Command for Cbsh {
 
     fn signature(&self) -> Signature {
         Signature::build("cbsh")
-            .usage("The Couchbase Shell.")
+            .description("The Couchbase Shell.")
             .named(
                 "connstr",
                 SyntaxShape::String,
@@ -170,7 +170,7 @@ impl Command for Cbsh {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Alternative Shell and UI for Couchbase Server and Capella."
     }
 

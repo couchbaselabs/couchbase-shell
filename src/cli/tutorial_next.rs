@@ -25,7 +25,7 @@ impl Command for TutorialNext {
         Signature::build("tutorial next").category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Step to the next page in the Couchbase Shell tutorial"
     }
 

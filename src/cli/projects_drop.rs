@@ -31,7 +31,7 @@ impl Command for ProjectsDrop {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Deletes a Capella project"
     }
 

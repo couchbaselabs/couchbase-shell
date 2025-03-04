@@ -54,7 +54,7 @@ impl Command for QueryTransactions {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Performs a n1ql query as a part of a transaction"
     }
 
