@@ -21,7 +21,7 @@ use crate::config::{
     DEFAULT_DATA_TIMEOUT, DEFAULT_KV_BATCH_SIZE, DEFAULT_MANAGEMENT_TIMEOUT, DEFAULT_QUERY_TIMEOUT,
     DEFAULT_SEARCH_TIMEOUT, DEFAULT_TRANSACTION_TIMEOUT,
 };
-use crate::config_files::{read_nu_config_file, CBSHELL_FOLDER};
+use crate::config_files::read_nu_config_file;
 use crate::default_context::create_default_context;
 use crate::remote_cluster::{
     ClusterTimeouts, RemoteCluster, RemoteClusterResources, RemoteClusterType,
@@ -41,7 +41,7 @@ use nu_cli::{gather_parent_env_vars, read_plugin_file, EvaluateCommandsOpts};
 use nu_protocol::engine::{EngineState, Stack, StateWorkingSet};
 use nu_protocol::{
     report_shell_error, ByteStream, ByteStreamSource, ByteStreamType, IntoPipelineData,
-    PipelineData, PluginIdentity, RegisteredPlugin, Signals, Span, Spanned, Value,
+    PipelineData, PluginIdentity, RegisteredPlugin, Signals, Span, Value,
 };
 
 use crate::client::{RustTlsConfig, CLOUD_URL};
@@ -63,7 +63,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let init_cwd = current_dir_from_environment();
     let mut context = create_default_context();
 
-    gather_parent_env_vars(&mut context, init_cwd.as_path().as_ref());
+    gather_parent_env_vars(&mut context, init_cwd.as_path());
     let mut stack = Stack::new();
 
     let (shell_commandline_args, args_to_script) = parse_shell_args();

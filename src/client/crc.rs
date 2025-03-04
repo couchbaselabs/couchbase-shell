@@ -39,7 +39,7 @@ pub fn cb_crc(key: Vec<u8>) -> u32 {
         crc = (crc >> 8) ^ CRC32TAB[(((crc as u64) ^ (x as u64)) & 0xff) as usize]
     }
 
-    (!crc) >> 16 & 0x7fff
+    ((!crc) >> 16) & 0x7fff
 }
 
 pub fn cb_vb_map(key: Vec<u8>, num_vbs: u32) -> u32 {
