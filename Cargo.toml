@@ -26,7 +26,6 @@ lazy_static = "1.5.0"
 log = "0.4.22"
 nix = { version = "0.28.0", features = ["signal", "process", "term"] }
 nu-protocol = { version = "0.101.0" }
-nu-cmd-base = { version = "0.101.0" }
 nu-cmd-extra = { version = "0.101.0" }
 nu-cmd-lang = { version = "0.101.0" }
 nu-cmd-plugin = { version = "0.101.0" }
@@ -40,7 +39,6 @@ nu-plugin = { version = "0.101.0" }
 nu-plugin-engine = { version = "0.101.0" }
 nu-system = { version = "0.101.0" }
 nu-utils = "0.101.0"
-num-traits = "0.2.19"
 rand = "0.8.5"
 regex = "1.10.5"
 reqwest = { version = "0.12.5", features = ["json", "rustls-tls", "blocking"] }
@@ -65,7 +63,6 @@ futures-core = "0.3.31"
 time = "0.3.36"
 tokio-stream = "0.1.15"
 futures-util = "0.3.30"
-nu_plugin_gstat = "0.102.0"
 
 [target.'cfg(not(any(target_os = "macos", target_os = "windows")))'.dependencies]
 # Our dependencies don't use OpenSSL on Macos
