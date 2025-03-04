@@ -1,0 +1,7 @@
+JW ID: Call { head: Span { start: 5690, end: 5697 }, decl_id: DeclId(399), inner: IrRef(Call { decl_id: DeclId(399),
+head: Span { start: 5690, end: 5697 }, span: Span { start: 5690, end: 5712 }, args_base: 0, args_len: 1 }) }
+
+JW ID: Call { head: Span { start: 5690, end: 5697 }, decl_id: 401, inner: AstRef(Call { decl_id: 401,
+head: Span { start: 5690, end: 5697 }, arguments: [Positional(Expression { expr: String("landmark_10019"),
+span: Span { start: 5698, end: 5712 }, span_id: SpanId(1676), ty: String, custom_completion: None })], parser_info: {} }) }
+
