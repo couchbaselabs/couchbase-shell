@@ -50,7 +50,7 @@ impl Command for UsersRoles {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Shows all roles available on the cluster"
     }
 

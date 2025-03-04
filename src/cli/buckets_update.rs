@@ -76,7 +76,7 @@ impl Command for BucketsUpdate {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Updates a bucket"
     }
 

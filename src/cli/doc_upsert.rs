@@ -77,7 +77,7 @@ impl Command for DocUpsert {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Upsert (insert or override) a document through the data service"
     }
 

@@ -38,7 +38,7 @@ impl Command for ColumnarDatabases {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Lists all databases on a Columnar analytics cluster"
     }
 

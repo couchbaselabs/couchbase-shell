@@ -15,7 +15,7 @@ impl Command for Doc {
         Signature::build("doc").category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Perform document operations against a bucket or collection"
     }
 

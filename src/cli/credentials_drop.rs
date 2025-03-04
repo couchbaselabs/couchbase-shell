@@ -41,7 +41,7 @@ impl Command for CredentialsDrop {
             )
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Creates credentials on a Capella cluster"
     }
 

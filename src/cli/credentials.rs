@@ -39,7 +39,7 @@ impl Command for Credentials {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Lists existing credentials on a Capella cluster"
     }
 

@@ -114,7 +114,7 @@ impl Command for CbEnvRegister {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Registers a cluster for use with the shell"
     }
 

@@ -50,7 +50,7 @@ impl Command for ColumnarClustersCreate {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Creates a new Columnar analytics cluster on the active Capella organization"
     }
 

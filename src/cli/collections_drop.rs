@@ -54,7 +54,7 @@ impl Command for CollectionsDrop {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Deletes collections through the HTTP API"
     }
 

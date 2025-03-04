@@ -45,7 +45,7 @@ impl Command for BucketsFlush {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Flushes buckets through the HTTP API"
     }
 

@@ -34,7 +34,7 @@ impl Command for UseBucket {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Sets the active bucket based on its name"
     }
 

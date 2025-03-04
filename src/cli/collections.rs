@@ -59,7 +59,7 @@ impl Command for Collections {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Fetches collections through the HTTP API"
     }
 

@@ -43,7 +43,7 @@ impl Command for ClustersGet {
             .category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Gets a cluster from the active Capella Project"
     }
 

@@ -15,7 +15,7 @@ impl Command for Vector {
         Signature::build("vector").category(Category::Custom("couchbase".to_string()))
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Commands that support and implement vector search"
     }
 
