@@ -28,27 +28,27 @@ const SELECT_tests = [
     {
         # Suggest WHERE and all other fields after *
         input: "FROM route SELECT * "
-        expected: [WHERE "`airline`" "`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`" "`type`"]
+        expected: [WHERE LIMIT "`airline`" "`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`" "`type`"]
     }
     {
         # Suggest list of fields and WHERE after SELECT meta().id
         input: "FROM route SELECT meta().id "
-        expected: [WHERE * "`airline`" "`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`" "`type`"]
+        expected: [WHERE LIMIT * "`airline`" "`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`" "`type`"]
     }
     {
         # Don't suggest used fields
         input: "FROM route SELECT `airline` `distance` `schedule` `type` "
-        expected: [WHERE * "`airlineid`" "`destinationairport`" "`equipment`" "`id`" "`sourceairport`" "`stops`"]
+        expected: [WHERE LIMIT * "`airlineid`" "`destinationairport`" "`equipment`" "`id`" "`sourceairport`" "`stops`"]
     }
     {
         # Correctly detect used fields when meta().id present
         input: "FROM route SELECT `airline` meta().id `distance` `schedule` `type` "
-        expected: [WHERE * "`airlineid`" "`destinationairport`" "`equipment`" "`id`" "`sourceairport`" "`stops`"]
+        expected: [WHERE LIMIT * "`airlineid`" "`destinationairport`" "`equipment`" "`id`" "`sourceairport`" "`stops`"]
     }
     {
         # Handle fields with spaces in the names
         input: "FROM route SELECT `airline` `space field` `distance` `schedule` `type` "
-        expected: [WHERE * "`airlineid`" "`destinationairport`" "`equipment`" "`id`" "`sourceairport`" "`stops`"]
+        expected: [WHERE LIMIT * "`airlineid`" "`destinationairport`" "`equipment`" "`id`" "`sourceairport`" "`stops`"]
     }
 ]
 
@@ -83,6 +83,61 @@ const WHERE_tests = [
         input: "FROM route SELECT `airline` `distance` `schedule` `type` WHERE `airline` == "
         expected: null
     }
+    {
+        # Suggest AND after condition
+        input: "FROM route SELECT * WHERE distance < 100 "
+        expected: [AND LIMIT]
+    }
+]
+
+const AND_tests = [
+    {
+        # Suggest AND after a condition
+        input: "FROM route SELECT `airline` `distance` `schedule` `type` WHERE `airline` == someAirline "
+        expected: [AND LIMIT]
+    }
+    {
+        # Suggest AND after a condition
+        input: "FROM route SELECT `airline` `distance` `schedule` `type` WHERE `airline` < someAirline "
+        expected: [AND LIMIT]
+    }
+    {
+        # Suggest nothing after operator
+        input: "FROM route SELECT * WHERE `airline` == someAirline AND `type` != "
+        expected: null
+    }
+    {
+        # Remove field once used in condition
+        input: "FROM route SELECT `airline` `distance` `schedule` `type` WHERE `airline` == someAirline AND "
+        expected: ["`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`" "`type`"]
+    }
+    {
+        # Remove field once used in condition with different operator
+        input: "FROM route SELECT `airline` `distance` `schedule` `type` WHERE `airline` < someAirline AND "
+        expected: ["`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`" "`type`"]
+    }
+    {
+        # Remove fields once used in condition
+        input: "FROM route SELECT `airline` `distance` `schedule` `type` WHERE `airline` == someAirline AND `type` == someType AND "
+        expected: ["`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`"]
+    }
+    {
+        # Condition values/fields with spaces
+        input: 'FROM route SELECT `airline` `distance` `schedule` `type` WHERE `airline` > "Best Airline" AND `some field` < "some things" AND '
+        expected: ["`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`" "`type`"]
+    }
+    {
+        # Suggest operator after AND field with spaces
+        input: "FROM route SELECT * WHERE `airline` == someAirline AND `some field` "
+        expected: $cli_operators
+    }
+]
+
+const LIMIT_tests = [
+    {
+        input: "FROM route SELECT * WHERE `airline` == someAirline LIMIT "
+        expected: null
+    }
 ]
 
 export def main [] {
@@ -90,6 +145,8 @@ export def main [] {
         ...$FROM_tests
         ...$SELECT_tests
         ...$WHERE_tests
+        ...$AND_tests
+        ...$LIMIT_tests
     ]
 
     for test in $tests {
