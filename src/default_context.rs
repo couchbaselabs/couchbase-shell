@@ -197,6 +197,7 @@ pub fn create_default_context() -> EngineState {
             DecodeBase64,
             EncodeBase64,
             DetectColumns,
+            Format,
             Parse,
             Split,
             SplitChars,
