@@ -61,10 +61,30 @@ const AND_tests = [
     }
 ]
 
+const SATISFIES_tests = [
+    {
+        # Don't wrap the element.`field` pair in more backticks
+        input: [col SELECT field WHERE ANY element IN array SATISFIES "element.`field`" == value END]
+        expected: 'SELECT `field` FROM col WHERE ANY element IN array SATISFIES element.`field` = "value" END'
+    }
+    {
+        # Same as above with int value
+        input: [col SELECT field WHERE ANY element IN array SATISFIES "element.`field`" == '11' END]
+        expected: 'SELECT `field` FROM col WHERE ANY element IN array SATISFIES element.`field` = 11 END'
+    }
+    {
+        # It is fine to wrap the element when it is not referencing a nested field
+        input: [col SELECT field WHERE ANY element IN array SATISFIES element == value END]
+        expected: 'SELECT `field` FROM col WHERE ANY element IN array SATISFIES `element` = "value" END'
+    }
+]
+
 export def main [] {
     let tests = [
         ...$SELECT_tests
         ...$WHERE_tests
+        ...$AND_tests
+        ...$SATISFIES_tests
     ]
 
     for test in $tests {

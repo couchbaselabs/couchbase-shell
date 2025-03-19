@@ -56,7 +56,7 @@ const WHERE_tests = [
     {
         # Suggest all fields after WHERE
         input: "FROM route SELECT `airline` `distance` `schedule` `type` WHERE "
-        expected: ["`airline`" "`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`" "`type`"]
+        expected: ["ANY" "EVERY" "`airline`" "`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`" "`type`"]
     }
     {
         # Suggest operators after field
@@ -109,22 +109,22 @@ const AND_tests = [
     {
         # Remove field once used in condition
         input: "FROM route SELECT `airline` `distance` `schedule` `type` WHERE `airline` == someAirline AND "
-        expected: ["`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`" "`type`"]
+        expected: ["ANY" "EVERY" "`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`" "`type`"]
     }
     {
         # Remove field once used in condition with different operator
         input: "FROM route SELECT `airline` `distance` `schedule` `type` WHERE `airline` < someAirline AND "
-        expected: ["`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`" "`type`"]
+        expected: ["ANY" "EVERY" "`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`" "`type`"]
     }
     {
         # Remove fields once used in condition
         input: "FROM route SELECT `airline` `distance` `schedule` `type` WHERE `airline` == someAirline AND `type` == someType AND "
-        expected: ["`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`"]
+        expected: ["ANY" "EVERY" "`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`"]
     }
     {
         # Condition values/fields with spaces
         input: 'FROM route SELECT `airline` `distance` `schedule` `type` WHERE `airline` > "Best Airline" AND `some field` < "some things" AND '
-        expected: ["`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`" "`type`"]
+        expected: ["ANY" "EVERY" "`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`" "`type`"]
     }
     {
         # Suggest operator after AND field with spaces
@@ -140,6 +140,78 @@ const LIMIT_tests = [
     }
 ]
 
+const ANY_tests = [
+    {
+        input: 'FROM hotel SELECT meta().id WHERE ANY '
+        expected: null
+    }
+    {
+        input: 'FROM hotel SELECT meta().id WHERE ANY r '
+        expected: [IN]
+    }
+]
+
+const EVERY_tests = [
+    {
+        input: 'FROM hotel SELECT meta().id WHERE EVERY '
+        expected: null
+    }
+    {
+        input: 'FROM hotel SELECT meta().id WHERE EVERY r '
+        expected: [IN]
+    }
+]
+
+const IN_tests = [
+    {
+        input: 'FROM hotel SELECT meta().id WHERE EVERY review IN '
+        expected: { options: {sort: false}, completions: ["`public_likes`" "`reviews`" " "]}
+    }
+    {
+        input: 'FROM hotel SELECT meta().id WHERE EVERY r IN reviews '
+        expected: [SATISFIES]
+    }
+    {
+        input: 'FROM hotel SELECT meta().id WHERE EVERY something IN "some array"'
+        expected: [SATISFIES]
+    }
+    {
+        input: 'FROM hotel SELECT meta().id WHERE ANY something IN some_array'
+        expected: [SATISFIES]
+    }
+]
+
+const SATISFIES_tests = [
+    {
+        # This test is flaky due to the output of the INFER query used being non-deterministic
+        input: 'FROM hotel SELECT * WHERE ANY r IN `reviews` SATISFIES '
+        expected:  { options: {sort: false}, completions: ["r.`author`" "r.`content`" "r.`date`" "r.ratings.`Business service (e.g., internet access)`"  "r.ratings.`Check in / front desk`" "r.ratings.`Cleanliness`" "r.ratings.`Location`" "r.ratings.`Overall`" "r.ratings.`Rooms`" "r.ratings.`Service`" "r.ratings.`Sleep Quality`" "r.ratings.`Value`" " "]}
+    }
+    {
+        input: 'FROM hotel SELECT * WHERE ANY l IN `public_likes` SATISFIES '
+        expected: [l]
+    }
+    {
+        input: 'FROM hotel SELECT meta().id WHERE ANY r IN `reviews` SATISFIES r.`author` '
+        expected: $cli_operators
+    }
+    {
+        input: 'FROM hotel SELECT meta().id WHERE EVERY r IN reviews SATISFIES r.`author` == asdf '
+        expected: [END]
+    }
+    {
+        input: 'FROM hotel SELECT meta().id WHERE EVERY r IN reviews SATISFIES r.`author` == "some name" '
+        expected: [END]
+    }
+]
+
+const END_tests = [
+    {
+        input: 'FROM hotel SELECT meta().id WHERE EVERY r IN reviews SATISFIES r.`author` == asdf END '
+        expected: [AND LIMIT]
+    }
+]
+
 export def main [] {
     let tests = [
         ...$FROM_tests
@@ -147,6 +219,11 @@ export def main [] {
         ...$WHERE_tests
         ...$AND_tests
         ...$LIMIT_tests
+        ...$ANY_tests
+        ...$EVERY_tests
+        ...$IN_tests
+        ...$SATISFIES_tests
+        ...$END_tests
     ]
 
     for test in $tests {
