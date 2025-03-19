@@ -57,13 +57,20 @@ export def main [context: string] {
                 let $collection = ($context | split words | get 1)
 
                 # Gets the infer results for the JSON objects in the array
-                let $array_object_fields = ([infer $collection] | str join " " | query $in | get properties | get $array | get items | get properties)
+                # If the array is not an array of objects this will error, which we ignore and result in array_object_fields being empty
+                let $array_object_fields = (do --ignore-errors {([infer $collection] | str join " " | query $in | get properties | get $array | get items | get properties)})
+
+                # If there are no objects then we are looking at an array of primitives and should just return the alias
+                if ($array_object_fields | is-empty) {
+                       return [$alias]
+                }
+
                 # There is a with the nushell completions where nothing is displayed if all the completions start the same
                 # So we append an empty space to the list of array fields to work around this
                 let $formatted_array_fields = ($array_object_fields | columns | each {|it| $array_object_fields | get $it | columns | if ("properties" in $in) {$array_object_fields | get $it | get properties | columns | each {|prop| [$alias . $it . '`' $prop '`'] | str join }} else { [$alias . '`' $it '`'] | str join} } | flatten | append " ")
                 return { options: {sort: false}, completions: $formatted_array_fields}
             }
-            END => [AND LIMIT]
+            END => {return [AND LIMIT]}
         }
     }
 
