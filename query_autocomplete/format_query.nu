@@ -49,7 +49,17 @@ def format_after_where [fields: list] {
 
     # Get all of the fields in the condition clauses, the values are determined as being the items that proceed operators
     # return a table containing the index of the field names in $after_where and the corresponding field name wrapped in backticks
-    let $condition_fields = ($after_where | enumerate | each {|it| if ($it.item in $operators) {($after_where | get ($it.index - 1)) | [[index value]; [($it.index - 1) (["`" $in "`"] | str join)]]}}) | flatten
+    # unless the field name already contains backticks then it is part of a SATISFIES clause and should not be wrapped again
+    mut $condition_fields = []
+    for it in ($after_where | enumerate) {
+        if ($it.item in $operators)  {
+            let $field = ($after_where | get ($it.index - 1))
+            if (not ($field | str contains "`")) {
+                  let $formatted = [[index value]; [($it.index - 1) (["`" $field "`"] | str join)]]
+                  $condition_fields = ($condition_fields | append $formatted)
+            }
+        }
+    }
 
     mut $formatted_after_where = $after_where
     for item in $condition_values {
@@ -80,6 +90,6 @@ def format_return_fields [fields: list] {
 # is_number determines if a string is actually a string representation of an int or float
 def is_number [possible_string: string] {
     # Try to convert the input to an int to see if it is actually a string representation of an int/float
-    let $possible_int = (do --ignore-shell-errors { $possible_string | into int })
+    let $possible_int = (do --ignore-errors { $possible_string | into int })
     ($possible_int != null)
 }

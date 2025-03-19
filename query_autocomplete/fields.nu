@@ -41,8 +41,8 @@ export def main [context: string] {
             IN => {
                 let $collection = ($context | split words | $in.1)
                 let $array_fields = (collection_fields $collection| filter {|it| $it.type == array} | get fields)
-                # There is a with the nushell completions where nothing is displayed if all the completions start the same
-                # So we append an empty space to the list of array fields to work around this
+                # There is an issue with the nushell completions where nothing is displayed if all the completions start the same
+                # So we append an empty space to the list of array fields to work around this for now
                 return { options: {sort: false}, completions: ($array_fields | append " ")}
             }
             SATISFIES => {
@@ -65,7 +65,7 @@ export def main [context: string] {
                        return [$alias]
                 }
 
-                # There is a with the nushell completions where nothing is displayed if all the completions start the same
+                # There is an issue with the nushell completions where nothing is displayed if all the completions start the same
                 # So we append an empty space to the list of array fields to work around this
                 let $formatted_array_fields = ($array_object_fields | columns | each {|it| $array_object_fields | get $it | columns | if ("properties" in $in) {$array_object_fields | get $it | get properties | columns | each {|prop| [$alias . $it . '`' $prop '`'] | str join }} else { [$alias . '`' $it '`'] | str join} } | flatten | append " ")
                 return { options: {sort: false}, completions: $formatted_array_fields}
@@ -120,14 +120,7 @@ export def main [context: string] {
         }
         ANY => [IN]
         EVERY => [IN]
-        IN => {
-            # Cases
-            # either
-            # IN y => [SATISFIES]
-            # IN x <operator> => Nothing
-            # IN x <operator> y
-            [SATISFIES]
-        }
+        IN => [SATISFIES]
         SATISFIES => {
             # If an operator is last argument suggest nothing
             if ($last in $cli_operators) {
