@@ -79,12 +79,24 @@ const SATISFIES_tests = [
     }
 ]
 
+const LIMIT_tests = [
+    {
+        input: [col SELECT * LIMIT 10]
+        expected: 'SELECT * FROM col LIMIT 10'
+    }
+    {
+        input: [col SELECT * WHERE field == value LIMIT 10]
+        expected: 'SELECT * FROM col WHERE `field` = "value" LIMIT 10'
+    }
+]
+
 export def main [] {
     let tests = [
         ...$SELECT_tests
         ...$WHERE_tests
         ...$AND_tests
         ...$SATISFIES_tests
+        ...$LIMIT_tests
     ]
 
     for test in $tests {

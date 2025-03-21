@@ -7,30 +7,32 @@ export def main [inputs: list] {
     # Also == needs to be replaced with =
     let $inputs = ($inputs | each {|it| if ($it == "meta.id") {"meta().id"} else if ($it == "==") {"="} else {$it}})
 
-    # Find the index of WHERE and then split the input into before and after the WHERE clause
-    mut $where_index = ($inputs | length)
-    for $it in ($inputs | enumerate) {
-        if $it.item == WHERE {
-            $where_index = $it.index
-            break
-        }
-    }
-    # let $where_index = ($inputs | enumerate | each {|it| if ($it.item == WHERE) {$it.index}})
+    # The return fields continue until we see WHERE, LIMIT or the end of the query
+    mut $last_return_field_index = ($inputs | length)
     mut $where_clause = []
-    if $where_index != ($inputs | length) {
+    mut $limit_clause = []
+    if WHERE in $inputs {
+        mut $where_index = 0
+        $where_index = ($inputs | enumerate | where ($it.item == WHERE) | get index.0)
         let $after_where = ($inputs | skip ($where_index + 1))
 
         # The conditions need to be parsed and any string condition values wrapped in speech marks
         let $parsed_after_where = (format_after_where $inputs)
         $where_clause = ([WHERE] | append $parsed_after_where)
+        $last_return_field_index = $where_index
+    } else if LIMIT in $inputs {
+        mut $limit_index = 0
+        $limit_index = ($inputs | enumerate | where ($it.item == LIMIT) | get index.0)
+        $limit_clause = ($inputs | skip $limit_index)
+        $last_return_field_index = $limit_index
     }
 
     # Extract the fields to be returned from the document and format them
-    let $return_fields = ($inputs | drop ($inputs | length | $in - $where_index) | skip 2)
+    let $return_fields = ($inputs | drop ($inputs | length | $in - $last_return_field_index) | skip 2)
     let $formatted_return_fields = format_return_fields $return_fields
 
     # Finally construct the query from the starting section and the parsed conditions
-    let $query = [SELECT $formatted_return_fields FROM $inputs.0] | append $where_clause | str join " "
+    let $query = [SELECT $formatted_return_fields FROM $inputs.0] | append $where_clause | append $limit_clause | str join " "
     return $query
 }
 
