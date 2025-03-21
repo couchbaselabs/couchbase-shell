@@ -24,7 +24,7 @@ export def main [context: string] {
             }
             WHERE => {
                 let $collection = ($context | split words | $in.1)
-                return (collection_fields $collection | get fields | prepend [ANY EVERY])
+                return { options: {sort: false}, completions: (collection_fields $collection | get fields | prepend [ANY EVERY])}
             }
             AND => {
                 # Need to suggest list of fields after WHERE that have not been used in conditions yet
@@ -34,7 +34,7 @@ export def main [context: string] {
                 # If they contain an operator then we split the condition on that operator and return the first word, this will be the name of the field
                 let $fields_in_conditions = ($conditions | each {|cond| $cli_operators | each {|op| if ($cond | str contains $op) {$cond | split row $op | first | str trim} } | first})
                 let $collection = ($context | split words | $in.1)
-                return (collection_fields $collection | get fields | filter {|x| $x not-in $fields_in_conditions} | prepend [ANY EVERY])
+                return { options: {sort: false}, completions: (collection_fields $collection | get fields | filter {|x| $x not-in $fields_in_conditions} | prepend [ANY EVERY])}
             }
             ANY => {return}
             EVERY => {return}
@@ -84,7 +84,7 @@ export def main [context: string] {
             let $selected_fields = ($after_last_keyword | split row "`" | each {|field| if (not ($field | str contains "*")) {["`" $field "`"] | str join} else {"*"}})
             let $collection = ($context | split words | $in.1)
             let $remaining_fields = (collection_fields $collection | get fields | prepend * | each {|it| if ($it not-in $selected_fields) {$it}} | flatten)
-            return ($remaining_fields | prepend [WHERE LIMIT])
+            return { options: {sort: false}, completions: ($remaining_fields | prepend [WHERE LIMIT])}
         }
         WHERE => {
             # If an operator is last argument suggest nothing
