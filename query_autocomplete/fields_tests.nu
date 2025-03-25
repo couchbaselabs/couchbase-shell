@@ -28,27 +28,27 @@ const SELECT_tests = [
     {
         # Suggest WHERE and all other fields after *
         input: "FROM route SELECT * "
-        expected: { options: {sort: false}, completions: [WHERE LIMIT "`airline`" "`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`" "`type`"]}
+        expected:  {options: {sort: false}, completions: [WHERE LIMIT "ORDER BY" "`airline`" "`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`" "`type`"]}
     }
     {
         # Suggest list of fields and WHERE after SELECT meta().id
         input: "FROM route SELECT meta().id "
-        expected: { options: {sort: false}, completions: [WHERE LIMIT * "`airline`" "`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`" "`type`"]}
+        expected:  {options: {sort: false}, completions: [WHERE LIMIT "ORDER BY" * "`airline`" "`airlineid`" "`destinationairport`" "`distance`" "`equipment`" "`id`" "`schedule`" "`sourceairport`" "`stops`" "`type`"]}
     }
     {
         # Don't suggest used fields
         input: "FROM route SELECT `airline` `distance` `schedule` `type` "
-        expected: { options: {sort: false}, completions: [WHERE LIMIT * "`airlineid`" "`destinationairport`" "`equipment`" "`id`" "`sourceairport`" "`stops`"]}
+        expected: {options: {sort: false}, completions: [WHERE LIMIT "ORDER BY" * "`airlineid`" "`destinationairport`" "`equipment`" "`id`" "`sourceairport`" "`stops`"]}
     }
     {
         # Correctly detect used fields when meta().id present
         input: "FROM route SELECT `airline` meta().id `distance` `schedule` `type` "
-        expected: { options: {sort: false}, completions: [WHERE LIMIT * "`airlineid`" "`destinationairport`" "`equipment`" "`id`" "`sourceairport`" "`stops`"]}
+        expected: {options: {sort: false}, completions: [WHERE LIMIT "ORDER BY" * "`airlineid`" "`destinationairport`" "`equipment`" "`id`" "`sourceairport`" "`stops`"]}
     }
     {
         # Handle fields with spaces in the names
         input: "FROM route SELECT `airline` `space field` `distance` `schedule` `type` "
-        expected: { options: {sort: false}, completions: [WHERE LIMIT * "`airlineid`" "`destinationairport`" "`equipment`" "`id`" "`sourceairport`" "`stops`"]}
+        expected:  {options: {sort: false}, completions: [WHERE LIMIT "ORDER BY" * "`airlineid`" "`destinationairport`" "`equipment`" "`id`" "`sourceairport`" "`stops`"]}
     }
 ]
 
@@ -212,6 +212,104 @@ const END_tests = [
     }
 ]
 
+const ORDER_BY_tests = [
+    {
+        input: 'FROM landmark SELECT `city` ORDER BY '
+        expected: { options: {sort: false}, completions: ["`city`" " "]}
+    }
+    {
+        input: 'FROM landmark SELECT `some field` ORDER BY '
+        expected: { options: {sort: false}, completions: ["`some field`" " "]}
+    }
+    {
+        input: 'FROM landmark SELECT `city` ORDER BY `city` '
+        expected: { options: {sort: false}, completions: [ASC DESC LIMIT]}
+    }
+    {
+        input: 'FROM landmark SELECT `city` `name` ORDER BY '
+        expected: { options: {sort: false}, completions: ["`city`" "`name`" " "]}
+    }
+    {
+        input: 'FROM landmark SELECT `city` `name` * ORDER BY '
+        expected:  { options: {sort: false}, completions: ["`city`" "`name`" " "]}
+    }
+    {
+        input: 'FROM landmark SELECT `city` `name` WHERE `country` == "France" ORDER BY '
+        expected: { options: {sort: false}, completions: ["`city`" "`name`" " "]}
+    }
+    {
+        input: 'FROM landmark SELECT `city` `name` WHERE `country` == France ORDER BY `city` '
+        expected: { options: {sort: false}, completions: ["`name`" ASC DESC LIMIT]}
+    }
+    {
+        input: 'FROM landmark SELECT `city` `name` `address` WHERE `country` == France ORDER BY `city` `name`'
+        expected: { options: {sort: false}, completions: ["`address`" ASC DESC LIMIT]}
+    }
+    # TO DO - SATISFIES AND ORDER BY tests
+]
+
+const ASC_tests = [
+    {
+        input: 'FROM landmark SELECT `city` ORDER BY `city` ASC '
+        expected: { options: {sort: false}, completions: [LIMIT]}
+    }
+    {
+        input: 'FROM landmark SELECT `city` `name` ORDER BY `city` ASC '
+        expected: { options: {sort: false}, completions: ["`name`" LIMIT]}
+    }
+    {
+        input: 'FROM landmark SELECT `city` `name` `address` ORDER BY `city` ASC `name` '
+        expected: { options: {sort: false}, completions: ["`address`" ASC DESC LIMIT]}
+    }
+    {
+        input: 'FROM landmark SELECT `city` `name` `address` ORDER BY `city` `name` ASC '
+        expected: { options: {sort: false}, completions: ["`address`" LIMIT]}
+    }
+    {
+        input: 'FROM landmark SELECT `city` `name` `address` WHERE `some field` == "some value" ORDER BY `city` ASC '
+        expected: { options: {sort: false}, completions: ["`name`" "`address`" LIMIT]}
+    }
+    {
+        input: 'FROM landmark SELECT `city` `name` WHERE `country` == France ORDER BY `city` ASC `name` ASC '
+        expected: { options: {sort: false}, completions: [LIMIT]}
+    }
+    {
+        input: 'FROM landmark SELECT `city` `country` WHERE `country` == France ORDER BY `city` ASC '
+        expected: { options: {sort: false}, completions: ["`country`" LIMIT]}
+    }
+]
+
+const DESC_tests = [
+    {
+        input: 'FROM landmark SELECT `city` ORDER BY `city` DESC '
+        expected: { options: {sort: false}, completions: [LIMIT]}
+    }
+    {
+        input: 'FROM landmark SELECT `city` `name` ORDER BY `city` DESC '
+        expected: { options: {sort: false}, completions: ["`name`" LIMIT]}
+    }
+    {
+        input: 'FROM landmark SELECT `city` `name` `address` ORDER BY `city` DESC `name` '
+        expected: { options: {sort: false}, completions: ["`address`" ASC DESC LIMIT]}
+    }
+    {
+        input: 'FROM landmark SELECT `city` `name` `address` ORDER BY `city` `name` DESC '
+        expected: { options: {sort: false}, completions: ["`address`" LIMIT]}
+    }
+    {
+        input: 'FROM landmark SELECT `city` `name` `address` WHERE `some field` == "some value" ORDER BY `city` DESC '
+        expected: { options: {sort: false}, completions: ["`name`" "`address`" LIMIT]}
+    }
+    {
+        input: 'FROM landmark SELECT `city` `name` WHERE `country` == France ORDER BY `city` ASC `name` DESC '
+        expected: { options: {sort: false}, completions: [LIMIT]}
+    }
+    {
+        input: 'FROM landmark SELECT `city` `country` WHERE `country` == France ORDER BY `city` DESC '
+        expected: { options: {sort: false}, completions: ["`country`" LIMIT]}
+    }
+]
+
 export def main [] {
     let tests = [
         ...$FROM_tests
@@ -224,6 +322,9 @@ export def main [] {
         ...$IN_tests
         ...$SATISFIES_tests
         ...$END_tests
+        ...$ORDER_BY_tests
+        ...$ASC_tests
+        ...$DESC_tests
     ]
 
     for test in $tests {
