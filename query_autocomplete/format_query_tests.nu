@@ -5,27 +5,27 @@ const SELECT_tests = [
     {
         # Most basic query
         input: [col SELECT *]
-        expected: 'SELECT * FROM col'
+        expected: 'FROM col SELECT *'
     }
     {
         # correctly format list of fields
         input: [col SELECT field1 field2]
-        expected: 'SELECT `field1`, `field2` FROM col'
+        expected: 'FROM col SELECT `field1` , `field2`'
     }
     {
         # Don't wrap * or meta().id in backticks
         input: [col SELECT * meta().id]
-        expected: 'SELECT *, meta().id FROM col'
+        expected: 'FROM col SELECT * , meta().id'
     }
     {
         # Same as above, with meta().id first
         input: [col SELECT meta().id *]
-        expected: 'SELECT meta().id, * FROM col'
+        expected: 'FROM col SELECT meta().id , *'
     }
     {
         #Handle field name with a space
         input: [col SELECT 'space field' field2]
-        expected: 'SELECT `space field`, `field2` FROM col'
+        expected: 'FROM col SELECT `space field` , `field2`'
     }
 ]
 
@@ -38,7 +38,7 @@ const WHERE_tests = [
     {
         # Multiple fields
         input: [col SELECT field1 field2 WHERE field3 == value]
-        expected: 'SELECT `field1`, `field2` FROM col WHERE `field3` = "value"'
+        expected: 'SELECT `field1` , `field2` FROM col WHERE `field3` = "value"'
     }
     {
         # Condition value with spaces
@@ -53,6 +53,12 @@ const WHERE_tests = [
 ]
 
 const AND_tests = [
+    {
+        # Don't wrap int or float condition values in quote marks
+        # Note that we quote the numbers in the list because they will be passed to format_query as strings
+        input: [col SELECT field WHERE field1 == value AND field2 == '10.5']
+        expected: 'SELECT `field` FROM col WHERE `field1` = "value" AND `field2` = 10.5'
+    }
     {
         # Don't wrap int or float condition values in quote marks
         # Note that we quote the numbers in the list because they will be passed to format_query as strings
@@ -82,11 +88,15 @@ const SATISFIES_tests = [
 const LIMIT_tests = [
     {
         input: [col SELECT * LIMIT 10]
-        expected: 'SELECT * FROM col LIMIT 10'
+        expected: 'FROM col SELECT * LIMIT 10'
     }
     {
         input: [col SELECT * WHERE field == value LIMIT 10]
         expected: 'SELECT * FROM col WHERE `field` = "value" LIMIT 10'
+    }
+    {
+        input: [col SELECT * WHERE field == value AND field2 != "other value" LIMIT 10]
+        expected: 'SELECT * FROM col WHERE `field` = "value" AND `field2` != "other value" LIMIT 10'
     }
 ]
 
