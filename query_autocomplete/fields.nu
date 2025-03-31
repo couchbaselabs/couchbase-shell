@@ -80,82 +80,19 @@ export def main [context: string] {
                 return [AND LIMIT "ORDER BY"]
             }
             BY => {
-                # Split the context on backticks, since this is what the field names are wrapped in and drop the first and
-                # last part of the partial query
-                let $split_context = ($context | split row "`" | skip | drop)
-                mut $select_fields = []
-                for $field in $split_context {
-                    # If we reach the WHERE clause break because we only want the field names in the SELECT clause
-                    if ($field | str contains "WHERE") {
-                        break
-                    }
-
-                    # We cannot order by *, and $split_context contains spaces that need skipping
-                    if (not ($field | str contains "*") and not ($field == " ")) {
-                        $select_fields = ($select_fields | append (["`" $field "`"] | str join))
-                    }
+                let $select_fields = select_fields $context
+                mut $formatted_fields = []
+                for $field in $select_fields {
+                    $formatted_fields = ($formatted_fields | append (["`" $field "`"] | str join))
                 }
 
                 # Addresses the bug where if all fields start with the same character then nothing is suggested
-                $select_fields = ($select_fields | append " ")
+                $formatted_fields = ($formatted_fields | append " ")
 
-                return { options: {sort: false}, completions: $select_fields}
+                return { options: {sort: false}, completions: $formatted_fields}
             }
-            ASC => {
-                # Split the context on backticks, since this is what the field names are wrapped in and drop the first and
-                # last part of the partial query
-                let $split_context = ($context | split row "`" | skip | drop)
-                mut $select_fields = []
-                for $field in $split_context {
-                    # If we reach the WHERE clause break because we only want the field names in the SELECT clause
-                    if (($field | str contains "WHERE") or ($field | str contains "ORDER BY")) {
-                        break
-                    }
-
-                    # We cannot order by *, and $split_context contains spaces that need skipping
-                    if (not ($field | str contains "*") and not ($field == " ")) {
-                        $select_fields = ($select_fields | append $field)
-                    }
-                }
-
-                # Now we need to find the fields that have already been used in the ORDER BY clause
-                let $order_by_fields = ($context | split row "BY" | skip | split row "`")
-                mut $remaining_order_by_fields = []
-                for $field in $select_fields {
-                    if ($field not-in $order_by_fields) {
-                        $remaining_order_by_fields = ($remaining_order_by_fields | append (["`" $field "`"] | str join))
-                    }
-                }
-
-                return { options: {sort: false}, completions: ($remaining_order_by_fields | append [LIMIT])}
-            }
-            DESC => {
-                # Split the context on backticks, since this is what the field names are wrapped in and drop the first and
-                # last part of the partial query
-                let $split_context = ($context | split row "`" | skip | drop)
-                mut $select_fields = []
-                for $field in $split_context {
-                    # If we reach the WHERE clause break because we only want the field names in the SELECT clause
-                    if (($field | str contains "WHERE") or ($field | str contains "ORDER BY")) {
-                        break
-                    }
-
-                    # We cannot order by *, and $split_context contains spaces that need skipping
-                    if (not ($field | str contains "*") and not ($field == " ")) {
-                        $select_fields = ($select_fields | append $field)
-                    }
-                }
-
-                # Now we need to find the fields that have already been used in the ORDER BY clause
-                let $order_by_fields = ($context | split row "BY" | skip | split row "`")
-                mut $remaining_order_by_fields = []
-                for $field in $select_fields {
-                    if ($field not-in $order_by_fields) {
-                        $remaining_order_by_fields = ($remaining_order_by_fields | append (["`" $field "`"] | str join))
-                    }
-                }
-
-                return { options: {sort: false}, completions: ($remaining_order_by_fields | append [LIMIT])}
+            ASC | DESC => {
+                return { options: {sort: false}, completions: (remaining_order_by_fields $context | append [LIMIT])}
             }
         }
     }
@@ -226,20 +163,8 @@ export def main [context: string] {
             # `SATISFIES person.age ` => $cli_operators
             return $cli_operators
         }
-        BY => {
-            let $remaining_fields = remaining_order_by_fields $context
-
-            return { options: {sort: false}, completions: ($remaining_fields | append [ASC DESC LIMIT])}
-        }
-        ASC => {
-             let $remaining_fields = remaining_order_by_fields $context
-
-            return { options: {sort: false}, completions: ($remaining_fields | append [ASC DESC LIMIT])}
-        }
-        DESC => {
-            let $remaining_fields = remaining_order_by_fields $context
-
-            return { options: {sort: false}, completions: ($remaining_fields | append [ASC DESC LIMIT])}
+        BY | ASC | DESC => {
+            return { options: {sort: false}, completions: (remaining_order_by_fields $context | append [ASC DESC LIMIT])}
         }
     }
 }
