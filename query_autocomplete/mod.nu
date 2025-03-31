@@ -23,9 +23,14 @@ field12?: string@fields
 field13?: string@fields
 field14?: string@fields
 field15?: string@fields
+field16?: string@fields
+field17?: string@fields
+field18?: string@fields
+field19?: string@fields
+field20?: string@fields
 --print_query
 ] {
-    let $inputs = [$field1 $field2 $field3 $field4 $field5 $field6 $field7 $field8 $field9 $field10 $field11 $field12 $field13 $field14 $field15]
+    let $inputs = [$field1 $field2 $field3 $field4 $field5 $field6 $field7 $field8 $field9 $field10 $field11 $field12 $field13 $field14 $field15 $field16 $field17 $field18 $field19 $field20]
 
     let $query = format_query $inputs
 
