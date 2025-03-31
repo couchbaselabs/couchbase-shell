@@ -70,7 +70,15 @@ export def main [context: string] {
                 let $formatted_array_fields = ($array_object_fields | columns | each {|it| $array_object_fields | get $it | columns | if ("properties" in $in) {$array_object_fields | get $it | get properties | columns | each {|prop| [$alias . $it . '`' $prop '`'] | str join }} else { [$alias . '`' $it '`'] | str join} } | flatten | append " ")
                 return { options: {sort: false}, completions: $formatted_array_fields}
             }
-            END => {return [AND LIMIT]}
+            END => {
+                let $select_fields = ($context | split row SELECT | last | split row WHERE | first | str trim)
+
+                if ($select_fields == "*") {
+                    return [AND LIMIT]
+                }
+
+                return [AND LIMIT "ORDER BY"]
+            }
             BY => {
                 # Split the context on backticks, since this is what the field names are wrapped in and drop the first and
                 # last part of the partial query
@@ -175,7 +183,12 @@ export def main [context: string] {
              # WHERE x #operator y
              # If an operator has been given after where but is not the last, then suggest AND
              if (($after_last_keyword | split row " " | filter {|x| $x in $cli_operators} | length) != 0) {
-                return [AND LIMIT]
+                let $select_fields = ($context | split row SELECT | last | split row WHERE | first | str trim)
+                if ($select_fields == "*") {
+                    return [AND LIMIT]
+                }
+
+                return [AND LIMIT "ORDER BY"]
              }
 
             # WHERE x

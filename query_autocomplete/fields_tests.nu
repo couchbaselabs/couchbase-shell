@@ -94,11 +94,21 @@ const AND_tests = [
     {
         # Suggest AND after a condition
         input: "FROM route SELECT `airline` `distance` `schedule` `type` WHERE `airline` == someAirline "
+        expected: [AND LIMIT "ORDER BY"]
+    }
+    {
+        # Don't suggest ORDER BY when there are no selected fields to ORDER BY
+        input: "FROM route SELECT * WHERE `airline` == someAirline "
         expected: [AND LIMIT]
     }
     {
         # Suggest AND after a condition
         input: "FROM route SELECT `airline` `distance` `schedule` `type` WHERE `airline` < someAirline "
+        expected: [AND LIMIT "ORDER BY"]
+    }
+    {
+        # Suggest AND after a condition and don't suggest ORDER BY when there are no selected fields to ORDER BY
+        input: "FROM route SELECT * WHERE `airline` < someAirline "
         expected: [AND LIMIT]
     }
     {
@@ -208,7 +218,15 @@ const SATISFIES_tests = [
 const END_tests = [
     {
         input: 'FROM hotel SELECT meta().id WHERE EVERY r IN reviews SATISFIES r.`author` == asdf END '
+        expected: [AND LIMIT "ORDER BY"]
+    }
+    {
+        input: 'FROM hotel SELECT * WHERE EVERY r IN reviews SATISFIES r.`author` == asdf END '
         expected: [AND LIMIT]
+    }
+    {
+        input: 'FROM hotel SELECT * name WHERE EVERY r IN reviews SATISFIES r.`author` == asdf END '
+        expected: [AND LIMIT "ORDER BY"]
     }
 ]
 
