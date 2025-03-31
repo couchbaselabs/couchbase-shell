@@ -218,14 +218,14 @@ const SATISFIES_tests = [
 const END_tests = [
     {
         input: 'FROM hotel SELECT meta().id WHERE EVERY r IN reviews SATISFIES r.`author` == asdf END '
-        expected: [AND LIMIT "ORDER BY"]
+        expected: [AND LIMIT]
     }
     {
         input: 'FROM hotel SELECT * WHERE EVERY r IN reviews SATISFIES r.`author` == asdf END '
         expected: [AND LIMIT]
     }
     {
-        input: 'FROM hotel SELECT * name WHERE EVERY r IN reviews SATISFIES r.`author` == asdf END '
+        input: 'FROM hotel SELECT * `name` WHERE EVERY r IN reviews SATISFIES r.`author` == asdf END '
         expected: [AND LIMIT "ORDER BY"]
     }
 ]

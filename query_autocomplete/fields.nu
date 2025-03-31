@@ -71,13 +71,14 @@ export def main [context: string] {
                 return { options: {sort: false}, completions: $formatted_array_fields}
             }
             END => {
-                let $select_fields = ($context | split row SELECT | last | split row WHERE | first | str trim)
+                mut $completions = [AND LIMIT]
+                let $select_fields = select_fields $context
 
-                if ($select_fields == "*") {
-                    return [AND LIMIT]
+                if (not ($select_fields | is-empty)) {
+                    $completions = ($completions | append "ORDER BY")
                 }
 
-                return [AND LIMIT "ORDER BY"]
+                return $completions
             }
             BY => {
                 let $select_fields = select_fields $context
@@ -184,9 +185,17 @@ export def collection_fields [collection: string] {
 # e.g if the partial query is "FROM col SELECT field1 field2 WHERE field3 == value" select_fields with return
 # [field1 field2]
 def select_fields [partial_query: string] {
-     # Split the partial query on backticks, since this is what the field names are wrapped in and drop the first and
-     # last part of the partial query
-     let $split_context = ($partial_query | split row "`" | skip | drop)
+     # Split the partial query on backticks, since this is what the field names are wrapped in and
+     mut $split_context = ($partial_query | split row "`")
+
+     # If we see WHERE in the first string of the split context this means that there are no SELECT fields
+     if ($split_context | first | str contains "WHERE") {
+        return []
+     }
+
+     # Drop the first and last part of the partial query
+     $split_context = ($split_context | skip | drop)
+
      mut $select_fields = []
      for $field in $split_context {
          # If we reach the WHERE clause break because we only want the field names in the SELECT clause
