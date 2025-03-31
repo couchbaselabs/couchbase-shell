@@ -103,54 +103,70 @@ const LIMIT_tests = [
 const ORDER_BY_tests = [
     {
         input: [col SELECT field ORDER BY field]
-        expected: 'SELECT `field` FROM col ORDER BY `field`'
+        expected: 'FROM col SELECT `field` ORDER BY `field`'
     }
     {
         input: [col SELECT 'some field' ORDER BY 'some field' LIMIT '10']
-        expected: 'SELECT `some field` FROM col ORDER BY `some field` LIMIT 10'
+        expected: 'FROM col SELECT `some field` ORDER BY `some field` LIMIT 10'
     }
     {
         input: [col SELECT field ORDER BY field ASC]
-        expected: 'SELECT `field` FROM col ORDER BY `field` ASC'
+        expected: 'FROM col SELECT `field` ORDER BY `field` ASC'
     }
     {
         input: [col SELECT field ORDER BY field DESC]
-        expected: 'SELECT `field` FROM col ORDER BY `field` DESC'
+        expected: 'FROM col SELECT `field` ORDER BY `field` DESC'
     }
     {
         input: [col SELECT field 'some field' ORDER BY field ASC LIMIT '10']
-        expected: 'SELECT `field`, `some field` FROM col ORDER BY `field` ASC LIMIT 10'
+        expected: 'FROM col SELECT `field` , `some field` ORDER BY `field` ASC LIMIT 10'
     }
     {
         input: [col SELECT field * 'some field' ORDER BY 'some field' ASC]
-        expected: 'SELECT `field`, *, `some field` FROM col ORDER BY `some field` ASC'
+        expected: 'FROM col SELECT `field` , * , `some field` ORDER BY `some field` ASC'
     }
     {
         input: [col SELECT field1 'some field' ORDER BY field1 'some field']
-        expected: 'SELECT `field1`, `some field` FROM col ORDER BY `field1` , `some field`'
+        expected: 'FROM col SELECT `field1` , `some field` ORDER BY `field1` , `some field`'
     }
     {
         input: [col SELECT field1 field2 WHERE field3 == value ORDER BY field1]
-        expected: 'SELECT `field1`, `field2` FROM col WHERE `field3` = "value" ORDER BY `field1`'
+        expected: 'SELECT `field1` , `field2` FROM col WHERE `field3` = "value" ORDER BY `field1`'
     }
     {
         input: [col SELECT field1 field2 WHERE 'some field' == 'some value' ORDER BY field1 ASC field2 DESC]
-        expected: 'SELECT `field1`, `field2` FROM col WHERE `field3` = "value" ORDER BY `field1` ASC , `field2` DESC'
+        expected: 'SELECT `field1` , `field2` FROM col WHERE `some field` = "some value" ORDER BY `field1` ASC , `field2` DESC'
     }
     {
         input: [col SELECT field1 field2 field3 ORDER BY field1 ASC field2 DESC field3 LIMIT '10']
-        expected: 'SELECT `field1`, `field2`, field3` FROM col ORDER BY `field1` ASC , `field2` DESC , `field3` LIMIT 10'
+        expected: 'FROM col SELECT `field1` , `field2` , `field3` ORDER BY `field1` ASC , `field2` DESC , `field3` LIMIT 10'
+    }
+    {
+        input: [col SELECT field1 WHERE field2 == '10' AND field3 != value ORDER BY field1 ASC]
+        expected: 'SELECT `field1` FROM col WHERE `field2` = 10 AND `field3` != "value" ORDER BY `field1` ASC'
+    }
+    {
+        input: [col SELECT field1 field2 WHERE field2 == '10' AND field3 != value ORDER BY field1 ASC field2]
+        expected: 'SELECT `field1` , `field2` FROM col WHERE `field2` = 10 AND `field3` != "value" ORDER BY `field1` ASC , `field2`'
+    }
+    {
+        input: [col SELECT field1 WHERE ANY field IN array SATISFIES field < '11' END ORDER BY field1 DESC]
+        expected: 'SELECT `field1` FROM col WHERE ANY field IN array SATISFIES `field` < 11 END ORDER BY `field1` DESC'
+    }
+    {
+        input: [col SELECT field1 WHERE field2 == value AND ANY field IN array SATISFIES field < '11' END ORDER BY field1 DESC]
+        expected: 'SELECT `field1` FROM col WHERE `field2` = "value" AND ANY field IN array SATISFIES `field` < 11 END ORDER BY `field1` DESC'
     }
     # TO do tests with WHERE AND, also with SATISFIES clauses
 ]
 
 export def main [] {
     let tests = [
-        #...$SELECT_tests
-        #...$WHERE_tests
-        #...$AND_tests
-        #...$SATISFIES_tests
-        #...$LIMIT_tests
+        ...$SELECT_tests
+        ...$WHERE_tests
+        ...$AND_tests
+        ...$SATISFIES_tests
+        ...$LIMIT_tests
         ...$ORDER_BY_tests
     ]
 
