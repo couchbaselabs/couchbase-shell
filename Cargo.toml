@@ -66,7 +66,7 @@ futures-util = "0.3.30"
 
 [target.'cfg(not(any(target_os = "macos", target_os = "windows")))'.dependencies]
 # Our dependencies don't use OpenSSL on Macos
-openssl = { version = "0.10.71", features = ["vendored"], optional = true }
+openssl = { version = "0.10.72", features = ["vendored"], optional = true }
 
 [dev-dependencies]
 dunce = "1.0.1"
