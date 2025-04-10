@@ -11,8 +11,8 @@ env:
   # Space separated paths to include in the archive.
   # Start relative paths with a dot if you don't want
   # paths to be preserved. Use "/" as a delimiter.
-  RELEASE_ADDS: README.md LICENSE LICENSE_AGREEMENT NOTICES
-  RELEASE_ADDS_WINDOWS: README.md,LICENSE,LICENSE_AGREEMENT,NOTICES
+  RELEASE_ADDS: README.md LICENSE LICENSE_AGREEMENT NOTICES query_autocomplete
+  RELEASE_ADDS_WINDOWS: README.md,LICENSE,LICENSE_AGREEMENT,NOTICES,query_autocomplete
 
 
 jobs:

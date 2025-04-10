@@ -37,7 +37,7 @@ use log::{debug, warn};
 use log::{error, info};
 use serde::Deserialize;
 
-use nu_cli::{gather_parent_env_vars, read_plugin_file, EvaluateCommandsOpts};
+use nu_cli::{eval_source, gather_parent_env_vars, read_plugin_file, EvaluateCommandsOpts};
 use nu_protocol::engine::{EngineState, Stack, StateWorkingSet};
 use nu_protocol::{
     report_shell_error, ByteStream, ByteStreamSource, ByteStreamType, IntoPipelineData,
@@ -202,6 +202,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     terminal::acquire();
     read_plugin_file(&mut context, None);
     read_nu_config_file(&mut context, &mut stack);
+
+    use_query_autocomplete(&mut context, &mut stack);
 
     nu_cli::evaluate_repl(&mut context, stack, None, None, entire_start_time)
         .expect("evaluate loop failed");
@@ -847,4 +849,20 @@ fn current_dir_from_environment() -> PathBuf {
         return home.into_std_path_buf();
     }
     current_exe_directory()
+}
+
+fn use_query_autocomplete(context: &mut EngineState, stack: &mut Stack) {
+    let path_res = current_dir_from_environment();
+    eval_source(
+        context,
+        stack,
+        format!("use {}/query_autocomplete FROM", path_res.display()).as_bytes(),
+        "entry 0",
+        PipelineData::empty(),
+        false,
+    );
+
+    if let Err(err) = context.merge_env(stack) {
+        report_shell_error(context, &err);
+    }
 }
