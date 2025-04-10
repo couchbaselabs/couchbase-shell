@@ -301,7 +301,7 @@ fn validate_hostnames(hostnames: Vec<String>) -> (RemoteClusterType, Vec<String>
 
 fn create_logger_builder(logger_prefix: Option<String>) {
     let mut logger_builder = env_logger::Builder::from_env(
-        Env::default().filter_or("CBSH_LOG", "info,isahc=error,surf=error,nu=warn"),
+        Env::default().filter_or("CBSH_LOG", "info,isahc=error,surf=error,nu=error"),
     );
 
     logger_builder.format(move |buf, record| {
