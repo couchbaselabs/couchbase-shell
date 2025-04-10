@@ -1,0 +1,204 @@
+== Query Autocomplete
+
+Query Autocomplete is designed to help users dip their toes into the wonderful world of n1ql without having to struggle with the particulars of query structure and formatting.
+Users can take advantage of Couchbase Shell's context to generate queries against their own collections and documents.
+
+=== Usage
+
+Query Autocomplete is implemented as a https://www.nushell.sh/book/modules.html[nushell module], which is added to the environment when the shell is started. 
+Before a query can be generated you need to set an <<_cb_env_bucketscopecollection,active bucket and scope>> so that `FROM` knows which collections you can query.
+Here we use the `travel-sample` bucket and `inventory` scope which can easily be loaded onto your cluster using <<_buckets_load_sample,`buckets load-sample`>>.
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+>
+```
+
+Type `FROM` followed by a space then press tab to see the possible completions:
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+| FROM
+airline             airport             hotel               landmark
+route
+```
+
+The suggestions here are all of the collections within your active scope. 
+If you are familiar with query languages you may be used to beginning with SELECT.
+So that `FROM` knows which fields to suggest later the collection is required first. 
+Choose one of the collections using the arrow keys or tab, then the enter key.
+Here we will go with the `landmark` collection:
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+> FROM landmark 
+```
+
+Now a collection is chosen, put a space after then press tab again for the next suggestions:
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+> FROM landmark SELECT
+```
+
+This time the only valid word is `SELECT` so this is added to the partial query without you needing to choose it.
+Now we can see what we can `SELECT` from the `landmark` docs:
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+| FROM landmark SELECT
+*                   `activity`          `address`           `alt`
+`city`              `content`           `country`           `directions`
+`email`             `geo`               `hours`             `id`
+`image`             `image_direct_url`  `name`              `phone`
+`price`             `state`             `title`             `tollfree`
+`type`              `url`
+```
+
+Choose the field, or wildcard, then continue to the next completion. 
+Let's choose the `name` field and generate the next set of completions:
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+| FROM landmark SELECT `name`
+WHERE               LIMIT               ORDER BY            *
+`activity`          `address`           `alt`               `city`
+`content`           `country`           `directions`        `email`
+`geo`               `hours`             `id`                `image`
+`image_direct_url`  `phone`             `price`             `state`
+`title`             `tollfree`          `type`              `url`
+```
+
+Let's `SELECT` the address as well:
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+| FROM landmark SELECT `name` `address`
+WHERE               LIMIT               ORDER BY            *
+`activity`          `alt`               `city`              `content`
+`country`           `directions`        `email`             `geo`
+`hours`             `id`                `image`             `image_direct_url`
+`phone`             `price`             `state`             `title`
+`tollfree`          `type`              `url`
+```
+
+Now let's add a `WHERE` clause:
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+| FROM landmark SELECT `name` `address` WHERE
+ANY                 EVERY               `activity`          `address`
+`alt`               `city`              `content`           `country`
+`directions`        `email`             `geo`               `hours`
+`id`                `image`             `image_direct_url`  `name`
+`phone`             `price`             `state`             `title`
+`tollfree`          `type`              `url`
+```
+
+Let's take a look at some Parisian landmarks, for that we need to conditionally SELECT on the `city` field:
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+| FROM landmark SELECT `name` `address` WHERE `city`
+!=                  <                   <=                  ==
+>                   >=                  LIKE
+```
+
+After choosing a condition field the command suggests all of the valid operators. 
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+| FROM landmark SELECT `name` `address` WHERE `city` ==
+NO RECORDS FOUND
+```
+
+Sometimes the autocomplete command will not have any suggestions, for example after an operator in a WHERE clause.
+This is because this value needs to be supplied by the User, since we want landmarks in Paris we need to manually type this: 
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+| FROM landmark SELECT `name` `address` WHERE `city` == Paris
+AND                 LIMIT               ORDER BY
+```
+
+Once we have completed the WHERE condition then the autocomplete command can suggest the next word again. 
+Let's add an `ORDER BY` clause to our query: 
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+| FROM landmark SELECT `name` `address` WHERE `city` == Paris ORDER BY
+`name`              `address`
+```
+
+Since we can only order by fields that we have selected from the documents these are all that are suggested.
+Let's order by `name`:
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+| FROM landmark SELECT `name` `address` WHERE `city` == Paris ORDER BY `name`
+`address`           ASC                 DESC                LIMIT
+```
+
+Finally let's add a LIMIT to the number of results from our query: 
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+| FROM landmark SELECT `name` `address` WHERE `city` == Paris ORDER BY `name` LIMIT
+NO RECORDS FOUND
+```
+
+As with the WHERE condition value the number of results needs to be supplied by the User so there are no suggestions.
+Let's LIMIT the number of results to 10:
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+| FROM landmark SELECT `name` `address` WHERE `city` == Paris ORDER BY `name` LIMIT 10
+```
+
+Once the query is complete press enter to execute it:
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+> FROM landmark SELECT `name` `address` WHERE `city` == Paris ORDER BY `name` LIMIT 10
+╭───┬─────────────────────────────────┬─────────────────────────────┬─────────╮
+│ # │             address             │            name             │ cluster │
+├───┼─────────────────────────────────┼─────────────────────────────┼─────────┤
+│ 0 │ Tour Eiffel 1st floor           │ 58 Tour Eiffel              │ local   │
+│ 1 │ 15, rue Desnouettes             │ Afaria                      │ local   │
+│ 2 │ 47, rue Saint Louis en l’Ile    │ Amorino                     │ local   │
+│ 3 │ 10, av de l’opéra               │ Antoine                     │ local   │
+│ 4 │ 4 rue louis Armand              │ Aquaboulevard               │ local   │
+│ 5 │                                 │ Arc de Triomphe de l'Étoile │ local   │
+│ 6 │ Avenue des Champs-Elysees 51-53 │ Atelier Renault             │ local   │
+│ 7 │ 7, rue des Trois-Frères         │ Au Progres                  │ local   │
+│ 8 │ 59 rue Lecourbe                 │ Au Roi du café              │ local   │
+│ 9 │ 129 bis rue Saint Charles,      │ Aux Merveilleux de Fred     │ local   │
+╰───┴─────────────────────────────────┴─────────────────────────────┴─────────╯
+```
+
+If you want to see fully formatted query then you can print this using the `--print-query` flag: 
+
+```
+👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+> FROM landmark SELECT `name` `address` WHERE `city` == Paris ORDER BY `name` LIMIT 10 --print_query
+SELECT `name` , `address` FROM landmark WHERE `city` = "Paris" ORDER BY `name` LIMIT 10
+```
+
+=== Supported keywords
+
+Query Autocomplete only covers a subset of the full n1ql language, the supported keywords are:
+
+- `FROM` 
+- `SELECT` 
+- `WHERE`
+- `AND` 
+- `LIMIT` 
+- `ANY/EVERY` 
+- `IN` 
+- `SATISFIES` 
+- `END` 
+- `ORDER BY` 
+- `ASC/DESC`
+
+We plan to include more keywords over time. 
+If you would like a support for a particular keyword to be added please raise an issue on the `cbshell` https://github.com/couchbaselabs/couchbase-shell/issues[issue tracker].
