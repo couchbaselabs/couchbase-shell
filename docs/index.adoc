@@ -22,6 +22,8 @@ include::intro.adoc[]
 
 include::cbenv.adoc[]
 
+include::query_autocomplete.adoc[]
+
 include::commands.adoc[]
 
 include::reference.adoc[]

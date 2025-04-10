@@ -3,7 +3,10 @@ adoc
 analytics
 Analytics
 api
+autocomplete
 aws
+
+bucketscopecollection
 
 capella
 cas
@@ -89,6 +92,7 @@ pre
 projectcapella
 
 QL
+ql
 quickstart
 Quickstart
 
