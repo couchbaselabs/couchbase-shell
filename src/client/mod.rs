@@ -1,3 +1,4 @@
+extern crate utilities;
 pub use crate::client::cloud::CapellaClient;
 pub use crate::client::cloud::CAPELLA_SRV_SUFFIX;
 pub use crate::client::cloud::CLOUD_URL;
@@ -6,7 +7,7 @@ pub use crate::client::http_client::{
     AnalyticsQueryRequest, Endpoint, HTTPClient, ManagementRequest, QueryRequest,
     QueryTransactionRequest, TextSearchQueryRequest, VectorSearchQueryRequest,
 };
-pub use crate::client::kv_client::{KeyValueRequest, KvClient, KvResponse};
+pub use crate::client::kv_client::{KvClient, KvResponse};
 pub use crate::client::tls::RustTlsConfig;
 use log::debug;
 
@@ -14,14 +15,12 @@ use nu_protocol::Signals;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 use tokio::time::Instant;
 
-extern crate utilities;
-
 mod bedrock_client;
 mod capella_ca;
 pub(crate) mod cloud;
 pub mod cloud_json;
 mod codec;
-mod crc;
+pub mod connection_client;
 mod error;
 mod gemini_client;
 pub(crate) mod http_client;
@@ -33,6 +32,7 @@ mod openai_client;
 mod protocol;
 mod tls;
 
+use crate::client::connection_client::ConnectionClient;
 pub use llm_client::LLMClients;
 
 pub struct Client {
@@ -85,6 +85,24 @@ impl Client {
         signals: Signals,
     ) -> Result<KvClient, ClientError> {
         KvClient::connect(
+            self.seeds.clone(),
+            self.username.clone(),
+            self.password.clone(),
+            self.tls_config.clone(),
+            bucket.clone(),
+            deadline,
+            signals,
+        )
+        .await
+    }
+
+    pub async fn connection_client(
+        &self,
+        bucket: String,
+        deadline: Instant,
+        signals: Signals,
+    ) -> Result<ConnectionClient, ClientError> {
+        ConnectionClient::connect(
             self.seeds.clone(),
             self.username.clone(),
             self.password.clone(),

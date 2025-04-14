@@ -1,9 +1,9 @@
 use crate::cli::util::{
-    cluster_identifiers_from, convert_nu_value_to_json_value, get_active_cluster,
-    namespace_from_args, NuValueMap,
+    cluster_identifiers_from, convert_nu_value_to_json_value, get_active_cluster, NuValueMap,
 };
-use crate::cli::{client_error_to_shell_error, serialize_error};
-use crate::client::{ClientError, KeyValueRequest, KvClient, KvResponse};
+use crate::cli::{client_error_to_shell_error, no_active_bucket_error, serialize_error};
+use crate::client::connection_client::ConnectionClient;
+use crate::client::ClientError;
 use crate::remote_cluster::RemoteCluster;
 use crate::state::State;
 use futures::stream::FuturesUnordered;
@@ -20,14 +20,26 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use tokio::runtime::Runtime;
 use tokio::time::Instant;
 
-pub(crate) fn run_kv_store_ops(
+pub(crate) fn run_kv_store_ops<Fut>(
     state: Arc<Mutex<State>>,
     engine_state: &EngineState,
     stack: &mut Stack,
     call: &Call,
     input: PipelineData,
-    req_builder: fn(String, Vec<u8>, u32) -> KeyValueRequest,
-) -> Result<Vec<Value>, ShellError> {
+    run_cb: impl Fn(
+        Arc<ConnectionClient>,
+        String,
+        String,
+        String,
+        Vec<u8>,
+        u32,
+        Instant,
+        Signals,
+    ) -> Fut,
+) -> Result<Vec<Value>, ShellError>
+where
+    Fut: Future<Output = Result<(), ClientError>>,
+{
     let span = call.head;
 
     let id_column = call
@@ -80,15 +92,7 @@ pub(crate) fn run_kv_store_ops(
         all_items.push((item.0, value));
     }
 
-    run_kv_mutations(
-        state,
-        engine_state,
-        stack,
-        call,
-        span,
-        all_items,
-        req_builder,
-    )
+    run_kv_mutations(state, engine_state, stack, call, span, all_items, run_cb)
 }
 
 pub fn id_from_value(v: &Value, span: Span) -> Option<String> {
@@ -105,15 +109,27 @@ pub fn id_from_value(v: &Value, span: Span) -> Option<String> {
     }
 }
 
-pub fn run_kv_mutations(
+pub fn run_kv_mutations<Fut>(
     state: Arc<Mutex<State>>,
     engine_state: &EngineState,
     stack: &mut Stack,
     call: &Call,
     span: Span,
     all_items: Vec<(String, Vec<u8>)>,
-    req_builder: fn(String, Vec<u8>, u32) -> KeyValueRequest,
-) -> Result<Vec<Value>, ShellError> {
+    run_cb: impl Fn(
+        Arc<ConnectionClient>,
+        String,
+        String,
+        String,
+        Vec<u8>,
+        u32,
+        Instant,
+        Signals,
+    ) -> Fut,
+) -> Result<Vec<Value>, ShellError>
+where
+    Fut: Future<Output = Result<(), ClientError>>,
+{
     let signals = engine_state.signals().clone();
 
     let expiry: i64 = call.get_flag(engine_state, stack, "expiry")?.unwrap_or(0);
@@ -129,6 +145,20 @@ pub fn run_kv_mutations(
 
     let guard = state.lock().unwrap();
 
+    let scope = scope_flag
+        .or_else(|| {
+            let active_cluster = guard.active_cluster()?;
+            active_cluster.active_scope()
+        })
+        .unwrap_or("_default".to_string());
+
+    let collection = collection_flag
+        .or_else(|| {
+            let active_cluster = guard.active_cluster()?;
+            active_cluster.active_collection()
+        })
+        .unwrap_or("_default".to_string());
+
     let mut all_values = vec![];
     if let Some(size) = batch_size {
         all_values = build_batched_kv_items(size as u32, all_items.clone());
@@ -137,13 +167,11 @@ pub fn run_kv_mutations(
     let mut results = vec![];
     for identifier in cluster_identifiers {
         let rt = Runtime::new().unwrap();
-        let (active_cluster, client, cid) = match get_active_cluster_client_cid(
+        let (active_cluster, client) = match get_active_cluster_connection_client(
             &rt,
             identifier.clone(),
             &guard,
             bucket_flag.clone(),
-            scope_flag.clone(),
-            collection_flag.clone(),
             signals.clone(),
             span,
         ) {
@@ -179,17 +207,20 @@ pub fn run_kv_mutations(
 
                 let client = client.clone();
 
+                let scope = scope.clone();
+                let collection = collection.clone();
+
                 if !item.0.is_empty() {
-                    workers.push(async move {
-                        client
-                            .request(
-                                req_builder(item.0, item.1, expiry as u32),
-                                cid,
-                                deadline,
-                                signals,
-                            )
-                            .await
-                    });
+                    workers.push(run_cb(
+                        client,
+                        item.0,
+                        scope,
+                        collection,
+                        item.1,
+                        expiry as u32,
+                        deadline,
+                        signals,
+                    ));
                 } else {
                     failed += 1;
                     let mut missing_reason = HashSet::new();
@@ -225,7 +256,7 @@ pub(crate) struct WorkerResponse {
 }
 
 pub(crate) fn process_kv_workers(
-    mut workers: FuturesUnordered<impl Future<Output = Result<KvResponse, ClientError>>>,
+    mut workers: FuturesUnordered<impl Future<Output = Result<(), ClientError>>>,
     rt: &Runtime,
     halt_on_error: bool,
     span: Span,
@@ -279,40 +310,31 @@ pub(crate) fn build_batched_kv_items<T>(
     all_items
 }
 
-pub(crate) fn get_active_cluster_client_cid<'a>(
+pub(crate) fn get_active_cluster_connection_client<'a>(
     rt: &Runtime,
     cluster: String,
     guard: &'a MutexGuard<State>,
     bucket: Option<String>,
-    scope: Option<String>,
-    collection: Option<String>,
     signals: Signals,
     span: Span,
-) -> Result<(&'a RemoteCluster, Arc<KvClient>, u32), ShellError> {
+) -> Result<(&'a RemoteCluster, Arc<ConnectionClient>), ShellError> {
     let active_cluster = get_active_cluster(cluster, guard, span)?;
 
-    let (bucket, scope, collection) =
-        namespace_from_args(bucket, scope, collection, active_cluster, span)?;
+    let bucket = match bucket.or_else(|| active_cluster.active_bucket()) {
+        Some(v) => Ok(v),
+        None => Err(no_active_bucket_error(span)),
+    }?;
 
     let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
     let client = rt
-        .block_on(active_cluster.cluster().key_value_client(
-            bucket.clone(),
-            deadline,
-            signals.clone(),
-        ))
+        .block_on(
+            active_cluster
+                .cluster()
+                .connection_client(bucket, deadline, signals),
+        )
         .map_err(|e| client_error_to_shell_error(e, span))?;
 
-    let cid = rt
-        .block_on(client.get_cid(
-            scope,
-            collection,
-            Instant::now().add(active_cluster.timeouts().data_timeout()),
-            signals.clone(),
-        ))
-        .map_err(|e| client_error_to_shell_error(e, span))?;
-
-    Ok((active_cluster, Arc::new(client), cid))
+    Ok((active_cluster, Arc::new(client)))
 }
 
 #[derive(Debug)]

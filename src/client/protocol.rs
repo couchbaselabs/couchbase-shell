@@ -65,9 +65,9 @@ pub struct KvResponse {
     // datatype: u8,
     status: Status,
     opaque: u32,
-    cas: u64,
+    // cas: u64,
     // key: Option<Bytes>,
-    extras: Option<Bytes>,
+    // extras: Option<Bytes>,
     body: Option<Bytes>,
 }
 
@@ -109,10 +109,10 @@ impl From<&Bytes> for KvResponse {
         // 10, 11, 12, 13
         let opaque = slice.get_u32();
         // 14, 15, 16, 17, 18, 19, 20, 21
-        let cas = slice.get_u64();
+        let _cas = slice.get_u64();
         let body_len = total_body_len - key_len - extras_len - flexible_extras_len;
 
-        let extras = if extras_len > 0 {
+        let _extras = if extras_len > 0 {
             Some(input.slice(
                 (HEADER_SIZE + flexible_extras_len)
                     ..(HEADER_SIZE + flexible_extras_len + extras_len),
@@ -139,11 +139,11 @@ impl From<&Bytes> for KvResponse {
         KvResponse {
             opaque,
             body,
-            extras,
+            // extras,
             // key,
             status: Status::from(status),
             // datatype,
-            cas,
+            // cas,
             opcode,
         }
     }
@@ -163,17 +163,8 @@ impl KvResponse {
         self.status
     }
 
-    pub fn cas(&self) -> u64 {
-        self.cas
-    }
-
     pub fn opcode(&self) -> Opcode {
         self.opcode
-    }
-
-    // extras takes the extras from the response.
-    pub fn extras(&mut self) -> Option<Bytes> {
-        self.extras.take()
     }
 }
 

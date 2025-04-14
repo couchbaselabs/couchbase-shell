@@ -1,11 +1,12 @@
 //! The `doc remove` command performs a KV remove operation.
 
 use crate::cli::doc_common::{
-    build_batched_kv_items, get_active_cluster_client_cid, process_kv_workers, MutationResult,
+    build_batched_kv_items, get_active_cluster_connection_client, process_kv_workers,
+    MutationResult,
 };
 use crate::cli::doc_get::ids_from_input;
 use crate::cli::util::cluster_identifiers_from;
-use crate::client::KeyValueRequest;
+use crate::client::connection_client::RemoveRequest;
 use crate::state::State;
 use futures::stream::FuturesUnordered;
 use nu_engine::command_prelude::Call;
@@ -123,16 +124,28 @@ fn run_remove(
 
     let guard = state.lock().unwrap();
 
+    let scope = scope_flag
+        .or_else(|| {
+            let active_cluster = guard.active_cluster()?;
+            active_cluster.active_scope()
+        })
+        .unwrap_or("_default".to_string());
+
+    let collection = collection_flag
+        .or_else(|| {
+            let active_cluster = guard.active_cluster()?;
+            active_cluster.active_collection()
+        })
+        .unwrap_or("_default".to_string());
+
     let mut results = vec![];
     for identifier in cluster_identifiers {
         let rt = Runtime::new().unwrap();
-        let (active_cluster, client, cid) = match get_active_cluster_client_cid(
+        let (active_cluster, client) = match get_active_cluster_connection_client(
             &rt,
             identifier.clone(),
             &guard,
             bucket_flag.clone(),
-            scope_flag.clone(),
-            collection_flag.clone(),
             signals.clone(),
             span,
         ) {
@@ -163,13 +176,28 @@ fn run_remove(
         for items in all_ids.clone() {
             for item in items.clone() {
                 let deadline = Instant::now().add(active_cluster.timeouts().data_timeout());
-                let signal = signals.clone();
+                let signals = signals.clone();
                 let client = client.clone();
 
+                let scope = scope.clone();
+                let collection = collection.clone();
+
                 workers.push(async move {
-                    client
-                        .request(KeyValueRequest::Remove { key: item }, cid, deadline, signal)
+                    match client
+                        .remove(
+                            RemoveRequest {
+                                key: &item,
+                                scope: &scope,
+                                collection: &collection,
+                            },
+                            deadline,
+                            signals,
+                        )
                         .await
+                    {
+                        Ok(_) => Ok(()),
+                        Err(e) => Err(e),
+                    }
                 });
             }
 

@@ -3,9 +3,8 @@
 use super::util::convert_json_value_to_nu_value;
 use crate::state::State;
 
-use crate::cli::doc_common::{build_batched_kv_items, get_active_cluster_client_cid};
+use crate::cli::doc_common::{build_batched_kv_items, get_active_cluster_connection_client};
 use crate::cli::util::{cluster_identifiers_from, NuValueMap};
-use crate::client::KeyValueRequest;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use log::debug;
@@ -15,6 +14,7 @@ use tokio::runtime::Runtime;
 use tokio::time::Instant;
 
 use crate::cli::error::generic_error;
+use crate::client::connection_client::GetRequest;
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -141,16 +141,28 @@ fn run_get(
     let collection_flag = call.get_flag(engine_state, stack, "collection")?;
     let halt_on_error = call.has_flag(engine_state, stack, "halt-on-error")?;
 
+    let scope = scope_flag
+        .or_else(|| {
+            let active_cluster = guard.active_cluster()?;
+            active_cluster.active_scope()
+        })
+        .unwrap_or("_default".to_string());
+
+    let collection = collection_flag
+        .or_else(|| {
+            let active_cluster = guard.active_cluster()?;
+            active_cluster.active_collection()
+        })
+        .unwrap_or("_default".to_string());
+
     let mut results = vec![];
     for identifier in cluster_identifiers {
-        let rt = Runtime::new().unwrap();
-        let (active_cluster, client, cid) = match get_active_cluster_client_cid(
+        let rt = Runtime::new()?;
+        let (active_cluster, client) = match get_active_cluster_connection_client(
             &rt,
             identifier.clone(),
             &guard,
             bucket_flag.clone(),
-            scope_flag.clone(),
-            collection_flag.clone(),
             signals.clone(),
             span,
         ) {
@@ -184,9 +196,20 @@ fn run_get(
 
                 let client = client.clone();
 
+                let scope = scope.clone();
+                let collection = collection.clone();
+
                 workers.push(async move {
                     client
-                        .request(KeyValueRequest::Get { key: id }, cid, deadline, signals)
+                        .get(
+                            GetRequest {
+                                key: &id,
+                                scope: &scope,
+                                collection: &collection,
+                            },
+                            deadline,
+                            signals,
+                        )
                         .await
                 });
             }

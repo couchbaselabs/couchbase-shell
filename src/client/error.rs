@@ -315,6 +315,16 @@ impl From<tokio::sync::oneshot::error::RecvError> for ClientError {
     }
 }
 
+// TODO: Remove this simple mapping
+impl From<couchbase_core::error::Error> for ClientError {
+    fn from(e: couchbase_core::error::Error) -> Self {
+        ClientError::RequestFailed {
+            reason: Some(format!("{}", e)),
+            key: None,
+        }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub(crate) struct KVErrorContext {
     pub context: Option<String>,

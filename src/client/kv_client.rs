@@ -1,30 +1,24 @@
 use crate::cli::CtrlcFuture;
-use crate::client::crc::cb_vb_map;
 use crate::client::error::ClientError;
 use crate::client::http_client::{Config, PingResponse, ServiceType};
 use crate::client::http_handler::HTTPHandler;
 use crate::client::kv::KvEndpoint;
-use crate::client::{protocol, HTTPClient};
+use crate::client::HTTPClient;
 use crate::RustTlsConfig;
-use bytes::{Buf, Bytes};
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
-use log::{debug, trace};
+use log::debug;
 use nu_protocol::Signals;
 use serde::Deserialize;
-use serde_json::json;
-use std::future::Future;
-use std::pin::Pin;
 use std::{collections::HashMap, ops::Sub};
 use tokio::select;
-use tokio::time::{sleep, Instant, Sleep};
+use tokio::time::{sleep, Instant};
 
 #[derive(Debug)]
 pub struct KvResponse {
-    content: Option<serde_json::Value>,
-    cas: u64,
-    key: String,
-    extras: Option<Bytes>,
+    pub(crate) content: Option<serde_json::Value>,
+    pub(crate) cas: u64,
+    pub(crate) key: String,
 }
 
 impl KvResponse {
@@ -38,10 +32,6 @@ impl KvResponse {
 
     pub fn key(&self) -> String {
         self.key.clone()
-    }
-
-    pub fn extras(&mut self) -> Option<Bytes> {
-        self.extras.take()
     }
 }
 
@@ -126,23 +116,6 @@ impl KvClient {
         })
     }
 
-    fn partition_for_key(&self, key: String) -> u32 {
-        let num_partitions = self.config.vbucket_server_map.vbucket_map.len() as u32;
-
-        cb_vb_map(key.as_bytes().to_vec(), num_partitions)
-    }
-
-    fn node_for_partition(&self, partition: u32) -> (String, u32) {
-        let seeds = self.config.key_value_seeds(self.tls_enabled);
-        let node = self.config.vbucket_server_map.vbucket_map[partition as usize][0];
-
-        let seed = &seeds[node as usize];
-        let addr = seed.0.clone();
-        let port = seed.1;
-
-        (addr, port)
-    }
-
     pub async fn ping_all(
         &mut self,
         deadline: Instant,
@@ -199,239 +172,6 @@ impl KvClient {
 
         Ok(results)
     }
-
-    pub fn is_non_default_scope_collection(scope: String, collection: String) -> bool {
-        (!scope.is_empty() && scope != "_default")
-            || (!collection.is_empty() && collection != "_default")
-    }
-
-    pub async fn request(
-        &self,
-        request: KeyValueRequest,
-        cid: u32,
-        deadline: Instant,
-        signals: Signals,
-    ) -> Result<KvResponse, ClientError> {
-        let now = Instant::now();
-        if now >= deadline {
-            return Err(ClientError::Timeout {
-                key: Some(request.key()),
-            });
-        }
-        let deadline = deadline.sub(now);
-        let deadline_sleep = sleep(deadline);
-        tokio::pin!(deadline_sleep);
-
-        let ctrlc_fut = CtrlcFuture::new(signals.clone());
-        tokio::pin!(ctrlc_fut);
-
-        let key = match request {
-            KeyValueRequest::Get { ref key } => key.clone(),
-            KeyValueRequest::Set { ref key, .. } => key.clone(),
-            KeyValueRequest::Insert { ref key, .. } => key.clone(),
-            KeyValueRequest::Replace { ref key, .. } => key.clone(),
-            KeyValueRequest::Remove { ref key, .. } => key.clone(),
-            KeyValueRequest::SubDocGet { ref key, .. } => key.clone(),
-            KeyValueRequest::SubdocMultiLookup { ref key, .. } => key.clone(),
-        };
-
-        let partition = self.partition_for_key(key.clone());
-        let (addr, port) = self.node_for_partition(partition);
-
-        let ep = self
-            .endpoints
-            .get(format!("{}:{}", addr.clone(), port).as_str())
-            .unwrap();
-
-        let result = match request {
-            KeyValueRequest::Get { key } => {
-                let op = ep.get(key.clone(), partition as u16, cid);
-
-                self.handle_op_future(key, op, deadline_sleep, ctrlc_fut)
-                    .await
-            }
-            KeyValueRequest::Set { key, value, expiry } => {
-                let op = ep.set(key.clone(), value, expiry, partition as u16, cid);
-
-                self.handle_op_future(key, op, deadline_sleep, ctrlc_fut)
-                    .await
-            }
-            KeyValueRequest::Insert { key, value, expiry } => {
-                let op = ep.add(key.clone(), value, expiry, partition as u16, cid);
-
-                self.handle_op_future(key, op, deadline_sleep, ctrlc_fut)
-                    .await
-            }
-            KeyValueRequest::Replace { key, value, expiry } => {
-                let op = ep.replace(key.clone(), value, expiry, partition as u16, cid);
-
-                self.handle_op_future(key, op, deadline_sleep, ctrlc_fut)
-                    .await
-            }
-            KeyValueRequest::Remove { key } => {
-                let op = ep.remove(key.clone(), partition as u16, cid);
-
-                self.handle_op_future(key, op, deadline_sleep, ctrlc_fut)
-                    .await
-            }
-            KeyValueRequest::SubDocGet { key, path } => {
-                let op = ep.sub_doc_get(key.clone(), partition as u16, cid, path);
-
-                self.handle_op_future(key, op, deadline_sleep, ctrlc_fut)
-                    .await
-            }
-            KeyValueRequest::SubdocMultiLookup { key, paths } => {
-                let op = ep.sub_doc_multi_lookup(key.clone(), partition as u16, cid, paths);
-
-                self.handle_op_future(key, op, deadline_sleep, ctrlc_fut)
-                    .await
-            }
-        };
-
-        self.handle_op_result(result)
-    }
-
-    fn handle_op_result(
-        &self,
-        result: Result<(protocol::KvResponse, Option<String>), ClientError>,
-    ) -> Result<KvResponse, ClientError> {
-        match result {
-            Ok(mut r) => {
-                let content = if let Some(body) = r.0.body() {
-                    match r.0.opcode() {
-                        protocol::Opcode::SubdocMultiLookup => {
-                            let mut results: Vec<serde_json::Value> = vec![];
-                            let mut bytes = body.clone();
-
-                            while !bytes.is_empty() {
-                                //Drop leading empty bytes
-                                bytes.get_u32();
-                                let len: usize = bytes.get_u16().into();
-                                let temp = bytes.split_off(len);
-
-                                let value = match serde_json::from_slice(bytes.as_ref()) {
-                                    Ok(v) => v,
-                                    Err(e) => {
-                                        return Err(ClientError::RequestFailed {
-                                            reason: Some(e.to_string()),
-                                            key: r.1,
-                                        });
-                                    }
-                                };
-
-                                results.push(value);
-                                bytes = temp;
-                            }
-                            Some(json!(results))
-                        }
-                        _ => match serde_json::from_slice(body.as_ref()) {
-                            Ok(v) => Some(v),
-                            Err(e) => {
-                                return Err(ClientError::RequestFailed {
-                                    reason: Some(e.to_string()),
-                                    key: r.1,
-                                });
-                            }
-                        },
-                    }
-                } else {
-                    None
-                };
-                Ok(KvResponse {
-                    content,
-                    cas: r.0.cas(),
-                    key: r.1.unwrap_or_default(),
-                    extras: r.0.extras(),
-                })
-            }
-            Err(e) => Err(e),
-        }
-    }
-
-    pub async fn get_cid(
-        &self,
-        scope: String,
-        collection: String,
-        deadline: Instant,
-        signals: Signals,
-    ) -> Result<u32, ClientError> {
-        if !KvClient::is_non_default_scope_collection(scope.clone(), collection.clone()) {
-            trace!(
-                "Scope and collection names both empty or _default, not performing manifest lookup"
-            );
-            return Ok(0);
-        }
-
-        let scope_name = if scope.is_empty() {
-            trace!("Coerced empty scope name to _default");
-            "_default".to_string()
-        } else {
-            scope
-        };
-        let collection_name = if collection.is_empty() {
-            trace!("Coerced empty collection name to _default");
-            "_default".to_string()
-        } else {
-            collection
-        };
-
-        let deadline_sleep = sleep(deadline.sub(Instant::now()));
-        tokio::pin!(deadline_sleep);
-
-        let ctrlc_fut = CtrlcFuture::new(signals.clone());
-        tokio::pin!(ctrlc_fut);
-
-        let (addr, port) = self.node_for_partition(0);
-        let ep = self
-            .endpoints
-            .get(format!("{}:{}", addr.clone(), port).as_str())
-            .unwrap();
-
-        let op = ep.get_cid(scope_name, collection_name);
-
-        let resp = self
-            .handle_op_future(None, op, deadline_sleep, ctrlc_fut)
-            .await;
-
-        let mut result = self.handle_op_result(resp)?;
-        match result.extras() {
-            Some(mut e) => {
-                if e.len() < 12 {
-                    return Err(ClientError::RequestFailed {
-                        reason: Some(
-                            "Response from get collection id not expected format".to_string(),
-                        ),
-                        key: None,
-                    });
-                }
-                // Skip over the manifest uid
-                e.advance(8);
-                Ok(e.get_u32())
-            }
-            None => Err(ClientError::RequestFailed {
-                reason: Some("Response from get collection id not expected format".to_string()),
-                key: None,
-            }),
-        }
-    }
-
-    // handle_op_future resolves the future into a result containing (response, key) or an error.
-    async fn handle_op_future(
-        &self,
-        key: impl Into<Option<String>>,
-        op: impl Future<Output = Result<protocol::KvResponse, ClientError>>,
-        mut deadline_sleep: Pin<&mut Sleep>,
-        mut ctrlc_fut: Pin<&mut CtrlcFuture>,
-    ) -> Result<(protocol::KvResponse, Option<String>), ClientError> {
-        let key = key.into();
-        let res = select! {
-            res = op => res,
-            () = &mut deadline_sleep => Err(ClientError::Timeout{key: key.clone()}),
-            () = &mut ctrlc_fut => Err(ClientError::Cancelled{key: key.clone()}),
-        }?;
-
-        Ok((res, key))
-    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -441,8 +181,6 @@ struct BucketConfig {
     nodes_ext: Vec<NodeExtConfig>,
     nodes: Vec<NodeConfig>,
     loaded_from: Option<String>,
-    #[serde(alias = "vBucketServerMap")]
-    vbucket_server_map: VBucketServerMap,
 }
 
 impl Config for BucketConfig {
@@ -547,60 +285,4 @@ pub(crate) struct NodeConfig {
     // pub(crate) hostname: Option<String>,
     // #[serde(default)]
     // pub(crate) ports: HashMap<String, i32>,
-}
-
-#[derive(Deserialize, Debug)]
-struct VBucketServerMap {
-    // #[serde(alias = "numReplicas")]
-    // num_replicas: u32,
-    // #[serde(alias = "serverList")]
-    // server_list: Vec<String>,
-    #[serde(alias = "vBucketMap")]
-    vbucket_map: Vec<Vec<i32>>,
-}
-
-pub enum KeyValueRequest {
-    Get {
-        key: String,
-    },
-    Set {
-        key: String,
-        value: Vec<u8>,
-        expiry: u32,
-    },
-    Insert {
-        key: String,
-        value: Vec<u8>,
-        expiry: u32,
-    },
-    Replace {
-        key: String,
-        value: Vec<u8>,
-        expiry: u32,
-    },
-    Remove {
-        key: String,
-    },
-    SubDocGet {
-        key: String,
-        path: String,
-    },
-    SubdocMultiLookup {
-        key: String,
-        paths: Vec<String>,
-    },
-}
-
-impl KeyValueRequest {
-    pub fn key(&self) -> String {
-        match self {
-            KeyValueRequest::Get { key } => key.clone(),
-            KeyValueRequest::Set { key, .. } => key.clone(),
-            KeyValueRequest::Insert { key, .. } => key.clone(),
-            KeyValueRequest::Replace { key, .. } => key.clone(),
-            KeyValueRequest::Remove { key } => key.clone(),
-            KeyValueRequest::SubDocGet { key, .. } => key.clone(),
-            KeyValueRequest::SubdocMultiLookup { key, .. } => key.clone(),
-        }
-    }
 }

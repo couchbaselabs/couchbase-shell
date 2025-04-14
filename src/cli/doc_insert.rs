@@ -1,15 +1,16 @@
 //! The `doc insert` command performs a KV insert operation.
 
 use crate::cli::doc_common::run_kv_store_ops;
-use crate::client::KeyValueRequest;
+use crate::client::connection_client::{ConnectionClient, InsertRequest};
+use crate::client::ClientError;
 use crate::state::State;
-use std::sync::{Arc, Mutex};
-
 use nu_engine::command_prelude::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
-    Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
+    Category, IntoPipelineData, PipelineData, ShellError, Signals, Signature, SyntaxShape, Value,
 };
+use std::sync::{Arc, Mutex};
+use tokio::time::Instant;
 
 #[derive(Clone)]
 pub struct DocInsert {
@@ -93,10 +94,6 @@ impl Command for DocInsert {
     }
 }
 
-fn build_req(key: String, value: Vec<u8>, expiry: u32) -> KeyValueRequest {
-    KeyValueRequest::Insert { key, value, expiry }
-}
-
 fn run_insert(
     state: Arc<Mutex<State>>,
     engine_state: &EngineState,
@@ -104,7 +101,40 @@ fn run_insert(
     call: &Call,
     input: PipelineData,
 ) -> Result<PipelineData, ShellError> {
-    let results = run_kv_store_ops(state, engine_state, stack, call, input, build_req)?;
+    let results = run_kv_store_ops(
+        state,
+        engine_state,
+        stack,
+        call,
+        input,
+        async |client: Arc<ConnectionClient>,
+               key: String,
+               scope: String,
+               collection: String,
+               value: Vec<u8>,
+               expiry: u32,
+               deadline: Instant,
+               signals: Signals|
+               -> Result<(), ClientError> {
+            match client
+                .insert(
+                    InsertRequest {
+                        key: &key,
+                        value: &value,
+                        expiry,
+                        scope: &scope,
+                        collection: &collection,
+                    },
+                    deadline,
+                    signals,
+                )
+                .await
+            {
+                Ok(_) => Ok(()),
+                Err(e) => Err(e),
+            }
+        },
+    )?;
 
     Ok(Value::List {
         vals: results,
