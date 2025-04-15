@@ -260,6 +260,7 @@ provider = "OpenAI"
 embed_model = "text-embedding-3-small"
 chat_model = "gpt-3.5-turbo"
 api_key = "get-your-own"
+api_base = "http://localhost:2134/v1"
 
 [[llm]]
 identifier = "Bedrock-titan"
@@ -282,6 +283,8 @@ Notice that the Bedrock entry does not have an API key, this is because it requi
 The `embed-model` field is the model that will be used to generate embeddings by the <<_vector_enrich_doc,vector enrich-doc>> and <<_vector_enrich_text,vector enrich-text>> commands.
 While the `chat-model` is the model that will be used to answer questions with the <<_ask,ask>> command.
 These models can be any that the provider's API supports, and should be provided in the format given in the provider's API docs.
+
+When using OpenAI user's can provide a custom api base, allowing users to use cbshell with local/custom models that support the OpenAI api format.
 
 The api-keys can also be given separately in the <<_credentials_file_format,credentials file>>, for example:
 
