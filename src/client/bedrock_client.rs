@@ -1,4 +1,4 @@
-use crate::cli::generic_error;
+use crate::cli::{api_base_unsupported, generic_error};
 use aws_sdk_bedrockruntime::operation::invoke_model::InvokeModelError;
 use aws_sdk_bedrockruntime::primitives::Blob;
 use nu_protocol::ShellError;
@@ -12,8 +12,12 @@ pub struct BedrockClient {}
 const MAX_RESPONSE_TOKENS: i32 = 8192;
 
 impl BedrockClient {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(api_base: Option<String>) -> Result<Self, ShellError> {
+        if api_base.is_some() {
+            return Err(api_base_unsupported("Bedrock".into()));
+        }
+
+        Ok(Self {})
     }
 
     pub fn batch_chunks(&self, chunks: Vec<String>) -> Vec<Vec<String>> {

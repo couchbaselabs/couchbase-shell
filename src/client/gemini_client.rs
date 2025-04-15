@@ -1,4 +1,4 @@
-use crate::cli::{generic_error, llm_api_key_missing};
+use crate::cli::{api_base_unsupported, generic_error, llm_api_key_missing};
 use bytes::Bytes;
 use log::info;
 use nu_protocol::ShellError;
@@ -25,7 +25,12 @@ impl GeminiClient {
     pub fn new(
         api_key: Option<String>,
         max_tokens: impl Into<Option<usize>>,
+        api_base: Option<String>,
     ) -> Result<Self, ShellError> {
+        if api_base.is_some() {
+            return Err(api_base_unsupported("Gemini".into()));
+        }
+
         let max_tokens = max_tokens.into().unwrap_or(MAX_FREE_TIER_TOKENS);
 
         if let Some(api_key) = api_key {

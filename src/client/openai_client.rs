@@ -1,4 +1,5 @@
 use crate::cli::{generic_error, llm_api_key_missing};
+use async_openai::config::OPENAI_API_BASE;
 use async_openai::types::{
     ChatCompletionRequestMessage, ChatCompletionRequestSystemMessageArgs,
     ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequestArgs,
@@ -11,6 +12,7 @@ use tiktoken_rs::p50k_base;
 pub struct OpenAIClient {
     api_key: String,
     max_tokens: usize,
+    api_base: String,
 }
 
 const MAX_FREE_TIER_TOKENS: usize = 150000;
@@ -19,13 +21,16 @@ impl OpenAIClient {
     pub fn new(
         api_key: Option<String>,
         max_tokens: impl Into<Option<usize>>,
+        api_base: Option<String>,
     ) -> Result<Self, ShellError> {
         let max_tokens = max_tokens.into().unwrap_or(MAX_FREE_TIER_TOKENS);
+        let api_base = api_base.unwrap_or(OPENAI_API_BASE.into());
 
         if let Some(api_key) = api_key {
             Ok(Self {
                 api_key,
                 max_tokens,
+                api_base,
             })
         } else {
             Err(llm_api_key_missing("OpenAI".to_string()))
@@ -81,7 +86,9 @@ impl OpenAIClient {
         model: String,
     ) -> Result<Vec<Vec<f32>>, ShellError> {
         let client = Client::with_config(
-            async_openai::config::OpenAIConfig::default().with_api_key(self.api_key.clone()),
+            async_openai::config::OpenAIConfig::default()
+                .with_api_key(self.api_key.clone())
+                .with_api_base(self.api_base.clone()),
         );
 
         if log::log_enabled!(log::Level::Debug) {
@@ -163,7 +170,9 @@ impl OpenAIClient {
         );
 
         let client = Client::with_config(
-            async_openai::config::OpenAIConfig::default().with_api_key(self.api_key.clone()),
+            async_openai::config::OpenAIConfig::default()
+                .with_api_key(self.api_key.clone())
+                .with_api_base(self.api_base.clone()),
         );
 
         let request = CreateChatCompletionRequestArgs::default()

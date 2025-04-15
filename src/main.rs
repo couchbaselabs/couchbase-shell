@@ -703,6 +703,7 @@ fn make_state(
                 config.provider(),
                 config.embed_model(),
                 config.chat_model(),
+                config.api_base(),
             );
             llms.insert(config.identifier(), llm);
 

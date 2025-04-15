@@ -180,6 +180,9 @@ pub enum CBShellError {
         project: String,
         span: Span,
     },
+    CustomBaseNotSupported {
+        provider: String,
+    },
 }
 
 impl From<CBShellError> for ShellError {
@@ -281,6 +284,9 @@ impl From<CBShellError> for ShellError {
             CBShellError::ColumnarClustersNotFound {project, span} => {
                 spanned_shell_error(format!("No columnar clusters found in project {}", project), "You can change the active project with the `cb-env project` command".to_string(), span)
             }
+            CBShellError::CustomBaseNotSupported { provider } => {
+                spanned_shell_error(format!("{} does not support custom api base", provider), "Either remove `api_base` entry from the config file or use the provider OpenAI".to_string(), None)
+            }
         }
     }
 }
@@ -354,6 +360,10 @@ pub fn no_llm_configured() -> ShellError {
 
 pub fn embed_model_missing() -> ShellError {
     CBShellError::EmbedModelMissing {}.into()
+}
+
+pub fn api_base_unsupported(provider: String) -> ShellError {
+    CBShellError::CustomBaseNotSupported { provider }.into()
 }
 
 pub fn insufficient_columnar_permissions_error(span: Span) -> ShellError {
