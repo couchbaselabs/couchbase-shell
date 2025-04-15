@@ -1,4 +1,3 @@
-use crate::cli::util::is_http_status;
 use crate::client::QueryTransactionRequest;
 use crate::state::State;
 use log::{debug, info};
@@ -8,6 +7,9 @@ use std::time::Duration;
 
 use crate::cli::error::{deserialize_error, generic_error, no_active_cluster_error};
 use crate::cli::query::{handle_query_response, query_context_from_args, send_query};
+use crate::cli::{client_error_to_shell_error, malformed_response_error};
+use crate::client::connection_client::ResponseMetadata;
+use crate::client::query_metadata::QueryStatus;
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -15,6 +17,7 @@ use nu_protocol::Value::Nothing;
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, Span, SyntaxShape, Value,
 };
+use tokio::runtime::Runtime;
 
 #[derive(Clone)]
 pub struct QueryTransactions {
@@ -131,28 +134,50 @@ fn query(
 
     debug!("Running n1ql query transaction {}", &statement);
 
-    let response = send_query(
-        active_cluster,
-        statement.clone(),
-        None,
-        maybe_scope,
-        signals.clone(),
-        timeout,
-        span,
-        txn_request,
-    );
+    let rt = Runtime::new()?;
+    let response = rt.block_on(async {
+        send_query(
+            active_cluster,
+            statement.clone(),
+            None,
+            maybe_scope,
+            signals.clone(),
+            timeout,
+            span,
+            txn_request,
+        )
+        .await
+    });
     if response.is_err() {
         info!("Ending transaction due to error");
         guard.end_transaction();
     }
-    let response = response?;
-    let status = response.status();
-    let endpoint = response.endpoint();
-    let content = response.content()?;
 
-    if is_http_status(status, 200, content.clone(), span).is_err() {
-        info!("Ending transaction due to non-200 status code");
-        guard.end_transaction();
+    let mut response = response?;
+
+    let endpoint = response.endpoint().to_string();
+
+    let (content, meta) = rt.block_on(async {
+        let content = response
+            .content()
+            .await
+            .map_err(|e| client_error_to_shell_error(e, span))?;
+        let meta = response
+            .metadata()
+            .map_err(|e| client_error_to_shell_error(e, span))?;
+
+        Ok::<(Vec<Vec<u8>>, Option<ResponseMetadata>), ShellError>((content, meta))
+    })?;
+
+    let meta = match meta {
+        Some(ResponseMetadata::Query(m)) => m,
+        None => {
+            return Err(malformed_response_error(
+                "response missing metadata",
+                "".to_string(),
+                span,
+            ))
+        }
     };
 
     if statement_type == TransactionStatementType::Rollback
@@ -163,22 +188,25 @@ fn query(
     };
 
     if statement_type == TransactionStatementType::Start {
-        if let Some(txid) = parse_txid(&content, span)? {
+        if let Some(txid) = parse_txid(&content, meta.status, span)? {
             info!(
                 "Updating state to start transaction for {} on {}",
                 &txid, endpoint
             );
-            guard.start_transaction(txid, endpoint)?;
+            guard.start_transaction(txid, endpoint.to_string())?;
         }
     }
 
-    let results = handle_query_response(
-        call.has_flag(engine_state, stack, "with-meta")?,
-        guard.active(),
-        status,
-        content,
-        span,
-    )?;
+    let results = rt.block_on(async {
+        handle_query_response(
+            call.has_flag(engine_state, stack, "with-meta")?,
+            guard.active(),
+            content,
+            Some(meta),
+            span,
+        )
+        .await
+    })?;
 
     if !results.is_empty() {
         return Ok(Value::List {
@@ -212,42 +240,27 @@ fn validate_statement(statement: &str, span: Span) -> Result<(), ShellError> {
     Ok(())
 }
 
-fn query_status_value_success(status: Option<&serde_json::value::Value>) -> bool {
-    if let Some(st) = status {
-        if let Some(s) = st.as_str() {
-            if s != "success" {
-                return false;
-            }
-        } else {
-            return false;
-        }
-    } else {
-        return false;
-    }
-
-    true
-}
-
-fn parse_txid(response: &str, span: Span) -> Result<Option<String>, ShellError> {
-    let content: HashMap<String, serde_json::Value> =
-        serde_json::from_str(response).map_err(|e| deserialize_error(e.to_string(), span))?;
-    let status = content.get("status");
-    if !query_status_value_success(status) {
+fn parse_txid(
+    response: &Vec<Vec<u8>>,
+    status: QueryStatus,
+    span: Span,
+) -> Result<Option<String>, ShellError> {
+    if status != QueryStatus::Success {
         return Ok(None);
     }
 
-    let results = content.get("results");
-    if let Some(results) = results {
-        if let Some(results) = results.as_array() {
-            if let Some(result) = results.first() {
-                if let Some(map) = result.as_object() {
-                    if let Some(txid) = map.get("txid") {
-                        if let Some(txid) = txid.as_str() {
-                            return Ok(Some(txid.to_string()));
-                        }
-                    }
-                }
-            }
+    if response.is_empty() {
+        return Ok(None);
+    }
+
+    let content = &response[0];
+
+    let content: HashMap<String, serde_json::Value> =
+        serde_json::from_slice(&content).map_err(|e| deserialize_error(e.to_string(), span))?;
+
+    if let Some(txid) = content.get("txid") {
+        if let Some(txid) = txid.as_str() {
+            return Ok(Some(txid.to_string()));
         }
     }
 

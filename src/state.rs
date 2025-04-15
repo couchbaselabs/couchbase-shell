@@ -1,4 +1,4 @@
-use crate::client::{CapellaClient, Endpoint};
+use crate::client::CapellaClient;
 
 use crate::cli::{
     embed_model_missing, generic_error, no_active_project_error, no_llm_configured,
@@ -18,7 +18,7 @@ use std::{collections::HashMap, time::Duration};
 #[derive(Debug, Clone)]
 pub struct TransactionState {
     id: String,
-    endpoint: Endpoint,
+    endpoint: String,
 }
 
 impl TransactionState {
@@ -26,7 +26,7 @@ impl TransactionState {
         self.id.clone()
     }
 
-    pub fn endpoint(&self) -> Endpoint {
+    pub fn endpoint(&self) -> String {
         self.endpoint.clone()
     }
 }
@@ -279,7 +279,7 @@ impl State {
         self.active_transaction.lock().unwrap().clone()
     }
 
-    pub fn start_transaction(&mut self, id: String, endpoint: Endpoint) -> Result<(), ShellError> {
+    pub fn start_transaction(&mut self, id: String, endpoint: String) -> Result<(), ShellError> {
         {
             let mut guard = self.active_transaction.lock().unwrap();
             *guard = Some(TransactionState { id, endpoint });

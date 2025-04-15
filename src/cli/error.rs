@@ -390,21 +390,6 @@ pub fn generic_error(
     .into()
 }
 
-pub fn query_error(
-    reason: impl Into<Option<QueryErrorReason>>,
-    status_code: impl Into<Option<i64>>,
-    message: String,
-    span: Span,
-) -> ShellError {
-    CBShellError::QueryError {
-        error_reason: reason.into().unwrap_or(QueryErrorReason::UnknownError),
-        status_code: status_code.into(),
-        message,
-        span,
-    }
-    .into()
-}
-
 pub fn analytics_error(
     reason: impl Into<Option<AnalyticsErrorReason>>,
     status_code: impl Into<Option<i64>>,

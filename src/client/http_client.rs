@@ -301,68 +301,6 @@ impl HTTPClient {
         })
     }
 
-    pub fn query_request(
-        &self,
-        request: QueryRequest,
-        deadline: Instant,
-        signals: Signals,
-    ) -> Result<HttpStreamResponse, ClientError> {
-        let rt = Arc::new(Runtime::new().unwrap());
-        rt.clone().block_on(async {
-            let config: ClusterConfig = HTTPClient::get_config(
-                &self.seeds,
-                self.tls_enabled,
-                &self.http_client,
-                None,
-                deadline,
-                signals.clone(),
-            )
-            .await?;
-
-            let seed = if let Some(e) = request.endpoint() {
-                if !config.has_query_seed(&e, self.tls_enabled) {
-                    return Err(ClientError::RequestFailed {
-                        reason: Some(format!("Endpoint {} not known", e)),
-                        key: None,
-                    });
-                }
-                e
-            } else if let Some(s) = config.random_query_seed(self.tls_enabled) {
-                s
-            } else {
-                return Err(ClientError::RequestFailed {
-                    reason: Some("No nodes found for service".to_string()),
-                    key: None,
-                });
-            };
-
-            let path = request.path();
-            let uri = format!("{}:{}{}", seed.hostname(), seed.port(), &path);
-            let (stream, status) = match request.verb() {
-                HttpVerb::Get => self.http_client.http_get(&uri, deadline, signals).await?,
-                HttpVerb::Post => {
-                    self.http_client
-                        .http_post(
-                            &uri,
-                            request.payload(),
-                            request.headers(),
-                            deadline,
-                            signals,
-                        )
-                        .await?
-                }
-                _ => {
-                    return Err(ClientError::RequestFailed {
-                        reason: Some("Method not allowed for queries".to_string()),
-                        key: None,
-                    });
-                }
-            };
-
-            Ok(HttpStreamResponse::new(stream, status, seed, rt))
-        })
-    }
-
     pub fn analytics_query_request(
         &self,
         request: AnalyticsQueryRequest,
@@ -671,128 +609,23 @@ impl ManagementRequest {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct QueryTransactionRequest {
-    tx_timeout: Option<Duration>,
-    tx_id: Option<String>,
-    endpoint: Option<Endpoint>,
+    pub tx_timeout: Option<Duration>,
+    pub tx_id: Option<String>,
+    pub endpoint: Option<String>,
 }
 
 impl QueryTransactionRequest {
     pub fn new(
         tx_timeout: impl Into<Option<Duration>>,
         tx_id: impl Into<Option<String>>,
-        endpoint: impl Into<Option<Endpoint>>,
+        endpoint: impl Into<Option<String>>,
     ) -> Self {
         Self {
             tx_timeout: tx_timeout.into(),
             tx_id: tx_id.into(),
             endpoint: endpoint.into(),
-        }
-    }
-}
-
-pub enum QueryRequest {
-    Execute {
-        statement: String,
-        parameters: Option<serde_json::Value>,
-        scope: Option<(String, String)>,
-        timeout: String,
-        transaction: Option<QueryTransactionRequest>,
-    },
-}
-
-impl QueryRequest {
-    pub fn path(&self) -> String {
-        match self {
-            Self::Execute { .. } => "/query".to_string(),
-        }
-    }
-
-    pub fn verb(&self) -> HttpVerb {
-        match self {
-            Self::Execute { .. } => HttpVerb::Post,
-        }
-    }
-
-    pub fn payload(&self) -> Option<Vec<u8>> {
-        match self {
-            Self::Execute {
-                statement,
-                scope,
-                timeout,
-                transaction,
-                parameters,
-            } => {
-                let mut json = HashMap::new();
-                if let Some(scope) = scope {
-                    let ctx = format!("`default`:`{}`.`{}`", scope.0, scope.1);
-                    json.insert("query_context".to_string(), serde_json::Value::String(ctx));
-                }
-
-                json.insert(
-                    "statement".to_string(),
-                    serde_json::Value::String(statement.to_string()),
-                );
-                json.insert(
-                    "timeout".to_string(),
-                    serde_json::Value::String(timeout.to_string()),
-                );
-                if let Some(txn) = transaction {
-                    if let Some(t) = txn.tx_timeout {
-                        json.insert(
-                            "txtimeout".to_string(),
-                            serde_json::Value::String(format!("{}ms", t.as_millis())),
-                        );
-                    }
-                    if let Some(id) = txn.tx_id.clone() {
-                        json.insert("txid".to_string(), serde_json::Value::String(id));
-                    }
-                }
-
-                if let Some(params) = parameters {
-                    match params {
-                        serde_json::Value::Array(_) => {
-                            json.insert("args".to_string(), params.clone());
-                        }
-                        serde_json::Value::Object(map) => {
-                            for (k, v) in map.iter() {
-                                let key = if k.starts_with('$') {
-                                    k.clone()
-                                } else {
-                                    format!("${}", *k)
-                                };
-                                json.insert(key, v.clone());
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-
-                Some(serde_json::to_vec(&json).unwrap())
-            }
-        }
-    }
-
-    pub fn headers(&self) -> HashMap<&str, &str> {
-        match self {
-            Self::Execute { .. } => {
-                let mut h = HashMap::new();
-                h.insert("Content-Type", "application/json");
-                h
-            }
-        }
-    }
-
-    pub fn endpoint(&self) -> Option<Endpoint> {
-        match self {
-            Self::Execute { transaction, .. } => {
-                if let Some(txn) = transaction {
-                    if let Some(endpoint) = txn.endpoint.clone() {
-                        return Some(endpoint);
-                    }
-                }
-                None
-            }
         }
     }
 }
@@ -1146,17 +979,8 @@ impl ClusterConfig {
         default
     }
 
-    pub fn has_query_seed(&self, endpoint: &Endpoint, tls: bool) -> bool {
-        let seeds = self.query_seeds(tls);
-        seeds.contains(endpoint)
-    }
-
     fn random_management_seed(&self, tls: bool) -> Option<Endpoint> {
         self.random_seed(self.management_seeds(tls))
-    }
-
-    fn random_query_seed(&self, tls: bool) -> Option<Endpoint> {
-        self.random_seed(self.query_seeds(tls))
     }
 
     pub fn random_analytics_seed(&self, tls: bool) -> Option<Endpoint> {

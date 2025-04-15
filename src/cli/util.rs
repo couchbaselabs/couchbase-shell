@@ -1,7 +1,7 @@
 use crate::cli::error::CBShellError::{MustNotBeCapella, ProjectNotFound};
 use crate::cli::error::{
     client_error_to_shell_error, cluster_not_found_error, malformed_response_error,
-    no_active_bucket_error, unexpected_status_code_error,
+    no_active_bucket_error,
 };
 use crate::cli::generic_error;
 use crate::cli::CBShellError::ClusterNotFound;
@@ -22,19 +22,6 @@ use regex::Regex;
 use std::fs;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
-
-pub fn is_http_status(
-    response_status: u16,
-    status: u16,
-    content: String,
-    span: Span,
-) -> Result<(), ShellError> {
-    if response_status != status {
-        return Err(unexpected_status_code_error(response_status, content, span));
-    }
-
-    Ok(())
-}
 
 pub fn convert_row_to_nu_value(
     v: &serde_json::Value,

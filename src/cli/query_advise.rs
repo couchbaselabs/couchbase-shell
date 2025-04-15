@@ -3,6 +3,7 @@ use crate::state::State;
 use log::debug;
 use std::sync::{Arc, Mutex};
 
+use crate::cli::client_error_to_shell_error;
 use crate::cli::query::{handle_query_response, query_context_from_args, send_query};
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
@@ -10,6 +11,7 @@ use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
 };
+use tokio::runtime::Runtime;
 
 #[derive(Clone)]
 pub struct QueryAdvise {
@@ -72,6 +74,7 @@ fn run(
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;
 
     let mut results: Vec<Value> = vec![];
+    let rt = Runtime::new()?;
     for identifier in cluster_identifiers {
         let guard = state.lock().unwrap();
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
@@ -80,25 +83,42 @@ fn run(
 
         debug!("Running n1ql advise query {}", &statement);
 
-        let response = send_query(
-            active_cluster,
-            statement.clone(),
-            None,
-            maybe_scope,
-            signals.clone(),
-            None,
-            span,
-            None,
-        )?;
+        let result = rt.block_on(async {
+            let mut response = send_query(
+                active_cluster,
+                statement.clone(),
+                None,
+                maybe_scope,
+                signals.clone(),
+                None,
+                span,
+                None,
+            )
+            .await?;
+
+            let contents = response
+                .content()
+                .await
+                .map_err(|e| client_error_to_shell_error(e, span))?;
+
+            let meta = response
+                .metadata()
+                .map_err(|e| client_error_to_shell_error(e, span))?
+                .map(|m| m.query().cloned())
+                .flatten();
+
+            handle_query_response(
+                call.has_flag(engine_state, stack, "with-meta")?,
+                identifier.clone(),
+                contents,
+                meta,
+                span,
+            )
+            .await
+        })?;
         drop(guard);
 
-        results.extend(handle_query_response(
-            call.has_flag(engine_state, stack, "with-meta")?,
-            identifier.clone(),
-            response.status(),
-            response.content()?,
-            span,
-        )?);
+        results.extend(result);
     }
 
     Ok(Value::List {

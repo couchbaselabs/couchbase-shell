@@ -1,9 +1,9 @@
+use crate::cli::deserialize_error;
 use crate::cli::error::{
-    client_error_to_shell_error, deserialize_error, no_active_bucket_error,
-    no_active_cluster_error, unexpected_status_code_error,
+    client_error_to_shell_error, no_active_bucket_error, no_active_cluster_error,
 };
-use crate::cli::util::{convert_json_value_to_nu_value, duration_to_golang_string};
-use crate::client::QueryRequest;
+use crate::cli::query::send_query;
+use crate::cli::util::convert_json_value_to_nu_value;
 use crate::state::State;
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
@@ -11,10 +11,8 @@ use nu_protocol::engine::{Command, EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
 };
-use std::collections::HashMap;
-use std::ops::Add;
 use std::sync::{Arc, Mutex};
-use tokio::time::Instant;
+use tokio::runtime::Runtime;
 
 // For now you need a covered index like
 // create index id3 on `travel-sample`(meta().id, meta().xattrs.attempts);
@@ -102,48 +100,36 @@ impl Command for TransactionsListAtrs {
             "select meta().id, meta().xattrs.attempts from `{}` where meta().id like '_txn:atr%'",
             bucket
         );
-        let response = active_cluster
-            .cluster()
-            .http_client()
-            .query_request(
-                QueryRequest::Execute {
-                    statement,
-                    parameters: None,
-                    scope: None,
-                    timeout: duration_to_golang_string(active_cluster.timeouts().query_timeout()),
-                    transaction: None,
-                },
-                Instant::now().add(active_cluster.timeouts().query_timeout()),
-                signals,
+        let rt = Runtime::new()?;
+
+        let contents = rt.block_on(async {
+            let mut response = send_query(
+                active_cluster,
+                statement.clone(),
+                None,
+                None,
+                signals.clone(),
+                None,
+                span,
+                None,
             )
-            .map_err(|e| client_error_to_shell_error(e, span))?;
+            .await?;
 
-        match response.status() {
-            200 => {}
-            _ => {
-                return Err(unexpected_status_code_error(
-                    response.status(),
-                    response.content()?,
-                    span,
-                ));
-            }
-        }
+            response
+                .content()
+                .await
+                .map_err(|e| client_error_to_shell_error(e, span))
+        })?;
 
-        let mut content: HashMap<String, serde_json::Value> =
-            serde_json::from_str(&response.content()?)
+        let mut values = vec![];
+
+        for content in contents {
+            let content = serde_json::from_slice(&content)
                 .map_err(|e| deserialize_error(e.to_string(), span))?;
-        let removed = if content.contains_key("errors") {
-            content.remove("errors").unwrap()
-        } else {
-            content.remove("results").unwrap()
-        };
+            let content = convert_json_value_to_nu_value(&content, span)?;
 
-        let values = removed
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|a| convert_json_value_to_nu_value(a, span).unwrap())
-            .collect::<Vec<_>>();
+            values.push(content);
+        }
 
         Ok(Value::List {
             vals: values,

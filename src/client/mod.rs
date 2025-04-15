@@ -1,11 +1,12 @@
 extern crate utilities;
+
 pub use crate::client::cloud::CapellaClient;
 pub use crate::client::cloud::CAPELLA_SRV_SUFFIX;
 pub use crate::client::cloud::CLOUD_URL;
 pub use crate::client::error::ClientError;
 pub use crate::client::http_client::{
-    AnalyticsQueryRequest, Endpoint, HTTPClient, ManagementRequest, QueryRequest,
-    QueryTransactionRequest, TextSearchQueryRequest, VectorSearchQueryRequest,
+    AnalyticsQueryRequest, Endpoint, HTTPClient, ManagementRequest, QueryTransactionRequest,
+    TextSearchQueryRequest, VectorSearchQueryRequest,
 };
 pub use crate::client::kv_client::{KvClient, KvResponse};
 pub use crate::client::tls::RustTlsConfig;
@@ -30,6 +31,7 @@ mod kv_client;
 mod llm_client;
 mod openai_client;
 mod protocol;
+pub mod query_metadata;
 mod tls;
 
 use crate::client::connection_client::ConnectionClient;
@@ -98,16 +100,17 @@ impl Client {
 
     pub async fn connection_client(
         &self,
-        bucket: String,
+        bucket: impl Into<Option<String>>,
         deadline: Instant,
         signals: Signals,
     ) -> Result<ConnectionClient, ClientError> {
+        let bucket = bucket.into();
         ConnectionClient::connect(
             self.seeds.clone(),
             self.username.clone(),
             self.password.clone(),
             self.tls_config.clone(),
-            bucket.clone(),
+            bucket,
             deadline,
             signals,
         )

@@ -17,6 +17,7 @@ use nu_protocol::{
 use serde::Deserialize;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
+use tokio::runtime::Runtime;
 use tokio::time::Instant;
 
 #[derive(Clone)]
@@ -91,6 +92,7 @@ fn query(
     debug!("Running n1ql query {}", &statement);
 
     let mut results: Vec<Value> = vec![];
+    let rt = Runtime::new()?;
     for identifier in cluster_identifiers {
         let guard = state.lock().unwrap();
         let active_cluster = get_active_cluster(identifier.clone(), &guard, span)?;
@@ -102,26 +104,42 @@ fn query(
             results.append(&mut defs);
             continue;
         }
+        let result = rt.block_on(async {
+            let mut response = send_query(
+                active_cluster,
+                statement.clone(),
+                None,
+                maybe_scope,
+                signals.clone(),
+                None,
+                span,
+                None,
+            )
+            .await?;
 
-        let response = send_query(
-            active_cluster,
-            statement.clone(),
-            None,
-            maybe_scope,
-            signals.clone(),
-            None,
-            span,
-            None,
-        )?;
+            let contents = response
+                .content()
+                .await
+                .map_err(|e| client_error_to_shell_error(e, span))?;
+
+            let meta = response
+                .metadata()
+                .map_err(|e| client_error_to_shell_error(e, span))?
+                .map(|m| m.query().cloned())
+                .flatten();
+
+            handle_query_response(
+                call.has_flag(engine_state, stack, "with-meta")?,
+                identifier.clone(),
+                contents,
+                meta,
+                span,
+            )
+            .await
+        })?;
         drop(guard);
 
-        results.extend(handle_query_response(
-            call.has_flag(engine_state, stack, "with-meta")?,
-            identifier.clone(),
-            response.status(),
-            response.content()?,
-            span,
-        )?);
+        results.extend(result);
     }
 
     Ok(Value::List {
