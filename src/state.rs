@@ -37,6 +37,7 @@ pub struct Llm {
     provider: Provider,
     embed_model: Option<String>,
     chat_model: Option<String>,
+    api_base: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -52,12 +53,14 @@ impl Llm {
         provider: Provider,
         embed_model: Option<String>,
         chat_model: Option<String>,
+        api_base: Option<String>,
     ) -> Self {
         Self {
             api_key,
             provider,
             embed_model,
             chat_model,
+            api_base,
         }
     }
 
@@ -75,6 +78,10 @@ impl Llm {
 
     pub fn chat_model(&self) -> Option<String> {
         self.chat_model.clone()
+    }
+
+    pub fn api_base(&self) -> Option<String> {
+        self.api_base.clone()
     }
 }
 

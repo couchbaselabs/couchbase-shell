@@ -278,6 +278,7 @@ pub struct LLMConfig {
     provider: Provider,
     embed_model: Option<String>,
     chat_model: Option<String>,
+    api_base: Option<String>,
 }
 
 impl LLMConfig {
@@ -300,6 +301,10 @@ impl LLMConfig {
     pub fn chat_model(&self) -> Option<String> {
         self.chat_model.clone()
     }
+
+    pub fn api_base(&self) -> Option<String> {
+        self.api_base.clone()
+    }
 }
 
 impl Debug for LLMConfig {
@@ -310,6 +315,7 @@ impl Debug for LLMConfig {
             .field("provider", &self.provider)
             .field("embed_model", &self.embed_model)
             .field("chat_model", &self.chat_model)
+            .field("api_base", &self.api_base)
             .finish()
     }
 }

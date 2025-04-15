@@ -52,17 +52,21 @@ impl LLMClients {
         max_tokens: impl Into<Option<usize>>,
     ) -> Result<LLMClients, ShellError> {
         let guard = state.lock().unwrap();
-        let (provider, api_key) = match guard.active_llm() {
-            Some(llm) => (llm.provider(), llm.api_key()),
+        let (provider, api_key, api_base) = match guard.active_llm() {
+            Some(llm) => (llm.provider(), llm.api_key(), llm.api_base()),
             None => {
                 return Err(no_llm_configured());
             }
         };
 
         let client = match provider {
-            Provider::OpenAI => LLMClients::OpenAI(OpenAIClient::new(api_key, max_tokens)?),
-            Provider::Gemini => LLMClients::Gemini(GeminiClient::new(api_key, max_tokens)?),
-            Provider::Bedrock => LLMClients::Bedrock(BedrockClient::new()),
+            Provider::OpenAI => {
+                LLMClients::OpenAI(OpenAIClient::new(api_key, max_tokens, api_base)?)
+            }
+            Provider::Gemini => {
+                LLMClients::Gemini(GeminiClient::new(api_key, max_tokens, api_base)?)
+            }
+            Provider::Bedrock => LLMClients::Bedrock(BedrockClient::new(api_base)?),
         };
 
         Ok(client)
