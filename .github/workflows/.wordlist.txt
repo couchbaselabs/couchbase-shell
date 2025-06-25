@@ -15,6 +15,7 @@ cbenv
 cbsh
 cbshell
 CBShell
+cidr
 CIDR
 CIDRs
 CLA
