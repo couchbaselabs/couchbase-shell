@@ -65,15 +65,31 @@ This will create a single node cluster, running the index, data query and search
 The full list of flags supported by `clusters create` is:
 
 ```
-  --name <String> - the name of the cluster
-  --provider <String> - the cloud provider
-  --version <String> - the couchbase server version
-  --capella <String> - the Capella organization to use
-  --nodes <Int> - the number of nodes in the cluster
-  --project <String> - the Capella project to use
+  --name <string>: the name of the cluster
+  --provider <string>: the cloud provider
+  --version <string>: the couchbase server version
+  --capella <string>: the Capella organization to use
+  --nodes <int>: the number of nodes in the cluster
+  --project <string>: the Capella project to use
+  --free-tier: deploy a free tier cluster
+  --description <string>: description for the cluster
+  --region <string>: cloud provider region for the cluster
+  --cidr <string>: cider block for the cluster
 ```
 
-If you want complete control over the structure of the cluster then you can pipe a JSON cluster definition into the command:
+The `--free-tier` flag can be used to create free tier clusters in the active Capella project. 
+For example: 
+
+```
+👤 Charlie 🏠 remote in ☁️ default._default._default
+> clusters create --free-tier --provider aws --region eu-west-1 --cidr 10.0.0.0/24 --description "My first Couchbase cluster"
+```
+
+Free clusters clusters are more limited in how they can be customised, and only the name, description, cloud provider and cidr can be configured using flags.
+Check the https://docs.couchbase.com/cloud/management-api-reference/index.html#tag/Free-Tier[Capella API docs] for more information.
+Currently free tier clusters do not support creation with a JSON cluster definition. 
+
+If you are using a paid cluster and want complete control over the structure of the cluster then you can pipe a JSON cluster definition into the command:
 
 ```
 👤 Charlie 🏠 remote in ☁️ default._default._default
