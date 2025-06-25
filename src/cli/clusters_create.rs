@@ -1,4 +1,4 @@
-use crate::client::cloud_json::{ClusterCreateRequest, Provider};
+use crate::client::cloud_json::{ClusterCreateRequest, FreeTierClusterCreateRequest, Provider};
 use crate::state::State;
 use log::{debug, info};
 use std::convert::TryFrom;
@@ -57,6 +57,25 @@ impl Command for ClustersCreate {
                 "the Capella project to use",
                 None,
             )
+            .switch("free-tier", "deploy a free tier cluster", None)
+            .named(
+                "description",
+                SyntaxShape::String,
+                "description for the cluster",
+                None,
+            )
+            .named(
+                "region",
+                SyntaxShape::String,
+                "cloud provider region for the cluster",
+                None,
+            )
+            .named(
+                "cidr",
+                SyntaxShape::String,
+                "cider block for the cluster",
+                None,
+            )
             .category(Category::Custom("couchbase".to_string()))
     }
 
@@ -100,6 +119,8 @@ fn clusters_create(
     let span = call.head;
     let signals = engine_state.signals().clone();
 
+    let free_tier = call.has_flag(engine_state, stack, "free-tier")?;
+
     let definition = match input.into_value(span)? {
         Value::Nothing { .. } => {
             let provider = match call.get_flag::<String>(engine_state, stack, "provider")? {
@@ -121,15 +142,73 @@ fn clusters_create(
             let nodes = call
                 .get_flag(engine_state, stack, "nodes")?
                 .unwrap_or_else(|| {
-                    info!("Number of nodes not specified, defaulting to 1");
+                    if !free_tier {
+                        // Only need to tell user we are defaulting to when node when not deploying a free tier cluster, since
+                        // free tier clusters are always one node
+                        info!("Number of nodes not specified, defaulting to 1");
+                    }
                     1
                 });
+            let description = call
+                .get_flag(engine_state, stack, "description")?
+                .unwrap_or_else(|| "A cluster created using cbshell".to_string());
+            let cidr = call
+                .get_flag(engine_state, stack, "cidr")?
+                .unwrap_or_else(|| {
+                    // The management API allows normal clusters creation requests without a cidr, however free tier clusters
+                    // do not.
+                    if free_tier {
+                        info!("cidr not specified, defaulting to `10.1.30.0/23`");
+                        Some("10.1.30.0/23".to_string())
+                    } else {
+                        None
+                    }
+                });
+            let region = call
+                .get_flag(engine_state, stack, "region")?
+                .unwrap_or_else(|| {
+                    let region: String = match provider {
+                        Provider::Aws => "us-east-2".into(),
+                        Provider::Gcp => "us-central1".into(),
+                        Provider::Azure => "eastus".into(),
+                    };
+                    info!("region not specified, defaulting to {}", region);
+                    region
+                });
+
+            if free_tier && nodes != 1 {
+                return Err(generic_error(
+                    "free tier clusters can only have one node",
+                    "Omit the --free-tier flag to deploy multinode clusters".to_string(),
+                    None,
+                ));
+            }
 
             let version = call.get_flag(engine_state, stack, "version")?;
-            ClusterCreateRequest::new(name, provider, version, nodes)
+            if free_tier && version.is_some() {
+                return Err(generic_error(
+                    "server version cannot be configured on free-tier clusters",
+                    "Omit the --free-tier flag to deploy a cluster with specific server version"
+                        .to_string(),
+                    None,
+                ));
+            }
+
+            ClusterCreateRequest::new(name, description, cidr, region, provider, version, nodes)
         }
-        Value::String { val, .. } => serde_json::from_str(val.as_str())
-            .map_err(|_| could_not_parse_cluster_definition_error())?,
+        Value::String { val, .. } => {
+            if free_tier {
+                return Err(generic_error(
+                    "cluster definitions are not supported for free tier clusters",
+                    "Use the --name, --description, --provider, --region and --cidr flags to configure free-tier clusters"
+                        .to_string(),
+                    None,
+                ));
+            }
+
+            serde_json::from_str(val.as_str())
+                .map_err(|_| could_not_parse_cluster_definition_error())?
+        }
         _ => {
             return Err(could_not_parse_cluster_definition_error());
         }
@@ -149,11 +228,20 @@ fn clusters_create(
     let org_id = find_org_id(signals.clone(), &client, span)?;
     let project_id = find_project_id(signals.clone(), project, &client, span, org_id.clone())?;
 
-    let payload =
-        serde_json::to_string(&definition).map_err(|e| serialize_error(e.to_string(), span))?;
-    client
-        .create_cluster(org_id, project_id, payload, signals)
-        .map_err(|e| client_error_to_shell_error(e, span))?;
+    if free_tier {
+        let free_tier_def = FreeTierClusterCreateRequest::from(definition);
+        let payload = serde_json::to_string(&free_tier_def)
+            .map_err(|e| serialize_error(e.to_string(), span))?;
+        client
+            .create_free_tier_cluster(org_id, project_id, payload, signals)
+            .map_err(|e| client_error_to_shell_error(e, span))?;
+    } else {
+        let payload =
+            serde_json::to_string(&definition).map_err(|e| serialize_error(e.to_string(), span))?;
+        client
+            .create_cluster(org_id, project_id, payload, signals)
+            .map_err(|e| client_error_to_shell_error(e, span))?;
+    }
 
     Ok(PipelineData::empty())
 }

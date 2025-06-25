@@ -120,22 +120,22 @@ pub(crate) struct CloudProvider {
 }
 
 impl CloudProvider {
-    pub fn new(provider: &Provider) -> Self {
+    pub fn new(provider: &Provider, region: String, cidr: Option<String>) -> Self {
         match provider {
             Provider::Aws => Self {
                 provider: "aws".into(),
-                region: "us-east-1".into(),
-                cidr: None,
+                region,
+                cidr,
             },
             Provider::Azure => Self {
                 provider: "azure".into(),
-                region: "eastus".into(),
-                cidr: None,
+                region,
+                cidr,
             },
             Provider::Gcp => Self {
                 provider: "gcp".into(),
-                region: "us-east1".into(),
-                cidr: None,
+                region,
+                cidr,
             },
         }
     }
@@ -190,8 +190,7 @@ pub(crate) struct AuditData {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ClusterCreateRequest {
     name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    description: Option<String>,
+    description: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     configuration_type: Option<String>,
     cloud_provider: CloudProvider,
@@ -209,15 +208,18 @@ pub(crate) struct ClusterCreateRequest {
 impl ClusterCreateRequest {
     pub fn new(
         name: String,
+        description: String,
+        cidr: Option<String>,
+        region: String,
         provider: Provider,
         version: Option<String>,
         num_of_nodes: i32,
     ) -> Self {
         Self {
             name,
-            description: Some("A cluster created using cbshell".to_string()),
+            description,
             configuration_type: None,
-            cloud_provider: CloudProvider::new(&provider),
+            cloud_provider: CloudProvider::new(&provider, region, cidr),
             couchbase_server: version.map(CouchbaseServer::new),
             service_groups: vec![{
                 ServiceGroup {
@@ -363,6 +365,24 @@ impl Cluster {
     }
     pub fn cmek_id(&self) -> Option<String> {
         self.cmek_id.clone()
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct FreeTierClusterCreateRequest {
+    name: String,
+    description: String,
+    cloud_provider: CloudProvider,
+}
+
+impl From<ClusterCreateRequest> for FreeTierClusterCreateRequest {
+    fn from(cluster_request: ClusterCreateRequest) -> Self {
+        FreeTierClusterCreateRequest {
+            name: cluster_request.name,
+            description: cluster_request.description,
+            cloud_provider: cluster_request.cloud_provider,
+        }
     }
 }
 
