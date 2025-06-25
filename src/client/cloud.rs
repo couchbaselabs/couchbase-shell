@@ -325,6 +325,23 @@ impl CapellaClient {
         handle_cluster_management_response(response)
     }
 
+    pub fn create_free_tier_cluster(
+        &self,
+        org_id: String,
+        project_id: String,
+        payload: String,
+        signals: Signals,
+    ) -> Result<(), ClientError> {
+        let request = CapellaRequest::FreeTierClusterCreate {
+            org_id,
+            project_id,
+            payload,
+        };
+        let response = self.capella_request(request, signals)?;
+
+        handle_cluster_management_response(response)
+    }
+
     pub fn create_columnar_cluster(
         &self,
         org_id: String,
@@ -804,6 +821,11 @@ pub enum CapellaRequest {
         org_id: String,
         project_id: String,
     },
+    FreeTierClusterCreate {
+        org_id: String,
+        project_id: String,
+        payload: String,
+    },
     ColumnarClusterCreate {
         org_id: String,
         project_id: String,
@@ -971,6 +993,14 @@ impl CapellaRequest {
             Self::ClusterList { org_id, project_id } => {
                 format!(
                     "/v4/organizations/{}/projects/{}/clusters",
+                    org_id, project_id
+                )
+            }
+            Self::FreeTierClusterCreate {
+                org_id, project_id, ..
+            } => {
+                format!(
+                    "/v4/organizations/{}/projects/{}/clusters/freeTier",
                     org_id, project_id
                 )
             }
@@ -1182,6 +1212,7 @@ impl CapellaRequest {
             Self::ClusterDelete { .. } => HttpVerb::Delete,
             Self::ClusterGet { .. } => HttpVerb::Get,
             Self::ClusterList { .. } => HttpVerb::Get,
+            Self::FreeTierClusterCreate { .. } => HttpVerb::Post,
             Self::ColumnarClusterCreate { .. } => HttpVerb::Post,
             Self::ColumnarClusterDelete { .. } => HttpVerb::Delete,
             Self::ColumnarClusterList { .. } => HttpVerb::Get,
@@ -1208,6 +1239,7 @@ impl CapellaRequest {
         match self {
             Self::ProjectCreate { payload, .. } => Some(payload.as_bytes().into()),
             Self::ClusterCreate { payload, .. } => Some(payload.as_bytes().into()),
+            Self::FreeTierClusterCreate { payload, .. } => Some(payload.as_bytes().into()),
             Self::ColumnarClusterCreate { payload, .. } => Some(payload.as_bytes().into()),
             Self::BucketCreate { payload, .. } => Some(payload.as_bytes().into()),
             Self::BucketLoadSample { payload, .. } => Some(payload.as_bytes().into()),
