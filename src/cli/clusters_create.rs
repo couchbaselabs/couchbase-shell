@@ -196,19 +196,8 @@ fn clusters_create(
 
             ClusterCreateRequest::new(name, description, cidr, region, provider, version, nodes)
         }
-        Value::String { val, .. } => {
-            if free_tier {
-                return Err(generic_error(
-                    "cluster definitions are not supported for free tier clusters",
-                    "Use the --name, --description, --provider, --region and --cidr flags to configure free-tier clusters"
-                        .to_string(),
-                    None,
-                ));
-            }
-
-            serde_json::from_str(val.as_str())
-                .map_err(|_| could_not_parse_cluster_definition_error())?
-        }
+        Value::String { val, .. } => serde_json::from_str(val.as_str())
+            .map_err(|_| could_not_parse_cluster_definition_error())?,
         _ => {
             return Err(could_not_parse_cluster_definition_error());
         }

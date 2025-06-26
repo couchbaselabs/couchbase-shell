@@ -77,18 +77,6 @@ The full list of flags supported by `clusters create` is:
   --cidr <string>: cider block for the cluster
 ```
 
-The `--free-tier` flag can be used to create free tier clusters in the active Capella project. 
-For example: 
-
-```
-👤 Charlie 🏠 remote in ☁️ default._default._default
-> clusters create --free-tier --provider aws --region eu-west-1 --cidr 10.0.0.0/24 --description "My first Couchbase cluster"
-```
-
-Free clusters clusters are more limited in how they can be customised, and only the name, description, cloud provider and cidr can be configured using flags.
-Check the https://docs.couchbase.com/cloud/management-api-reference/index.html#tag/Free-Tier[Capella API docs] for more information.
-Currently free tier clusters do not support creation with a JSON cluster definition. 
-
 If you are using a paid cluster and want complete control over the structure of the cluster then you can pipe a JSON cluster definition into the command:
 
 ```
@@ -99,7 +87,8 @@ If you are using a paid cluster and want complete control over the structure of 
   "description": "A gcp cluster created using cbshell",
   "cloudProvider": {
     "type": "gcp",
-    "region": "us-east1"
+    "region": "us-central1",
+    "cidr": "10.0.23.0/24"
   },
   "serviceGroups": [
     {
@@ -139,13 +128,76 @@ If you are using a paid cluster and want complete control over the structure of 
 ├───┼─────────────┼──────────────────────────────────────┼───────────┼───────────────────────────┤
 │ 0 │ GCP-CBShell │ c60b070f-6656-4e25-9b22-0cee497bea6a │ deploying │ ╭────────┬──────────────╮ │
 │   │             │                                      │           │ │ type   │ gcp          │ │
-│   │             │                                      │           │ │ region │ us-east1     │ │
+│   │             │                                      │           │ │ region │ us-central1  │ │
 │   │             │                                      │           │ │ cidr   │ 10.0.23.0/24 │ │
 │   │             │                                      │           │ ╰────────┴──────────────╯ │
 ╰───┴─────────────┴──────────────────────────────────────┴───────────┴───────────────────────────╯
 ```
 
 See the https://docs.couchbase.com/cloud/management-api-reference/index.html#tag/Clusters/operation/postCluster[Capella API docs] for more examples of cluster definitions with different providers.
+
+The `--free-tier` flag can be used to create free tier clusters in the active Capella project. 
+For example: 
+
+```
+👤 Charlie 🏠 remote in ☁️ default._default._default
+> clusters create --free-tier --provider aws --region eu-west-1 --cidr 10.0.0.0/24 --description "My first Couchbase cluster"
+```
+
+Free clusters clusters are more limited in how they can be customised, and only the name, description, cloud provider and cidr can be configured.
+Check the https://docs.couchbase.com/cloud/management-api-reference/index.html#tag/Free-Tier[Capella API docs] for more information.
+Free tier clusters can be created by piping a cluster definition into `clusters create` as follows: 
+
+```
+👤 Charlie 🏠 remote in ☁️ default._default._default
+> cat gcp-cluster-def.json | clusters create --free-tier
+```
+
+However fields other than the name, description, cloud provider, and cidr will be ignored.
+
+```
+👤 Charlie 🏠 remote in ☁️ default._default._default
+> clusters get GCP-CBShell
+╭────────────────────┬──────────────────────────────────────────────────────────────────────────╮
+│ name               │ GCP-CBShell                                                              │
+│ id                 │ 9ec29286-ceeb-40f0-b226-324fe6716ab7                                     │
+│ description        │ A gcp cluster created using cbshell                                      │
+│ state              │ deploying                                                                │
+│ connection string  │ cb.zssny9sxlno3atpb.aws-guardians.nonprod-project-avengers.com           │
+│ configuration type │ singleNode                                                               │
+│                    │ ╭─────────┬───────╮                                                      │
+│ server             │ │ version │ 7.6.6 │                                                      │
+│                    │ ╰─────────┴───────╯                                                      │
+│                    │ ╭────────┬─────────────╮                                                 │
+│ cloud provider     │ │ type   │ gcp         │                                                 │
+│                    │ │ region │ us-central1 │                                                 │
+│                    │ │ cidr   │ 10.0.23.0/24│                                                 │
+│                    │ ╰────────┴─────────────╯                                                 │
+│                    │ ╭───┬────────────────────────────────────┬────────────┬────────────────╮ │
+│ service groups     │ │ # │                node                │ numOfNodes │    services    │ │
+│                    │ ├───┼────────────────────────────────────┼────────────┼────────────────┤ │
+│                    │ │ 0 │ ╭─────────┬──────────────────────╮ │          1 │ ╭───┬────────╮ │ │
+│                    │ │   │ │         │ ╭─────┬───╮          │ │            │ │ 0 │ search │ │ │
+│                    │ │   │ │ compute │ │ cpu │ 2 │          │ │            │ │ 1 │ index  │ │ │
+│                    │ │   │ │         │ │ ram │ 8 │          │ │            │ │ 2 │ data   │ │ │
+│                    │ │   │ │         │ ╰─────┴───╯          │ │            │ │ 3 │ query  │ │ │
+│                    │ │   │ │         │ ╭─────────┬────────╮ │ │            │ ╰───┴────────╯ │ │
+│                    │ │   │ │ disk    │ │ type    │ pd-ssd │ │ │            │                │ │
+│                    │ │   │ │         │ │ storage │ 10     │ │ │            │                │ │
+│                    │ │   │ │         │ ╰─────────┴────────╯ │ │            │                │ │
+│                    │ │   │ ╰─────────┴──────────────────────╯ │            │                │ │
+│                    │ ╰───┴────────────────────────────────────┴────────────┴────────────────╯ │
+│                    │ ╭──────┬────────╮                                                        │
+│ availability       │ │ type │ single │                                                        │
+│                    │ ╰──────┴────────╯                                                        │
+│                    │ ╭──────────┬──────╮                                                      │
+│ support            │ │ plan     │ free │                                                      │
+│                    │ │ timezone │ PT   │                                                      │
+│                    │ ╰──────────┴──────╯                                                      │
+╰────────────────────┴──────────────────────────────────────────────────────────────────────────╯
+```
+
+As you can see the `support`, `availability` and `service groups` settings from the cluster definition have been ignored.
 
 ==== `clusters drop`
 
