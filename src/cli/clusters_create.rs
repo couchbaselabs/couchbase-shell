@@ -57,7 +57,6 @@ impl Command for ClustersCreate {
                 "the Capella project to use",
                 None,
             )
-            .switch("free-tier", "deploy a free tier cluster", None)
             .named(
                 "description",
                 SyntaxShape::String,
@@ -118,37 +117,24 @@ fn clusters_create(
 ) -> Result<PipelineData, ShellError> {
     let span = call.head;
     let signals = engine_state.signals().clone();
-
-    let free_tier = call.has_flag(engine_state, stack, "free-tier")?;
+    let mut free_tier = false;
 
     let definition = match input.into_value(span)? {
         Value::Nothing { .. } => {
             let provider = match call.get_flag::<String>(engine_state, stack, "provider")? {
                 Some(p) => Provider::try_from(p.as_str())?,
                 None => {
-                    return Err(generic_error(
-                        "no provider specified",
-                        "Please specify a cloud provider using the '--provider' flag".to_string(),
-                        None,
-                    ));
+                    info!("provider not specified, defaulting to aws");
+                    Provider::Aws
                 }
             };
             let name = call
                 .get_flag(engine_state, stack, "name")?
                 .unwrap_or_else(|| {
-                    info!("Cluster name not specified, a randomly generated name will be used");
+                    info!("cluster name not specified, a randomly generated name will be used");
                     random_cluster_name()
                 });
-            let nodes = call
-                .get_flag(engine_state, stack, "nodes")?
-                .unwrap_or_else(|| {
-                    if !free_tier {
-                        // Only need to tell user we are defaulting to when node when not deploying a free tier cluster, since
-                        // free tier clusters are always one node
-                        info!("Number of nodes not specified, defaulting to 1");
-                    }
-                    1
-                });
+            let nodes = call.get_flag::<i32>(engine_state, stack, "nodes")?;
             let description = call
                 .get_flag(engine_state, stack, "description")?
                 .unwrap_or_else(|| "A cluster created using cbshell".to_string());
@@ -176,28 +162,26 @@ fn clusters_create(
                     region
                 });
 
-            if free_tier && nodes != 1 {
-                return Err(generic_error(
-                    "free tier clusters can only have one node",
-                    "Omit the --free-tier flag to deploy multinode clusters".to_string(),
-                    None,
-                ));
-            }
-
             let version = call.get_flag(engine_state, stack, "version")?;
-            if free_tier && version.is_some() {
-                return Err(generic_error(
-                    "server version cannot be configured on free-tier clusters",
-                    "Omit the --free-tier flag to deploy a cluster with specific server version"
-                        .to_string(),
-                    None,
-                ));
+
+            if nodes.is_none() && version.is_none() {
+                // Only name, description, region and cidr can be configured for free tier clusters. If any flags other than these
+                // have been set, then we aren't deploying a free tier cluster
+                free_tier = true;
             }
 
-            ClusterCreateRequest::new(name, description, cidr, region, provider, version, nodes)
+            ClusterCreateRequest::new(
+                name,
+                description,
+                cidr,
+                region,
+                provider,
+                version,
+                nodes.unwrap_or(1),
+            )
         }
         Value::String { val, .. } => serde_json::from_str(val.as_str())
-            .map_err(|_| could_not_parse_cluster_definition_error())?,
+            .map_err(|err| could_not_parse_cluster_definition_error())?,
         _ => {
             return Err(could_not_parse_cluster_definition_error());
         }
