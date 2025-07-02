@@ -381,7 +381,18 @@ impl From<ClusterCreateRequest> for FreeTierClusterCreateRequest {
         FreeTierClusterCreateRequest {
             name: cluster_request.name,
             description: cluster_request.description,
-            cloud_provider: cluster_request.cloud_provider,
+            cloud_provider: CloudProvider {
+                provider: cluster_request.cloud_provider.provider,
+                region: cluster_request.cloud_provider.region,
+                // Normal clusters can be created with a blank cidr and the control plane will provide a sensible default. Free
+                // tier cluster will not so we need to supply a default.
+                cidr: Some(
+                    cluster_request
+                        .cloud_provider
+                        .cidr
+                        .unwrap_or("10.1.30.0/23".to_string()),
+                ),
+            },
         }
     }
 }
