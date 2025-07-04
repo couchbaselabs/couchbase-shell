@@ -181,9 +181,9 @@ fn clusters_create(
             )
         }
         Value::String { val, .. } => serde_json::from_str(val.as_str())
-            .map_err(|err| could_not_parse_cluster_definition_error())?,
+            .map_err(|err| could_not_parse_cluster_definition_error(err.to_string()))?,
         _ => {
-            return Err(could_not_parse_cluster_definition_error());
+            return Err(could_not_parse_cluster_definition_error("".to_string()));
         }
     };
 
@@ -225,9 +225,10 @@ fn random_cluster_name() -> String {
     format!("cbshell-cluster-{}", uuid)
 }
 
-fn could_not_parse_cluster_definition_error() -> ShellError {
+fn could_not_parse_cluster_definition_error(inner: String) -> ShellError {
+    let msg = format!("Could not parse cluster definintion: {}", inner);
     generic_error(
-        "Could not parse cluster definition",
+        msg,
         "Piped cluster definition must be a string in th format defined by the Capella v4 API. Run 'clusters create --help' for an example".to_string(),
         None
     )
