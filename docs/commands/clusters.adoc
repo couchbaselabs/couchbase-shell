@@ -48,9 +48,11 @@ If used with no definition or flag values provided a free tier cluster with sens
 ```
 👤 Charlie 🏠 remote in ☁️ default._default._default
 > clusters create
-[INFO] 2025-07-04 11:35:41.392 provider not specified, defaulting to aws
-[INFO] 2025-07-04 11:35:41.392 cluster name not specified, a randomly generated name will be used
-[INFO] 2025-07-04 11:35:41.392 region not specified, defaulting to us-east-2
+[INFO] 2025-07-07 09:11:21.628 provider not specified, defaulting to aws
+[INFO] 2025-07-07 09:11:21.628 cluster name not specified, a randomly generated name will be used
+[INFO] 2025-07-07 09:11:21.628 region not specified, defaulting to us-east-2
+[WARN] 2025-07-07 09:11:21.628 this configuration will create a FREE cluster, is this okay? (y/n)
+y
 👤 Charlie 🏠 remote in ☁️ default._default._default
 > clusters
 ╭───┬────────────────────────┬──────────────────────────────────────┬───────────┬───────────────────────────╮
@@ -64,16 +66,26 @@ If used with no definition or flag values provided a free tier cluster with sens
 ╰───┴────────────────────────┴──────────────────────────────────────┴───────────┴───────────────────────────╯
 ```
 
-Free clusters clusters are limited in how they can be customised, and only the name, description, cloud provider, region and cidr can be configured.
+Before your cluster is created cbshell will tell you if the configuration will result in a free-tier or paid cluster, and as for confirmation: 
+
+```
+[WARN] 2025-07-07 09:11:21.628 this configuration will create a FREE cluster, is this okay? (y/n)
+y
+```
+
+Free clusters are limited in how they can be customised, and only the name, description, cloud provider, region and cidr can be configured.
 Check the https://docs.couchbase.com/cloud/management-api-reference/index.html#tag/Free-Tier[Capella API docs] for more information.
 You can configure all of these fields with the relevant flags: 
 
 ```
 👤 Charlie 🏠 remote in ☁️ default._default._default
 > clusters create --name free-gcp --description "My first couchbase cluster" --cidr 10.0.0.0/24 --provider gcp --region us-central1
+[WARN] 2025-07-07 09:13:32.545 this configuration will create a FREE cluster, is this okay? (y/n)
+y
 ``` 
 
-Getting the cluster details shows that this has still deployed a free tier cluster: 
+We can see from the warning that we will still deploy a free tier cluster.
+This can be double checked by getting the full details of the cluster being deployed: 
 
 ```
 > clusters get free-gcp
@@ -121,6 +133,7 @@ For example the following will create a paid cluster because the number of nodes
 
 ```
 > clusters create --name paid-azure --description "My first couchbase cluster" --cidr 10.0.2.0/24 --provider azure --region eastus --nodes 3
+[WARN] 2025-07-07 09:15:36.022 this configuration will create a PAID cluster, is this okay? (y/n)
 👤 Charlie 🏠 remote in ☁️ default._default._default
 > clusters get paid-azure
 ╭────────────────────┬───────────────────────────────────────────────────────────────────────────────╮
@@ -164,8 +177,17 @@ For example the following will create a paid cluster because the number of nodes
 ╰────────────────────┴───────────────────────────────────────────────────────────────────────────────╯
 ```
 
-The created cluster can be configured using flags:
+If you need to skip this confirmation step then the `--confirm` or `-c` flag for short can be used: 
+
 ```
+👤 Charlie 🏠 remote in ☁️ default._default._default
+> clusters create --name paid-azure --description "My first couchbase cluster" --cidr 10.0.2.0/24 --provider azure --region eastus --nodes 3 -y
+👤 Charlie 🏠 remote in ☁️ default._default._default
+```
+
+The full set of flags for `clusters create` is:
+```
+  -h, --help: Display the help message for this command
   --name <string>: the name of the cluster
   --provider <string>: the cloud provider
   --version <string>: the couchbase server version
@@ -175,6 +197,7 @@ The created cluster can be configured using flags:
   --description <string>: description for the cluster
   --region <string>: cloud provider region for the cluster
   --cidr <string>: cider block for the cluster
+  -y, --yes: answer yes to confirmation prompt
 ```
 
 If you want complete control over the structure of the cluster then you can pipe a JSON cluster definition into the command:
