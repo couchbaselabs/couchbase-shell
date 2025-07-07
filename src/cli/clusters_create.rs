@@ -1,12 +1,13 @@
 use crate::client::cloud_json::{ClusterCreateRequest, FreeTierClusterCreateRequest, Provider};
 use crate::state::State;
-use log::{debug, info};
+use log::{debug, info, warn};
 use std::convert::TryFrom;
 use std::sync::{Arc, Mutex};
 
 use crate::cli::error::{client_error_to_shell_error, serialize_error};
 use crate::cli::generic_error;
 use crate::cli::util::{find_org_id, find_project_id};
+use crate::read_input;
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
 use nu_protocol::engine::{Command, EngineState, Stack};
@@ -75,6 +76,7 @@ impl Command for ClustersCreate {
                 "cider block for the cluster",
                 None,
             )
+            .switch("yes", "answer yes to confirmation prompt", Some('y'))
             .category(Category::Custom("couchbase".to_string()))
     }
 
@@ -187,10 +189,23 @@ fn clusters_create(
         }
     };
 
-    let capella = call.get_flag(engine_state, stack, "capella")?;
+    if !call.has_flag(engine_state, stack, "yes")? {
+        if free_tier {
+            warn!("this configuration will create a FREE cluster, is this okay? (y/n)")
+        } else {
+            warn!("this configuration will create a PAID cluster, is this okay? (y/n)")
+        }
+
+        let confirmation = read_input().unwrap_or("y".to_string());
+        if confirmation.chars().nth(0).unwrap() != 'y' {
+            info!("cluster creation canceled");
+            return Ok(PipelineData::empty());
+        }
+    }
 
     debug!("Running clusters create for {:?}", definition);
 
+    let capella: Option<String> = call.get_flag(engine_state, stack, "capella")?;
     let guard = state.lock().unwrap();
     let control = guard.named_or_active_org(capella)?;
     let client = control.client();

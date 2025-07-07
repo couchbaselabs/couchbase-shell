@@ -487,7 +487,7 @@ fn maybe_write_config_file(opt: CliOptions, password: Option<String>) -> PathBuf
     path
 }
 
-fn read_input() -> Option<String> {
+pub fn read_input() -> Option<String> {
     let mut answer = String::new();
     std::io::stdin()
         .read_line(&mut answer)
