@@ -1,37 +1,30 @@
 #![recursion_limit = "256"]
 
 extern crate core;
-
-mod cli;
-mod cli_options;
-mod client;
-mod config;
-mod config_files;
 mod default_context;
-mod remote_cluster;
-mod state;
 #[cfg(unix)]
 mod terminal;
-mod tutorial;
+pub mod cli_options;
 
-use crate::cli::*;
-use crate::cli_options::{parse_commandline_args, parse_shell_args, CliOptions};
-use crate::config::{
+use utilities::read_input;
+
+use nu_couchbase::cli::*;
+use nu_couchbase::config::{
     ClusterConfigBuilder, ClusterCredentials, ShellConfig, DEFAULT_ANALYTICS_TIMEOUT,
     DEFAULT_DATA_TIMEOUT, DEFAULT_KV_BATCH_SIZE, DEFAULT_MANAGEMENT_TIMEOUT, DEFAULT_QUERY_TIMEOUT,
     DEFAULT_SEARCH_TIMEOUT, DEFAULT_TRANSACTION_TIMEOUT,
 };
-use crate::config_files::read_nu_config_file;
+use nu_couchbase::config_files::read_nu_config_file;
 use crate::default_context::create_default_context;
-use crate::remote_cluster::{
+use nu_couchbase::remote_cluster::{
     ClusterTimeouts, RemoteCluster, RemoteClusterResources, RemoteClusterType,
 };
-use crate::state::Llm;
-use crate::state::RemoteCapellaOrganization;
-use state::State;
+use nu_couchbase::state::Llm;
+use nu_couchbase::state::RemoteCapellaOrganization;
+use nu_couchbase::state::State;
 
 use chrono::Local;
-use config::ClusterTlsConfig;
+use nu_couchbase::config::ClusterTlsConfig;
 use env_logger::Env;
 use log::{debug, warn};
 use log::{error, info};
@@ -44,7 +37,7 @@ use nu_protocol::{
     PipelineData, PluginIdentity, RegisteredPlugin, Signals, Span, Value,
 };
 
-use crate::client::{RustTlsConfig, CLOUD_URL};
+use nu_couchbase::client::{RustTlsConfig, CLOUD_URL};
 use nu_path::canonicalize_with;
 use nu_plugin_engine::{GetPlugin, PluginDeclaration};
 use std::collections::HashMap;
@@ -56,6 +49,7 @@ use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use crate::cli_options::{parse_commandline_args, parse_shell_args, CliOptions};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let entire_start_time = std::time::Instant::now();
@@ -259,46 +253,6 @@ struct Motd {
     msg: String,
 }
 
-fn validate_hostnames(hostnames: Vec<String>) -> (RemoteClusterType, Vec<String>) {
-    let mut validated = vec![];
-    for hostname in &hostnames {
-        let host = if let Some(stripped_couchbase) = hostname.strip_prefix("couchbase://") {
-            if let Some(stripped_port) = stripped_couchbase.strip_suffix(":11210") {
-                stripped_port.to_string()
-            } else if stripped_couchbase.contains(':') {
-                error!("Couchbase scheme and non-default port detected, http scheme must be used with custom port (management port)");
-                std::process::exit(1);
-            } else {
-                stripped_couchbase.to_string()
-            }
-        } else if let Some(stripped_couchbase) = hostname.strip_prefix("couchbases://") {
-            if let Some(stripped_port) = stripped_couchbase.strip_suffix(":11211") {
-                stripped_port.to_string()
-            } else if stripped_couchbase.contains(':') {
-                error!("Couchbases scheme and non-default port detected, http scheme must be used with custom port (management port)");
-                std::process::exit(1);
-            } else {
-                stripped_couchbase.to_string()
-            }
-        } else if hostname.strip_suffix(":11210").is_some()
-            || hostname.strip_suffix(":11211").is_some()
-        {
-            error!("Memcached port detected, http scheme must be used with custom port (management port)");
-            std::process::exit(1);
-        } else if let Some(stripped_http) = hostname.strip_prefix("http://") {
-            stripped_http.to_string()
-        } else if let Some(stripped_http) = hostname.strip_prefix("https://") {
-            stripped_http.to_string()
-        } else {
-            hostname.to_string()
-        };
-
-        validated.push(host);
-    }
-
-    (RemoteClusterType::from(hostnames), validated)
-}
-
 fn create_logger_builder(logger_prefix: Option<String>) {
     let mut logger_builder = env_logger::Builder::from_env(
         Env::default().filter_or("CBSH_LOG", "info,isahc=error,surf=error,nu=error"),
@@ -362,7 +316,7 @@ fn remote_cluster_from_opts(opt: CliOptions, password: Option<String>) -> Remote
         Some(RustTlsConfig::new(opt.tls_accept_all_certs, opt.tls_cert_path).unwrap())
     };
     let (cluster_type, hostnames) =
-        validate_hostnames(conn_string.split(',').map(|v| v.to_owned()).collect());
+        RemoteCluster::validate_hostnames(conn_string.split(',').map(|v| v.to_owned()).collect());
     RemoteCluster::new(
         RemoteClusterResources {
             hostnames,
@@ -405,7 +359,7 @@ fn maybe_write_config_file(opt: CliOptions, password: Option<String>) -> PathBuf
             .expect("Failed to read user input");
         answer.trim().to_string()
     };
-    validate_hostnames(
+    RemoteCluster::validate_hostnames(
         conn_string
             .clone()
             .split(',')
@@ -485,20 +439,6 @@ fn maybe_write_config_file(opt: CliOptions, password: Option<String>) -> PathBuf
     .expect("Failed to write config file");
 
     path
-}
-
-pub fn read_input() -> Option<String> {
-    let mut answer = String::new();
-    std::io::stdin()
-        .read_line(&mut answer)
-        .expect("Failed to read user input");
-
-    answer = answer.trim().to_string();
-    if answer.is_empty() {
-        None
-    } else {
-        Some(answer)
-    }
 }
 
 fn load_config(
@@ -629,7 +569,7 @@ fn make_state(
                 None => DEFAULT_KV_BATCH_SIZE,
             };
 
-            let (cluster_type, hostnames) = validate_hostnames(
+            let (cluster_type, hostnames) = RemoteCluster::validate_hostnames(
                 v.conn_string()
                     .split(',')
                     .map(|s| s.to_string())

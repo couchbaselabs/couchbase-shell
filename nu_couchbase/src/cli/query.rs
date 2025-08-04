@@ -18,7 +18,7 @@ use crate::cli::error::{
 };
 use crate::cli::generic_error;
 use crate::client::http_handler::HttpStreamResponse;
-use crate::RemoteCluster;
+use crate::remote_cluster::RemoteCluster;
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
 use nu_protocol::engine::{Command, EngineState, Stack};

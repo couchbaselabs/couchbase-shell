@@ -1,6 +1,5 @@
 use crate::client::capella_ca::CAPELLA_CERT;
 use crate::client::ClientError;
-use crate::ClusterTlsConfig;
 use log::{debug, error};
 use rustls_pemfile::{read_all, Item};
 use std::convert::TryFrom;
@@ -9,6 +8,7 @@ use std::io::BufReader;
 use std::sync::Arc;
 use tokio_rustls::rustls::crypto::{aws_lc_rs::default_provider, CryptoProvider};
 use tokio_rustls::rustls::{ClientConfig, RootCertStore};
+use crate::config::ClusterTlsConfig;
 
 #[derive(Clone)]
 pub struct RustTlsConfig {

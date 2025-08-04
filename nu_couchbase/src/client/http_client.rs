@@ -1,7 +1,7 @@
 use crate::client::error::{ClientError, ConfigurationLoadFailedReason};
 use crate::client::http_handler::{read_stream, HTTPHandler, HttpStreamResponse, HttpVerb};
 use crate::client::kv_client::NodeExtConfig;
-use crate::RustTlsConfig;
+use crate::client::RustTlsConfig;
 use log::{debug, trace};
 use nu_protocol::Signals;
 use rand::Rng;

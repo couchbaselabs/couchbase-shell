@@ -1,0 +1,20 @@
+[package]
+name = "nu_plugin_couchbase"
+version = "1.1.0"
+authors = ["Laurent Doguin <laurent.doguin@couchbase.com>"]
+edition = "2018"
+keywords = ["couchbase", "nushell", "nu", "plugin"]
+
+[dependencies]
+nu-couchbase =  { path = "../nu_couchbase" }
+anyhow = "1"
+nu-plugin = "0.101.0"
+nu-utils = "0.104.0"
+nu-protocol = { version = "0.104.0", features = ["plugin"] }
+tokio = { version = "1", features = ["rt-multi-thread", "signal"] }
+tokio-stream = "0.1.17"
+futures = "0.3.31"
+tokio-util = "0.7.14"
+log = "0.4.27"
+simple_logger = "5.0.0"
+env_logger = "0.11.7"

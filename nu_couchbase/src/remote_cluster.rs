@@ -1,12 +1,13 @@
 use crate::client::{Client, RustTlsConfig, CAPELLA_SRV_SUFFIX};
 use crate::remote_cluster::RemoteClusterType::Provisioned;
-use crate::{
+use crate::config::{
     DEFAULT_ANALYTICS_TIMEOUT, DEFAULT_DATA_TIMEOUT, DEFAULT_MANAGEMENT_TIMEOUT,
     DEFAULT_QUERY_TIMEOUT, DEFAULT_SEARCH_TIMEOUT, DEFAULT_TRANSACTION_TIMEOUT,
 };
 use serde_derive::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use log::error;
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, Eq, PartialEq)]
 pub enum RemoteClusterType {
@@ -197,6 +198,46 @@ impl RemoteCluster {
     pub fn display_name(&self) -> Option<String> {
         self.display_name.clone()
     }
+    
+    pub fn validate_hostnames(hostnames: Vec<String>) -> (RemoteClusterType, Vec<String>) {
+        let mut validated = vec![];
+        for hostname in &hostnames {
+            let host = if let Some(stripped_couchbase) = hostname.strip_prefix("couchbase://") {
+                if let Some(stripped_port) = stripped_couchbase.strip_suffix(":11210") {
+                    stripped_port.to_string()
+                } else if stripped_couchbase.contains(':') {
+                    error!("Couchbase scheme and non-default port detected, http scheme must be used with custom port (management port)");
+                    std::process::exit(1);
+                } else {
+                    stripped_couchbase.to_string()
+                }
+            } else if let Some(stripped_couchbase) = hostname.strip_prefix("couchbases://") {
+                if let Some(stripped_port) = stripped_couchbase.strip_suffix(":11211") {
+                    stripped_port.to_string()
+                } else if stripped_couchbase.contains(':') {
+                    error!("Couchbases scheme and non-default port detected, http scheme must be used with custom port (management port)");
+                    std::process::exit(1);
+                } else {
+                    stripped_couchbase.to_string()
+                }
+            } else if hostname.strip_suffix(":11210").is_some()
+                || hostname.strip_suffix(":11211").is_some()
+            {
+                error!("Memcached port detected, http scheme must be used with custom port (management port)");
+                std::process::exit(1);
+            } else if let Some(stripped_http) = hostname.strip_prefix("http://") {
+                stripped_http.to_string()
+            } else if let Some(stripped_http) = hostname.strip_prefix("https://") {
+                stripped_http.to_string()
+            } else {
+                hostname.to_string()
+            };
+
+            validated.push(host);
+        }
+
+        (RemoteClusterType::from(hostnames), validated)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -288,4 +329,5 @@ impl ClusterTimeouts {
     pub fn set_transaction_timeout(&mut self, duration: Duration) {
         self.transaction_timeout = duration
     }
+
 }

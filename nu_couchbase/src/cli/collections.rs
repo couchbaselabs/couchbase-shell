@@ -16,7 +16,7 @@ use crate::cli::error::{
 };
 use crate::client::cloud::CollectionNamespace;
 use crate::client::cloud_json::Collection;
-use crate::RemoteCluster;
+use crate::remote_cluster::RemoteCluster;
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
 use nu_protocol::engine::{Command, EngineState, Stack};

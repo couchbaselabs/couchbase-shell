@@ -5,7 +5,7 @@ use crate::cli::query::{handle_query_response, query_context_from_args, send_que
 use crate::cli::util::{cluster_identifiers_from, get_active_cluster, NuValueMap};
 use crate::client::ManagementRequest;
 use crate::state::State;
-use crate::RemoteCluster;
+use crate::remote_cluster::RemoteCluster;
 use log::debug;
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;

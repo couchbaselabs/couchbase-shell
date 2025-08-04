@@ -9,7 +9,6 @@ use crate::client::cloud_json::Cluster;
 use crate::client::CapellaClient;
 use crate::config::ShellConfig;
 use crate::state::State;
-use crate::{read_input, RemoteCluster};
 use log::debug;
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
@@ -22,6 +21,9 @@ use regex::Regex;
 use std::fs;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
+use crate::remote_cluster::RemoteCluster;
+use utilities::read_input;
+use crate::plugin::CouchbasePlugin;
 
 pub fn is_http_status(
     response_status: u16,
@@ -218,6 +220,48 @@ fn json_list(input: &[Value], span: Span) -> Result<Vec<serde_json::Value>, Shel
     }
 
     Ok(out)
+}
+
+pub fn cluster_identifiers_from_plugin(
+    plugin: &CouchbasePlugin,
+    _engine: &nu_plugin::EngineInterface,
+    call: &nu_plugin::EvaluatedCall,
+    _input: PipelineData,
+    default_active: bool,
+) -> Result<Vec<String>, ShellError> {
+    let state = plugin.state.lock().unwrap();
+
+    let identifier_arg: String = match call.get_flag("clusters")? {
+        Some(arg) => arg,
+        None => {
+            if default_active {
+                return Ok(vec![state.active()]);
+            }
+            "".to_string()
+        }
+    };
+
+    let re = match Regex::new(identifier_arg.as_str()) {
+        Ok(v) => v,
+        Err(e) => {
+            return Err(generic_error(
+                e.to_string(),
+                "Failed to parse identifier used for specifying clusters".to_string(),
+                call.head,
+            ));
+        }
+    };
+    let clusters: Vec<String> = state
+        .clusters()
+        .keys()
+        .filter(|k| re.is_match(k))
+        .cloned()
+        .collect();
+    if clusters.is_empty() {
+        return Err(cluster_not_found_error(identifier_arg, call.get_flag_span("clusters").unwrap()));
+    }
+
+    Ok(clusters)
 }
 
 pub fn cluster_identifiers_from(

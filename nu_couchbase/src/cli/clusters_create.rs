@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 use crate::cli::error::{client_error_to_shell_error, serialize_error};
 use crate::cli::generic_error;
 use crate::cli::util::{find_org_id, find_project_id};
-use crate::read_input;
+use utilities::read_input;
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
 use nu_protocol::engine::{Command, EngineState, Stack};

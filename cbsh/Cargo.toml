@@ -1,0 +1,78 @@
+[package]
+name = "couchbase-shell"
+version = "1.1.0"
+authors = ["Charles Dixon <chvckd@gmail.com>", "Jack Westwood <jack.westwood@couchbase.com>"]
+edition = "2018"
+default-run = "cbsh"
+
+[dependencies]
+nu-couchbase =  { path = "../nu_couchbase" }
+chrono = { version = "0.4.38", features = ["serde"] }
+ctrlc = "3.4.4"
+dirs = "5.0.1"
+env_logger = "0.10.0"
+log = "0.4.22"
+nix = { version = "0.28.0", features = ["signal", "process", "term"] }
+nu-protocol = { version = "0.101.0" }
+nu-cmd-extra = { version = "0.101.0" }
+nu-cmd-lang = { version = "0.101.0" }
+nu-cmd-plugin = { version = "0.101.0" }
+nu-command = { version = "0.101.0", features = ["plugin"] }
+nu-explore = { version = "0.101.0" }
+nu-path = { version = "0.101.0" }
+nu-cli = { version = "0.101.0", features = ["plugin"] }
+nu-engine = { version = "0.101.0" }
+nu-parser = { version = "0.101.0" }
+nu-utils = "0.101.0"
+nu-plugin-engine = { version = "0.101.0" }
+nu-system = { version = "0.101.0" }
+reqwest = { version = "0.12.5", features = ["json", "rustls-tls", "blocking"] }
+rpassword = "7.3.1"
+serde = "1.0.203"
+serde_json = "1.0.120"
+shellexpand = "3.1.0"
+utilities = { path = "../utilities" }
+
+[target.'cfg(not(any(target_os = "macos", target_os = "windows")))'.dependencies]
+# Our dependencies don't use OpenSSL on Macos
+openssl = { version = "0.10.72", features = ["vendored"], optional = true }
+
+[dev-dependencies]
+dunce = "1.0.1"
+envconfig = "0.10.0"
+itertools = "0.13.0"
+lazy_static = "1.5.0"
+nu-test-support = { version = "0.95.0" }
+strum = "0.26.3"
+strum_macros = "0.26.4"
+
+# cargo machete should ignore the following dependincies as they are known false positives
+[package.metadata.cargo-machete]
+ignored = ["humantime-serde"]
+
+[features]
+# Enable to statically link OpenSSL; otherwise the system version will be used. Not enabled by default because it takes a while to build
+static-link-openssl = ["dep:openssl"]
+
+# We use a list of supported features to determine which tests we want to run, the defaults will always be run, then we
+# define any additional features using the specific server versions we test against
+default = ["key_value", "query", "query_index", "query_index_definitions", "query_index_advise"]
+"7.1.1" = ["collections", "import_sample"]
+"7.0.3" = ["collections", "import_sample"]
+"capella" = ["collections"]
+key_value = []
+query = []
+collections = []
+query_index = []
+query_index_definitions = []
+query_index_advise = []
+import_sample = []
+vector = []
+
+[[bin]]
+name = "cbsh"
+path = "src/main.rs"
+
+[profile.release]
+lto = true
+codegen-units = 1

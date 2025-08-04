@@ -1,7 +1,7 @@
 use crate::cli::{client_error_to_shell_error, CtrlcFuture};
 use crate::client::error::ClientError;
 use crate::client::Endpoint;
-use crate::RustTlsConfig;
+use crate::client::RustTlsConfig;
 use bytes::Bytes;
 use futures_core::Stream;
 use futures_util::stream::StreamExt;

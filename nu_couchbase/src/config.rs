@@ -9,13 +9,13 @@ use std::time::Duration;
 use std::{fmt, fs};
 use toml::ser::Error;
 
-pub(crate) const DEFAULT_DATA_TIMEOUT: Duration = Duration::from_millis(5000);
-pub(crate) const DEFAULT_QUERY_TIMEOUT: Duration = Duration::from_millis(75000);
-pub(crate) const DEFAULT_ANALYTICS_TIMEOUT: Duration = Duration::from_millis(75000);
-pub(crate) const DEFAULT_SEARCH_TIMEOUT: Duration = Duration::from_millis(75000);
-pub(crate) const DEFAULT_MANAGEMENT_TIMEOUT: Duration = Duration::from_millis(75000);
-pub(crate) const DEFAULT_TRANSACTION_TIMEOUT: Duration = Duration::from_secs(120);
-pub(crate) const DEFAULT_KV_BATCH_SIZE: u32 = 500;
+pub const DEFAULT_DATA_TIMEOUT: Duration = Duration::from_millis(5000);
+pub const DEFAULT_QUERY_TIMEOUT: Duration = Duration::from_millis(75000);
+pub const DEFAULT_ANALYTICS_TIMEOUT: Duration = Duration::from_millis(75000);
+pub const DEFAULT_SEARCH_TIMEOUT: Duration = Duration::from_millis(75000);
+pub const DEFAULT_MANAGEMENT_TIMEOUT: Duration = Duration::from_millis(75000);
+pub const DEFAULT_TRANSACTION_TIMEOUT: Duration = Duration::from_secs(120);
+pub const DEFAULT_KV_BATCH_SIZE: u32 = 500;
 
 /// Holds the complete config in an aggregated manner.
 #[derive(Debug, Deserialize, Serialize)]

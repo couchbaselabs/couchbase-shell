@@ -1,0 +1,91 @@
+[package]
+name = "nu-couchbase"
+version = "1.1.0"
+authors = ["Charles Dixon <chvckd@gmail.com>", "Jack Westwood <jack.westwood@couchbase.com>"]
+edition = "2018"
+
+[dependencies]
+async-openai = "0.23.3"
+aws-config = { version = "1.5.3", features = ["behavior-version-latest"] }
+aws-sdk-bedrockruntime = "1.37.0"
+aws-smithy-runtime-api = "1.7.0"
+base64 = "0.22.1"
+bytes = "1.6.0"
+chrono = { version = "0.4.38", features = ["serde"] }
+dirs = "5.0.1"
+fake = { version = "2.10.0", features = ["chrono", "random_color"] }
+futures = "0.3.30"
+hmac = "0.12.1"
+humantime-serde = "1.1.1"
+lazy_static = "1.5.0"
+log = "0.4.22"
+nu-protocol = { version = "0.101.0" }
+nu-command = { version = "0.101.0", features = ["plugin"] }
+nu-path = { version = "0.101.0" }
+nu-cli = { version = "0.101.0", features = ["plugin"] }
+nu-plugin = "0.101.0"
+nu-engine = { version = "0.101.0" }
+nu-utils = "0.101.0"
+rand = "0.8.5"
+regex = "1.10.5"
+reqwest = { version = "0.12.5", features = ["json", "rustls-tls", "blocking"] }
+rpassword = "7.3.1"
+rustls-pemfile = "2.1.2"
+serde = "1.0.203"
+serde_json = "1.0.120"
+serde_derive = "1.0.203"
+serde_urlencoded = "0.7.1"
+sha2 = "0.10.8"
+tera = "1.20.0"
+tiktoken-rs = "0.5.9"
+tokio = { version = "1.38.2", features = ["full"] }
+tokio-util = { version = "0.7.11", features = ["codec"] }
+tokio-rustls = { version = "0.26.0" }
+toml = "0.8.14"
+uuid = { version = "1.9.1", features = ["v4"] }
+utilities = { path = "../utilities" }
+webpki-roots = "0.26.3"
+futures-core = "0.3.31"
+tokio-stream = "0.1.15"
+futures-util = "0.3.30"
+
+[target.'cfg(not(any(target_os = "macos", target_os = "windows")))'.dependencies]
+# Our dependencies don't use OpenSSL on Macos
+openssl = { version = "0.10.72", features = ["vendored"], optional = true }
+
+[dev-dependencies]
+dunce = "1.0.1"
+envconfig = "0.10.0"
+itertools = "0.13.0"
+lazy_static = "1.5.0"
+nu-test-support = { version = "0.95.0" }
+strum = "0.26.3"
+strum_macros = "0.26.4"
+
+# cargo machete should ignore the following dependincies as they are known false positives
+[package.metadata.cargo-machete]
+ignored = ["humantime-serde"]
+
+[features]
+# Enable to statically link OpenSSL; otherwise the system version will be used. Not enabled by default because it takes a while to build
+static-link-openssl = ["dep:openssl"]
+
+# We use a list of supported features to determine which tests we want to run, the defaults will always be run, then we
+# define any additional features using the specific server versions we test against
+default = ["key_value", "query", "query_index", "query_index_definitions", "query_index_advise"]
+"7.1.1" = ["collections", "import_sample"]
+"7.0.3" = ["collections", "import_sample"]
+"capella" = ["collections"]
+key_value = []
+query = []
+collections = []
+query_index = []
+query_index_definitions = []
+query_index_advise = []
+import_sample = []
+vector = []
+
+
+[profile.release]
+lto = true
+codegen-units = 1

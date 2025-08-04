@@ -6,7 +6,7 @@ use tokio::runtime::Runtime;
 use tokio::select;
 
 use crate::cli::{client_error_to_shell_error, generic_error, no_llm_configured};
-use crate::CtrlcFuture;
+use crate::cli::CtrlcFuture;
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
 use nu_protocol::engine::{Command, EngineState, Stack};

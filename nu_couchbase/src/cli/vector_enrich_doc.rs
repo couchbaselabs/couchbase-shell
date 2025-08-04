@@ -3,7 +3,7 @@ use log::debug;
 use std::time::SystemTime;
 
 use crate::client::{ClientError, LLMClients};
-use crate::CtrlcFuture;
+use crate::cli::CtrlcFuture;
 use nu_protocol::Record;
 use nu_protocol::{Example, Span};
 use nu_utils::SharedCow;

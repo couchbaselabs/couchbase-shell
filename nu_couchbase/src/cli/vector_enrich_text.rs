@@ -1,5 +1,5 @@
 use crate::state::State;
-use crate::CtrlcFuture;
+use crate::cli::CtrlcFuture;
 use log::debug;
 use nu_protocol::Record;
 use nu_protocol::{Example, Span};

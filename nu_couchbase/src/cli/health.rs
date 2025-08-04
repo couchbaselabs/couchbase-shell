@@ -6,7 +6,7 @@ use crate::cli::util::{
 };
 use crate::client::ManagementRequest;
 use crate::state::State;
-use crate::RemoteCluster;
+use crate::remote_cluster::RemoteCluster;
 use log::warn;
 use nu_engine::command_prelude::Call;
 use nu_protocol::engine::{Command, EngineState, Stack};

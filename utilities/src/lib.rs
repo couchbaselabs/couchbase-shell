@@ -91,3 +91,19 @@ pub fn try_lookup_srv(addr: String) -> Result<Vec<String>, String> {
 
     Ok(addresses)
 }
+
+
+pub fn read_input() -> Option<String> {
+    let mut answer = String::new();
+    std::io::stdin()
+        .read_line(&mut answer)
+        .expect("Failed to read user input");
+
+    answer = answer.trim().to_string();
+    if answer.is_empty() {
+        None
+    } else {
+        Some(answer)
+    }
+}
+

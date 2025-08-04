@@ -5,7 +5,6 @@ use crate::cli::{
     organization_not_registered,
 };
 use crate::tutorial::Tutorial;
-use crate::RemoteCluster;
 use lazy_static::__Deref;
 use nu_protocol::LabeledError;
 use nu_protocol::ShellError;
@@ -14,6 +13,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::{collections::HashMap, time::Duration};
+use crate::remote_cluster::RemoteCluster;
 
 #[derive(Debug, Clone)]
 pub struct TransactionState {

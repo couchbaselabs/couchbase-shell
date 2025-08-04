@@ -1,7 +1,6 @@
 use crate::client::codec::KeyValueCodec;
 use crate::client::protocol::{request, KvRequest, KvResponse, Status};
-use crate::client::{protocol, ClientError};
-use crate::RustTlsConfig;
+use crate::client::{protocol, ClientError, RustTlsConfig};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use futures::lock::Mutex as AsyncMutex;
 use futures::{SinkExt, StreamExt};

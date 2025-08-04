@@ -2,9 +2,10 @@ use crate::cli::error::generic_error;
 use crate::cli::util::{get_username_and_password, read_config_file, update_config_file};
 use crate::config::{ClusterConfig, DEFAULT_KV_BATCH_SIZE};
 use crate::state::State;
-use crate::{
-    ClusterTimeouts, RemoteCluster, RemoteClusterResources, RemoteClusterType, RustTlsConfig,
+use crate::remote_cluster::{
+    ClusterTimeouts, RemoteCluster, RemoteClusterResources, RemoteClusterType,
 };
+use crate::client::RustTlsConfig;
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
 use nu_protocol::engine::{Command, EngineState, Stack};

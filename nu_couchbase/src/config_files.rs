@@ -5,10 +5,10 @@ use std::fs;
 use std::fs::File;
 use std::io::Write;
 
-pub(crate) const CBSHELL_FOLDER: &str = "CouchbaseShell";
+pub const CBSHELL_FOLDER: &str = "CouchbaseShell";
 const CONFIG_FILE: &str = "config.nu";
 
-pub(crate) fn read_nu_config_file(engine_state: &mut EngineState, stack: &mut Stack) {
+pub fn read_nu_config_file(engine_state: &mut EngineState, stack: &mut Stack) {
     if let Some(mut config_path) = nu_path::nu_config_dir() {
         config_path.push(CBSHELL_FOLDER);
 
@@ -44,13 +44,13 @@ pub(crate) fn read_nu_config_file(engine_state: &mut EngineState, stack: &mut St
         let config_file = if cfg!(windows) {
             format!(
                 "{}{}",
-                include_str!("../docs/sample_config/default_config_windows.nu"),
+                include_str!("../../docs/sample_config/default_config_windows.nu"),
                 set_prompt
             )
         } else {
             format!(
                 "{}{}",
-                include_str!("../docs/sample_config/default_config.nu"),
+                include_str!("../../docs/sample_config/default_config.nu"),
                 set_prompt
             )
         };
