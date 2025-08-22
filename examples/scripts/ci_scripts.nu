@@ -29,11 +29,7 @@ def bucket-clone [
         }
         if ( $with_indexes ) {
             let indexes = query indexes --definitions --disable-context --clusters $p.src | where bucket == $p.src_bucket
-            for index in $indexes {
-                print $"Recreating index ($index.name) on cluster ($p.dest) with: "
-                print $index.definition
-                query $index.definition --disable-context --clusters $p.dest
-            }
+            $indexes | create-indexes $p.dest
         }
     } --bucket $bucket --destbucket $destbucket --source $source --destination $destination
 }
@@ -128,12 +124,7 @@ def copy-bucket-definition [
 ] {
     run_with_default { |p|
         let clonable = buckets get --clusters $p.src $p.src_bucket | get 0 
-        print $"Create Bucket ($p.dest)_($p.dest_bucket) with ($clonable.ram_quota) quota, type ($clonable.type), ($clonable.replicas) replicas, ($clonable.min_durability_level) durability, ($clonable.max_expiry) expiry"
-        if ( $clonable.flush_enabled) {
-            $clonable | buckets create $p.dest_bucket ( $in.ram_quota / 1MB  | into int ) --clusters $p.dest  --type $in.type --replicas $in.replicas --durability $in.min_durability_level --expiry $in.max_expiry --flush
-        } else {
-            $clonable | buckets create $p.dest_bucket ( $in.ram_quota / 1MB | into int ) --clusters $p.dest  --type $in.type --replicas $in.replicas --durability $in.min_durability_level --expiry $in.max_expiry
-        }
+        $clonable | _create-bucket-definition  $p.dest
     } --bucket $bucket --destbucket $destbucket --source $source --destination $destination
 }
 
@@ -224,4 +215,87 @@ def run_with_default [
         dest_collection: $dest_collection,
     }
     do $operation $params
+}
+
+# Exports all buckets, scopes and collections structure
+# for the given cluster
+def export-cluster-struct [
+    source: string # The cluster to export
+] {
+    mut export = []
+
+    let buckets = buckets  --clusters $source
+
+    for bucket in $buckets {
+        mut scope_structs = []
+
+        let scopes = scopes --clusters $source --bucket $bucket.name
+
+        for scope in $scopes {
+            let collections = (collections --clusters $source --bucket $bucket.name --scope $scope.scope | reject -i cluster)
+
+            # push scope + its collections into scope_structs
+            $scope_structs ++= [{ 
+                scope: $scope.scope, 
+                collections: $collections 
+            }]
+        }
+        
+        # push bucket + its scopes into export
+        let buc = ( $bucket | merge {scopes: $scope_structs } )
+        $export ++= [ $buc ]
+    }
+
+    let indexes = query indexes --definitions --disable-context --clusters $source
+    let output = { 
+        buckets: $export,
+        indexes: $indexes
+    }
+    return $output
+}
+
+
+# Import all buckets, scopes and collections structure
+# in the given cluster
+def import-cluster-struct [
+    destination: string # The cluster to export
+] {
+    let structure = $in
+    let buckets = $structure.buckets
+    for bucket in $buckets {
+        $bucket | _create-bucket-definition $destination
+        for scope in ($bucket.scopes | where not ( $it.scope | str starts-with "_" ) ) {
+            print $"Create scope ($destination)_($bucket.name)_($scope.scope)"
+            scopes create --clusters $destination --bucket $bucket.name $scope.scope
+            for col in $scope.collections {
+                print $"Create collection ($destination)_($bucket.name)_($scope.scope)_($col.collection)"
+                collections create --clusters $destination --bucket $bucket.name --scope  $scope.scope $col.collection
+            }
+        }
+    }
+    let indexes = $structure.indexes
+    $indexes | _create-indexes $destination
+}
+
+def _create-indexes [
+    destination: string # the cluster where to create indexes
+] {
+    let indexes = $in
+    for index in $indexes {
+        print $"Recreating index ($index.name) on cluster ($destination) with: "
+        print $index.definition
+        query $index.definition --disable-context --clusters $destination
+    }
+}
+
+def _create-bucket-definition [
+    destination: string # the cluster where to create indexes
+] {
+    let bucket = $in
+    print $"Create Bucket ($destination)_($bucket.name) with ($bucket.ram_quota / 1024 / 1024 ) quota, type ($bucket.type), ($bucket.replicas) replicas, ($bucket.min_durability_level) durability, ($bucket.max_expiry) expiry"
+    if ( $bucket.flush_enabled) {
+        $bucket | buckets create $in.name ( $in.ram_quota / 1024 / 1024  | into int ) --clusters $destination  --type $in.type --replicas $in.replicas --durability $in.min_durability_level --expiry $in.max_expiry --flush
+    } else {
+        $bucket | buckets create $in.name ( $in.ram_quota / 1024 / 1024 | into int ) --clusters $destination  --type $in.type --replicas $in.replicas --durability $in.min_durability_level --expiry $in.max_expiry
+    }
 }
