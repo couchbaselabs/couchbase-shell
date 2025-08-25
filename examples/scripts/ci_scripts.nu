@@ -27,7 +27,7 @@ def cluster-clone [
     run_with_default { |p|
         let buckets = buckets --clusters $p.src
         for bucket in $buckets {
-            bucket-clone $bucket.name $bucket.name $p.src $p.dest
+            bucket-clone $bucket.name $bucket.name --source $p.src --destination $p.dest
         }
         if ( $with_indexes ) {
             let indexes = query indexes --definitions --disable-context --clusters $p.src
@@ -321,6 +321,7 @@ def _create-indexes [
 
 def _create-bucket-definition [
     destination: string # the cluster where to create the bucket
+] {
     let bucket = $in
     print $"Create Bucket ($destination)_($bucket.name) with ($bucket.ram_quota / 1024 / 1024 ) quota, type ($bucket.type), ($bucket.replicas) replicas, ($bucket.min_durability_level) durability, ($bucket.max_expiry) expiry"
     if ( $bucket.flush_enabled) {
