@@ -1,4 +1,41 @@
 # This files contains a collection of scripts useful for CI tasks, like cloning buckets, scopes or collections
+# Most support the following env variable, and will default to cb-env if null.
+# SRC_CLUSTER: Source cluster identifier
+# SRC_BUCKET: Source Bucket
+# SRC_SCOPE: Source Scope
+# SRC_COLLECTION: Source Collection
+# DEST_CLUSTER: Destination cluster identifier
+# DEST_BUCKET: Destination Bucket
+# DEST_SCOPE: Destination Scope
+# DEST_COLLECTION: Destination Collection
+
+
+# Clones all buckets, scopes and collections
+#
+# All parameters can be null, Env Variables can be used. If
+# the parameter is null and no env variables are set, param
+# will default to current cb-env.
+#
+# SRC_CLUSTER: Source cluster identifier
+# DEST_CLUSTER: Destination cluster identifier
+def cluster-clone [
+    source?: string, # Identifier of the source Cluster
+    destination?: string  # Identifier of the destination Cluster
+    --with-indexes # copy all indexes in the bucket
+] {
+
+    run_with_default { |p|
+        let buckets = buckets --clusters $p.src
+        for bucket in $buckets {
+            bucket-clone $bucket.name $bucket.name $p.src $p.dest
+        }
+        if ( $with_indexes ) {
+            let indexes = query indexes --definitions --disable-context --clusters $p.src
+            $indexes | create-indexes $p.dest
+        }
+    } --source $source --destination $destination
+}
+
 
 # Clones an entire bucket, scopes and collections
 #
@@ -8,12 +45,8 @@
 #
 # SRC_CLUSTER: Source cluster identifier
 # SRC_BUCKET: Source Bucket
-# SRC_SCOPE: Source Scope
-# SRC_COLLECTION: Source Collection
 # DEST_CLUSTER: Destination cluster identifier
 # DEST_BUCKET: Destination Bucket
-# DEST_SCOPE: Destination Scope
-# DEST_COLLECTION: Destination Collection
 def bucket-clone [
     bucket?: string, # Name of the source bucket
     destbucket?: string, # Name of the destination bucket
@@ -43,11 +76,9 @@ def bucket-clone [
 # SRC_CLUSTER: Source cluster identifier
 # SRC_BUCKET: Source Bucket
 # SRC_SCOPE: Source Scope
-# SRC_COLLECTION: Source Collection
 # DEST_CLUSTER: Destination cluster identifier
 # DEST_BUCKET: Destination Bucket
 # DEST_SCOPE: Destination Scope
-# DEST_COLLECTION: Destination Collection
 def scope-clone [
     bucket?: string, # Name of the source bucket
     scope?: string, # Name of the source scope
@@ -258,7 +289,7 @@ def export-cluster-struct [
 # Import all buckets, scopes and collections structure
 # in the given cluster
 def import-cluster-struct [
-    destination: string # The cluster to export
+    destination: string # The cluster to import
 ] {
     let structure = $in
     let buckets = $structure.buckets
@@ -289,8 +320,7 @@ def _create-indexes [
 }
 
 def _create-bucket-definition [
-    destination: string # the cluster where to create indexes
-] {
+    destination: string # the cluster where to create the bucket
     let bucket = $in
     print $"Create Bucket ($destination)_($bucket.name) with ($bucket.ram_quota / 1024 / 1024 ) quota, type ($bucket.type), ($bucket.replicas) replicas, ($bucket.min_durability_level) durability, ($bucket.max_expiry) expiry"
     if ( $bucket.flush_enabled) {
