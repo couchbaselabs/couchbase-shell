@@ -64,7 +64,7 @@ time = "0.3.36"
 tokio-stream = "0.1.15"
 futures-util = "0.3.30"
 
-couchbase_core = {path = "../rscbcorex/sdk/couchbase-core"}
+couchbase-core = "1.0.0-beta.1"
 
 [target.'cfg(not(any(target_os = "macos", target_os = "windows")))'.dependencies]
 # Our dependencies don't use OpenSSL on Macos
