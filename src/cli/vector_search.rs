@@ -158,7 +158,9 @@ fn run(
                 }
             }
         }
-        Value::Nothing { internal_span: _ } => {
+        Value::Nothing {
+            internal_span: _, ..
+        } => {
             let vec: Option<Value> = call.opt(engine_state, stack, 2)?;
             if let Some(v) = vec {
                 vector = input_to_vector(&v)?;
@@ -247,11 +249,7 @@ fn run(
         }
     }
 
-    Ok(Value::List {
-        vals: results,
-        internal_span: call.head,
-    }
-    .into_pipeline_data())
+    Ok(Value::list(results, call.head).into_pipeline_data())
 }
 
 fn index_name_from_namespace(index: String, namespace: (String, String, String)) -> String {

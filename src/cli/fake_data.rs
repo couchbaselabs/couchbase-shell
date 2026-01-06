@@ -113,11 +113,7 @@ fn run_fake(
                     })
                     .collect::<Result<Vec<Value>, ShellError>>()?;
 
-                Ok(Value::List {
-                    vals: converted,
-                    internal_span: call.head,
-                }
-                .into_pipeline_data())
+                Ok(Value::list(converted, call.head).into_pipeline_data())
             }
             _ => unimplemented!(),
         }
@@ -165,11 +161,7 @@ fn run_fake(
         .take(num_rows as usize)
         .collect::<Result<Vec<Value>, ShellError>>()?;
 
-        Ok(Value::List {
-            vals: converted,
-            internal_span: call.head,
-        }
-        .into_pipeline_data())
+        Ok(Value::list(converted, call.head).into_pipeline_data())
     }
 }
 

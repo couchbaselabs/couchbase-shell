@@ -118,11 +118,7 @@ fn run(
         }
     }
 
-    Ok(Value::List {
-        vals: results,
-        internal_span: call.head,
-    }
-    .into_pipeline_data())
+    Ok(Value::list(results, call.head).into_pipeline_data())
 }
 
 #[derive(Debug, Deserialize)]

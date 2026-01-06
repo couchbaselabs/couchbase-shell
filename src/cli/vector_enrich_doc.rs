@@ -6,7 +6,6 @@ use crate::client::{ClientError, LLMClients};
 use crate::CtrlcFuture;
 use nu_protocol::Record;
 use nu_protocol::{Example, Span};
-use nu_utils::SharedCow;
 use std::str;
 use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
@@ -265,34 +264,25 @@ fn vector_enrich_doc(
         for (i, _) in batch.iter().enumerate() {
             input_records[count].insert(
                 vector_field.clone(),
-                Value::List {
-                    internal_span: span,
-                    vals: embeddings[i]
+                Value::list(
+                    embeddings[i]
                         .iter()
-                        .map(|&e| Value::Float {
-                            val: e as f64,
-                            internal_span: span,
-                        })
+                        .map(|&e| Value::float(e as f64, span))
                         .collect(),
-                },
+                    span,
+                ),
             );
 
             let cols = vec!["id".to_string(), "content".to_string()];
             let vals = vec![
-                Value::String {
-                    val: input_ids[count].clone(),
-                    internal_span: span,
-                },
-                Value::Record {
-                    val: SharedCow::new(input_records[count].clone()),
-                    internal_span: span,
-                },
+                Value::string(input_ids[count].clone(), span),
+                Value::record(input_records[count].clone(), span),
             ];
 
-            let vector_doc = Value::Record {
-                val: SharedCow::new(Record::from_raw_cols_vals(cols, vals, span, span).unwrap()),
-                internal_span: span,
-            };
+            let vector_doc = Value::record(
+                Record::from_raw_cols_vals(cols, vals, span, span).unwrap(),
+                span,
+            );
 
             records.push(vector_doc);
 
@@ -306,11 +296,7 @@ fn vector_enrich_doc(
     let total_time = SystemTime::now().duration_since(start);
     debug!("\nTotal Duration: {:?}", total_time.unwrap());
 
-    Ok(Value::List {
-        internal_span: span,
-        vals: records,
-    }
-    .into_pipeline_data())
+    Ok(Value::list(records, span).into_pipeline_data())
 }
 
 fn read_from_field(doc: &Record, field: String, span: Span) -> Result<String, ShellError> {

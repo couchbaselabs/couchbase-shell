@@ -92,9 +92,5 @@ fn dataverses(
         )?);
     }
 
-    Ok(Value::List {
-        vals: results,
-        internal_span: span,
-    }
-    .into_pipeline_data())
+    Ok(Value::list(results, span).into_pipeline_data())
 }

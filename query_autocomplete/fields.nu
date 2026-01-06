@@ -34,13 +34,13 @@ export def main [context: string] {
                 # If they contain an operator then we split the condition on that operator and return the first word, this will be the name of the field
                 let $fields_in_conditions = ($conditions | each {|cond| $cli_operators | each {|op| if ($cond | str contains $op) {$cond | split row $op | first | str trim} } | first})
                 let $collection = ($context | split words | $in.1)
-                return { options: {sort: false}, completions: (collection_fields $collection | get fields | filter {|x| $x not-in $fields_in_conditions} | prepend [ANY EVERY])}
+                return { options: {sort: false}, completions: (collection_fields $collection | get fields | where {|x| $x not-in $fields_in_conditions} | prepend [ANY EVERY])}
             }
             ANY => {return}
             EVERY => {return}
             IN => {
                 let $collection = ($context | split words | $in.1)
-                let $array_fields = (collection_fields $collection| filter {|it| $it.type == array} | get fields)
+                let $array_fields = (collection_fields $collection| where {|it| $it.type == array} | get fields)
                 # There is an issue with the nushell completions where nothing is displayed if all the completions start the same
                 # So we append an empty space to the list of array fields to work around this for now
                 return { options: {sort: false}, completions: ($array_fields | append " ")}
@@ -120,7 +120,7 @@ export def main [context: string] {
 
              # WHERE x #operator y
              # If an operator has been given after where but is not the last, then suggest AND
-             if (($after_last_keyword | split row " " | filter {|x| $x in $cli_operators} | length) != 0) {
+             if (($after_last_keyword | split row " " | where {|x| $x in $cli_operators} | length) != 0) {
                 let $select_fields = ($context | split row SELECT | last | split row WHERE | first | str trim)
                 if ($select_fields == "*") {
                     return [AND LIMIT]
@@ -139,7 +139,7 @@ export def main [context: string] {
             }
 
             # If an operator has been given after AND but is not the last, then suggest AND LIMIT
-            if (($after_last_keyword | split row " " | filter {|x| $x in $cli_operators} | length) != 0) {
+            if (($after_last_keyword | split row " " | where {|x| $x in $cli_operators} | length) != 0) {
                 # To do - should check if all fields have been used in conditions, if so only suggest LIMIT
                 return [AND LIMIT]
             }
@@ -157,7 +157,7 @@ export def main [context: string] {
             }
 
             # `Satisfies person.age <operator> <value> ` => END
-            if (($after_last_keyword | split row " " | filter {|x| $x in $cli_operators} | length) != 0) {
+            if (($after_last_keyword | split row " " | where {|x| $x in $cli_operators} | length) != 0) {
                 return [END]
             }
 

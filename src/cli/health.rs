@@ -98,11 +98,7 @@ fn health(
         }
     }
 
-    Ok(Value::List {
-        vals: converted,
-        internal_span: span,
-    }
-    .into_pipeline_data())
+    Ok(Value::list(converted, span).into_pipeline_data())
 }
 
 fn grab_bucket_names(

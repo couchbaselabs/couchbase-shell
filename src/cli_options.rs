@@ -182,11 +182,7 @@ impl Command for Cbsh {
         call: &Call,
         _input: PipelineData,
     ) -> Result<PipelineData, ShellError> {
-        Ok(Value::String {
-            val: get_full_help(&Cbsh, context, stack),
-            internal_span: call.head,
-        }
-        .into_pipeline_data())
+        Ok(Value::string(get_full_help(&Cbsh, context, stack), call.head).into_pipeline_data())
     }
 
     fn examples(&self) -> Vec<Example> {

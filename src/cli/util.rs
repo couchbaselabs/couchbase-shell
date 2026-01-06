@@ -17,7 +17,6 @@ use nu_protocol::ast::PathMember;
 use nu_protocol::engine::{EngineState, Stack};
 use nu_protocol::{IntoPipelineData, PipelineData, ShellError, Span, Value};
 use nu_protocol::{Record, Signals};
-use nu_utils::SharedCow;
 use regex::Regex;
 use std::fs;
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -50,15 +49,12 @@ pub fn convert_row_to_nu_value(
                 vals.push(convert_json_value_to_nu_value(v, span)?);
             }
             cols.push("cluster".to_string());
-            vals.push(Value::String {
-                val: cluster_identifier,
-                internal_span: span,
-            });
+            vals.push(Value::string(cluster_identifier, span));
 
-            Ok(vec![Value::Record {
-                val: SharedCow::new(Record::from_raw_cols_vals(cols, vals, span, span).unwrap()),
-                internal_span: span,
-            }])
+            Ok(vec![Value::record(
+                Record::from_raw_cols_vals(cols, vals, span, span).unwrap(),
+                span,
+            )])
         }
         serde_json::Value::Array(s) => {
             let mut results = vec![];
@@ -86,24 +82,13 @@ pub fn convert_json_value_to_nu_value(
     span: Span,
 ) -> Result<Value, ShellError> {
     let result = match v {
-        serde_json::Value::Null => Value::Nothing {
-            internal_span: span,
-        },
-        serde_json::Value::Bool(b) => Value::Bool {
-            val: *b,
-            internal_span: span,
-        },
+        serde_json::Value::Null => Value::nothing(span),
+        serde_json::Value::Bool(b) => Value::bool(*b, span),
         serde_json::Value::Number(n) => {
             if let Some(val) = n.as_i64() {
-                Value::Int {
-                    val,
-                    internal_span: span,
-                }
+                Value::int(val, span)
             } else if let Some(val) = n.as_f64() {
-                Value::Float {
-                    val,
-                    internal_span: span,
-                }
+                Value::float(val, span)
             } else {
                 return Err(generic_error(
                     format!(
@@ -115,19 +100,13 @@ pub fn convert_json_value_to_nu_value(
                 ));
             }
         }
-        serde_json::Value::String(val) => Value::String {
-            val: val.clone(),
-            internal_span: span,
-        },
+        serde_json::Value::String(val) => Value::string(val.clone(), span),
         serde_json::Value::Array(a) => {
             let t = a
                 .iter()
                 .map(|x| convert_json_value_to_nu_value(x, span))
                 .collect::<Result<Vec<Value>, ShellError>>()?;
-            Value::List {
-                vals: t,
-                internal_span: span,
-            }
+            Value::list(t, span)
         }
         serde_json::Value::Object(o) => {
             let mut cols = vec![];
@@ -138,10 +117,10 @@ pub fn convert_json_value_to_nu_value(
                 vals.push(convert_json_value_to_nu_value(v, span)?);
             }
 
-            Value::Record {
-                val: SharedCow::new(Record::from_raw_cols_vals(cols, vals, span, span).unwrap()),
-                internal_span: span,
-            }
+            Value::record(
+                Record::from_raw_cols_vals(cols, vals, span, span).unwrap(),
+                span,
+            )
         }
     };
 
@@ -442,52 +421,36 @@ impl NuValueMap {
 
     pub fn add_i64(&mut self, name: impl Into<String>, val: i64, span: Span) {
         self.cols.push(name.into());
-        self.vals.push(Value::Int {
-            val,
-            internal_span: span,
-        });
+        self.vals.push(Value::int(val, span));
     }
 
     pub fn add_string(&mut self, name: impl Into<String>, val: impl Into<String>, span: Span) {
         self.cols.push(name.into());
-        self.vals.push(Value::String {
-            val: val.into(),
-            internal_span: span,
-        });
+        self.vals.push(Value::string(val.into(), span));
     }
 
     pub fn add_bool(&mut self, name: impl Into<String>, val: bool, span: Span) {
         self.cols.push(name.into());
-        self.vals.push(Value::Bool {
-            val,
-            internal_span: span,
-        });
+        self.vals.push(Value::bool(val, span));
     }
 
     pub fn add_vec(&mut self, name: impl Into<String>, vec: Vec<Value>, span: Span) {
         self.cols.push(name.into());
-        self.vals.push(Value::List {
-            vals: vec,
-            internal_span: span,
-        });
+        self.vals.push(Value::list(vec, span));
     }
 
     pub fn into_value(self, span: Span) -> Value {
-        Value::Record {
-            val: SharedCow::new(
-                Record::from_raw_cols_vals(self.cols, self.vals, span, span).unwrap(),
-            ),
-            internal_span: span,
-        }
+        Value::record(
+            Record::from_raw_cols_vals(self.cols, self.vals, span, span).unwrap(),
+            span,
+        )
     }
 
     pub fn into_pipeline_data(self, span: Span) -> PipelineData {
-        Value::Record {
-            val: SharedCow::new(
-                Record::from_raw_cols_vals(self.cols, self.vals, span, span).unwrap(),
-            ),
-            internal_span: span,
-        }
+        Value::record(
+            Record::from_raw_cols_vals(self.cols, self.vals, span, span).unwrap(),
+            span,
+        )
         .into_pipeline_data()
     }
 }
