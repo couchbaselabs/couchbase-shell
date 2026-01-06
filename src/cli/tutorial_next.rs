@@ -44,9 +44,5 @@ fn run_tutorial_next(state: Arc<Mutex<State>>, call: &Call) -> Result<PipelineDa
     let guard = state.lock().unwrap();
     let tutorial = guard.tutorial();
 
-    Ok(Value::String {
-        val: tutorial.next_tutorial_step(),
-        internal_span: call.head,
-    }
-    .into_pipeline_data())
+    Ok(Value::string(tutorial.next_tutorial_step(), call.head).into_pipeline_data())
 }

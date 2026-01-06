@@ -31,7 +31,6 @@ export def build_collection_prompt [] {
     }
 
     let prompt = $"(($user) + ' at ' + ($cluster) + ($bucket_prompt) + ($collection_prompt))
-
 "
 
     $prompt

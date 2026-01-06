@@ -11,7 +11,6 @@ use futures::StreamExt;
 use log::debug;
 use nu_protocol::Example;
 use nu_protocol::Record;
-use nu_utils::SharedCow;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
@@ -242,18 +241,16 @@ fn run_subdoc_lookup(
                                     } else {
                                         let list = c.as_list().unwrap().to_vec();
 
-                                        let record = Value::Record {
-                                            val: SharedCow::new(
-                                                Record::from_raw_cols_vals(
-                                                    paths.clone(),
-                                                    list,
-                                                    span,
-                                                    span,
-                                                )
-                                                .unwrap(),
-                                            ),
-                                            internal_span: span,
-                                        };
+                                        let record = Value::record(
+                                            Record::from_raw_cols_vals(
+                                                paths.clone(),
+                                                list,
+                                                span,
+                                                span,
+                                            )
+                                            .unwrap(),
+                                            span,
+                                        );
                                         collected = collected.content(record);
                                     }
                                 }
@@ -290,9 +287,5 @@ fn run_subdoc_lookup(
         }
     }
 
-    Ok(Value::List {
-        vals: results,
-        internal_span: call.head,
-    }
-    .into_pipeline_data())
+    Ok(Value::list(results, call.head).into_pipeline_data())
 }

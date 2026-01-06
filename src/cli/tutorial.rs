@@ -50,9 +50,5 @@ fn run_tutorial(
     let guard = state.lock().unwrap();
     let tutorial = guard.tutorial();
 
-    Ok(Value::String {
-        val: tutorial.current_step(),
-        internal_span: call.head,
-    }
-    .into_pipeline_data())
+    Ok(Value::string(tutorial.current_step(), call.head).into_pipeline_data())
 }

@@ -57,11 +57,7 @@ fn run_tutorial_page(
     let guard = state.lock().unwrap();
     let tutorial = guard.tutorial();
     if let Some(n) = name {
-        Ok(Value::String {
-            val: tutorial.goto_step(n)?,
-            internal_span: call.head,
-        }
-        .into_pipeline_data())
+        Ok(Value::string(tutorial.goto_step(n)?, call.head).into_pipeline_data())
     } else {
         let mut results: Vec<Value> = vec![];
         let (current_step, steps) = tutorial.step_names();
@@ -75,10 +71,6 @@ fn run_tutorial_page(
             results.push(collected.into_value(call.head));
         }
 
-        Ok(Value::List {
-            vals: results,
-            internal_span: call.head,
-        }
-        .into_pipeline_data())
+        Ok(Value::list(results, call.head).into_pipeline_data())
     }
 }

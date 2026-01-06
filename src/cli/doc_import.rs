@@ -143,9 +143,5 @@ fn run_import(
 
     let results = run_kv_mutations(state, engine_state, stack, call, span, all_items, build_req)?;
 
-    Ok(Value::List {
-        vals: results,
-        internal_span: call.head,
-    }
-    .into_pipeline_data())
+    Ok(Value::list(results, call.head).into_pipeline_data())
 }

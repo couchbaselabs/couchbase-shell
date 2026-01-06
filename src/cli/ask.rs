@@ -94,6 +94,7 @@ pub fn ask(
                 Value::List {
                     vals,
                     internal_span: span,
+                    ..
                 } => {
                     let mut ctx: Vec<String> = Vec::new();
                     for v in vals {
@@ -192,9 +193,5 @@ pub fn ask(
         }
     };
 
-    Ok(Value::String {
-        val: answer,
-        internal_span: span,
-    }
-    .into_pipeline_data())
+    Ok(Value::string(answer, span).into_pipeline_data())
 }

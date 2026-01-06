@@ -26,10 +26,9 @@ impl Command for Columnar {
         call: &Call,
         _input: PipelineData,
     ) -> Result<PipelineData, ShellError> {
-        Ok(Value::String {
-            val: get_full_help(&Columnar, engine_state, stack),
-            internal_span: call.head,
-        }
-        .into_pipeline_data())
+        Ok(
+            Value::string(get_full_help(&Columnar, engine_state, stack), call.head)
+                .into_pipeline_data(),
+        )
     }
 }

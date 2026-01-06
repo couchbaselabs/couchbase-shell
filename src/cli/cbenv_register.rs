@@ -8,8 +8,7 @@ use crate::{
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
 use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::Value::Nothing;
-use nu_protocol::{Category, PipelineData, ShellError, Signature, Span, SyntaxShape};
+use nu_protocol::{Category, PipelineData, ShellError, Signature, Span, SyntaxShape, Value};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 #[derive(Clone)]
@@ -197,12 +196,7 @@ fn clusters_register(
         save_new_cluster_config(&mut guard, call.head, identifier)?;
     }
 
-    Ok(PipelineData::Value(
-        Nothing {
-            internal_span: call.head,
-        },
-        None,
-    ))
+    Ok(PipelineData::Value(Value::nothing(call.head), None))
 }
 
 fn save_new_cluster_config(

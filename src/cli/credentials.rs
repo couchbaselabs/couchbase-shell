@@ -9,7 +9,6 @@ use nu_protocol::{
     Category, IntoInterruptiblePipelineData, PipelineData, Record, ShellError, Signature,
     SyntaxShape, Value,
 };
-use nu_utils::SharedCow;
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
@@ -114,42 +113,24 @@ fn credentials(
                 ];
                 let mut vals = vec![];
 
-                vals.push(Value::String {
-                    val: acc.bucket(),
-                    internal_span: span,
-                });
+                vals.push(Value::string(acc.bucket(), span));
 
                 let mut scope_values = vec![];
                 for scope in acc.scopes() {
-                    scope_values.push(Value::String {
-                        val: scope,
-                        internal_span: span,
-                    })
+                    scope_values.push(Value::string(scope, span))
                 }
 
-                vals.push(Value::List {
-                    vals: scope_values,
-                    internal_span: span,
-                });
+                vals.push(Value::list(scope_values, span));
 
                 let mut privilege_values = vec![];
                 for privilege in acc.privileges() {
-                    privilege_values.push(Value::String {
-                        val: privilege,
-                        internal_span: span,
-                    })
+                    privilege_values.push(Value::string(privilege, span))
                 }
 
-                vals.push(Value::List {
-                    vals: privilege_values,
-                    internal_span: span,
-                });
+                vals.push(Value::list(privilege_values, span));
 
                 let access = Record::from_raw_cols_vals(cols, vals, span, span).unwrap();
-                access_records.push(Value::Record {
-                    val: SharedCow::new(access),
-                    internal_span: span,
-                });
+                access_records.push(Value::record(access, span));
             }
 
             collected.add_vec("access", access_records, span);
