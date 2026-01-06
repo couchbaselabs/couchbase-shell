@@ -3,8 +3,7 @@ use crate::state::State;
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
 use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::Value::Nothing;
-use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
+use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape, Value};
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
@@ -44,11 +43,6 @@ impl Command for UseProject {
         let project: String = call.req(engine_state, stack, 0)?;
         guard.set_active_project(project);
 
-        Ok(PipelineData::Value(
-            Nothing {
-                internal_span: call.head,
-            },
-            None,
-        ))
+        Ok(PipelineData::Value(Value::nothing(call.head), None))
     }
 }

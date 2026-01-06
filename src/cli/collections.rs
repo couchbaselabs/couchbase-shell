@@ -141,23 +141,13 @@ fn collections_get(
                 _ => format!("{:?}", Duration::from_secs(collection.max_expiry() as u64)),
             };
 
-            collected.add(
-                "max_expiry",
-                Value::String {
-                    val: expiry,
-                    internal_span: span,
-                },
-            );
+            collected.add("max_expiry", Value::string(expiry, span));
             collected.add_string("cluster", identifier.clone(), span);
             results.push(collected.into_value(span));
         }
     }
 
-    Ok(Value::List {
-        vals: results,
-        internal_span: span,
-    }
-    .into_pipeline_data())
+    Ok(Value::list(results, span).into_pipeline_data())
 }
 
 pub fn get_bucket_or_active(

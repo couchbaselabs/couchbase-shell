@@ -101,10 +101,7 @@ fn run_ping(
                     collected.add_string("remote", ping.address().to_string(), span);
                     collected.add(
                         "latency",
-                        Value::Duration {
-                            val: ping.latency().as_nanos() as i64,
-                            internal_span: span,
-                        },
+                        Value::duration(ping.latency().as_nanos() as i64, span),
                     );
                     collected.add_string("state", ping.state().to_string(), span);
 
@@ -149,10 +146,7 @@ fn run_ping(
                     collected.add_string("remote", ping.address().to_string(), span);
                     collected.add(
                         "latency",
-                        Value::Duration {
-                            val: ping.latency().as_nanos() as i64,
-                            internal_span: span,
-                        },
+                        Value::duration(ping.latency().as_nanos() as i64, span),
                     );
                     collected.add_string("state", ping.state().to_string(), span);
 
@@ -169,9 +163,5 @@ fn run_ping(
         };
     }
 
-    Ok(Value::List {
-        vals: results,
-        internal_span: call.head,
-    }
-    .into_pipeline_data())
+    Ok(Value::list(results, call.head).into_pipeline_data())
 }

@@ -37,8 +37,7 @@ export def build_collection_prompt [] {
         $"($scope_name + $col_name)"
     }
 
-    let prompt = $"('👤 ' + (ansi ub) + ($user) + (ansi reset) + ' 🏠 ' + (ansi yb) + ($cluster) + (ansi reset) + ($bucket_prompt) + ($collection_prompt) + (ansi reset))
-
+    let prompt = $"('👤 ' + (ansi bb) + ($user) + (ansi reset) + ' 🏠 ' + (ansi yb) + ($cluster) + (ansi reset) + ($bucket_prompt) + ($collection_prompt) + (ansi reset))
 "
 
     $prompt

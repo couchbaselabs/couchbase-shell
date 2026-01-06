@@ -4,8 +4,7 @@ use std::sync::{Arc, Mutex};
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
 use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::Value::Nothing;
-use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
+use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape, Value};
 
 #[derive(Clone)]
 pub struct CbEnvLLM {
@@ -47,11 +46,6 @@ impl Command for CbEnvLLM {
         let guard = self.state.lock().unwrap();
         guard.set_active_llm(call.req(engine_state, stack, 0)?)?;
 
-        Ok(PipelineData::Value(
-            Nothing {
-                internal_span: call.head,
-            },
-            None,
-        ))
+        Ok(PipelineData::Value(Value::nothing(call.head), None))
     }
 }

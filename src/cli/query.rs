@@ -22,7 +22,6 @@ use crate::RemoteCluster;
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
 use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::Value::Nothing;
 use nu_protocol::{
     Category, Example, IntoPipelineData, PipelineData, ShellError, Signals, Signature, Span,
     SyntaxShape, Value,
@@ -173,19 +172,10 @@ fn query(
     }
 
     if !results.is_empty() {
-        return Ok(Value::List {
-            vals: results,
-            internal_span: call.head,
-        }
-        .into_pipeline_data());
+        return Ok(Value::list(results, call.head).into_pipeline_data());
     }
 
-    Ok(PipelineData::Value(
-        Nothing {
-            internal_span: span,
-        },
-        None,
-    ))
+    Ok(PipelineData::Value(Value::nothing(span), None))
 }
 
 pub fn send_query(

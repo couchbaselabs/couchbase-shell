@@ -20,7 +20,6 @@ use nu_protocol::engine::{EngineState, Stack};
 use nu_protocol::{
     Category, IntoPipelineData, PipelineData, ShellError, Signature, SyntaxShape, Value,
 };
-use nu_utils::SharedCow;
 
 #[derive(Clone)]
 pub struct VectorEnrichText {
@@ -158,10 +157,7 @@ fn vector_enrich_text(
         for (i, chunk) in batch.iter().enumerate() {
             let vector = embeddings[i]
                 .iter()
-                .map(|x| Value::Float {
-                    val: *x as f64,
-                    internal_span: span,
-                })
+                .map(|x| Value::float(*x as f64, span))
                 .collect::<Vec<Value>>();
 
             let mut uuid = Uuid::new_v4().to_string();
@@ -169,32 +165,20 @@ fn vector_enrich_text(
 
             let cols = vec!["text".to_string(), "vector".to_string()];
             let vals = vec![
-                Value::String {
-                    val: chunk.to_string(),
-                    internal_span: span,
-                },
-                Value::List {
-                    vals: vector,
-                    internal_span: span,
-                },
+                Value::string(chunk.to_string(), span),
+                Value::list(vector, span),
             ];
-            let content = Value::Record {
-                val: SharedCow::new(Record::from_raw_cols_vals(cols, vals, span, span).unwrap()),
-                internal_span: span,
-            };
+            let content = Value::record(
+                Record::from_raw_cols_vals(cols, vals, span, span).unwrap(),
+                span,
+            );
 
             let cols = vec!["id".to_string(), "content".to_string()];
-            let vals = vec![
-                Value::String {
-                    val: format!("vector-{}", uuid),
-                    internal_span: span,
-                },
-                content,
-            ];
-            let vector_doc = Value::Record {
-                val: SharedCow::new(Record::from_raw_cols_vals(cols, vals, span, span).unwrap()),
-                internal_span: span,
-            };
+            let vals = vec![Value::string(format!("vector-{}", uuid), span), content];
+            let vector_doc = Value::record(
+                Record::from_raw_cols_vals(cols, vals, span, span).unwrap(),
+                span,
+            );
 
             results.push(vector_doc);
         }
@@ -207,11 +191,7 @@ fn vector_enrich_text(
     let total_time = SystemTime::now().duration_since(start);
     debug!("\nTotal Duration: {:?}", total_time.unwrap());
 
-    Ok(Value::List {
-        internal_span: span,
-        vals: results,
-    }
-    .into_pipeline_data())
+    Ok(Value::list(results, span).into_pipeline_data())
 }
 
 fn chunks_from_input(

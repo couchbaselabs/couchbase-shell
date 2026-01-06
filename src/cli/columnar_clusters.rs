@@ -139,9 +139,5 @@ fn columnar_clusters(
         return Err(columnar_clusters_not_found_error(project, span));
     }
 
-    Ok(Value::List {
-        vals: results,
-        internal_span: span,
-    }
-    .into_pipeline_data())
+    Ok(Value::list(results, span).into_pipeline_data())
 }

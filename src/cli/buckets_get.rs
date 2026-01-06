@@ -96,11 +96,7 @@ fn buckets_get(
         ));
     }
 
-    Ok(Value::List {
-        vals: results,
-        internal_span: call.head,
-    }
-    .into_pipeline_data())
+    Ok(Value::list(results, call.head).into_pipeline_data())
 }
 
 pub fn get_server_bucket(
@@ -175,10 +171,10 @@ pub(crate) fn bucket_to_nu_value(
     );
     collected.add(
         "ram_quota",
-        Value::Filesize {
-            val: Filesize::new((bucket.ram_quota_mb() * 1024 * 1024) as i64),
-            internal_span: span,
-        },
+        Value::filesize(
+            Filesize::new((bucket.ram_quota_mb() * 1024 * 1024) as i64),
+            span,
+        ),
     );
     collected.add_bool("flush_enabled", bucket.flush_enabled(), span);
     collected.add_bool("cloud", is_cloud, span);
