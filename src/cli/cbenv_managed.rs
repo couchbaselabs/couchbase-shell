@@ -71,9 +71,5 @@ fn clusters(
         })
         .collect::<Vec<_>>();
 
-    Ok(Value::List {
-        vals: clusters,
-        internal_span: span,
-    }
-    .into_pipeline_data())
+    Ok(Value::list(clusters, span).into_pipeline_data())
 }

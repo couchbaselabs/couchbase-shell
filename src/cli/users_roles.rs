@@ -124,9 +124,5 @@ fn run_async(
         }
     }
 
-    Ok(Value::List {
-        vals: entries,
-        internal_span: span,
-    }
-    .into_pipeline_data())
+    Ok(Value::list(entries, span).into_pipeline_data())
 }

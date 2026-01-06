@@ -10,7 +10,7 @@ use crate::cli::error::{client_error_to_shell_error, unexpected_status_code_erro
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
 use nu_protocol::engine::{Command, EngineState, Stack};
-use nu_protocol::Value::Nothing;
+use nu_protocol::Value;
 use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape};
 
 #[derive(Clone)]
@@ -140,10 +140,5 @@ fn users_upsert(
         }
     }
 
-    Ok(PipelineData::Value(
-        Nothing {
-            internal_span: span,
-        },
-        None,
-    ))
+    Ok(PipelineData::Value(Value::nothing(span), None))
 }

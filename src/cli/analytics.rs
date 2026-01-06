@@ -12,7 +12,6 @@ use nu_protocol::{
     Category, IntoPipelineData, ListStream, PipelineData, ShellError, Signature, Span, SyntaxShape,
     Value,
 };
-use nu_utils::SharedCow;
 use std::str::from_utf8;
 use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
@@ -96,10 +95,7 @@ impl Iterator for AnalyticsStream {
             let bytes = match result {
                 Ok(r) => r,
                 Err(e) => {
-                    return Some(Value::Error {
-                        error: Box::new(e),
-                        internal_span: self.span,
-                    });
+                    return Some(Value::error(e, self.span));
                 }
             };
             let result_string = from_utf8(&bytes).unwrap();
@@ -199,26 +195,11 @@ fn run(
             let meta_value = convert_json_value_to_nu_value(&meta_json, span).unwrap();
             let meta_as_record: &mut nu_protocol::Record = &mut meta_value.into_record().unwrap();
 
-            meta_as_record.push(
-                "cluster",
-                Value::String {
-                    val: identifier.clone(),
-                    internal_span: span,
-                },
-            );
+            meta_as_record.push("cluster", Value::string(identifier.clone(), span));
 
-            meta_as_record.push(
-                "results",
-                Value::List {
-                    vals: query_results,
-                    internal_span: span,
-                },
-            );
+            meta_as_record.push("results", Value::list(query_results, span));
 
-            results.push(Value::Record {
-                val: SharedCow::new(meta_as_record.clone()),
-                internal_span: span,
-            })
+            results.push(Value::record(meta_as_record.clone(), span))
         }
 
         streams.insert(identifier, json_streamer);
@@ -227,11 +208,7 @@ fn run(
     let result_stream = AnalyticsStream { streams, span, rt };
 
     if with_meta {
-        return Ok(Value::List {
-            vals: results,
-            internal_span: span,
-        }
-        .into_pipeline_data());
+        return Ok(Value::list(results, span).into_pipeline_data());
     }
 
     Ok(PipelineData::from(ListStream::new(

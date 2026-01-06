@@ -129,11 +129,7 @@ fn nodes(
         nodes.append(&mut n);
     }
 
-    Ok(Value::List {
-        vals: nodes,
-        internal_span: call.head,
-    }
-    .into_pipeline_data())
+    Ok(Value::list(nodes, call.head).into_pipeline_data())
 }
 
 #[derive(Debug, Deserialize)]

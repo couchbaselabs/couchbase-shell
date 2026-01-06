@@ -106,9 +106,5 @@ fn run_insert(
 ) -> Result<PipelineData, ShellError> {
     let results = run_kv_store_ops(state, engine_state, stack, call, input, build_req)?;
 
-    Ok(Value::List {
-        vals: results,
-        internal_span: call.head,
-    }
-    .into_pipeline_data())
+    Ok(Value::list(results, call.head).into_pipeline_data())
 }
