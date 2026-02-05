@@ -60,7 +60,7 @@ uuid = { version = "1.9.1", features = ["v4"] }
 utilities = { path = "utilities" }
 webpki-roots = "0.26.3"
 futures-core = "0.3.31"
-time = "0.3.36"
+time = "0.3.47"
 tokio-stream = "0.1.15"
 futures-util = "0.3.30"
 
