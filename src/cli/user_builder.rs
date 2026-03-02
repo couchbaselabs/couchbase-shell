@@ -1,20 +1,6 @@
 use serde_derive::{Deserialize, Serialize};
 use std::borrow::Borrow;
-use std::fmt::{self, Debug};
-
-#[derive(Debug, Deserialize, Clone, Copy)]
-pub enum AuthDomain {
-    #[serde(rename = "local")]
-    Local,
-    #[serde(rename = "external")]
-    External,
-}
-
-impl fmt::Display for AuthDomain {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
+use std::fmt::Debug;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Role {
