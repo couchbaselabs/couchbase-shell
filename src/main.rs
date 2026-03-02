@@ -307,7 +307,7 @@ fn create_logger_builder(logger_prefix: Option<String>) {
 
     // nu-parser 0.109 added some logic that eagerly evaluates partial where
     // clauses. If there is a parse error this will flash up before quickly
-    // being removed, and result in a new line. So we need to supress this error
+    // being removed, and result in a new line so we need to suppress this error
     logger_builder.filter_module("nu_parser", LevelFilter::Off);
 
     logger_builder.format(move |buf, record| {
