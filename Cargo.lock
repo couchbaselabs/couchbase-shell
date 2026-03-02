@@ -4188,6 +4188,7 @@ dependencies = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "nucleo-matcher"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4211,6 +4212,11 @@ dependencies = [
 name = "num-conv"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+=======
+name = "num-conv"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+>>>>>>> c0f1366 (Update time to address CVE-2026-25727)
 checksum = "cf97ec579c3c42f953ef76dbf8d55ac91fb219dde70e49aa4a6b7d74e9919050"
 
 [[package]]
