@@ -185,7 +185,7 @@ impl Command for Cbsh {
         Ok(Value::string(get_full_help(&Cbsh, context, stack), call.head).into_pipeline_data())
     }
 
-    fn examples(&self) -> Vec<Example> {
+    fn examples(&self) -> Vec<Example<'_>> {
         vec![
             Example {
                 description: "Run a script",
@@ -211,7 +211,7 @@ pub fn parse_commandline_args(
 
         let output = parse(&mut working_set, None, commandline_args.as_bytes(), false);
         if let Some(err) = working_set.parse_errors.first() {
-            report_parse_error(&working_set, err);
+            report_parse_error(None::<&Stack>, &working_set, err);
 
             std::process::exit(1);
         }

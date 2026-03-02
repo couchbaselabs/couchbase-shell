@@ -51,7 +51,7 @@ impl Command for Ask {
         "Asks a connected LLM a question, optionally enhanced with context"
     }
 
-    fn examples(&self) -> Vec<Example> {
+    fn examples(&self) -> Vec<Example<'_>> {
         vec![
             Example {
                 description: "Ask a simple question",

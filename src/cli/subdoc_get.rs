@@ -97,7 +97,7 @@ impl Command for SubDocGet {
         run_subdoc_lookup(self.state.clone(), engine_state, stack, call, input)
     }
 
-    fn examples(&self) -> Vec<Example> {
+    fn examples(&self) -> Vec<Example<'_>> {
         vec![
             Example{
                 description: "Fetches the address and content fields from the document with the ID landmark_10019",
