@@ -91,7 +91,7 @@ impl Command for DocGet {
         run_get(self.state.clone(), engine_state, stack, call, input)
     }
 
-    fn examples(&self) -> Vec<Example> {
+    fn examples(&self) -> Vec<Example<'_>> {
         vec![
             Example {
                 description: "Fetches a single document with the ID as an argument",

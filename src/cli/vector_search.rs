@@ -88,7 +88,7 @@ impl Command for VectorSearch {
         run(self.state.clone(), engine_state, stack, call, input)
     }
 
-    fn examples(&self) -> Vec<Example> {
+    fn examples(&self) -> Vec<Example<'_>> {
         vec![
             Example {
             description: "Source vector fetched using 'doc get'",

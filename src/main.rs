@@ -33,6 +33,7 @@ use state::State;
 use chrono::Local;
 use config::ClusterTlsConfig;
 use env_logger::Env;
+use log::LevelFilter;
 use log::{debug, warn};
 use log::{error, info};
 use serde::Deserialize;
@@ -303,6 +304,11 @@ fn create_logger_builder(logger_prefix: Option<String>) {
     let mut logger_builder = env_logger::Builder::from_env(
         Env::default().filter_or("CBSH_LOG", "info,isahc=error,surf=error,nu=error"),
     );
+
+    // nu-parser 0.109 added some logic that eagerly evaluates partial where
+    // clauses. If there is a parse error this will flash up before quickly
+    // being removed, and result in a new line. So we need to supress this error
+    logger_builder.filter_module("nu_parser", LevelFilter::Off);
 
     logger_builder.format(move |buf, record| {
         let mut style = buf.style();
@@ -827,7 +833,7 @@ fn merge_couchbase_delta(context: &mut EngineState, state: Arc<Mutex<State>>) {
     };
 
     if let Err(err) = context.merge_delta(delta) {
-        report_shell_error(context, &err);
+        report_shell_error(None::<&Stack>, context, &err);
     }
 }
 
@@ -864,6 +870,6 @@ fn use_query_autocomplete(context: &mut EngineState, stack: &mut Stack) {
     );
 
     if let Err(err) = context.merge_env(stack) {
-        report_shell_error(context, &err);
+        report_shell_error(Some(stack), context, &err);
     }
 }

@@ -81,7 +81,7 @@ impl Command for VectorEnrichText {
         vector_enrich_text(self.state.clone(), engine_state, stack, call, input)
     }
 
-    fn examples(&self) -> Vec<Example> {
+    fn examples(&self) -> Vec<Example<'_>> {
         vec![
             Example {
                 description: "Retrieves an embedding from a plain text string",

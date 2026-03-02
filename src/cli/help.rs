@@ -104,7 +104,7 @@ impl Command for Help {
         }
     }
 
-    fn examples(&self) -> Vec<Example> {
+    fn examples(&self) -> Vec<Example<'_>> {
         vec![
             Example {
                 description: "show help for single command, alias, or module",

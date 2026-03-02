@@ -89,7 +89,7 @@ impl Command for Query {
         query(self.state.clone(), engine_state, stack, call, input)
     }
 
-    fn examples(&self) -> Vec<Example> {
+    fn examples(&self) -> Vec<Example<'_>> {
         vec![
             Example {
                 description: "Run a basic query",

@@ -94,7 +94,7 @@ impl Command for ClustersCreate {
         clusters_create(self.state.clone(), engine_state, stack, call, input)
     }
 
-    fn examples(&self) -> Vec<Example> {
+    fn examples(&self) -> Vec<Example<'_>> {
         vec![
             Example {
                 description: "Create a cluster from a saved definition",

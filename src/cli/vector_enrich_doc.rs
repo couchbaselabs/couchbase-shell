@@ -91,7 +91,7 @@ impl Command for VectorEnrichDoc {
         vector_enrich_doc(self.state.clone(), engine_state, stack, call, input)
     }
 
-    fn examples(&self) -> Vec<Example> {
+    fn examples(&self) -> Vec<Example<'_>> {
         vec![
             Example {
                 description: "Open local json doc and enrich the field named 'description'",
