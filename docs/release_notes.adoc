@@ -1,5 +1,11 @@
 == Release Notes
 
+=== 1.2.0 - 2025-03-05
+
+* Support for deploying free tier Capella clusters
+* Support custom API base when using OpenAI models
+* Nushell bumped to 0.111.0
+
 === 1.1.0 - 2025-02-04
 
 * Added support for Columnar cluster management and queries
