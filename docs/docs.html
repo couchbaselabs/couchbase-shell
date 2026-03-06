@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Asciidoctor 2.0.23">
+<meta name="generator" content="Asciidoctor 2.0.26">
 <meta name="author" content="(c) Copyright 2024, All Rights Reserved">
 <title>Couchbase Shell Documentation</title>
 <link rel="stylesheet" href="./couchbase.css">
@@ -60,112 +60,119 @@
 </li>
 </ul>
 </li>
-<li><a href="#_couchbase_commands">4. Couchbase Commands</a>
+<li><a href="#_query_autocomplete">4. Query Autocomplete</a>
 <ul class="sectlevel2">
-<li><a href="#_allow_ip">4.1. <code>allow ip</code></a></li>
-<li><a href="#_buckets">4.2. buckets</a>
-<ul class="sectlevel3">
-<li><a href="#_buckets_2">4.2.1. <code>buckets</code></a></li>
-<li><a href="#_buckets_config">4.2.2. <code>buckets config</code></a></li>
-<li><a href="#_buckets_create">4.2.3. <code>buckets create</code></a></li>
-<li><a href="#_buckets_drop">4.2.4. <code>buckets drop</code></a></li>
-<li><a href="#_buckets_flush">4.2.5. <code>buckets flush</code></a></li>
-<li><a href="#_buckets_get">4.2.6. <code>buckets get</code></a></li>
-<li><a href="#_buckets_load_sample">4.2.7. <code>buckets load-sample</code></a></li>
-<li><a href="#_buckets_update">4.2.8. <code>buckets update</code></a></li>
+<li><a href="#_usage">4.1. Usage</a></li>
+<li><a href="#_supported_keywords">4.2. Supported keywords</a></li>
 </ul>
 </li>
-<li><a href="#_collections">4.3. collections</a>
-<ul class="sectlevel3">
-<li><a href="#_collections_2">4.3.1. <code>collections</code></a></li>
-<li><a href="#_collections_create">4.3.2. <code>collections create</code></a></li>
-<li><a href="#_collections_drop">4.3.3. <code>collections drop</code></a></li>
-</ul>
-</li>
-<li><a href="#_clusters">4.4. clusters</a>
-<ul class="sectlevel3">
-<li><a href="#_clusters_2">4.4.1. <code>clusters</code></a></li>
-<li><a href="#_clusters_create">4.4.2. <code>clusters create</code></a></li>
-<li><a href="#_clusters_drop">4.4.3. <code>clusters drop</code></a></li>
-<li><a href="#_clusters_get">4.4.4. <code>clusters get</code></a></li>
-</ul>
-</li>
-<li><a href="#_columnar">4.5. columnar</a>
-<ul class="sectlevel3">
-<li><a href="#_columnar_clusters">4.5.1. <code>columnar clusters</code></a></li>
-<li><a href="#_columnar_clusters_create">4.5.2. <code>columnar clusters create</code></a></li>
-<li><a href="#_columnar_clusters_drop">4.5.3. <code>columnar clusters drop</code></a></li>
-<li><a href="#_columnar_databases">4.5.4. <code>columnar databases</code></a></li>
-<li><a href="#_columnar_query">4.5.5. <code>columnar query</code></a></li>
-</ul>
-</li>
-<li><a href="#_credentials">4.6. <code>credentials</code></a>
-<ul class="sectlevel3">
-<li><a href="#_credentials_2">4.6.1. <code>credentials</code></a></li>
-<li><a href="#_credentials_create">4.6.2. <code>credentials create</code></a></li>
-<li><a href="#_credentials_drop">4.6.3. <code>credentials drop</code></a></li>
-</ul>
-</li>
-<li><a href="#_doc">4.7. doc</a>
-<ul class="sectlevel3">
-<li><a href="#_doc_get">4.7.1. <code>doc get</code></a></li>
-<li><a href="#_doc_import">4.7.2. <code>doc import</code></a></li>
-<li><a href="#_doc_insert">4.7.3. <code>doc insert</code></a></li>
-<li><a href="#_doc_remove">4.7.4. <code>doc remove</code></a></li>
-<li><a href="#_doc_replace">4.7.5. <code>doc replace</code></a></li>
-<li><a href="#_doc_upsert">4.7.6. <code>doc upsert</code></a></li>
-</ul>
-</li>
-<li><a href="#_scopes">4.8. scopes</a>
-<ul class="sectlevel3">
-<li><a href="#_scopes_2">4.8.1. <code>scopes</code></a></li>
-<li><a href="#_scopes_create">4.8.2. <code>scopes create</code></a></li>
-<li><a href="#_scopes_drop">4.8.3. <code>scopes drop</code></a></li>
-</ul>
-</li>
-<li><a href="#_nodes">4.9. <code>nodes</code></a></li>
-<li><a href="#_subdoc_get">4.10. <code>subdoc get</code></a></li>
-<li><a href="#_query">4.11. query</a>
-<ul class="sectlevel3">
-<li><a href="#_query_2">4.11.1. <code>query</code></a></li>
-<li><a href="#_query_advise">4.11.2. <code>query advise</code></a></li>
-<li><a href="#_query_indexes">4.11.3. <code>query indexes</code></a></li>
-</ul>
-</li>
-<li><a href="#_vector">4.12. vector</a>
-<ul class="sectlevel3">
-<li><a href="#_vector_search">4.12.1. <code>vector search</code></a></li>
-<li><a href="#_vector_create_index">4.12.2. <code>vector create-index</code></a></li>
-<li><a href="#_vector_enrich_doc">4.12.3. <code>vector enrich-doc</code></a></li>
-<li><a href="#_vector_enrich_text">4.12.4. <code>vector enrich-text</code></a></li>
-</ul>
-</li>
-<li><a href="#_ask">4.13. <code>ask</code></a></li>
-<li><a href="#_version">4.14. <code>version</code></a></li>
-</ul>
-</li>
-<li><a href="#_reference">5. Reference</a>
+<li><a href="#_couchbase_commands">5. Couchbase Commands</a>
 <ul class="sectlevel2">
-<li><a href="#_config_file_format">5.1. Config File Format</a></li>
-<li><a href="#_credentials_file_format">5.2. Credentials File Format</a></li>
+<li><a href="#_allow_ip">5.1. <code>allow ip</code></a></li>
+<li><a href="#_buckets">5.2. buckets</a>
+<ul class="sectlevel3">
+<li><a href="#_buckets_2">5.2.1. <code>buckets</code></a></li>
+<li><a href="#_buckets_config">5.2.2. <code>buckets config</code></a></li>
+<li><a href="#_buckets_create">5.2.3. <code>buckets create</code></a></li>
+<li><a href="#_buckets_drop">5.2.4. <code>buckets drop</code></a></li>
+<li><a href="#_buckets_flush">5.2.5. <code>buckets flush</code></a></li>
+<li><a href="#_buckets_get">5.2.6. <code>buckets get</code></a></li>
+<li><a href="#_buckets_load_sample">5.2.7. <code>buckets load-sample</code></a></li>
+<li><a href="#_buckets_update">5.2.8. <code>buckets update</code></a></li>
 </ul>
 </li>
-<li><a href="#_debugging">6. Debugging</a>
-<ul class="sectlevel2">
-<li><a href="#_error">6.1. error</a></li>
-<li><a href="#_warn">6.2. warn</a></li>
-<li><a href="#_info">6.3. info</a></li>
-<li><a href="#_debug">6.4. debug</a></li>
-<li><a href="#_trace">6.5. trace</a></li>
+<li><a href="#_collections">5.3. collections</a>
+<ul class="sectlevel3">
+<li><a href="#_collections_2">5.3.1. <code>collections</code></a></li>
+<li><a href="#_collections_create">5.3.2. <code>collections create</code></a></li>
+<li><a href="#_collections_drop">5.3.3. <code>collections drop</code></a></li>
 </ul>
 </li>
-<li><a href="#_release_notes">7. Release Notes</a>
+<li><a href="#_clusters">5.4. clusters</a>
+<ul class="sectlevel3">
+<li><a href="#_clusters_2">5.4.1. <code>clusters</code></a></li>
+<li><a href="#_clusters_create">5.4.2. <code>clusters create</code></a></li>
+<li><a href="#_clusters_drop">5.4.3. <code>clusters drop</code></a></li>
+<li><a href="#_clusters_get">5.4.4. <code>clusters get</code></a></li>
+</ul>
+</li>
+<li><a href="#_columnar">5.5. columnar</a>
+<ul class="sectlevel3">
+<li><a href="#_columnar_clusters">5.5.1. <code>columnar clusters</code></a></li>
+<li><a href="#_columnar_clusters_create">5.5.2. <code>columnar clusters create</code></a></li>
+<li><a href="#_columnar_clusters_drop">5.5.3. <code>columnar clusters drop</code></a></li>
+<li><a href="#_columnar_databases">5.5.4. <code>columnar databases</code></a></li>
+<li><a href="#_columnar_query">5.5.5. <code>columnar query</code></a></li>
+</ul>
+</li>
+<li><a href="#_credentials">5.6. <code>credentials</code></a>
+<ul class="sectlevel3">
+<li><a href="#_credentials_2">5.6.1. <code>credentials</code></a></li>
+<li><a href="#_credentials_create">5.6.2. <code>credentials create</code></a></li>
+<li><a href="#_credentials_drop">5.6.3. <code>credentials drop</code></a></li>
+</ul>
+</li>
+<li><a href="#_doc">5.7. doc</a>
+<ul class="sectlevel3">
+<li><a href="#_doc_get">5.7.1. <code>doc get</code></a></li>
+<li><a href="#_doc_import">5.7.2. <code>doc import</code></a></li>
+<li><a href="#_doc_insert">5.7.3. <code>doc insert</code></a></li>
+<li><a href="#_doc_remove">5.7.4. <code>doc remove</code></a></li>
+<li><a href="#_doc_replace">5.7.5. <code>doc replace</code></a></li>
+<li><a href="#_doc_upsert">5.7.6. <code>doc upsert</code></a></li>
+</ul>
+</li>
+<li><a href="#_scopes">5.8. scopes</a>
+<ul class="sectlevel3">
+<li><a href="#_scopes_2">5.8.1. <code>scopes</code></a></li>
+<li><a href="#_scopes_create">5.8.2. <code>scopes create</code></a></li>
+<li><a href="#_scopes_drop">5.8.3. <code>scopes drop</code></a></li>
+</ul>
+</li>
+<li><a href="#_nodes">5.9. <code>nodes</code></a></li>
+<li><a href="#_subdoc_get">5.10. <code>subdoc get</code></a></li>
+<li><a href="#_query">5.11. query</a>
+<ul class="sectlevel3">
+<li><a href="#_query_2">5.11.1. <code>query</code></a></li>
+<li><a href="#_query_advise">5.11.2. <code>query advise</code></a></li>
+<li><a href="#_query_indexes">5.11.3. <code>query indexes</code></a></li>
+</ul>
+</li>
+<li><a href="#_vector">5.12. vector</a>
+<ul class="sectlevel3">
+<li><a href="#_vector_search">5.12.1. <code>vector search</code></a></li>
+<li><a href="#_vector_create_index">5.12.2. <code>vector create-index</code></a></li>
+<li><a href="#_vector_enrich_doc">5.12.3. <code>vector enrich-doc</code></a></li>
+<li><a href="#_vector_enrich_text">5.12.4. <code>vector enrich-text</code></a></li>
+</ul>
+</li>
+<li><a href="#_ask">5.13. <code>ask</code></a></li>
+<li><a href="#_version">5.14. <code>version</code></a></li>
+</ul>
+</li>
+<li><a href="#_reference">6. Reference</a>
 <ul class="sectlevel2">
-<li><a href="#_1_1_0_2025_02_04">7.1. 1.1.0 - 2025-02-04</a></li>
-<li><a href="#_1_0_0_2024_09_11">7.2. 1.0.0 - 2024-09-11</a></li>
-<li><a href="#_0_75_2_2023_04_10">7.3. 0.75.2 - 2023-04-10</a></li>
-<li><a href="#_0_75_1_2023_04_13">7.4. 0.75.1 - 2023-04-13</a></li>
-<li><a href="#_0_75_0_2023_02_09">7.5. 0.75.0 - 2023-02-09</a></li>
+<li><a href="#_config_file_format">6.1. Config File Format</a></li>
+<li><a href="#_credentials_file_format">6.2. Credentials File Format</a></li>
+</ul>
+</li>
+<li><a href="#_debugging">7. Debugging</a>
+<ul class="sectlevel2">
+<li><a href="#_error">7.1. error</a></li>
+<li><a href="#_warn">7.2. warn</a></li>
+<li><a href="#_info">7.3. info</a></li>
+<li><a href="#_debug">7.4. debug</a></li>
+<li><a href="#_trace">7.5. trace</a></li>
+</ul>
+</li>
+<li><a href="#_release_notes">8. Release Notes</a>
+<ul class="sectlevel2">
+<li><a href="#_1_2_0_2025_03_05">8.1. 1.2.0 - 2025-03-05</a></li>
+<li><a href="#_1_1_0_2025_02_04">8.2. 1.1.0 - 2025-02-04</a></li>
+<li><a href="#_1_0_0_2024_09_11">8.3. 1.0.0 - 2024-09-11</a></li>
+<li><a href="#_0_75_2_2023_04_10">8.4. 0.75.2 - 2023-04-10</a></li>
+<li><a href="#_0_75_1_2023_04_13">8.5. 0.75.1 - 2023-04-13</a></li>
+<li><a href="#_0_75_0_2023_02_09">8.6. 0.75.0 - 2023-02-09</a></li>
 </ul>
 </li>
 </ul>
@@ -193,7 +200,7 @@ We are providing community support through this <a href="https://github.com/couc
 <div class="sect2">
 <h3 id="_installation">1.1. Installation</h3>
 <div class="paragraph">
-<p>The current latest version is <strong>1.1.0</strong>.</p>
+<p>The current latest version is <strong>1.2.0</strong>.</p>
 </div>
 <div class="paragraph">
 <p>There are a couple ways you can get access to <code>cbsh</code>.</p>
@@ -206,19 +213,19 @@ We are providing community support through this <a href="https://github.com/couc
 <div class="ulist">
 <ul>
 <li>
-<p>Linux: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.1.0/cbsh-x86_64-unknown-linux-gnu.tar.gz">cbsh-x86_64-unknown-linux-gnu.tar.gz</a></p>
+<p>Linux: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.2.0/cbsh-x86_64-unknown-linux-gnu.tar.gz">cbsh-x86_64-unknown-linux-gnu.tar.gz</a></p>
 </li>
 <li>
-<p>macOS: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.1.0/cbsh-x86_64-apple-darwin.zip">cbsh-x86_64-apple-darwin.zip</a></p>
+<p>macOS: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.2.0/cbsh-x86_64-apple-darwin.zip">cbsh-x86_64-apple-darwin.zip</a></p>
 </li>
 <li>
-<p>Linux aarch64: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.1.0/cbsh-aarch64-unknown-linux-gnu.tar.gz">cbsh-aarch64-unknown-linux-gnu.tar.gz</a></p>
+<p>Linux aarch64: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.2.0/cbsh-aarch64-unknown-linux-gnu.tar.gz">cbsh-aarch64-unknown-linux-gnu.tar.gz</a></p>
 </li>
 <li>
-<p>macOS aarch64: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.1.0/cbsh-aarch64-apple-darwin.zip">cbsh-aarch64-apple-darwin.zip</a></p>
+<p>macOS aarch64: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.2.0/cbsh-aarch64-apple-darwin.zip">cbsh-aarch64-apple-darwin.zip</a></p>
 </li>
 <li>
-<p>Windows: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.1.0/cbsh-x86_64-pc-windows-msvc.zip">cbsh-x86_64-pc-windows-msvc.zip</a></p>
+<p>Windows: <a href="https://github.com/couchbaselabs/couchbase-shell/releases/download/v1.2.0/cbsh-x86_64-pc-windows-msvc.zip">cbsh-x86_64-pc-windows-msvc.zip</a></p>
 </li>
 </ul>
 </div>
@@ -1118,6 +1125,7 @@ provider = &quot;OpenAI&quot;
 embed_model = &quot;text-embedding-3-small&quot;
 chat_model = &quot;gpt-3.5-turbo&quot;
 api_key = &quot;get-your-own&quot;
+api_base = &quot;http://localhost:2134/v1&quot;
 
 [[llm]]
 identifier = &quot;Bedrock-titan&quot;
@@ -1142,6 +1150,9 @@ Notice that the Bedrock entry does not have an API key, this is because it requi
 <p>The <code>embed-model</code> field is the model that will be used to generate embeddings by the <a href="#_vector_enrich_doc">vector enrich-doc</a> and <a href="#_vector_enrich_text">vector enrich-text</a> commands.
 While the <code>chat-model</code> is the model that will be used to answer questions with the <a href="#_ask">ask</a> command.
 These models can be any that the provider&#8217;s API supports, and should be provided in the format given in the provider&#8217;s API docs.</p>
+</div>
+<div class="paragraph">
+<p>When using OpenAI user&#8217;s can provide a custom api base, allowing users to use cbshell with local/custom models that support the OpenAI api format.</p>
 </div>
 <div class="paragraph">
 <p>The api-keys can also be given separately in the <a href="#_credentials_file_format">credentials file</a>, for example:</p>
@@ -1297,14 +1308,286 @@ For example:</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_couchbase_commands">4. Couchbase Commands</h2>
+<h2 id="_query_autocomplete">4. Query Autocomplete</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Query Autocomplete is designed to help users dip their toes into the wonderful world of n1ql without having to struggle with the particulars of query structure and formatting.
+Users can take advantage of Couchbase Shell&#8217;s context to generate queries against their own collections and documents.</p>
+</div>
+<div class="sect2">
+<h3 id="_usage">4.1. Usage</h3>
+<div class="paragraph">
+<p>Query Autocomplete is implemented as a <a href="https://www.nushell.sh/book/modules.html">nushell module</a>, which is added to the environment when the shell is started.
+Before a query can be generated you need to set an <a href="#_cb_env_bucketscopecollection">active bucket and scope</a> so that <code>FROM</code> knows which collections you can query.
+Here we use the <code>travel-sample</code> bucket and <code>inventory</code> scope which can easily be loaded onto your cluster using <a href="#_buckets_load_sample"><code>buckets load-sample</code></a>.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+&gt;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Type <code>FROM</code> followed by a space then press tab to see the possible completions:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+| FROM
+airline             airport             hotel               landmark
+route</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The suggestions here are all of the collections within your active scope.
+If you are familiar with query languages you may be used to beginning with SELECT.
+So that <code>FROM</code> knows which fields to suggest later the collection is required first.
+Choose one of the collections using the arrow keys or tab, then the enter key.
+Here we will go with the <code>landmark</code> collection:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+&gt; FROM landmark</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Now a collection is chosen, put a space after then press tab again for the next suggestions:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+&gt; FROM landmark SELECT</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This time the only valid word is <code>SELECT</code> so this is added to the partial query without you needing to choose it.
+Now we can see what we can <code>SELECT</code> from the <code>landmark</code> docs:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+| FROM landmark SELECT
+*                   `activity`          `address`           `alt`
+`city`              `content`           `country`           `directions`
+`email`             `geo`               `hours`             `id`
+`image`             `image_direct_url`  `name`              `phone`
+`price`             `state`             `title`             `tollfree`
+`type`              `url`</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Choose the field, or wildcard, then continue to the next completion.
+Let&#8217;s choose the <code>name</code> field and generate the next set of completions:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+| FROM landmark SELECT `name`
+WHERE               LIMIT               ORDER BY            *
+`activity`          `address`           `alt`               `city`
+`content`           `country`           `directions`        `email`
+`geo`               `hours`             `id`                `image`
+`image_direct_url`  `phone`             `price`             `state`
+`title`             `tollfree`          `type`              `url`</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Let&#8217;s <code>SELECT</code> the address as well:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+| FROM landmark SELECT `name` `address`
+WHERE               LIMIT               ORDER BY            *
+`activity`          `alt`               `city`              `content`
+`country`           `directions`        `email`             `geo`
+`hours`             `id`                `image`             `image_direct_url`
+`phone`             `price`             `state`             `title`
+`tollfree`          `type`              `url`</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Now let&#8217;s add a <code>WHERE</code> clause:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+| FROM landmark SELECT `name` `address` WHERE
+ANY                 EVERY               `activity`          `address`
+`alt`               `city`              `content`           `country`
+`directions`        `email`             `geo`               `hours`
+`id`                `image`             `image_direct_url`  `name`
+`phone`             `price`             `state`             `title`
+`tollfree`          `type`              `url`</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Let&#8217;s take a look at some Parisian landmarks, for that we need to conditionally SELECT on the <code>city</code> field:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+| FROM landmark SELECT `name` `address` WHERE `city`
+!=                  &lt;                   &lt;=                  ==
+&gt;                   &gt;=                  LIKE</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>After choosing a condition field the command suggests all of the valid operators.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+| FROM landmark SELECT `name` `address` WHERE `city` ==
+NO RECORDS FOUND</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Sometimes the autocomplete command will not have any suggestions, for example after an operator in a WHERE clause.
+This is because this value needs to be supplied by the User, since we want landmarks in Paris we need to manually type this:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+| FROM landmark SELECT `name` `address` WHERE `city` == Paris
+AND                 LIMIT               ORDER BY</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Once we have completed the WHERE condition then the autocomplete command can suggest the next word again.
+Let&#8217;s add an <code>ORDER BY</code> clause to our query:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+| FROM landmark SELECT `name` `address` WHERE `city` == Paris ORDER BY
+`name`              `address`</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Since we can only order by fields that we have selected from the documents these are all that are suggested.
+Let&#8217;s order by <code>name</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+| FROM landmark SELECT `name` `address` WHERE `city` == Paris ORDER BY `name`
+`address`           ASC                 DESC                LIMIT</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Finally let&#8217;s add a LIMIT to the number of results from our query:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+| FROM landmark SELECT `name` `address` WHERE `city` == Paris ORDER BY `name` LIMIT
+NO RECORDS FOUND</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>As with the WHERE condition value the number of results needs to be supplied by the User so there are no suggestions.
+Let&#8217;s LIMIT the number of results to 10:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+| FROM landmark SELECT `name` `address` WHERE `city` == Paris ORDER BY `name` LIMIT 10</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Once the query is complete press enter to execute it:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+&gt; FROM landmark SELECT `name` `address` WHERE `city` == Paris ORDER BY `name` LIMIT 10
+╭───┬─────────────────────────────────┬─────────────────────────────┬─────────╮
+│ # │             address             │            name             │ cluster │
+├───┼─────────────────────────────────┼─────────────────────────────┼─────────┤
+│ 0 │ Tour Eiffel 1st floor           │ 58 Tour Eiffel              │ local   │
+│ 1 │ 15, rue Desnouettes             │ Afaria                      │ local   │
+│ 2 │ 47, rue Saint Louis en l’Ile    │ Amorino                     │ local   │
+│ 3 │ 10, av de l’opéra               │ Antoine                     │ local   │
+│ 4 │ 4 rue louis Armand              │ Aquaboulevard               │ local   │
+│ 5 │                                 │ Arc de Triomphe de l'Étoile │ local   │
+│ 6 │ Avenue des Champs-Elysees 51-53 │ Atelier Renault             │ local   │
+│ 7 │ 7, rue des Trois-Frères         │ Au Progres                  │ local   │
+│ 8 │ 59 rue Lecourbe                 │ Au Roi du café              │ local   │
+│ 9 │ 129 bis rue Saint Charles,      │ Aux Merveilleux de Fred     │ local   │
+╰───┴─────────────────────────────────┴─────────────────────────────┴─────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>If you want to see fully formatted query then you can print this using the <code>--print-query</code> flag:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 local in 🗄 travel-sample.inventory._default
+&gt; FROM landmark SELECT `name` `address` WHERE `city` == Paris ORDER BY `name` LIMIT 10 --print_query
+SELECT `name` , `address` FROM landmark WHERE `city` = &quot;Paris&quot; ORDER BY `name` LIMIT 10</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_supported_keywords">4.2. Supported keywords</h3>
+<div class="paragraph">
+<p>Query Autocomplete only covers a subset of the full n1ql language, the supported keywords are:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>FROM</code></p>
+</li>
+<li>
+<p><code>SELECT</code></p>
+</li>
+<li>
+<p><code>WHERE</code></p>
+</li>
+<li>
+<p><code>AND</code></p>
+</li>
+<li>
+<p><code>LIMIT</code></p>
+</li>
+<li>
+<p><code>ANY/EVERY</code></p>
+</li>
+<li>
+<p><code>IN</code></p>
+</li>
+<li>
+<p><code>SATISFIES</code></p>
+</li>
+<li>
+<p><code>END</code></p>
+</li>
+<li>
+<p><code>ORDER BY</code></p>
+</li>
+<li>
+<p><code>ASC/DESC</code></p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>We plan to include more keywords over time.
+If you would like a support for a particular keyword to be added please raise an issue on the <code>cbshell</code> <a href="https://github.com/couchbaselabs/couchbase-shell/issues">issue tracker</a>.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_couchbase_commands">5. Couchbase Commands</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>The following sections discuss the individual Couchbase specific commands in greater detail. Remember, you can always mix and match
 them with built-in other shell commands as well as executable programs from your environment.</p>
 </div>
 <div class="sect2">
-<h3 id="_allow_ip">4.1. <code>allow ip</code></h3>
+<h3 id="_allow_ip">5.1. <code>allow ip</code></h3>
 <div class="paragraph">
 <p>Adds the given IP address to the active Capella cluster&#8217;s allow list.
 Note that this command will not work against locally hosted Couchbase Server clusters.</p>
@@ -1338,13 +1621,13 @@ For example we can use one command to get our IP address and pipe the result int
 </div>
 </div>
 <div class="sect2">
-<h3 id="_buckets">4.2. buckets</h3>
+<h3 id="_buckets">5.2. buckets</h3>
 <div class="paragraph">
 <p>The <code>buckets</code> commands are used to perform bucket management operations.
 They can be particularly powerful combined with the <a href="https://couchbase.sh/docs/#_the_clusters_flag">--clusters</a> flag.</p>
 </div>
 <div class="sect3">
-<h4 id="_buckets_2">4.2.1. <code>buckets</code></h4>
+<h4 id="_buckets_2">5.2.1. <code>buckets</code></h4>
 <div class="paragraph">
 <p>Lists all the buckets from your active cluster:</p>
 </div>
@@ -1366,7 +1649,7 @@ They can be particularly powerful combined with the <a href="https://couchbase.s
 </div>
 </div>
 <div class="sect3">
-<h4 id="_buckets_config">4.2.2. <code>buckets config</code></h4>
+<h4 id="_buckets_config">5.2.2. <code>buckets config</code></h4>
 <div class="paragraph">
 <p>Retrieves the full config for the named bucket:</p>
 </div>
@@ -1414,7 +1697,7 @@ They can be particularly powerful combined with the <a href="https://couchbase.s
 </div>
 </div>
 <div class="sect3">
-<h4 id="_buckets_create">4.2.3. <code>buckets create</code></h4>
+<h4 id="_buckets_create">5.2.3. <code>buckets create</code></h4>
 <div class="paragraph">
 <p>Creates a bucket with the specified RAM quota on the active cluster:</p>
 </div>
@@ -1436,7 +1719,7 @@ They can be particularly powerful combined with the <a href="https://couchbase.s
 </div>
 </div>
 <div class="sect3">
-<h4 id="_buckets_drop">4.2.4. <code>buckets drop</code></h4>
+<h4 id="_buckets_drop">5.2.4. <code>buckets drop</code></h4>
 <div class="paragraph">
 <p>Drops the named bucket:</p>
 </div>
@@ -1460,7 +1743,7 @@ They can be particularly powerful combined with the <a href="https://couchbase.s
 </div>
 </div>
 <div class="sect3">
-<h4 id="_buckets_flush">4.2.5. <code>buckets flush</code></h4>
+<h4 id="_buckets_flush">5.2.5. <code>buckets flush</code></h4>
 <div class="paragraph">
 <p>Deletes all docs from the named buckets:</p>
 </div>
@@ -1481,7 +1764,7 @@ They can be particularly powerful combined with the <a href="https://couchbase.s
 </div>
 </div>
 <div class="sect3">
-<h4 id="_buckets_get">4.2.6. <code>buckets get</code></h4>
+<h4 id="_buckets_get">5.2.6. <code>buckets get</code></h4>
 <div class="paragraph">
 <p>Gets the named bucket:</p>
 </div>
@@ -1497,7 +1780,7 @@ They can be particularly powerful combined with the <a href="https://couchbase.s
 </div>
 </div>
 <div class="sect3">
-<h4 id="_buckets_load_sample">4.2.7. <code>buckets load-sample</code></h4>
+<h4 id="_buckets_load_sample">5.2.7. <code>buckets load-sample</code></h4>
 <div class="paragraph">
 <p>Loads the named <a href="https://docs.couchbase.com/server/current/manage/manage-settings/install-sample-buckets.html">sample bucket</a> onto the active cluster:</p>
 </div>
@@ -1521,7 +1804,7 @@ They can be particularly powerful combined with the <a href="https://couchbase.s
 </div>
 </div>
 <div class="sect3">
-<h4 id="_buckets_update">4.2.8. <code>buckets update</code></h4>
+<h4 id="_buckets_update">5.2.8. <code>buckets update</code></h4>
 <div class="paragraph">
 <p>Updates the settings of an existing bucket:</p>
 </div>
@@ -1548,12 +1831,12 @@ They can be particularly powerful combined with the <a href="https://couchbase.s
 </div>
 </div>
 <div class="sect2">
-<h3 id="_collections">4.3. collections</h3>
+<h3 id="_collections">5.3. collections</h3>
 <div class="paragraph">
 <p>The <code>collections</code> commands are used to manage collections.</p>
 </div>
 <div class="sect3">
-<h4 id="_collections_2">4.3.1. <code>collections</code></h4>
+<h4 id="_collections_2">5.3.1. <code>collections</code></h4>
 <div class="paragraph">
 <p>Lists all of the collections in the active scope:</p>
 </div>
@@ -1574,7 +1857,7 @@ They can be particularly powerful combined with the <a href="https://couchbase.s
 </div>
 </div>
 <div class="sect3">
-<h4 id="_collections_create">4.3.2. <code>collections create</code></h4>
+<h4 id="_collections_create">5.3.2. <code>collections create</code></h4>
 <div class="paragraph">
 <p>Create a collection with the name supplied:</p>
 </div>
@@ -1598,7 +1881,7 @@ They can be particularly powerful combined with the <a href="https://couchbase.s
 </div>
 </div>
 <div class="sect3">
-<h4 id="_collections_drop">4.3.3. <code>collections drop</code></h4>
+<h4 id="_collections_drop">5.3.3. <code>collections drop</code></h4>
 <div class="paragraph">
 <p>Drop the collection matching the name given:</p>
 </div>
@@ -1623,13 +1906,13 @@ They can be particularly powerful combined with the <a href="https://couchbase.s
 </div>
 </div>
 <div class="sect2">
-<h3 id="_clusters">4.4. clusters</h3>
+<h3 id="_clusters">5.4. clusters</h3>
 <div class="paragraph">
 <p>The <code>clusters</code> commands are used to perform management operations against Capella clusters.
 In order to use these commands you will need to configure a Capella organization in the <a href="https://couchbase.sh/docs/#_the_config_dotfiles">config file</a>.</p>
 </div>
 <div class="sect3">
-<h4 id="_clusters_2">4.4.1. <code>clusters</code></h4>
+<h4 id="_clusters_2">5.4.1. <code>clusters</code></h4>
 <div class="paragraph">
 <p>Lists all the Capella clusters in the active project/Organization.</p>
 </div>
@@ -1668,40 +1951,178 @@ In order to use these commands you will need to configure a Capella organization
 </div>
 </div>
 <div class="sect3">
-<h4 id="_clusters_create">4.4.2. <code>clusters create</code></h4>
+<h4 id="_clusters_create">5.4.2. <code>clusters create</code></h4>
 <div class="paragraph">
-<p>Creates a cluster from either a full definition piped in or from values chosen using flags.
-The minimum required is for the user to choose a cloud provider, this can be aws, gcp or azure:</p>
+<p>Creates a Capella cluster in the configured organization and project.
+If used with no definition or flag values provided a free tier cluster with sensible defaults will be created:</p>
 </div>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight nowrap"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
-&gt; clusters create --provider aws
+&gt; clusters create
+[INFO] 2025-07-07 09:11:21.628 provider not specified, defaulting to aws
+[INFO] 2025-07-07 09:11:21.628 cluster name not specified, a randomly generated name will be used
+[INFO] 2025-07-07 09:11:21.628 region not specified, defaulting to us-east-2
+[WARN] 2025-07-07 09:11:21.628 this configuration will create a FREE cluster, is this okay? (y/n)
+y
 👤 Charlie 🏠 remote in ☁️ default._default._default
 &gt; clusters
 ╭───┬────────────────────────┬──────────────────────────────────────┬───────────┬───────────────────────────╮
 │ # │          name          │                  id                  │   state   │      cloud provider       │
 ├───┼────────────────────────┼──────────────────────────────────────┼───────────┼───────────────────────────┤
-│ 0 │ cbshell-cluster-2cd8d6 │ 1e3b86a6-f039-479e-be60-12330af49e67 │ deploying │ ╭────────┬──────────────╮ │
+│ 0 │ cbshell-cluster-de1942 │ 96226baa-f52b-41c0-aadd-c45dccb1a8ef │ deploying │ ╭────────┬──────────────╮ │
 │   │                        │                                      │           │ │ type   │ aws          │ │
-│   │                        │                                      │           │ │ region │ us-east-1    │ │
-│   │                        │                                      │           │ │ cidr   │ 10.0.23.0/24 │ │
+│   │                        │                                      │           │ │ region │ us-east-2    │ │
+│   │                        │                                      │           │ │ cidr   │ 10.1.30.0/23 │ │
 │   │                        │                                      │           │ ╰────────┴──────────────╯ │
 ╰───┴────────────────────────┴──────────────────────────────────────┴───────────┴───────────────────────────╯</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>This will create a single node cluster, running the index, data query and search services.
-The full list of flags supported by <code>clusters create</code> is:</p>
+<p>Before your cluster is created cbshell will tell you if the configuration will result in a free-tier or paid cluster, and as for confirmation:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>  --name &lt;String&gt; - the name of the cluster
-  --provider &lt;String&gt; - the cloud provider
-  --version &lt;String&gt; - the couchbase server version
-  --capella &lt;String&gt; - the Capella organization to use
-  --nodes &lt;Int&gt; - the number of nodes in the cluster
-  --project &lt;String&gt; - the Capella project to use</code></pre>
+<pre class="CodeRay highlight"><code>[WARN] 2025-07-07 09:11:21.628 this configuration will create a FREE cluster, is this okay? (y/n)
+y</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Free clusters are limited in how they can be customised, and only the name, description, cloud provider, region and cidr can be configured.
+Check the <a href="https://docs.couchbase.com/cloud/management-api-reference/index.html#tag/Free-Tier">Capella API docs</a> for more information.
+You can configure all of these fields with the relevant flags:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; clusters create --name free-gcp --description &quot;My first couchbase cluster&quot; --cidr 10.0.0.0/24 --provider gcp --region us-central1
+[WARN] 2025-07-07 09:13:32.545 this configuration will create a FREE cluster, is this okay? (y/n)
+y</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>We can see from the warning that we will still deploy a free tier cluster.
+This can be double checked by getting the full details of the cluster being deployed:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; clusters get free-gcp
+╭────────────────────┬──────────────────────────────────────────────────────────────────────────╮
+│ name               │ free-gcp                                                                 │
+│ id                 │ abfcb6a8-2e88-4d73-8ff2-9546dca70b07                                     │
+│ description        │ My first couchbase cluster                                               │
+│ state              │ deploying                                                                │
+│ connection string  │ cb.nzdq9trtbggtvut5.aws-guardians.nonprod-project-avengers.com           │
+│ configuration type │ singleNode                                                               │
+│                    │ ╭─────────┬───────╮                                                      │
+│ server             │ │ version │ 7.6.6 │                                                      │
+│                    │ ╰─────────┴───────╯                                                      │
+│                    │ ╭────────┬─────────────╮                                                 │
+│ cloud provider     │ │ type   │ gcp         │                                                 │
+│                    │ │ region │ us-central1 │                                                 │
+│                    │ │ cidr   │ 10.0.0.0/24 │                                                 │
+│                    │ ╰────────┴─────────────╯                                                 │
+│                    │ ╭───┬────────────────────────────────────┬────────────┬────────────────╮ │
+│ service groups     │ │ # │                node                │ numOfNodes │    services    │ │
+│                    │ ├───┼────────────────────────────────────┼────────────┼────────────────┤ │
+│                    │ │ 0 │ ╭─────────┬──────────────────────╮ │          1 │ ╭───┬────────╮ │ │
+│                    │ │   │ │         │ ╭─────┬───╮          │ │            │ │ 0 │ data   │ │ │
+│                    │ │   │ │ compute │ │ cpu │ 2 │          │ │            │ │ 1 │ index  │ │ │
+│                    │ │   │ │         │ │ ram │ 8 │          │ │            │ │ 2 │ query  │ │ │
+│                    │ │   │ │         │ ╰─────┴───╯          │ │            │ │ 3 │ search │ │ │
+│                    │ │   │ │         │ ╭─────────┬────────╮ │ │            │ ╰───┴────────╯ │ │
+│                    │ │   │ │ disk    │ │ type    │ pd-ssd │ │ │            │                │ │
+│                    │ │   │ │         │ │ storage │ 10     │ │ │            │                │ │
+│                    │ │   │ │         │ ╰─────────┴────────╯ │ │            │                │ │
+│                    │ │   │ ╰─────────┴──────────────────────╯ │            │                │ │
+│                    │ ╰───┴────────────────────────────────────┴────────────┴────────────────╯ │
+│                    │ ╭──────┬────────╮                                                        │
+│ availability       │ │ type │ single │                                                        │
+│                    │ ╰──────┴────────╯                                                        │
+│                    │ ╭──────────┬──────╮                                                      │
+│ support            │ │ plan     │ free │                                                      │
+│                    │ │ timezone │ PT   │                                                      │
+│                    │ ╰──────────┴──────╯                                                      │
+╰────────────────────┴──────────────────────────────────────────────────────────────────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>If you configure any fields that are not supported by free-tier clusters then a paid cluster will be deployed.
+For example the following will create a paid cluster because the number of nodes has been set to 3:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>&gt; clusters create --name paid-azure --description &quot;My first couchbase cluster&quot; --cidr 10.0.2.0/24 --provider azure --region eastus --nodes 3
+[WARN] 2025-07-07 09:15:36.022 this configuration will create a PAID cluster, is this okay? (y/n)
+👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; clusters get paid-azure
+╭────────────────────┬───────────────────────────────────────────────────────────────────────────────╮
+│ name               │ paid-azure                                                                    │
+│ id                 │ b8df912f-dcfa-4fac-8926-fe4ab3a48864                                          │
+│ description        │ My first couchbase cluster                                                    │
+│ state              │ deploying                                                                     │
+│ connection string  │ cb.zxabjkz-ifhrczs5.aws-guardians.nonprod-project-avengers.com                │
+│ configuration type │ multiNode                                                                     │
+│                    │ ╭─────────┬───────╮                                                           │
+│ server             │ │ version │ 7.6.6 │                                                           │
+│                    │ ╰─────────┴───────╯                                                           │
+│                    │ ╭────────┬─────────────╮                                                      │
+│ cloud provider     │ │ type   │ azure       │                                                      │
+│                    │ │ region │ eastus      │                                                      │
+│                    │ │ cidr   │ 10.0.2.0/24 │                                                      │
+│                    │ ╰────────┴─────────────╯                                                      │
+│                    │ ╭───┬─────────────────────────────────────────┬────────────┬────────────────╮ │
+│ service groups     │ │ # │                  node                   │ numOfNodes │    services    │ │
+│                    │ ├───┼─────────────────────────────────────────┼────────────┼────────────────┤ │
+│                    │ │ 0 │ ╭─────────┬───────────────────────────╮ │          3 │ ╭───┬────────╮ │ │
+│                    │ │   │ │         │ ╭─────┬────╮              │ │            │ │ 0 │ index  │ │ │
+│                    │ │   │ │ compute │ │ cpu │ 4  │              │ │            │ │ 1 │ data   │ │ │
+│                    │ │   │ │         │ │ ram │ 16 │              │ │            │ │ 2 │ query  │ │ │
+│                    │ │   │ │         │ ╰─────┴────╯              │ │            │ │ 3 │ search │ │ │
+│                    │ │   │ │         │ ╭───────────────┬───────╮ │ │            │ ╰───┴────────╯ │ │
+│                    │ │   │ │ disk    │ │ type          │ P6    │ │ │            │                │ │
+│                    │ │   │ │         │ │ storage       │ 64    │ │ │            │                │ │
+│                    │ │   │ │         │ │ iops          │ 240   │ │ │            │                │ │
+│                    │ │   │ │         │ │ autoExpansion │ false │ │ │            │                │ │
+│                    │ │   │ │         │ ╰───────────────┴───────╯ │ │            │                │ │
+│                    │ │   │ ╰─────────┴───────────────────────────╯ │            │                │ │
+│                    │ ╰───┴─────────────────────────────────────────┴────────────┴────────────────╯ │
+│                    │ ╭──────┬────────╮                                                             │
+│ availability       │ │ type │ single │                                                             │
+│                    │ ╰──────┴────────╯                                                             │
+│                    │ ╭──────────┬───────╮                                                          │
+│ support            │ │ plan     │ basic │                                                          │
+│                    │ │ timezone │ PT    │                                                          │
+│                    │ ╰──────────┴───────╯                                                          │
+╰────────────────────┴───────────────────────────────────────────────────────────────────────────────╯</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>If you need to skip this confirmation step then the <code>--confirm</code> or <code>-c</code> flag for short can be used:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; clusters create --name paid-azure --description &quot;My first couchbase cluster&quot; --cidr 10.0.2.0/24 --provider azure --region eastus --nodes 3 -y
+👤 Charlie 🏠 remote in ☁️ default._default._default</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The full set of flags for <code>clusters create</code> is:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>  -h, --help: Display the help message for this command
+  --name &lt;string&gt;: the name of the cluster
+  --provider &lt;string&gt;: the cloud provider
+  --version &lt;string&gt;: the couchbase server version
+  --capella &lt;string&gt;: the Capella organization to use
+  --nodes &lt;int&gt;: the number of nodes in the cluster
+  --project &lt;string&gt;: the Capella project to use
+  --description &lt;string&gt;: description for the cluster
+  --region &lt;string&gt;: cloud provider region for the cluster
+  --cidr &lt;string&gt;: cider block for the cluster
+  -y, --yes: answer yes to confirmation prompt</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1716,7 +2137,8 @@ The full list of flags supported by <code>clusters create</code> is:</p>
   &quot;description&quot;: &quot;A gcp cluster created using cbshell&quot;,
   &quot;cloudProvider&quot;: {
     &quot;type&quot;: &quot;gcp&quot;,
-    &quot;region&quot;: &quot;us-east1&quot;
+    &quot;region&quot;: &quot;us-central1&quot;,
+    &quot;cidr&quot;: &quot;10.0.23.0/24&quot;
   },
   &quot;serviceGroups&quot;: [
     {
@@ -1756,7 +2178,7 @@ The full list of flags supported by <code>clusters create</code> is:</p>
 ├───┼─────────────┼──────────────────────────────────────┼───────────┼───────────────────────────┤
 │ 0 │ GCP-CBShell │ c60b070f-6656-4e25-9b22-0cee497bea6a │ deploying │ ╭────────┬──────────────╮ │
 │   │             │                                      │           │ │ type   │ gcp          │ │
-│   │             │                                      │           │ │ region │ us-east1     │ │
+│   │             │                                      │           │ │ region │ us-central1  │ │
 │   │             │                                      │           │ │ cidr   │ 10.0.23.0/24 │ │
 │   │             │                                      │           │ ╰────────┴──────────────╯ │
 ╰───┴─────────────┴──────────────────────────────────────┴───────────┴───────────────────────────╯</code></pre>
@@ -1765,9 +2187,19 @@ The full list of flags supported by <code>clusters create</code> is:</p>
 <div class="paragraph">
 <p>See the <a href="https://docs.couchbase.com/cloud/management-api-reference/index.html#tag/Clusters/operation/postCluster">Capella API docs</a> for more examples of cluster definitions with different providers.</p>
 </div>
+<div class="paragraph">
+<p>The <code>--free-tier</code> flag can be used to create free tier clusters in the active Capella project.
+For example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>👤 Charlie 🏠 remote in ☁️ default._default._default
+&gt; clusters create --free-tier --provider aws --region eu-west-1 --cidr 10.0.0.0/24 --description &quot;My first Couchbase cluster&quot;</code></pre>
+</div>
+</div>
 </div>
 <div class="sect3">
-<h4 id="_clusters_drop">4.4.3. <code>clusters drop</code></h4>
+<h4 id="_clusters_drop">5.4.3. <code>clusters drop</code></h4>
 <div class="paragraph">
 <p>This deletes a cluster with the given name in the active project.</p>
 </div>
@@ -1795,7 +2227,7 @@ The full list of flags supported by <code>clusters create</code> is:</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_clusters_get">4.4.4. <code>clusters get</code></h4>
+<h4 id="_clusters_get">5.4.4. <code>clusters get</code></h4>
 <div class="paragraph">
 <p>Gets the full details of a named cluster.
 Say we have the following clusters in our project:</p>
@@ -1884,7 +2316,7 @@ Check this <a href="https://couchbase.sh/docs/recipes/#_register_clusters">recip
 </div>
 </div>
 <div class="sect2">
-<h3 id="_columnar">4.5. columnar</h3>
+<h3 id="_columnar">5.5. columnar</h3>
 <div class="paragraph">
 <p>The <code>columnar</code> commands are used to perform management operations and execute queries against Columnar analytics clusters.
 The columnar cluster management commands require an <a href="https://docs.couchbase.com/cloud/management-api-guide/management-api-start.html#:~:text=API%20keys%20are%20associated%20with,an%20allowed%20IP%20Address%20list">API key</a> to be registered with access to the relevant project.
@@ -1892,7 +2324,7 @@ The <code>columnar databases</code> or <code>columnar query</code> commands requ
 The Access Control account will require at least the <code>sys_data_reader</code> role to be assigned for queries to be executed successfully.</p>
 </div>
 <div class="sect3">
-<h4 id="_columnar_clusters">4.5.1. <code>columnar clusters</code></h4>
+<h4 id="_columnar_clusters">5.5.1. <code>columnar clusters</code></h4>
 <div class="paragraph">
 <p>Lists all of the Columnar analytics clusters in the active project.</p>
 </div>
@@ -1941,7 +2373,7 @@ The Access Control account will require at least the <code>sys_data_reader</code
 </div>
 </div>
 <div class="sect3">
-<h4 id="_columnar_clusters_create">4.5.2. <code>columnar clusters create</code></h4>
+<h4 id="_columnar_clusters_create">5.5.2. <code>columnar clusters create</code></h4>
 <div class="paragraph">
 <p>Creates a Columnar analytics cluster in the active Organization and Project.
 When called with no arguments a cluster with one node and a random name is created:</p>
@@ -2015,7 +2447,7 @@ When called with no arguments a cluster with one node and a random name is creat
 </div>
 </div>
 <div class="sect3">
-<h4 id="_columnar_clusters_drop">4.5.3. <code>columnar clusters drop</code></h4>
+<h4 id="_columnar_clusters_drop">5.5.3. <code>columnar clusters drop</code></h4>
 <div class="paragraph">
 <p>Deletes the named Columnar analytics cluster from the active organization/project.
 Say we have the following Columnar cluster running:</p>
@@ -2047,7 +2479,7 @@ Say we have the following Columnar cluster running:</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_columnar_databases">4.5.4. <code>columnar databases</code></h4>
+<h4 id="_columnar_databases">5.5.4. <code>columnar databases</code></h4>
 <div class="paragraph">
 <p>Lists all the Databases on a Columnar analytics cluster:</p>
 </div>
@@ -2066,7 +2498,7 @@ Say we have the following Columnar cluster running:</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_columnar_query">4.5.5. <code>columnar query</code></h4>
+<h4 id="_columnar_query">5.5.5. <code>columnar query</code></h4>
 <div class="paragraph">
 <p>Executes a query against a Columnar analytics cluster:</p>
 </div>
@@ -2112,12 +2544,12 @@ Say we have the following Columnar cluster running:</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_credentials">4.6. <code>credentials</code></h3>
+<h3 id="_credentials">5.6. <code>credentials</code></h3>
 <div class="paragraph">
 <p>The <code>credentials</code> commands are used to perform credential management operations against Capella clusters.</p>
 </div>
 <div class="sect3">
-<h4 id="_credentials_2">4.6.1. <code>credentials</code></h4>
+<h4 id="_credentials_2">5.6.1. <code>credentials</code></h4>
 <div class="paragraph">
 <p>Lists all the credentials on the active cluster:</p>
 </div>
@@ -2155,7 +2587,7 @@ To list the credentials of a cluster other than the active cluster you can use t
 </div>
 </div>
 <div class="sect3">
-<h4 id="_credentials_create">4.6.2. <code>credentials create</code></h4>
+<h4 id="_credentials_create">5.6.2. <code>credentials create</code></h4>
 <div class="paragraph">
 <p>Creates credentials using the given username and password against the active Capella cluster.
 Note that this command will not work against locally hosted Couchbase Server clusters.</p>
@@ -2262,7 +2694,7 @@ If you want to grant access to a specific bucket, this can be done using the buc
 </div>
 </div>
 <div class="sect3">
-<h4 id="_credentials_drop">4.6.3. <code>credentials drop</code></h4>
+<h4 id="_credentials_drop">5.6.3. <code>credentials drop</code></h4>
 <div class="paragraph">
 <p>Deletes the credentials with the given ID.
 For example if you have the following credentials on the cluster:</p>
@@ -2306,12 +2738,12 @@ However only one cluster can be specified at a time since credentials only exist
 </div>
 </div>
 <div class="sect2">
-<h3 id="_doc">4.7. doc</h3>
+<h3 id="_doc">5.7. doc</h3>
 <div class="paragraph">
 <p>The <code>doc</code> commands are for managing the documents stored in the registered clusters.</p>
 </div>
 <div class="sect3">
-<h4 id="_doc_get">4.7.1. <code>doc get</code></h4>
+<h4 id="_doc_get">5.7.1. <code>doc get</code></h4>
 <div class="paragraph">
 <p>Gets a doc from the active cluster, bucket, scope and collection:</p>
 </div>
@@ -2383,7 +2815,7 @@ But the <code>id</code> can be extracted from a different input column using the
 </div>
 </div>
 <div class="sect3">
-<h4 id="_doc_import">4.7.2. <code>doc import</code></h4>
+<h4 id="_doc_import">5.7.2. <code>doc import</code></h4>
 <div class="paragraph">
 <p>The simplest way to import data into the active cluster.
 The data can be in any of the formats supported by the <a href="https://www.nushell.sh/commands/docs/from.html">from</a> command.</p>
@@ -2463,7 +2895,7 @@ With this simple tool at hand you are able to load many different data formats q
 </div>
 </div>
 <div class="sect3">
-<h4 id="_doc_insert">4.7.3. <code>doc insert</code></h4>
+<h4 id="_doc_insert">5.7.3. <code>doc insert</code></h4>
 <div class="paragraph">
 <p>Inserts document into the active bucket/scope/collection:</p>
 </div>
@@ -2507,7 +2939,7 @@ With this simple tool at hand you are able to load many different data formats q
 </div>
 </div>
 <div class="sect3">
-<h4 id="_doc_remove">4.7.4. <code>doc remove</code></h4>
+<h4 id="_doc_remove">5.7.4. <code>doc remove</code></h4>
 <div class="paragraph">
 <p>Removes the document with the given key from the active collection.
 For example say we have the following stored:</p>
@@ -2571,7 +3003,7 @@ For example say we have the following stored:</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_doc_replace">4.7.5. <code>doc replace</code></h4>
+<h4 id="_doc_replace">5.7.5. <code>doc replace</code></h4>
 <div class="paragraph">
 <p>Replaces the document in Couchbase matching the key id of the new one, if there is no document matching the <code>id</code> then an error is returned.
 Say we have the following document stored in the connected cluster:</p>
@@ -2650,7 +3082,7 @@ If there was no document with the <code>id</code> Michael, then the replace woul
 </div>
 </div>
 <div class="sect3">
-<h4 id="_doc_upsert">4.7.6. <code>doc upsert</code></h4>
+<h4 id="_doc_upsert">5.7.6. <code>doc upsert</code></h4>
 <div class="paragraph">
 <p>This is the most robust way to import data into the cluster since it will work whether or not there is an existing doc in the cluster with a matching <code>id</code>.
 If there is no document already in the cluster with a matching <code>id</code> then it behaves the same as <a href="#_doc_insert">doc insert</a>:</p>
@@ -2740,12 +3172,12 @@ If there is no document already in the cluster with a matching <code>id</code> t
 </div>
 </div>
 <div class="sect2">
-<h3 id="_scopes">4.8. scopes</h3>
+<h3 id="_scopes">5.8. scopes</h3>
 <div class="paragraph">
 <p>The <code>scopes</code> commands are used to manage scopes.</p>
 </div>
 <div class="sect3">
-<h4 id="_scopes_2">4.8.1. <code>scopes</code></h4>
+<h4 id="_scopes_2">5.8.1. <code>scopes</code></h4>
 <div class="paragraph">
 <p>Lists all of the scopes in the active bucket:</p>
 </div>
@@ -2768,7 +3200,7 @@ If there is no document already in the cluster with a matching <code>id</code> t
 </div>
 </div>
 <div class="sect3">
-<h4 id="_scopes_create">4.8.2. <code>scopes create</code></h4>
+<h4 id="_scopes_create">5.8.2. <code>scopes create</code></h4>
 <div class="paragraph">
 <p>Creates a scope with the name supplied:</p>
 </div>
@@ -2795,7 +3227,7 @@ If there is no document already in the cluster with a matching <code>id</code> t
 </div>
 </div>
 <div class="sect3">
-<h4 id="_scopes_drop">4.8.3. <code>scopes drop</code></h4>
+<h4 id="_scopes_drop">5.8.3. <code>scopes drop</code></h4>
 <div class="paragraph">
 <p>Deletes the scope matching the given name:</p>
 </div>
@@ -2823,7 +3255,7 @@ If there is no document already in the cluster with a matching <code>id</code> t
 </div>
 </div>
 <div class="sect2">
-<h3 id="_nodes">4.9. <code>nodes</code></h3>
+<h3 id="_nodes">5.9. <code>nodes</code></h3>
 <div class="paragraph">
 <p>The <code>nodes</code> command allows you to list all the nodes of the cluster you are currently connected to.</p>
 </div>
@@ -2841,7 +3273,7 @@ If there is no document already in the cluster with a matching <code>id</code> t
 </div>
 </div>
 <div class="sect2">
-<h3 id="_subdoc_get">4.10. <code>subdoc get</code></h3>
+<h3 id="_subdoc_get">5.10. <code>subdoc get</code></h3>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; subdoc get --help
@@ -2917,12 +3349,12 @@ Parameters:
 </div>
 </div>
 <div class="sect2">
-<h3 id="_query">4.11. query</h3>
+<h3 id="_query">5.11. query</h3>
 <div class="paragraph">
 <p>The query commands can be used to explore/create indexes and execute queries.</p>
 </div>
 <div class="sect3">
-<h4 id="_query_2">4.11.1. <code>query</code></h4>
+<h4 id="_query_2">5.11.1. <code>query</code></h4>
 <div class="paragraph">
 <p>Takes a N1QL statement and executes it against the active cluster.</p>
 </div>
@@ -3008,7 +3440,7 @@ The following finds any IDs that match the regex 'hotel1002*'.</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_query_advise">4.11.2. <code>query advise</code></h4>
+<h4 id="_query_advise">5.11.2. <code>query advise</code></h4>
 <div class="paragraph">
 <p>Helps you to learn about the indexes that your queries are using, and what indexes
 you could create to make them faster. For example we can take the first query from the <code>query</code> examples:</p>
@@ -3055,7 +3487,7 @@ you could create to make them faster. For example we can take the first query fr
 </div>
 </div>
 <div class="sect3">
-<h4 id="_query_indexes">4.11.3. <code>query indexes</code></h4>
+<h4 id="_query_indexes">5.11.3. <code>query indexes</code></h4>
 <div class="paragraph">
 <p>Lists all of the query indexes.
 If we had just created the recommended index at the end of the <code>query advise</code> section, the nushell command <code>find</code> can be used in conjunction with <code>query indexes</code> to check it was successfully created.</p>
@@ -3091,13 +3523,13 @@ If we had just created the recommended index at the end of the <code>query advis
 </div>
 </div>
 <div class="sect2">
-<h3 id="_vector">4.12. vector</h3>
+<h3 id="_vector">5.12. vector</h3>
 <div class="paragraph">
 <p>The vector commands make it easy to explore the value that vector search can add to your data.
 Check the recipes for how the vector commands can be combined to implement <a href="https://couchbase.sh/docs/recipes.html#_similarity_search">similarity search</a> or <a href="https://couchbase.sh/docs/recipes.html#_simple_rag">simple RAG</a>.</p>
 </div>
 <div class="sect3">
-<h4 id="_vector_search">4.12.1. <code>vector search</code></h4>
+<h4 id="_vector_search">5.12.1. <code>vector search</code></h4>
 <div class="paragraph">
 <p>Performs a vector search against a named vector index.
 Requires a vector to be used as the source of the search which can be supplied in a couple of formats.</p>
@@ -3292,7 +3724,7 @@ Error:   × Unexpected status code
 </div>
 </div>
 <div class="sect3">
-<h4 id="_vector_create_index">4.12.2. <code>vector create-index</code></h4>
+<h4 id="_vector_create_index">5.12.2. <code>vector create-index</code></h4>
 <div class="paragraph">
 <p>Creates a vector index against the active bucket/scope or the bucket/scope specified with the corresponding flags.
 For example the following will create an index named new-vector-index over the field fieldName in documents in the bucket <code>default</code> and the scope <code>_default</code>:</p>
@@ -3343,7 +3775,7 @@ Whereas in the latter the environment values need to be overwritten with the <co
 </div>
 </div>
 <div class="sect3">
-<h4 id="_vector_enrich_doc">4.12.3. <code>vector enrich-doc</code></h4>
+<h4 id="_vector_enrich_doc">5.12.3. <code>vector enrich-doc</code></h4>
 <div class="paragraph">
 <p>Enriches an existing json document by generating an embedding using the <a href="#_cb_env_llm">active llm</a> from a named field and storing it in a new field in the same document.</p>
 </div>
@@ -3472,7 +3904,7 @@ For example to use the "name" field as the id of the resulting documents do:</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_vector_enrich_text">4.12.4. <code>vector enrich-text</code></h4>
+<h4 id="_vector_enrich_text">5.12.4. <code>vector enrich-text</code></h4>
 <div class="paragraph">
 <p>Generates an embedding from the input text using the <a href="#_cb_env_llm">active_llm</a> and outputs a json document containing the source text and the embedding.</p>
 </div>
@@ -3584,7 +4016,7 @@ Check this <a href="https://couchbase.sh/docs/recipes.html#_simple_rag">recipe</
 </div>
 </div>
 <div class="sect2">
-<h3 id="_ask">4.13. <code>ask</code></h3>
+<h3 id="_ask">5.13. <code>ask</code></h3>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code>&gt; ask --help
@@ -3661,7 +4093,7 @@ At the new restaurant, you can enjoy the following activities:
 </div>
 </div>
 <div class="sect2">
-<h3 id="_version">4.14. <code>version</code></h3>
+<h3 id="_version">5.14. <code>version</code></h3>
 <div class="paragraph">
 <p>The <code>version</code> command lists the version of the Couchbase shell.</p>
 </div>
@@ -3677,10 +4109,10 @@ At the new restaurant, you can enjoy the following activities:
 </div>
 </div>
 <div class="sect1">
-<h2 id="_reference">5. Reference</h2>
+<h2 id="_reference">6. Reference</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_config_file_format">5.1. Config File Format</h3>
+<h3 id="_config_file_format">6.1. Config File Format</h3>
 <div class="paragraph">
 <p>The <code>~/.cbsh/config</code> file with examples:</p>
 </div>
@@ -3724,7 +4156,7 @@ management-timeout = &quot;75s&quot;</code></pre>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_credentials_file_format">5.2. Credentials File Format</h3>
+<h3 id="_credentials_file_format">6.2. Credentials File Format</h3>
 <div class="paragraph">
 <p>The optional <code>~/.cbsh/credentials</code> file with examples:</p>
 </div>
@@ -3748,7 +4180,7 @@ password = &quot;password&quot;
 </div>
 </div>
 <div class="sect1">
-<h2 id="_debugging">6. Debugging</h2>
+<h2 id="_debugging">7. Debugging</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>If you encounter unexpected behaviour when using or developing <code>cbsh</code> the best way to start debugging is to increase the log level.
@@ -3756,7 +4188,7 @@ This is done through an environment variable called <code>CBSH_LOG</code>.
 By default the log level is set to <code>warn</code>, but there are various levels available, all outlined in this section.</p>
 </div>
 <div class="sect2">
-<h3 id="_error">6.1. error</h3>
+<h3 id="_error">7.1. error</h3>
 <div class="paragraph">
 <p>This is the lowest level, lower than the default (warn), so not much use for debugging since only errors will be logged.</p>
 </div>
@@ -3773,7 +4205,7 @@ By default the log level is set to <code>warn</code>, but there are various leve
 </div>
 </div>
 <div class="sect2">
-<h3 id="_warn">6.2. warn</h3>
+<h3 id="_warn">7.2. warn</h3>
 <div class="paragraph">
 <p>This is the level above error, and is the default log level.</p>
 </div>
@@ -3792,7 +4224,7 @@ By default the log level is set to <code>warn</code>, but there are various leve
 </div>
 </div>
 <div class="sect2">
-<h3 id="_info">6.3. info</h3>
+<h3 id="_info">7.3. info</h3>
 <div class="paragraph">
 <p>This level returns a large amount of information, not just from cbsh but logs from Nushell, on which <code>cbsh</code> is built, will be printed:</p>
 </div>
@@ -3843,7 +4275,7 @@ By default the log level is set to <code>warn</code>, but there are various leve
 </div>
 </div>
 <div class="sect2">
-<h3 id="_debug">6.4. debug</h3>
+<h3 id="_debug">7.4. debug</h3>
 <div class="paragraph">
 <p>The log level can be set to <code>debug</code> as follows:</p>
 </div>
@@ -3920,7 +4352,7 @@ In order to only see the messages at debug and below that originate from <code>c
 </div>
 </div>
 <div class="sect2">
-<h3 id="_trace">6.5. trace</h3>
+<h3 id="_trace">7.5. trace</h3>
 <div class="paragraph">
 <p>The highest log level available is <code>trace</code> and can be chosen in the same way as the others.
 This returns a huge amount of information, even when simply starting the shell:</p>
@@ -4004,10 +4436,26 @@ Fortunately these can be turned off so that we only see the <code>traces</code> 
 </div>
 </div>
 <div class="sect1">
-<h2 id="_release_notes">7. Release Notes</h2>
+<h2 id="_release_notes">8. Release Notes</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_1_1_0_2025_02_04">7.1. 1.1.0 - 2025-02-04</h3>
+<h3 id="_1_2_0_2025_03_05">8.1. 1.2.0 - 2025-03-05</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Support for deploying free tier Capella clusters</p>
+</li>
+<li>
+<p>Support custom API base when using OpenAI models</p>
+</li>
+<li>
+<p>Nushell bumped to 0.111.0</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_1_1_0_2025_02_04">8.2. 1.1.0 - 2025-02-04</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -4026,7 +4474,7 @@ Fortunately these can be turned off so that we only see the <code>traces</code> 
 </div>
 </div>
 <div class="sect2">
-<h3 id="_1_0_0_2024_09_11">7.2. 1.0.0 - 2024-09-11</h3>
+<h3 id="_1_0_0_2024_09_11">8.3. 1.0.0 - 2024-09-11</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -4084,7 +4532,7 @@ Fortunately these can be turned off so that we only see the <code>traces</code> 
 </div>
 </div>
 <div class="sect2">
-<h3 id="_0_75_2_2023_04_10">7.3. 0.75.2 - 2023-04-10</h3>
+<h3 id="_0_75_2_2023_04_10">8.4. 0.75.2 - 2023-04-10</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -4097,7 +4545,7 @@ Fortunately these can be turned off so that we only see the <code>traces</code> 
 </div>
 </div>
 <div class="sect2">
-<h3 id="_0_75_1_2023_04_13">7.4. 0.75.1 - 2023-04-13</h3>
+<h3 id="_0_75_1_2023_04_13">8.5. 0.75.1 - 2023-04-13</h3>
 <div class="paragraph">
 <p><strong>This release contains a number of breaking changes, which are explicitly called out below.</strong>
 As our versioning continues to track the underlying Nushell minor version this has required breaking changes in a patch version.</p>
@@ -4199,7 +4647,7 @@ As our versioning continues to track the underlying Nushell minor version this h
 </div>
 </div>
 <div class="sect2">
-<h3 id="_0_75_0_2023_02_09">7.5. 0.75.0 - 2023-02-09</h3>
+<h3 id="_0_75_0_2023_02_09">8.6. 0.75.0 - 2023-02-09</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -4249,7 +4697,7 @@ As our versioning continues to track the underlying Nushell minor version this h
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2025-02-18 10:18:29 UTC
+Last updated 2026-03-06 09:05:58 UTC
 </div>
 </div>
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
