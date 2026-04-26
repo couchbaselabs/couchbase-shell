@@ -37,13 +37,14 @@ impl LLMClients {
     pub async fn ask(
         &self,
         question: String,
+        template: Option<String>,
         context: Vec<String>,
         model: String,
     ) -> Result<String, ShellError> {
         match self {
-            Self::OpenAI(c) => c.ask(question, context, model).await,
-            Self::Gemini(c) => c.ask(question, context, model).await,
-            Self::Bedrock(c) => c.ask(question, context, model).await,
+            Self::OpenAI(c) => c.ask(question, template, context, model).await,
+            Self::Gemini(c) => c.ask(question, template, context, model).await,
+            Self::Bedrock(c) => c.ask(question, template, context, model).await,
         }
     }
 
