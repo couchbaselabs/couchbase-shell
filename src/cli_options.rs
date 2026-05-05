@@ -5,7 +5,7 @@ use nu_protocol::ast::{Expr, Expression, PipelineElement};
 use nu_protocol::engine::{Command, EngineState, Stack, StateWorkingSet};
 use nu_protocol::{
     report_parse_error, Category, Example, IntoPipelineData, PipelineData, ShellError, Signature,
-    Spanned, SyntaxShape, Value,
+    Span, Spanned, SyntaxShape, Value,
 };
 use nu_utils::escape_quote_string;
 use std::fmt;
@@ -182,7 +182,10 @@ impl Command for Cbsh {
         call: &Call,
         _input: PipelineData,
     ) -> Result<PipelineData, ShellError> {
-        Ok(Value::string(get_full_help(&Cbsh, context, stack), call.head).into_pipeline_data())
+        Ok(
+            Value::string(get_full_help(&Cbsh, context, stack, call.head), call.head)
+                .into_pipeline_data(),
+        )
     }
 
     fn examples(&self) -> Vec<Example<'_>> {
@@ -286,7 +289,7 @@ pub fn parse_commandline_args(
             let help = call.has_flag(context, &mut stack, "help")?;
 
             if help {
-                let full_help = get_full_help(&Cbsh, context, &mut stack);
+                let full_help = get_full_help(&Cbsh, context, &mut stack, Span::new(0, 0));
 
                 let _ = std::panic::catch_unwind(move || {
                     let stdout = std::io::stdout();
@@ -333,7 +336,7 @@ pub fn parse_commandline_args(
     }
 
     // Just give the help and exit if the above fails
-    let full_help = get_full_help(&Cbsh, context, &mut stack);
+    let full_help = get_full_help(&Cbsh, context, &mut stack, Span::new(0, 0));
     print!("{}", full_help);
     std::process::exit(1);
 }

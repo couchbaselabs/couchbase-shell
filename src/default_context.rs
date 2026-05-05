@@ -280,8 +280,8 @@ pub fn create_default_context() -> EngineState {
             FromTsv,
             FromXlsx,
             FromXml,
-            FromYaml,
-            FromYml,
+            FROM_YAML,
+            FROM_YML,
             To,
             ToCsv,
             ToJson,
@@ -294,7 +294,7 @@ pub fn create_default_context() -> EngineState {
             Upsert,
             Where,
             ToXml,
-            ToYaml,
+            TO_YAML,
         };
 
         // Viewers, from nu_command
@@ -375,7 +375,6 @@ pub fn create_default_context() -> EngineState {
             RandomBool,
             RandomChars,
             RandomFloat,
-            RandomDice,
             RandomInt,
             RandomUuid,
         };

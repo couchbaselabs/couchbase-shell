@@ -1,4 +1,5 @@
 use crate::client::ClientError;
+use nu_protocol::shell_error::generic::GenericError;
 use nu_protocol::{ShellError, Span};
 use std::fmt::{Display, Formatter};
 
@@ -296,13 +297,20 @@ fn spanned_shell_error(
     help: impl Into<Option<String>>,
     span: impl Into<Option<Span>>,
 ) -> ShellError {
-    ShellError::GenericError {
-        error: msg.into(),
-        msg: "".to_string(),
-        span: span.into(),
-        help: help.into(),
-        inner: Vec::new(),
-    }
+    let error = msg.into();
+    let help = help.into();
+    let span: Option<Span> = span.into();
+    let ge = if let Some(s) = span {
+        GenericError::new(error, "", s)
+    } else {
+        GenericError::new_internal(error, "")
+    };
+    let ge = if let Some(h) = help {
+        ge.with_help(h)
+    } else {
+        ge
+    };
+    ShellError::Generic(ge)
 }
 
 pub fn unexpected_status_code_error(

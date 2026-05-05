@@ -206,7 +206,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     use_query_autocomplete(&mut context, &mut stack);
 
-    nu_cli::evaluate_repl(&mut context, stack, None, None, entire_start_time)
+    nu_cli::evaluate_repl(&mut context, stack, None, None, entire_start_time.into())
         .expect("evaluate loop failed");
     // nu_cli::evaluate_repl(&mut context, None, false).expect("evaluate loop failed");
     Ok(())

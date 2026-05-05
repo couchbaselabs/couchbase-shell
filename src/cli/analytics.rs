@@ -8,6 +8,7 @@ use log::debug;
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
 use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::shell_error::generic::GenericError;
 use nu_protocol::{
     Category, IntoPipelineData, ListStream, PipelineData, ShellError, Signature, Span, SyntaxShape,
     Value,
@@ -156,24 +157,22 @@ fn run(
             // Read prelude so rows are ready for reading
             json_streamer.read_prelude().await
         })
-        .map_err(|e| ShellError::GenericError {
-            error: format!("failed to read stream prelude: {}", e),
-            msg: "".to_string(),
-            span: None,
-            help: None,
-            inner: vec![],
+        .map_err(|e| {
+            ShellError::Generic(GenericError::new_internal(
+                format!("failed to read stream prelude: {}", e),
+                "",
+            ))
         })?;
 
         if with_meta {
             let mut query_results = vec![];
             while let Some(result_row) = rt
                 .block_on(async { json_streamer.read_row().await })
-                .map_err(|e| ShellError::GenericError {
-                    error: format!("failed to read analytics query result: {}", e),
-                    msg: "".to_string(),
-                    span: None,
-                    help: None,
-                    inner: vec![],
+                .map_err(|e| {
+                    ShellError::Generic(GenericError::new_internal(
+                        format!("failed to read analytics query result: {}", e),
+                        "",
+                    ))
                 })?
             {
                 let row_str = from_utf8(&result_row).unwrap();
@@ -183,12 +182,11 @@ fn run(
 
             let meta = rt
                 .block_on(async { json_streamer.read_epilog().await })
-                .map_err(|e| ShellError::GenericError {
-                    error: format!("failed to read stream epilog: {}", e),
-                    msg: "".to_string(),
-                    span: None,
-                    help: None,
-                    inner: vec![],
+                .map_err(|e| {
+                    ShellError::Generic(GenericError::new_internal(
+                        format!("failed to read stream epilog: {}", e),
+                        "",
+                    ))
                 })?;
             let meta_json =
                 serde_json::from_str::<serde_json::Value>(from_utf8(&meta).unwrap()).unwrap();

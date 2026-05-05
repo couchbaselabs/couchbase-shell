@@ -4,6 +4,7 @@ use std::task::{Context, Poll};
 use crate::json_row_parser::JsonRowParser;
 use bytes::Bytes;
 use futures::stream::{FusedStream, Stream};
+use nu_protocol::shell_error::generic::GenericError;
 use nu_protocol::ShellError;
 
 type QueryStream = dyn Stream<Item = Result<Bytes, reqwest::Error>> + Send;
@@ -71,13 +72,9 @@ impl Stream for JsonRowStream {
                                 };
 
                                 this.state = State::Done;
-                                return Poll::Ready(Some(Err(ShellError::GenericError {
-                                    error: err,
-                                    msg: "".to_string(),
-                                    span: None,
-                                    help: None,
-                                    inner: vec![],
-                                })));
+                                return Poll::Ready(Some(Err(ShellError::Generic(
+                                    GenericError::new_internal(err, ""),
+                                ))));
                             }
                         },
                         Err(e) => {
