@@ -8,6 +8,7 @@ use log::{debug, info};
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
 use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::shell_error::generic::GenericError;
 use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape, Value};
 use std::sync::{Arc, Mutex};
 
@@ -79,23 +80,17 @@ fn allow_ip(
             if let Some(address) = call.opt(engine_state, stack, 0)? {
                 format_ip_address(address)
             } else {
-                return Err(ShellError::GenericError {
-                    error: "No IP address provided".to_string(),
-                    msg: "".to_string(),
-                    span: None,
-                    help: Some("Provide IP as positional parameter or piped input".into()),
-                    inner: vec![],
-                });
+                return Err(ShellError::Generic(
+                    GenericError::new_internal("No IP address provided", "")
+                        .with_help("Provide IP as positional parameter or piped input"),
+                ));
             }
         }
         _ => {
-            return Err(ShellError::GenericError {
-                error: "IP address must be a string".to_string(),
-                msg: "".to_string(),
-                span: None,
-                help: None,
-                inner: vec![],
-            })
+            return Err(ShellError::Generic(GenericError::new_internal(
+                "IP address must be a string",
+                "",
+            )))
         }
     };
 

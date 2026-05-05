@@ -8,6 +8,7 @@ use crate::state::State;
 use nu_engine::command_prelude::Call;
 use nu_engine::CallExt;
 use nu_protocol::engine::{Command, EngineState, Stack};
+use nu_protocol::shell_error::generic::GenericError;
 use nu_protocol::{Category, PipelineData, ShellError, Signature, SyntaxShape, Value};
 use std::sync::{Arc, Mutex};
 
@@ -98,41 +99,31 @@ fn credentials_create(
     let scopes_flag: Option<Value> = call.get_flag(engine_state, stack, "scopes")?;
 
     let scopes = match scopes_flag {
-        Some(_) if bucket.is_none() => Err(ShellError::GenericError {
-            error: "--scopes cannot be used without specifying a bucket".to_string(),
-            msg: "".to_string(),
-            span: None,
-            help: Some(
-                "Use the --bucket flag to specify a bucket the credentials are allowed to access"
-                    .to_string(),
+        Some(_) if bucket.is_none() => Err(ShellError::Generic(
+            GenericError::new_internal("--scopes cannot be used without specifying a bucket", "")
+                .with_help(
+                "Use the --bucket flag to specify a bucket the credentials are allowed to access",
             ),
-            inner: vec![],
-        }),
+        )),
         Some(val) => match val {
             Value::String { val, .. } => Ok(vec![val]),
             Value::List { vals, .. } => vals
                 .iter()
                 .map(|v| v.as_str().map(|s| s.to_string()))
                 .collect(),
-            _ => Err(ShellError::GenericError {
-                error: "failed to parse scopes".to_string(),
-                msg: "".to_string(),
-                span: None,
-                help: Some("--scopes must be a string or a list of strings".to_string()),
-                inner: vec![],
-            }),
+            _ => Err(ShellError::Generic(
+                GenericError::new_internal("failed to parse scopes", "")
+                    .with_help("--scopes must be a string or a list of strings"),
+            )),
         },
         None => Ok(vec!["*".to_string()]),
     }?;
 
     if !read && !write {
-        return Err(ShellError::GenericError {
-            error: "Credentials must have at least read or write access".to_string(),
-            msg: "".to_string(),
-            span: None,
-            help: Some("Use the --read and --write flags to add permissions.".into()),
-            inner: vec![],
-        });
+        return Err(ShellError::Generic(
+            GenericError::new_internal("Credentials must have at least read or write access", "")
+                .with_help("Use the --read and --write flags to add permissions."),
+        ));
     }
 
     let cluster_identifiers = cluster_identifiers_from(engine_state, stack, &state, call, true)?;

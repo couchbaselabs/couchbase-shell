@@ -1,6 +1,7 @@
 use crate::json_row_stream::JsonRowStream;
 use futures::{Stream, StreamExt};
 use futures_core::FusedStream;
+use nu_protocol::shell_error::generic::GenericError;
 use nu_protocol::ShellError;
 use serde_json::Value;
 use std::cmp::{PartialEq, PartialOrd};
@@ -37,48 +38,34 @@ impl RawJsonRowStreamer {
 
     async fn begin(&mut self) -> Result<(), ShellError> {
         if self.state != RowStreamState::Start {
-            return Err(ShellError::GenericError {
-                error: "".to_string(),
-                msg: "Unexpected parsing state during begin".to_string(),
-                span: None,
-                help: None,
-                inner: vec![],
-            });
+            return Err(ShellError::Generic(GenericError::new_internal(
+                "Unexpected parsing state during begin",
+                "",
+            )));
         }
 
         let first = match self.stream.next().await {
             Some(result) => result?,
             None => {
-                return Err(ShellError::GenericError {
-                    error: "Expected first line to be non-empty".to_string(),
-                    msg: "".to_string(),
-                    span: None,
-                    help: None,
-                    inner: vec![],
-                })
+                return Err(ShellError::Generic(GenericError::new_internal(
+                    "Expected first line to be non-empty",
+                    "",
+                )))
             }
         };
 
         if &first[..] != b"{" {
-            return Err(ShellError::GenericError {
-                error: "Expected an opening brace for the result".to_string(),
-                msg: "".to_string(),
-                span: None,
-                help: None,
-                inner: vec![],
-            });
+            return Err(ShellError::Generic(GenericError::new_internal(
+                "Expected an opening brace for the result",
+                "",
+            )));
         }
         loop {
             match self.stream.next().await {
                 Some(item) => {
-                    let mut item =
-                        String::from_utf8(item?).map_err(|e| ShellError::GenericError {
-                            error: e.to_string(),
-                            msg: "".to_string(),
-                            span: None,
-                            help: None,
-                            inner: vec![],
-                        })?;
+                    let mut item = String::from_utf8(item?).map_err(|e| {
+                        ShellError::Generic(GenericError::new_internal(e.to_string(), ""))
+                    })?;
                     if item.is_empty() || item == "}" {
                         self.state = RowStreamState::End;
                         break;
@@ -87,13 +74,7 @@ impl RawJsonRowStreamer {
                         if let Some(maybe_row) = self.stream.next().await {
                             let maybe_row = maybe_row?;
                             let str_row = std::str::from_utf8(&maybe_row).map_err(|e| {
-                                ShellError::GenericError {
-                                    error: e.to_string(),
-                                    msg: "".to_string(),
-                                    span: None,
-                                    help: None,
-                                    inner: vec![],
-                                }
+                                ShellError::Generic(GenericError::new_internal(e.to_string(), ""))
                             })?;
                             // if there are no more rows, immediately move to post-rows
                             if str_row == "]" {
@@ -111,12 +92,8 @@ impl RawJsonRowStreamer {
                     // Wrap the line in a JSON object to deserialize
                     item = format!("{{{}}}", item);
                     let json_value: HashMap<String, Value> =
-                        serde_json::from_str(&item).map_err(|e| ShellError::GenericError {
-                            error: e.to_string(),
-                            msg: "".to_string(),
-                            span: None,
-                            help: None,
-                            inner: vec![],
+                        serde_json::from_str(&item).map_err(|e| {
+                            ShellError::Generic(GenericError::new_internal(e.to_string(), ""))
                         })?;
 
                     // Save the attribute for the metadata
@@ -148,13 +125,10 @@ impl RawJsonRowStreamer {
 
     pub async fn read_row(&mut self) -> Result<Option<Vec<u8>>, ShellError> {
         if self.state < RowStreamState::Rows {
-            return Err(ShellError::GenericError {
-                error: "Unexpected parsing state during read rows".to_string(),
-                msg: "".to_string(),
-                span: None,
-                help: None,
-                inner: vec![],
-            });
+            return Err(ShellError::Generic(GenericError::new_internal(
+                "Unexpected parsing state during read rows",
+                "",
+            )));
         }
 
         // If we've already read all rows or rows is null, we return None
@@ -166,14 +140,8 @@ impl RawJsonRowStreamer {
 
         if let Some(maybe_row) = self.stream.next().await {
             let maybe_row = maybe_row?;
-            let str_row =
-                std::str::from_utf8(&maybe_row).map_err(|e| ShellError::GenericError {
-                    error: e.to_string(),
-                    msg: "".to_string(),
-                    span: None,
-                    help: None,
-                    inner: vec![],
-                })?;
+            let str_row = std::str::from_utf8(&maybe_row)
+                .map_err(|e| ShellError::Generic(GenericError::new_internal(e.to_string(), "")))?;
             if str_row == "]" {
                 self.state = RowStreamState::PostRows;
             } else {
@@ -186,13 +154,10 @@ impl RawJsonRowStreamer {
 
     async fn end(&mut self) -> Result<(), ShellError> {
         if self.state < RowStreamState::PostRows {
-            return Err(ShellError::GenericError {
-                error: "Unexpected parsing state during end".to_string(),
-                msg: "".to_string(),
-                span: None,
-                help: None,
-                inner: vec![],
-            });
+            return Err(ShellError::Generic(GenericError::new_internal(
+                "Unexpected parsing state during end",
+                "",
+            )));
         }
 
         // Check if we've already read everything
@@ -203,14 +168,9 @@ impl RawJsonRowStreamer {
         loop {
             match self.stream.next().await {
                 Some(item) => {
-                    let mut item =
-                        String::from_utf8(item?).map_err(|e| ShellError::GenericError {
-                            error: e.to_string(),
-                            msg: "".to_string(),
-                            span: None,
-                            help: None,
-                            inner: vec![],
-                        })?;
+                    let mut item = String::from_utf8(item?).map_err(|e| {
+                        ShellError::Generic(GenericError::new_internal(e.to_string(), ""))
+                    })?;
 
                     if item == "}" || item.is_empty() {
                         self.state = RowStreamState::End;
@@ -218,12 +178,8 @@ impl RawJsonRowStreamer {
                     }
                     item = format!("{{{}}}", item);
                     let json_value: HashMap<String, Value> =
-                        serde_json::from_str(&item).map_err(|e| ShellError::GenericError {
-                            error: e.to_string(),
-                            msg: "".to_string(),
-                            span: None,
-                            help: None,
-                            inner: vec![],
+                        serde_json::from_str(&item).map_err(|e| {
+                            ShellError::Generic(GenericError::new_internal(e.to_string(), ""))
                         })?;
                     for (k, v) in json_value {
                         self.attribs.insert(k, v);
@@ -240,24 +196,14 @@ impl RawJsonRowStreamer {
 
     pub async fn read_prelude(&mut self) -> Result<Vec<u8>, ShellError> {
         self.begin().await?;
-        serde_json::to_vec(&self.attribs).map_err(|e| ShellError::GenericError {
-            error: e.to_string(),
-            msg: "".to_string(),
-            span: None,
-            help: None,
-            inner: vec![],
-        })
+        serde_json::to_vec(&self.attribs)
+            .map_err(|e| ShellError::Generic(GenericError::new_internal(e.to_string(), "")))
     }
 
     pub async fn read_epilog(&mut self) -> Result<Vec<u8>, ShellError> {
         self.end().await?;
-        serde_json::to_vec(&self.attribs).map_err(|e| ShellError::GenericError {
-            error: e.to_string(),
-            msg: "".to_string(),
-            span: None,
-            help: None,
-            inner: vec![],
-        })
+        serde_json::to_vec(&self.attribs)
+            .map_err(|e| ShellError::Generic(GenericError::new_internal(e.to_string(), "")))
     }
 }
 
@@ -272,13 +218,10 @@ impl Stream for RawJsonRowStreamer {
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         if self.state < RowStreamState::Rows {
-            return Poll::Ready(Some(Err(ShellError::GenericError {
-                error: "Unexpected parsing state during read rows".to_string(),
-                msg: "".to_string(),
-                span: None,
-                help: None,
-                inner: vec![],
-            })));
+            return Poll::Ready(Some(Err(ShellError::Generic(GenericError::new_internal(
+                "Unexpected parsing state during read rows",
+                "",
+            )))));
         }
 
         // Check if we've already read everything
@@ -292,14 +235,9 @@ impl Stream for RawJsonRowStreamer {
 
         match this.stream.poll_next_unpin(cx) {
             Poll::Ready(Some(Ok(stream_row))) => {
-                let str_row =
-                    std::str::from_utf8(&stream_row).map_err(|e| ShellError::GenericError {
-                        error: e.to_string(),
-                        msg: "".to_string(),
-                        span: None,
-                        help: None,
-                        inner: vec![],
-                    })?;
+                let str_row = std::str::from_utf8(&stream_row).map_err(|e| {
+                    ShellError::Generic(GenericError::new_internal(e.to_string(), ""))
+                })?;
                 if str_row == "]" {
                     this.state = RowStreamState::PostRows;
                 } else {
