@@ -207,7 +207,7 @@ dependencies = [
  "derive_builder",
  "eventsource-stream",
  "futures",
- "rand 0.8.5",
+ "rand 0.8.7",
  "reqwest",
  "reqwest-eventsource",
  "secrecy",
@@ -687,7 +687,7 @@ dependencies = [
  "getrandom 0.2.17",
  "instant",
  "pin-project-lite",
- "rand 0.8.5",
+ "rand 0.8.7",
  "tokio",
 ]
 
@@ -1340,7 +1340,7 @@ dependencies = [
  "nu-test-support",
  "nu-utils 0.114.1",
  "openssl",
- "rand 0.8.5",
+ "rand 0.10.1",
  "regex",
  "reqwest",
  "rpassword",
@@ -2002,7 +2002,7 @@ checksum = "2d391ba4af7f1d93f01fcf7b2f29e2bc9348e109dfdbf4dcbdc51dfa38dab0b6"
 dependencies = [
  "chrono",
  "deunicode",
- "rand 0.8.5",
+ "rand 0.8.7",
  "random_color",
 ]
 
@@ -5142,7 +5142,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c80231409c20246a13fddb31776fb942c38553c51e871f8cbd687a4cfb5843d"
 dependencies = [
  "phf_shared 0.11.3",
- "rand 0.8.5",
+ "rand 0.8.7",
 ]
 
 [[package]]
@@ -5480,9 +5480,9 @@ checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
 
 [[package]]
 name = "rand"
-version = "0.8.5"
+version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34af8d1a0e25924bc5b7c43c079c942339d8f0a8b57c39049bef581b46327404"
+checksum = "22f6172bdec972074665ed81ed53b71da00bfc44b65a753cfde883ec4c702a1a"
 dependencies = [
  "libc",
  "rand_chacha 0.3.1",
@@ -5569,7 +5569,7 @@ version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0085421bc527effa7ed6d46bac0a28734663c47abe03d80a5e78e441fad85196"
 dependencies = [
- "rand 0.8.5",
+ "rand 0.8.7",
 ]
 
 [[package]]
@@ -6743,7 +6743,7 @@ dependencies = [
  "percent-encoding",
  "pest",
  "pest_derive",
- "rand 0.8.5",
+ "rand 0.8.7",
  "regex",
  "serde",
  "serde_json",
@@ -7257,7 +7257,7 @@ dependencies = [
  "idna 0.4.0",
  "ipnet",
  "once_cell",
- "rand 0.8.5",
+ "rand 0.8.7",
  "smallvec",
  "thiserror 1.0.69",
  "tinyvec",
@@ -7278,7 +7278,7 @@ dependencies = [
  "lru-cache",
  "once_cell",
  "parking_lot",
- "rand 0.8.5",
+ "rand 0.8.7",
  "resolv-conf",
  "smallvec",
  "thiserror 1.0.69",
