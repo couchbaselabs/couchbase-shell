@@ -137,15 +137,15 @@ impl OpenAIClient {
     pub async fn ask(
         &self,
         question: String,
+        template: Option<String>,
         context: Vec<String>,
         model: String,
     ) -> Result<String, ShellError> {
         let mut messages: Vec<ChatCompletionRequestMessage> = vec![];
-
         // Primes the model to respond appropriately
         messages.push(
             ChatCompletionRequestSystemMessageArgs::default()
-                .content("You are a helpful assistant.")
+                .content(template.unwrap_or("You are a helpful assistant.".to_string()))
                 .build()
                 .unwrap()
                 .into(),
