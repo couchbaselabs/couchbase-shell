@@ -56,33 +56,46 @@ impl ServerCertVerifier for InsecureCertVerifier {
     }
 }
 
-use trust_dns_resolver::config::{ResolverConfig, ResolverOpts};
-use trust_dns_resolver::Resolver;
+use hickory_resolver::config::{ResolverConfig, GOOGLE};
+use hickory_resolver::net::runtime::TokioRuntimeProvider;
+use hickory_resolver::proto::rr::RData;
+use hickory_resolver::Resolver;
 
 pub mod json_row_parser;
 pub mod json_row_stream;
 pub mod raw_json_row_streamer;
 
 pub fn try_lookup_srv(addr: String) -> Result<Vec<String>, String> {
-    // NOTE: resolver is going to build its own runtime, which is a pain...
-    // Construct a new Resolver with default configuration options
-    let resolver = Resolver::new(ResolverConfig::default(), ResolverOpts::default())
+    // NOTE: resolver is async so we have to build our own runtime to drive it, which is a pain...
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
         .map_err(|e| e.to_string())?;
+    // Construct a new Resolver using Google's name servers, matching the trust-dns default
+    let resolver = Resolver::builder_with_config(
+        ResolverConfig::udp_and_tcp(&GOOGLE),
+        TokioRuntimeProvider::default(),
+    )
+    .build()
+    .map_err(|e| e.to_string())?;
     let mut address = addr;
     if !address.starts_with("_couchbases._tcp.") {
         address = format!("_couchbases._tcp.{}", address);
     }
 
-    let response = match resolver.srv_lookup(address) {
+    let response = match runtime.block_on(resolver.srv_lookup(address)) {
         Ok(k) => k,
         Err(e) => return Err(e.to_string()),
     };
 
     let mut addresses: Vec<String> = Vec::new();
-    for a in response.iter() {
+    for a in response.answers().iter().filter_map(|r| match &r.data {
+        RData::SRV(srv) => Some(srv),
+        _ => None,
+    }) {
         // The addresses get suffixed with a . so we have to remove this to later match the address
         // with the addresses in the alternate addresses in the config.
-        let mut host = a.target().to_string();
+        let mut host = a.target.to_string();
         if let Some(prefix) = host.strip_suffix('.') {
             host = prefix.to_string();
         }
