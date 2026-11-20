@@ -112,18 +112,18 @@ impl BedrockClient {
     pub async fn ask(
         &self,
         question: String,
+        template: Option<String>,
         context: Vec<String>,
         model: String,
     ) -> Result<String, ShellError> {
         let config = aws_config::load_from_env().await;
         let client = aws_sdk_bedrockruntime::Client::new(&config);
 
+        let tpl_value = template.unwrap_or( "Please answer this question: \\\"{}\\\". Using the following context: \\\"{}\\\"".to_string());
+        let mut rendered_tpl = tpl_value.replacen("{}", &*question, 1);
+        rendered_tpl = rendered_tpl.replacen("{}", &*context.join(" "), 1);
         let question_with_ctx = if !context.is_empty() {
-            format!(
-                "Please answer this question: \\\"{}\\\". Using the following context: \\\"{}\\\"",
-                question,
-                context.join(" ")
-            )
+            rendered_tpl
         } else {
             question
         };
